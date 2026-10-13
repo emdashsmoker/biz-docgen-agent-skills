@@ -1,13 +1,11 @@
 # biz-docgen-agent-skills
 
-Agent Skills that typeset HWPX, DOCX and PPTX document files.
+Agent Skills that typeset HWPX, DOCX and PPTX document files. Every skill ships as a Korean original and an English translation.
 
-HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다.
+HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
 <details>
 <summary><b>English</b></summary>
-
-Every skill ships as a Korean original and an English translation.
 
 ## Skills
 
@@ -58,8 +56,6 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 <details>
 <summary><b>한국어</b></summary>
-
-모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
 ## 스킬 목록
 
