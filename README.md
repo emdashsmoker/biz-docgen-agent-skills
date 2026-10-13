@@ -6,9 +6,9 @@ Agent Skills that typeset HWPX, DOCX and PPTX document files. Every skill ships 
 
 ## Skills
 
-- `blockwriter`: Typesets a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering.
-- `ieum-deck`: Designs a planning or consulting deck as a storyboard.json and typesets it as an editable PPTX.
-- `juja-builder`: Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files.
+- [`blockwriter`](skills/blockwriter/): Typesets a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering.
+- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and typesets it as an editable PPTX.
+- [`juja-builder`](skills/juja-builder/): Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files.
 
 ## Installation
 
