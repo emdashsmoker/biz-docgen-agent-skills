@@ -6,9 +6,9 @@ HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음
 
 ## 스킬 목록
 
-- `blockwriter`: 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 조판하고 렌더링으로 검수합니다.
-- `ieum-deck`: 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX로 조판합니다.
-- `juja-builder`: 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다.
+- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 조판하고 렌더링으로 검수합니다.
+- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX로 조판합니다.
+- [`juja-builder`](skills/juja-builder/): 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다.
 
 ## 설치
 
