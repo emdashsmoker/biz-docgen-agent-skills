@@ -1,6 +1,7 @@
 # biz-docgen-agent-skills
 
-Agent Skills that typeset HWPX, DOCX and PPTX document files.<br>
+Agent Skills that typeset HWPX, DOCX and PPTX document files.
+
 HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다.
 
 <details>
@@ -106,3 +107,19 @@ skills/juja-builder/
 스킬마다 `LICENSE`와 `NOTICE.md`가 들어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 만든 제안서, 보고서, 발표자료는 AGPL 조건 없이 쓸 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각자의 라이선스를 따릅니다.
 
 </details>
+
+## References
+
+Thanks to the developers and contributors of these projects.
+
+이 프로젝트들의 개발자와 기여자분들께 감사드립니다.
+
+- [rhwp](https://github.com/edwardkim/rhwp)
+- [python-hwpx](https://github.com/airmang/python-hwpx)
+- [python-docx](https://github.com/python-openxml/python-docx)
+- [python-pptx](https://github.com/scanny/python-pptx)
+- [PptxGenJS](https://github.com/gitbrent/PptxGenJS)
+- [LibreOffice](https://www.libreoffice.org/)
+- [H2Orestart](https://github.com/ebandal/H2Orestart)
+- [Poppler](https://poppler.freedesktop.org/)
+- [Nanum fonts](https://hangeul.naver.com/font)
