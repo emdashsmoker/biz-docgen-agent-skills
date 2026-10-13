@@ -1,0 +1,16 @@
+# Node dependencies installed by ieum-deck (npm install)
+node_modules/
+
+# Python caches created when running skill scripts
+__pycache__/
+*.pyc
+
+# OS metadata files
+.DS_Store
+Thumbs.db
+
+# Credentials and secrets
+.env
+.env.*
+*.pem
+*.key
