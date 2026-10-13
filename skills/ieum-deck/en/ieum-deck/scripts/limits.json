@@ -1,0 +1,141 @@
+{
+ "LIMIT": {
+  "headlineOneLine": 50,
+  "headlineTwoLine": 100,
+  "markerTitle": 30,
+  "panelHead": 16,
+  "bulletItem": 45,
+  "bulletsPerPanel": 5,
+  "tableCell": 24,
+  "chevronStep": 10,
+  "cardTitle": 16,
+  "tasksPerSlideMax": 4,
+  "moduleSlidesMin": 2,
+  "moduleSlidesMax": 8,
+  "panelsPerSlide": 4,
+  "panelsPerSlideReport": 5,
+  "tableRowsPerSlide": 16,
+  "tasksPerMulti": 3,
+  "freeSlidesMax": 8,
+  "tableFillMin": 0.6,
+  "boxTextFillMin": 0.65,
+  "boxTextMaxFillMin": 0.8,
+  "summaryFillMin": 0.9,
+  "summaryMaxFillMin": 0.95,
+  "boxFillMin": 0.45,
+  "bandBottomGapMax": 0.15,
+  "bodyCoverMin": 0.7,
+  "bulletOnlyShareMax": 0.5,
+  "deckVarietyRatio": 0.3,
+  "deckTemplateShareMax": 0.4,
+  "taskVarietyRatio": 0.5,
+  "sameTemplateRun": 3,
+  "accentPerSlide": 1
+ },
+ "HEADLINE_LINE_CHARS": {
+  "16:9": 50,
+  "A4": 43,
+  "10.83": 40,
+  "4:3": 37
+ },
+ "SIZE": {
+  "BODY_MIN": 11
+ },
+ "LAYOUTS": {
+  "16:9": {
+   "name": "LAYOUT_16x9_WIDE",
+   "W": 13.333,
+   "H": 7.5
+  },
+  "A4": {
+   "name": "LAYOUT_A4_LAND",
+   "W": 11.69,
+   "H": 8.27
+  },
+  "10.83": {
+   "name": "LAYOUT_10_83",
+   "W": 10.83,
+   "H": 7.5
+  },
+  "4:3": {
+   "name": "LAYOUT_4x3",
+   "W": 10,
+   "H": 7.5
+  }
+ },
+ "BAND": {
+  "EDGE_MIN": 0.42,
+  "CONTENT_Y": 2.32,
+  "BODY_PAD": 0.1,
+  "CONTENT_BOTTOM": 6.92
+ },
+ "PANEL": {
+  "GAP": 0.2
+ },
+ "THEME_TEXT": {
+  "RULES": [
+   {
+    "key": "navy",
+    "on": "white",
+    "min": 4.5
+   },
+   {
+    "key": "navyDeep",
+    "on": "white",
+    "min": 4.5
+   },
+   {
+    "key": "navyPastel",
+    "on": "white",
+    "min": 3
+   },
+   {
+    "key": "navyRamp.0",
+    "on": "white",
+    "min": 4.5
+   },
+   {
+    "key": "navyRamp.1",
+    "on": "white",
+    "min": 3
+   },
+   {
+    "key": "navyPastel2",
+    "on": "textDark",
+    "min": 3
+   },
+   {
+    "key": "navyRamp.2",
+    "on": "textDark",
+    "min": 3
+   },
+   {
+    "key": "navyRamp.3",
+    "on": "textDark",
+    "min": 3
+   },
+   {
+    "key": "tintNavy",
+    "on": "textDark",
+    "min": 4.5
+   },
+   {
+    "key": "tintHead",
+    "on": "textDark",
+    "min": 4.5
+   },
+   {
+    "key": "tintBg",
+    "on": "textDark",
+    "min": 4.5
+   },
+   {
+    "key": "textMuted",
+    "on": "white",
+    "min": 3
+   }
+  ],
+  "HINT": "Assign light colors to keys that carry body text (navyPastel2, navyRamp 3rd-4th, tints) and dark colors to keys that carry white text (navy, navyDeep, navyPastel, textMuted)",
+  "TEXT_DARK": "333333"
+ }
+}
