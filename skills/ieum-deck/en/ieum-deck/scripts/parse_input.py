@@ -7,7 +7,7 @@ docx and pptx fall back to python-docx and python-pptx when markitdown fails
 hwpx conversion order: python-hwpx export_markdown → HwpxDocument.text.markdown → direct extraction from body XML
 --pdf also converts hwpx to PDF (rhwp on PATH first, otherwise LibreOffice H2Orestart. How to obtain them is in SKILL.md). Use it to check table and figure placement by eye
 
-본 제품은 한글과컴퓨터의 한/글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 (English) This product was developed with reference to the public documentation of the Hancom Hangul document file format (.hwp)
 """
 import re
