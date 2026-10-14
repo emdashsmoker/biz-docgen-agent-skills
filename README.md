@@ -9,20 +9,21 @@ HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음
 
 ## Skills
 
-- [`blockwriter`](skills/blockwriter/): Typesets a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering.
-- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and typesets it as an editable PPTX.
-- [`juja-builder`](skills/juja-builder/): Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files.
+- [`blockwriter`](skills/blockwriter/): Typesets a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering. [Samples](skills/blockwriter/demo/)
+- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and typesets it as an editable PPTX. [Samples](skills/ieum-deck/demo/)
+- [`juja-builder`](skills/juja-builder/): Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files. [Samples](skills/juja-builder/demo/)
 
 ## Installation
 
-Each skill folder holds the install packages and the source folders.
+Each skill folder holds the install packages, the source folders and sample pages.
 
 ```
 skills/juja-builder/
 ├── juja-builder-ko.skill    Korean install package
 ├── juja-builder-en.skill    English install package
 ├── ko/juja-builder/         Korean source
-└── en/juja-builder/         English source
+├── en/juja-builder/         English source
+└── demo/                    sample pages
 ```
 
 - A `.skill` file is a zip archive of the skill folder. Where only `.zip` uploads are accepted, rename the extension to `.zip`.
@@ -42,7 +43,7 @@ skills/juja-builder/
 
 ## Disclaimer
 
-The skills come as they are, without any warranty. Correct operation in every environment is not guaranteed. The end user bears responsibility for using the skills and their output.
+The skills come as they are, without any warranty. Correct operation in every environment is not guaranteed. The end user bears responsibility for using the skills and their output. The organizations in the demo pages are fictional.
 
 The HWPX writers were developed with reference to Hancom's published HWP document file (.hwp) specification. Hangul, Hancom Office and HWPX are trademarks of Hancom Inc. The skills in this repository have no affiliation with Hancom Inc.
 
@@ -59,20 +60,21 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 스킬 목록
 
-- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 조판하고 렌더링으로 검수합니다.
-- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX로 조판합니다.
-- [`juja-builder`](skills/juja-builder/): 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다.
+- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 조판하고 렌더링으로 검수합니다. [예시](skills/blockwriter/demo/)
+- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX로 조판합니다. [예시](skills/ieum-deck/demo/)
+- [`juja-builder`](skills/juja-builder/): 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다. [예시](skills/juja-builder/demo/)
 
 ## 설치
 
-스킬 폴더마다 설치용 패키지와 소스 폴더가 들어 있습니다.
+스킬 폴더마다 설치용 패키지, 소스 폴더, 예시 쪽 이미지가 들어 있습니다.
 
 ```
 skills/juja-builder/
 ├── juja-builder-ko.skill    한국어판 설치용 패키지
 ├── juja-builder-en.skill    영어판 설치용 패키지
 ├── ko/juja-builder/         한국어판 소스
-└── en/juja-builder/         영어판 소스
+├── en/juja-builder/         영어판 소스
+└── demo/                    예시 쪽 이미지
 ```
 
 - `.skill` 파일은 스킬 폴더를 묶은 zip 파일입니다. `.zip` 파일만 올릴 수 있는 환경에서는 확장자를 `.zip`으로 바꿔 업로드하면 됩니다.
@@ -92,7 +94,7 @@ skills/juja-builder/
 
 ## 면책 고지
 
-이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다.
+이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다. 예시 쪽 이미지에 나오는 기관은 모두 가상입니다.
 
 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. 한/글, 한컴오피스, HWPX는 한글과컴퓨터의 상표입니다. 이 저장소의 스킬은 한글과컴퓨터와 제휴 관계가 없습니다.
 
