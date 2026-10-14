@@ -23,4 +23,22 @@ If you modify this program, you may extend this permission to your version, but 
 
 ## Third-party software
 
-Packages, programs, fonts and models that this program installs or downloads at run time are not part of this program. They keep their own licenses.
+This program bundles no third-party code, fonts or binaries. The components below are installed or downloaded at run time. They are not part of this program and keep their own licenses.
+
+| Component | Use | License |
+|---|---|---|
+| [python-hwpx](https://github.com/airmang/python-hwpx) | HWPX reading and writing | Apache-2.0 |
+| [python-docx](https://github.com/python-openxml/python-docx) | DOCX reading and writing | MIT |
+| [pdfplumber](https://github.com/jsvine/pdfplumber) | PDF text and table extraction | MIT |
+| [pdfminer.six](https://github.com/pdfminer/pdfminer.six) | PDF layout analysis | MIT |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | PDF page rendering | BSD-3-Clause, Apache-2.0 and the licenses of its bundled PDFium binary |
+| [lxml](https://lxml.de/) | XML processing | BSD-3-Clause |
+| [Pillow](https://python-pillow.org/) | Image processing | MIT-CMU |
+| [openpyxl](https://openpyxl.readthedocs.io/) | XLSX reading | MIT |
+| [rhwp](https://github.com/edwardkim/rhwp) | HWPX page rendering for review | MIT |
+| [LibreOffice](https://www.libreoffice.org/) | Document conversion and page rendering | MPL-2.0 |
+| [H2Orestart](https://github.com/ebandal/H2Orestart) | HWP and HWPX import for LibreOffice | GPL-3.0 |
+| OpenJDK runtime | Runs the H2Orestart extension | GPL-2.0 with Classpath Exception |
+| [Poppler](https://poppler.freedesktop.org/) (pdftoppm) | PDF page images | GPL-2.0 or GPL-3.0 |
+| [Nanum fonts](https://hangeul.naver.com/font) by NAVER | Rendering and layout fonts | OFL-1.1 |
+| [Noto CJK fonts](https://github.com/notofonts/noto-cjk) | Rendering fallback font | OFL-1.1 |
