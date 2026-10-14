@@ -23,4 +23,25 @@ If you modify this program, you may extend this permission to your version, but 
 
 ## Third-party software
 
-Packages, programs, fonts and models that this program installs or downloads at run time are not part of this program. They keep their own licenses.
+This program bundles no third-party code, fonts or binaries. The components below are installed or downloaded at run time. They are not part of this program and keep their own licenses.
+
+| Component | Use | License |
+|---|---|---|
+| [PptxGenJS](https://github.com/gitbrent/PptxGenJS) and its npm dependencies | PPTX writing | MIT, ISC, (MIT OR GPL-3.0-or-later) for JSZip, (MIT AND Zlib) for pako |
+| [python-pptx](https://github.com/scanny/python-pptx) | PPTX reading and layout checks | MIT |
+| [python-hwpx](https://github.com/airmang/python-hwpx) | HWPX input reading | Apache-2.0 |
+| [pyhwp](https://github.com/mete0r/pyhwp) | HWP 5.0 input reading | AGPL-3.0-or-later |
+| [python-docx](https://github.com/python-openxml/python-docx) | DOCX input reading | MIT |
+| [MarkItDown](https://github.com/microsoft/markitdown) | Input conversion to Markdown | MIT |
+| [pdfplumber](https://github.com/jsvine/pdfplumber) | PDF text and table extraction | MIT |
+| [pypdf](https://github.com/py-pdf/pypdf) | PDF image extraction | BSD-3-Clause |
+| [lxml](https://lxml.de/) | XML processing | BSD-3-Clause |
+| [Pillow](https://python-pillow.org/) | Image processing | MIT-CMU |
+| [NumPy](https://numpy.org/) | Image comparison | BSD-3-Clause |
+| [rhwp](https://github.com/edwardkim/rhwp) | HWPX page rendering for review | MIT |
+| [LibreOffice](https://www.libreoffice.org/) | Document conversion and page rendering | MPL-2.0 |
+| [H2Orestart](https://github.com/ebandal/H2Orestart) | HWP and HWPX import for LibreOffice | GPL-3.0 |
+| [Poppler](https://poppler.freedesktop.org/) (pdftoppm) | PDF page images | GPL-2.0 or GPL-3.0 |
+| [Nanum fonts](https://hangeul.naver.com/font) by NAVER | Rendering and layout fonts | OFL-1.1 |
+
+`assets/font-metrics.json` holds glyph advance widths measured from NanumGothic (NAVER, SIL Open Font License 1.1). It contains no font data.

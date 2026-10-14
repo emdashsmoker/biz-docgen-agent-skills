@@ -7,7 +7,7 @@ docx 와 pptx 는 markitdown 실패 시 python-docx 와 python-pptx 로 대체
 hwpx 변환 순서: python-hwpx export_markdown → HwpxDocument.text.markdown → 본문 XML 직접 추출
 --pdf 는 hwpx 를 PDF 로도 변환 (PATH 의 rhwp 우선, 없으면 LibreOffice H2Orestart. 확보 순서는 SKILL.md). 표와 그림 배치를 눈으로 확인할 때 사용
 
-본 제품은 한글과컴퓨터의 한/글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 """
 import re
 import shutil
