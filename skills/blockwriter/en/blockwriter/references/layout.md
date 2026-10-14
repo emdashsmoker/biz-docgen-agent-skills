@@ -26,7 +26,7 @@ Both forms are A4 (210 x 297mm) with 20mm left and right margins and a 170mm bod
 | unit row | 단위 (나눔고딕 9pt) | 단위 (나눔고딕 9pt spacing -7%) |
 | source row | 출처 (나눔고딕 9pt) | 출처 (나눔고딕 9pt spacing -7%) |
 | figure caption | 그림 제목 (나눔고딕 11pt bold spacing -6%) | 그림 제목 (나눔고딕 11pt spacing -6%) |
-| footnote | 각주 (나눔고딕 10pt) | 각주 (나눔고딕 9pt) |
+| footnote | 각주 (나눔고딕 10pt, left-aligned) | 각주 (나눔고딕 9pt, left-aligned) |
 | TOC | 목차 장 (나눔고딕 14pt bold), 목차 절 (나눔고딕 12pt) | none (TOC skipped) |
 | body | 바탕글 (나눔고딕 10pt) | 바탕글 (나눔고딕 10pt) |
 
