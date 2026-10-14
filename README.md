@@ -4,6 +4,36 @@ Agent Skills that typeset HWPX, DOCX and PPTX document files. Every skill ships 
 
 HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
+## Demo
+
+Sample outputs on one topic, hyperscale AI (초거대AI). 가온시 and 다온정책연구소 in the samples are fictional organizations. The images are LibreOffice renders, so the layout can differ slightly in Word and PowerPoint.
+
+초거대AI를 주제로 만든 예시 산출물입니다. 예시에 나오는 가온시와 다온정책연구소는 가상의 기관입니다. 이미지는 LibreOffice로 렌더링한 화면이라 Word와 PowerPoint에서 연 배치와 조금 다를 수 있습니다.
+
+### blockwriter
+
+[![blockwriter sample report pages](docs/demo/blockwriter.png)](docs/demo/blockwriter.png)
+
+A DOCX policy report in the chapter form, with a cover, a table of contents, footnotes and captioned tables.
+
+chapter 양식으로 조판한 DOCX 정책 보고서입니다. 표지, 목차, 각주, 캡션을 단 표가 들어 있습니다.
+
+### ieum-deck
+
+[![ieum-deck sample slides](docs/demo/ieum-deck.png)](docs/demo/ieum-deck.png)
+
+A 16:9 proposal presentation made from the same RFP as the juja-builder sample. It uses the mono theme and is typeset as an editable PPTX.
+
+juja-builder 예시와 같은 RFP로 만든 16:9 제안 발표자료입니다. mono 테마를 적용해 편집 가능한 PPTX로 조판했습니다.
+
+### juja-builder
+
+[![juja-builder sample proposal pages](docs/demo/juja-builder.png)](docs/demo/juja-builder.png)
+
+A DOCX proposal written from a fictional RFP, with mono bands. It covers the proposal overview and the work plan.
+
+가상 RFP로 작성한 DOCX 제안서입니다. 밴드에 mono 테마를 적용했고 제안 개요와 사업 수행부문을 담았습니다.
+
 <details>
 <summary><b>English</b></summary>
 
