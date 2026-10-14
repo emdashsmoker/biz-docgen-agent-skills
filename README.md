@@ -43,7 +43,7 @@ skills/juja-builder/
 
 ## Disclaimer
 
-The skills come as they are, without any warranty. Correct operation in every environment is not guaranteed. The end user bears responsibility for using the skills and their output. The organizations in the demo pages, 가온시 and 다온정책연구소, are fictional.
+The skills come as they are, without any warranty. Correct operation in every environment is not guaranteed. The end user bears responsibility for using the skills and their output. The organizations in the demo pages are fictional.
 
 The HWPX writers were developed with reference to Hancom's published HWP document file (.hwp) specification. Hangul, Hancom Office and HWPX are trademarks of Hancom Inc. The skills in this repository have no affiliation with Hancom Inc.
 
@@ -94,7 +94,7 @@ skills/juja-builder/
 
 ## 면책 고지
 
-이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다. 예시 쪽 이미지의 가온시와 다온정책연구소는 가상의 기관입니다.
+이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다. 예시 쪽 이미지에 나오는 기관은 모두 가상입니다.
 
 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. 한/글, 한컴오피스, HWPX는 한글과컴퓨터의 상표입니다. 이 저장소의 스킬은 한글과컴퓨터와 제휴 관계가 없습니다.
 
