@@ -1144,6 +1144,8 @@ def write_default_skeleton(base_dir: str) -> str:
                     d = _sk_build_header(d)
                 elif n == "Contents/section0.xml":
                     d = _sk_build_section(d)
+                elif n == "Contents/content.hpf":
+                    d = lib.clear_author_metadata(d.decode("utf-8")).encode("utf-8")
                 elif n == "Preview/PrvText.txt":
                     d = b""
                 method = zipfile.ZIP_STORED if n == "mimetype" else zipfile.ZIP_DEFLATED

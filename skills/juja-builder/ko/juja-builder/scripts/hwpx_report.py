@@ -1557,6 +1557,14 @@ def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[st
 # ═══════════════════════════════════════════════════════════════════════
 # 4. skeleton: 참조 hwpx에서 스타일 시트와 본문 구역 설정만 남긴 빈 양식 추출
 # ═══════════════════════════════════════════════════════════════════════
+AUTHOR_META_RE = re.compile(r'(<opf:meta name="(creator|lastsaveby|date|CreatedDate|ModifiedDate)"[^>]*>)[^<]*(</opf:meta>)')
+
+
+def clear_author_metadata(hpf: str) -> str:
+    """content.hpf의 작성자와 일시 메타데이터를 비움. 참조 양식과 python-hwpx 빈 새 문서의 작성 정보가 납품본에 남지 않게 함"""
+    return AUTHOR_META_RE.sub(r"\1\3", hpf)
+
+
 def cmd_skeleton(a):
     src = zipfile.ZipFile(a.input)
     secs = sorted(n for n in src.namelist() if re.match(r"Contents/section\d+\.xml", n))
@@ -1571,8 +1579,7 @@ def cmd_skeleton(a):
     hpf = re.sub(r'<opf:item id="section[1-9]\d*"[^>]*/>', "", hpf)
     hpf = re.sub(r'<opf:itemref idref="section[1-9]\d*"[^>]*/>', "", hpf)
     hpf = re.sub(r'<opf:item [^>]*href="BinData/[^"]*"[^>]*/>', "", hpf)
-    hpf = re.sub(r'(<opf:meta name="(creator|lastsaveby|date|CreatedDate|ModifiedDate)"[^>]*>)[^<]*(</opf:meta>)',
-                 r"\1\3", hpf)  # 작성자와 일시 메타데이터 제거
+    hpf = clear_author_metadata(hpf)
     with zipfile.ZipFile(a.output, "w", zipfile.ZIP_DEFLATED) as z:
         for it in src.infolist():
             n = it.filename

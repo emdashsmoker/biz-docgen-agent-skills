@@ -1557,6 +1557,14 @@ def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[st
 # ═══════════════════════════════════════════════════════════════════════
 # 4. skeleton: extract an empty template keeping only the style sheet and body section settings from a reference hwpx
 # ═══════════════════════════════════════════════════════════════════════
+AUTHOR_META_RE = re.compile(r'(<opf:meta name="(creator|lastsaveby|date|CreatedDate|ModifiedDate)"[^>]*>)[^<]*(</opf:meta>)')
+
+
+def clear_author_metadata(hpf: str) -> str:
+    """Empty the author and date metadata in content.hpf, so author details of a reference template or the empty new python-hwpx document do not stay in deliverables"""
+    return AUTHOR_META_RE.sub(r"\1\3", hpf)
+
+
 def cmd_skeleton(a):
     src = zipfile.ZipFile(a.input)
     secs = sorted(n for n in src.namelist() if re.match(r"Contents/section\d+\.xml", n))
@@ -1571,8 +1579,7 @@ def cmd_skeleton(a):
     hpf = re.sub(r'<opf:item id="section[1-9]\d*"[^>]*/>', "", hpf)
     hpf = re.sub(r'<opf:itemref idref="section[1-9]\d*"[^>]*/>', "", hpf)
     hpf = re.sub(r'<opf:item [^>]*href="BinData/[^"]*"[^>]*/>', "", hpf)
-    hpf = re.sub(r'(<opf:meta name="(creator|lastsaveby|date|CreatedDate|ModifiedDate)"[^>]*>)[^<]*(</opf:meta>)',
-                 r"\1\3", hpf)  # remove author and date metadata
+    hpf = clear_author_metadata(hpf)
     with zipfile.ZipFile(a.output, "w", zipfile.ZIP_DEFLATED) as z:
         for it in src.infolist():
             n = it.filename
