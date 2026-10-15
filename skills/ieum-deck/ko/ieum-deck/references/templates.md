@@ -137,6 +137,7 @@
 | 템플릿 또는 블록 | 슬롯 | 기본값 |
 |---|---|---|
 | common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | 수행 Point |
+| common | company (슬라이드 company 와 meta.company 가 우선) | 회사명 |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |
@@ -171,7 +172,7 @@
     + 기본 토큰(※, 출처:, 자료:, Source:, Note:)은 그대로 인식
     + 추가 토큰도 "토큰:" 형태로 시작하는 항목만 주석으로 조판하고 lint 주석 표기 검사에 포함
 - scope 구조 라벨(visionTag, scopeTag, outputTag)은 10pt 로 조판되므로 영문 대문자로 지정 (다른 표기는 check_layout 11pt 하한 WARN)
-- 회사명은 라벨이 아닌 내용이므로 `meta.company` 로 지정 (미지정 시 자리 표시 "회사명")
+- 회사명은 내용이므로 `meta.company` 로 지정. 미지정 시 자리 표시는 `common.company` 라벨 (기본 "회사명")
 - 라벨 슬롯이 아닌 고정 문구는 내용이 비었을 때만 나타나는 자리 표시와 언어와 무관한 번호 기호
     + 이미지 자리 상자의 문구(이미지, 사진, 표본 화면, 산출물 화면, 로고)와 인력 자리 표기([인력A], [인력])는 내용을 채우면 사라짐
     + 커스텀 슬라이드의 빈 이미지 슬롯 대체 문구([기관명], "접수 → 검토 → 승인 → 처리 → 통보", 원본 문구에 "파쇄" 가 있을 때의 설명 문구)와 빈 차트 슬롯의 견본 항목(항목 A, B, C)도 슬롯을 채우면 사라짐
@@ -184,7 +185,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key point"},
+ "common": {"pointLabel": "Key point", "company": "Company name"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

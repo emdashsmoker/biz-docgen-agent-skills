@@ -1082,7 +1082,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
         atom.mg = [0, 0, 0, 0]; atom.va = "middle";
         ov.scale = inside.length > 1 ? 0.55 : 0.65;
       }
-      const company = sl.company || (ctx && ctx.meta && ctx.meta.company) || "회사명";
+      const company = sl.company || (ctx && ctx.meta && ctx.meta.company) || LB.label("common", "company");
       if (atom.paras) {
         tk += 1;
         const id = "t" + tk;
@@ -1160,7 +1160,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
 // Replaces the company name token. Puts the meta.company value into __COMPANY__
 // Other text stays as is, and text replacement rules apply only at the extraction step (own_extract.py)
 function scrub(textValue, company) {
-  return String(textValue).replace(/__COMPANY__/g, company || "회사명");
+  return String(textValue).replace(/__COMPANY__/g, company || LB.label("common", "company"));
 }
 /** Replaces only the text while keeping the existing paragraph format. Line breaks split paragraphs. With too few paragraphs, the last paragraph format repeats */
 function substitute(paras, value) {

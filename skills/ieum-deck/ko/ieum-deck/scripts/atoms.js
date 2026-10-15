@@ -1082,7 +1082,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
         atom.mg = [0, 0, 0, 0]; atom.va = "middle";
         ov.scale = inside.length > 1 ? 0.55 : 0.65;
       }
-      const company = sl.company || (ctx && ctx.meta && ctx.meta.company) || "회사명";
+      const company = sl.company || (ctx && ctx.meta && ctx.meta.company) || LB.label("common", "company");
       if (atom.paras) {
         tk += 1;
         const id = "t" + tk;
@@ -1160,7 +1160,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
 // 회사명 자리 토큰 치환. meta.company 값을 __COMPANY__ 자리에 넣는다
 // 그 외 텍스트는 그대로 두며 텍스트 치환 규칙은 추출 단계(own_extract.py)에서만 적용
 function scrub(textValue, company) {
-  return String(textValue).replace(/__COMPANY__/g, company || "회사명");
+  return String(textValue).replace(/__COMPANY__/g, company || LB.label("common", "company"));
 }
 /** 기존 문단 서식을 유지하며 텍스트만 치환. 줄바꿈은 문단 분리. 문단 수가 부족하면 마지막 문단 서식 반복 */
 function substitute(paras, value) {
