@@ -5,6 +5,7 @@
 // 사용: node build.js <storyboard.json> <out.pptx> [--layout 16:9|A4|10.83|4:3] [--digest] [--marker square|bar|triangle] [--theme navy|mono]
 // --digest : 슬라이드별 headline 과 template 만 남긴 요약본(빠른 구조 검토용)
 // 슬라이드의 byLayout 은 지정 판형으로 빌드할 때만 해당 경로의 값을 교체 (판형 전용 문구)
+// 템플릿과 블록의 고정 라벨은 슬라이드 슬롯, meta.labels, assets/labels.json 순으로 해석 (labels.js)
 // 커스텀 슬라이드(own:N)는 meta.ownDeck 경로(storyboard 기준 상대 경로 허용) 또는 환경변수 IEUM_DECK_OWN 의 own-deck.json 을 재생
 
 const fs = require("fs");
@@ -13,6 +14,7 @@ const PptxGenJS = require("pptxgenjs");
 const T = require("./tokens.js");
 const A = require("./atoms.js");
 const TEMPLATES = require("./templates.js");
+const LB = require("./labels.js");
 
 const OWN_ENV = "IEUM_DECK_OWN";
 
@@ -124,6 +126,7 @@ async function main() {
   if (!inPath || !outPath) { console.error("usage: node build.js <storyboard.json> <out.pptx> [--layout KEY] [--digest] [--marker square|bar|triangle] [--theme navy|mono]"); process.exit(2); }
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
+  LB.useDeck(meta); // 덱 단위 라벨(meta.labels) 등록
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`판형 ${layoutKey} 미정의. 선택: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
@@ -155,8 +158,9 @@ async function main() {
   // 커스텀 슬라이드 재생 슬라이드는 원본 글꼴과 폭 흡수 축소를 따르므로 본문 하한 검사에서 제외 (check_layout 이 읽음)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout, finalize 가 읽음)
+  // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

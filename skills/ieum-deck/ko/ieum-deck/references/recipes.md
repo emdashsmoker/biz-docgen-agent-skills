@@ -41,7 +41,7 @@
 | `slots.rowFlow` | true 이면 행 사이에 아래쪽 화살표 |
 | `slots.numbered` | true 이면 칸 제목 앞에 ①, ②, ③ 번호 |
 | `slots.dividers` | true 이면 칸 사이와 행 사이에 회색 구분선 (4분면 차트 배치). 행마다 같은 위치의 세로선은 한 줄로 연결 (가로선과 십자로 교차) |
-| `slots.point` | 본문 아래 수행 Point 밴드 문구 (라벨은 슬라이드 `pointLabel` 이나 `meta.pointLabel`). 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용 |
+| `slots.point` | 본문 아래 수행 Point 밴드 문구 (라벨은 슬라이드 `pointLabel`, `meta.pointLabel`, `meta.labels.common.pointLabel` 순). 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용 |
 | `slots.conclusion` | 본문 아래 결론 밴드 문구 |
 
 - 칸 수와 `regions` 수가 다르면 빌드 경고
@@ -117,6 +117,7 @@
 | `chart` | 네이티브 차트 | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` 는 데이터 레이블과 값 축의 숫자 서식 (예: "0.0" 은 소수 첫째 자리까지. 지정하지 않으면 막대와 선 차트는 정수로 반올림하여 표시) |
 | `image` | 이미지 또는 자리 상자 | `src`(경로 또는 data URI), `caption`(이미지 아래 설명), `label`(자리 상자 문구) |
 
+- 블록 라벨(valuechain, porter 의 라벨 필드와 goalsystem, house, logicmodel, canvas 의 labels)의 덱 공통 값은 `meta.labels` 의 블록 이름 키로 지정 (`references/templates.md` 라벨 슬롯 절)
 - 블록 본문 항목(`items` 와 칸, 행, 단계의 `text`)의 줄바꿈은 항목 구분으로 조판 (항목마다 불릿)
 - 라벨, 제목, 결론 띠(`lead`), `text` 블록 문구의 줄바꿈은 개행으로 조판
 - `matrix` 의 `x`, `y` 는 사분면 안 위치를 0-1 비율로 지정 (0 은 낮음, 1 은 높음)

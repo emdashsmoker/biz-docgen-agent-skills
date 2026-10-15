@@ -4,6 +4,7 @@
 // 좌표 단위는 인치, 색상은 tokens 의 6자리. 수치 상수는 tokens.js 에서만 가져온다.
 
 const T = require("./tokens.js");
+const LB = require("./labels.js"); // meta.labels.notation.source 로 추가한 주석 토큰 판정
 const fs = require("fs");
 const path = require("path");
 // 나눔고딕 실측 폭(em). 없으면 tokens.METRIC 근사값 사용
@@ -1170,7 +1171,7 @@ function substitute(paras, value) {
     const r0 = src.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     // 원본의 ※ 문단은 예시 주석 자리이므로 작성자의 선택을 따름
     const srcText = src.runs.map((r) => r.t).join("").trim();
-    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln)) {
+    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
       // 주석이 아닌 문구를 넣으면 바로 위 불릿 문단의 서식으로 맞춰 일반 항목으로 표기
       const prev = base.slice(0, Math.min(i, base.length - 1)).reverse().find((p) => p.bullet);
       if (prev) {

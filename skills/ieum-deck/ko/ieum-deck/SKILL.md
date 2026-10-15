@@ -143,6 +143,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 11. (회사 사실 정보) 유사 실적, 조직과 팀 전문성, 투입인력 이력, 재무, 인증의 제공 여부. 미제공 항목은 `[회사 확인]` 자리 표기로 산출
 12. (컨소시엄) 참여 여부와 기관별 지분, 투입 인월(M/M)
 13. (발주기관 관행) Task ID 표기(`Module 1 - Task 2` 또는 `M1-T2`), 평가항목 병기형 헤더, 경로형 헤더("주제 〉 세부")
+14. (문서 언어와 라벨) 한국어 라벨(기본) 또는 다른 언어. 다른 언어면 템플릿 라벨과 언어 태그를 `meta.labels` 에 지정 (영문 발표자료 절)
 
 ## 회사 사실 정보
 
@@ -455,6 +456,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 치환 예외는 RFP 서식 명칭(과업지시서, 과업 세부내용)과 VISION, SCOPE 같은 구조 라벨
 - 제안 외 산출물에 과업 라벨이 남으면 lint WARN
 - 제안 전용 라벨은 산출 대상에 맞춰 변경
+    + 덱 전체에 같은 라벨은 `meta.labels` 에 한 번 지정 (키와 기본값은 `references/templates.md` 라벨 슬롯 절)
     + 수행 Point 밴드의 라벨 문구(기본 "수행 Point")는 `meta.pointLabel` 로 변경
     + 간트의 과업 열 머리와 보고 행 묶음 이름(기본 "과업", "보고회")은 gantt 의 `taskHead`, `reportHead` 로 변경
     + 표지와 종료 슬라이드의 회사명은 `meta.company` 로 지정
@@ -478,13 +480,21 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 영문 발표자료도 같은 템플릿, 빌드, 검수 절차로 조판
 - 텍스트 규범, 헤드라인 문체(착수 질의 5번), lint 문장 규범 검사는 한글 문구에만 적용
     + em dash 와 en dash 검사는 영문 문구에도 적용 (lint FAIL)
-- 템플릿과 블록의 기본 라벨은 한국어이므로 라벨 슬롯에 영문 라벨을 지정 (슬롯 목록은 `references/templates.md` 의 라벨 슬롯 절)
-- 수행 Point 밴드 라벨은 `meta.pointLabel` 로 지정
+- 템플릿과 블록의 기본 라벨은 한국어이므로 `meta.labels` 에 영문 라벨을 덱 단위로 지정 (키, 기본값, 영문 예시는 `references/templates.md` 의 라벨 슬롯 절)
+    + 해석 순서는 슬라이드 슬롯 값, `meta.labels`, 기본값
+    + 슬라이드마다 다른 라벨만 해당 슬롯에 지정
+    + 일부 슬라이드만 영문인 덱은 영문 슬라이드가 쓰는 템플릿의 라벨만 지정하거나 그 슬라이드의 슬롯에 지정
+    + 지정하지 않은 키는 한국어 기본값으로 조판되므로 영문 덱이 쓰는 템플릿의 라벨은 모두 지정
+    + lint 는 `meta.labels` 의 알 수 없는 템플릿, 블록, 슬롯 이름과 형식 오류를 FAIL 로 보고
+- 수행 Point 밴드 라벨은 `meta.pointLabel` 또는 `meta.labels.common.pointLabel` 로 지정
+- scope 의 구조 라벨(visionTag, scopeTag, outputTag)은 10pt 로 조판되므로 영문 대문자로 지정 (다른 표기는 check_layout 11pt 하한 WARN)
+- PPTX 글자의 언어 태그는 `meta.labels.language` 로 지정 (기본 latin en-US, 한글이 든 run 은 east_asia ko-KR. finalize.py 가 적용)
 - 자리 표기(`[회사 확인]`, `[확인 필요]`)는 lint 가 미완성 항목을 찾는 표기이므로 영문 발표자료에서도 그대로 사용
 - 공통 파트(company2slides.py 산출)는 한국어 문구로 생성되므로 storyboard 에 옮긴 뒤 영문으로 번역
     + 번역 대상은 headline, marker, section, chapter 와 슬롯 문구
     + id, template, 슬롯 키, 자리 표기는 그대로 유지
 - 출처와 주석 줄은 "Source:", "Note:" 로 시작해도 "출처:", "자료:" 와 같이 인식
+    + 다른 언어의 주석 토큰은 `meta.labels.notation.source` 에 추가 (기본 토큰은 유지)
 - 헤드라인과 마커의 글자 수 상한은 한글 환산 글자 수로 검사 (영문은 같은 폭에 약 2배 글자가 들어감)
 - 영문 성명과 영문 투입인력표의 인식 기준은 `references/storyboard-schema.md` 를 따름
 - 시각 검수에서 한국어 기본 라벨이 남은 슬라이드가 없는지 확인
@@ -842,8 +852,9 @@ ieum-deck/
 │   ├── atoms.js             원자 요소(텍스트, 도형, 선, 표, 차트, 이미지), 밴드, 커스텀 슬라이드 재생, 실측 폭 기반 축소
 │   ├── templates.js         파라메트릭 템플릿과 free
 │   ├── composite.js         composite 템플릿의 격자와 블록
+│   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 단어 단위 줄바꿈, 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 단어 단위 줄바꿈, 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사
@@ -857,7 +868,7 @@ ieum-deck/
 │   ├── own_catalog.py       own-deck.json → 슬롯 목록 문서
 │   ├── compare.py           원본 PDF 와 재현 PNG 대조
 │   └── setup_deps.py        의존성 설치와 --check
-├── assets/  font-metrics.json, company.md, common-slides.json, proposal-templates.json, recipe-demos.json
+├── assets/  labels.json(라벨 기본값), font-metrics.json, company.md, common-slides.json, proposal-templates.json, recipe-demos.json
 └── references/  storyboard-schema.md, templates.md, recipes.md, custom-slides.md, headline-patterns.md, strategy.md, methods.md, review.md, wording.md, skeletons.md, writing-rules.md
 ```
 
