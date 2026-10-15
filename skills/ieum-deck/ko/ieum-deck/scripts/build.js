@@ -65,7 +65,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     // 마커 텍스트가 없으면 마커 밴드를 그리지 않음 (빈 정사각형만 남는 결함 방지)
     const base = s.mode || "full";
     const mode = sb.bandMode || (String(b0.marker || "").trim() ? base : bandNoMarker(base));
-    const company = (sb.slots && sb.slots.company) || meta.company || "회사명";
+    const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
     if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });

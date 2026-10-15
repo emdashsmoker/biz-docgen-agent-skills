@@ -1,5 +1,5 @@
 {
- "common": {"pointLabel": "수행 Point"},
+ "common": {"pointLabel": "수행 Point", "company": "회사명"},
  "cover": {"label": "제안발표자료"},
  "contents": {"title": "목차"},
  "end": {"title": "감사합니다"},

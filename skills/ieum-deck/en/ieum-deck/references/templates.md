@@ -137,6 +137,7 @@
 | Template or block | Slot | Default |
 |---|---|---|
 | common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | 수행 Point |
+| common | company (the slide company and meta.company take precedence) | 회사명 |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |
@@ -171,7 +172,7 @@
     + The built-in tokens (※, 출처:, 자료:, Source:, Note:) stay recognized
     + Extra tokens also make only items starting in the "token:" form notes, and the lint note notation check includes them
 - The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
-- The company name is content rather than a label, so set it with `meta.company` (without it, the placeholder "회사명" shows)
+- The company name is content, so set it with `meta.company`. Without it, the placeholder is the `common.company` label (default "회사명")
 - The fixed text that is not a label slot is placeholders that show only while the content is empty, and numbering symbols unrelated to language
     + Image placeholder box text (이미지, 사진, 표본 화면, 산출물 화면, 로고) and staff placeholders ([인력A], [인력]) disappear once the content is filled
     + The stand-in text of empty custom slide image slots ([기관명], "접수 → 검토 → 승인 → 처리 → 통보", and a description when the source text contains "파쇄") and the sample items of empty chart slots (항목 A, B, C) also disappear once the slot is filled
@@ -184,7 +185,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key point"},
+ "common": {"pointLabel": "Key point", "company": "Company name"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

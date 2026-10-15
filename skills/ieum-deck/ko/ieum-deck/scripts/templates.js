@@ -447,7 +447,7 @@ function cover(ctx, slide, sb) {
   const logoBox = { x: L.W / 2 - 1.1 * S.sx, y: 5.6 * S.sy, w: 2.2 * S.sx, h: 0.6 };
   // 로고가 없으면 회사명 글자를 로고 자리보다 넓은 상자에 한 줄로 조판 (로고 자리 폭에서는 긴 회사명이 줄바꿈됨)
   const nameBox = { x: L.W / 2 - (COVER_NAME_W / 2) * S.sx, y: logoBox.y, w: COVER_NAME_W * S.sx, h: logoBox.h };
-  if (s.logo) A.image(ctx.pres, slide, logoBox, s.logo); else A.text(slide, nameBox, s.company || ctx.meta.company || "회사명", { sz: T.SIZE.marker, bold: true, align: "center", mg: [0, 0, 0, 0] });
+  if (s.logo) A.image(ctx.pres, slide, logoBox, s.logo); else A.text(slide, nameBox, s.company || ctx.meta.company || LB.label("common", "company"), { sz: T.SIZE.marker, bold: true, align: "center", mg: [0, 0, 0, 0] });
 }
 function contents(ctx, slide, sb) {
   const S = ctx.S, items = (sb.slots && sb.slots.items) || sb.items || [];
@@ -473,7 +473,7 @@ function divider(ctx, slide, sb) {
 function end(ctx, slide, sb) {
   const S = ctx.S, s = sb.slots || {};
   A.text(slide, { x: S.marginX, y: 2.9 * S.sy, w: S.contentW, h: 0.9 }, LB.label("end", "title", s.title), { sz: T.SIZE.dividerTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
-  A.text(slide, { x: S.marginX, y: 3.9 * S.sy, w: S.contentW, h: 0.5 }, s.company || ctx.meta.company || "회사명", { sz: T.SIZE.marker, align: "center", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.marginX, y: 3.9 * S.sy, w: S.contentW, h: 0.5 }, s.company || ctx.meta.company || LB.label("common", "company"), { sz: T.SIZE.marker, align: "center", mg: [0, 0, 0, 0] });
 }
 
 // ---------------------------------------------------------------- 제안개요

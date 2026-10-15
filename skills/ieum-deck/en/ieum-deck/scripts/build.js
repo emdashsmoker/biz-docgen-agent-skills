@@ -65,7 +65,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     // Without marker text, skip the marker band (prevents a defect that leaves only an empty square)
     const base = s.mode || "full";
     const mode = sb.bandMode || (String(b0.marker || "").trim() ? base : bandNoMarker(base));
-    const company = (sb.slots && sb.slots.company) || meta.company || "회사명";
+    const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
     if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });
