@@ -7,7 +7,7 @@ WHY: Packages made by pptxgenjs open in LibreOffice, but PowerPoint (Windows) an
 
 HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml first,
         remove Overrides for missing parts, apply recursively to embedded xlsx
-     2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language of Hangul runs,
+     2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language tags of runs and charts (meta.labels.language),
         correct the core properties relationship type, clear the application name, remove the document language and presentation format name
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
@@ -300,17 +300,32 @@ HANGUL_PATTERN = re.compile(r"[ᄀ-ᇿ㄰-㆏가-힣]")
 RUN_PATTERN = re.compile(r"<a:r>(.*?)</a:r>", re.S)
 RUN_TEXT_PATTERN = re.compile(r"<a:t(?:\s[^>]*)?>(.*?)</a:t>", re.S)
 RUN_LANG_PATTERN = re.compile(r'(<a:rPr\b[^>]*?\blang=")([^"]*)(")')
-KOREAN_LANG = "ko-KR"
+# Language tags. pptxgenjs writes every run, paragraph end and chart with en-US, so they are changed to the tags of the build record (meta.labels.language)
+# The defaults are language in assets/labels.json (the same table build.js reads). latin is the tag of ordinary runs, east_asia the tag of runs that contain Hangul
+PPTXGENJS_LANG = "en-US"
+LABELS_PATH = Path(__file__).resolve().parent.parent / "assets" / "labels.json"
+RUN_LANGUAGE = dict(json.loads(LABELS_PATH.read_text(encoding="utf-8"))["language"])
+LANG_TAG_PATTERN = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")
+LATIN_LANG_PATTERN = re.compile(r'(<a:(?:rPr|endParaRPr|defRPr)\b[^>]*?\blang="|<c:lang val=")' + re.escape(PPTXGENJS_LANG) + '(")')
+
+
+def set_latin_language(xml: str) -> tuple[str, int]:
+    """Changes the en-US tags pptxgenjs wrote (runs, paragraph ends, default run properties, chart language) to RUN_LANGUAGE["latin"]. The default en-US changes nothing"""
+    latin = RUN_LANGUAGE.get("latin") or PPTXGENJS_LANG
+    if latin == PPTXGENJS_LANG:
+        return xml, 0
+    return LATIN_LANG_PATTERN.subn(lambda m: m.group(1) + latin + m.group(2), xml)
 
 
 def set_hangul_run_language(xml: str) -> tuple[str, int]:
-    """Record the language (a:rPr lang) of runs that contain Hangul as ko-KR
+    """Record the language (a:rPr lang) of runs that contain Hangul as RUN_LANGUAGE["east_asia"] (default ko-KR)
 
     WHY: pptxgenjs writes every run with lang="en-US". LibreOffice re-serialization fills the language of the East Asian
          part of a run with the default of the runtime locale, so in an environment with no locale set Hangul is saved as zh-CN.
          Recording the language of Hangul runs in the document keeps ko-KR regardless of the runtime (the render is the same)
     """
     count = 0
+    east = RUN_LANGUAGE["east_asia"]
 
     def rep(m: re.Match) -> str:
         nonlocal count
@@ -318,10 +333,10 @@ def set_hangul_run_language(xml: str) -> tuple[str, int]:
         if not HANGUL_PATTERN.search("".join(RUN_TEXT_PATTERN.findall(body))):
             return m.group(0)
         lang = RUN_LANG_PATTERN.search(body)
-        if lang is None or lang.group(2) == KOREAN_LANG:
+        if lang is None or lang.group(2) == east:
             return m.group(0)
         count += 1
-        return "<a:r>" + body[:lang.start(2)] + KOREAN_LANG + body[lang.end(2):] + "</a:r>"
+        return "<a:r>" + body[:lang.start(2)] + east + body[lang.end(2):] + "</a:r>"
 
     return RUN_PATTERN.sub(rep, xml), count
 
@@ -421,6 +436,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
         xml, _ = set_korean_word_wrap(xml)
+        xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang
         return xml.encode("utf-8"), stats
@@ -432,6 +448,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["alien_extensions"] = dropped
         xml, fonts = add_chart_east_asian_fonts(xml)
         stats["chart_ea_fonts"] = fonts
+        xml, _ = set_latin_language(xml)
         return xml.encode("utf-8"), stats
 
     return payload, stats
@@ -675,9 +692,29 @@ def theme_palette(pptx_path: Path) -> set:
         return set()
 
 
+def record_language(pptx_path: Path) -> dict:
+    """Language tags (meta.labels.language) in the build record (<file name>.build.json). Values that are not tags are ignored and the defaults stay"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return {}
+    try:
+        lang = json.loads(record.read_text(encoding="utf-8")).get("language") or {}
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for key in ("latin", "east_asia"):
+        val = lang.get(key)
+        if isinstance(val, str) and LANG_TAG_PATTERN.fullmatch(val):
+            out[key] = val
+        elif val is not None:
+            print(f"[finalize] Language tag {key}={val!r} is malformed, keeping the default {RUN_LANGUAGE[key]}")
+    return out
+
+
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """Post-processes the input PPTX, overwrites it in place and returns the metrics before and after"""
     CELL_PALETTE.update(theme_palette(pptx_path))
+    RUN_LANGUAGE.update(record_language(pptx_path))
     before = inspect(pptx_path)
     print(format_metrics("before", before))
 

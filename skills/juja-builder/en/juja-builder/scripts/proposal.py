@@ -7,8 +7,9 @@ Commands
   figure    capture a whole deck page or part of it as a diagram PNG for insertion (--grid makes a grid PNG for reading crop values)
   init      create the workspace (--kind proposal|report|plan. state.json, default skeleton _양식/proposal.hwpx. A proposal adds 00_제안전략서.md, 회사자료.md, and the common part templates 원고/41 61 62. A pre-diagnosis report adds 00_진단서.md, a planning report adds 00_기획설계.md)
   ledger    tally the deciding sections of 01_배점표.md and update attributed points and status in 02_섹션대장.md
-  check     rfp | density | wording | tone | numbers | fill | volume | all (all is the check list for the output type)
-  build     merge 원고/*.md → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. The skeleton is regenerated on every run)
+  check     rfp | density | wording | tone | numbers | fill | volume | all (all is the check list for the output type. --skip leaves out named checks)
+  build     merge 원고/*.md → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. The skeleton is regenerated on every run.
+            --labels is a document label file. The default labels are Korean)
   render    hwpx or docx → PDF + page PNGs (hwpx uses rhwp first, LibreOffice with H2Orestart if missing. docx uses LibreOffice)
   selftest  judge the render path by typesetting and rendering a sample manuscript (the start gate. Result in state.json checks.render)
   skeleton  client template.hwpx → skeleton.hwpx + draft profile
@@ -48,7 +49,6 @@ from lxml import etree  # noqa: E402  installed together as a python-hwpx depend
 HP = lib.HP
 HH = "{http://www.hancom.co.kr/hwpml/2011/head}"
 ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"]
-GANADA = "가나다라마바사아자차카타파하"
 
 # ═══════════════════════════════════════════════════════════════════════
 # Settings 1: default skeleton and proposal profile
@@ -124,7 +124,7 @@ PROFILES = {
         "chapter_format": "{r}. {t}",       # Ⅰ. 제안 개요
         "chapter_label": "{r}",             # chapter band number cell
         "section_format": "{s}. {t}",       # 1. 제안 배경 및 필요성
-        "subsection_format": "{g}. {t}",    # 가. subsection
+        "subsection_format": "{g} {t}",     # 가. subsection ({g} is the letter notation of the letters label, "가.")
         "item_format": "{i}) {t}",          # 1) item
         "caption_prefix": None,             # None=unnumbered caption <title> (proposal convention). "{c}-" gives automatic numbering <표 1-1>
         "chapter_pt": 2000, "section_pt": 1600, "subsection_pt": 1400,  # sizes for hierarchy. None means the skeleton size
@@ -136,15 +136,14 @@ PROFILES["plan"] = dict(PROFILES["proposal"])
 PROFILES["report"] = {
     **PROFILES["proposal"],
     "chapter_format": "제{n}장 {t}", "chapter_label": "제{n}장",
-    "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g}. {t}",
+    "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g} {t}",
     "caption_prefix": "{c}-", "toc_lists": True,
     "chapter_band": {"label_w": 7600, "label_pt": 1800},   # one line up to "제10장". The width equals the Module band so title start lines align
 }
-# Output type: recorded in state.json by init --kind. Sets build's default profile and the delivered file name
-KINDS = {"proposal": {"profile": "proposal", "out": "제안서"},
-         "report": {"profile": "report", "out": "사전진단보고서"},
-         "plan": {"profile": "plan", "out": "기획보고서"}}
-TOC_LIST_TITLES = ("표 목차", "그림 목차")
+# Output type: recorded in state.json by init --kind. Sets build's default profile. The delivered file name is the label output.<type> (hwpx_report.py LABEL_DEFAULTS)
+KINDS = {"proposal": {"profile": "proposal"},
+         "report": {"profile": "report"},
+         "plan": {"profile": "plan"}}
 # Color theme: applies only to bands. Chosen with build --theme. base fills the chapter number cell, tint fills the Module label cell,
 # dark is the label text and the Task label border
 THEMES = {
@@ -317,6 +316,7 @@ CLIENT_SLOT_LABEL = "leftover agency naming slot (replace with the notation of t
 SUM_LABEL_RE = re.compile(r"^\s*(합\s*계|계|총\s*계|소\s*계|합계)\s*$")
 NUM_CELL_RE = re.compile(r"^[\d,]+(\.\d+)?%?$")
 STAGES = ["strategy", "rfp", "ledger", "core", "common", "check", "build"]
+CHECK_NAMES = ("rfp", "density", "volume", "wording", "tone", "numbers", "fill")   # names of the individual checks (targets of check all --skip)
 # check all targets per type. Density (per Task) and common part substitution are proposal-only. Wording comes from the key wording dictionary of the proposal strategy file
 CHECKS_BY_KIND = {"proposal": ("rfp", "density", "volume", "wording", "tone", "numbers", "fill"),
                   "report": ("rfp", "volume", "tone", "numbers", "fill"),
@@ -452,12 +452,12 @@ class ProposalLayout:
         elif level == 3:
             self.n.update(subsection=self.n["subsection"] + 1, ganada=0)
             ss = self.n["subsection"]
-            label = self.p["subsection_format"].format(c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=ss, g=GANADA[(ss - 1) % 14], t=text)
+            label = self.p["subsection_format"].format(c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=ss, g=lib.letter_label(ss), t=text)
             pt = self.p.get("subsection_pt")
         else:
             self.n["ganada"] += 1
             i = self.n["ganada"]
-            label = self.p.get("item_format", "{g}. {t}").format(i=i, g=GANADA[(i - 1) % 14], t=text)
+            label = self.p.get("item_format", "{g} {t}").format(i=i, g=lib.letter_label(i), t=text)
         if level == 1:  # chapter titles are bands like Module and Task. The label is recorded as is for TOC and page number matching
             self.cap_n = {"TABLE": 0, "PICTURE": 0}
             band_label = self.p.get("chapter_label", "{r}").format(n=c, r=ROMAN[(c - 1) % len(ROMAN)])
@@ -500,14 +500,16 @@ class ProposalLayout:
 
     def caption_label(self, kind: str, text: str) -> dict:
         """Caption text. Unnumbered profiles use <title> for tables and [title] for figures. Numbered profiles use <표 1-3> title and [그림 1-3] title
-        Returns: open (before the number), num (the number, None if absent), close (after the number), text (the whole). Numbered captions are registered in the list of tables and list of figures"""
+        Returns: open (before the number), num (the number, None if absent), close (after the number), text (the whole). Numbered captions are registered in the list of tables and list of figures
+        The word and brackets are the caption labels (hwpx_report.py LABEL_DEFAULTS)"""
         prefix = self.p.get("caption_prefix")
+        cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
         if prefix is None:
-            label = f"<{text}>" if kind == "TABLE" else f"[{text}]"
+            label = f"{cap['open']}{text}{cap['close']}"
             return {"open": label, "num": None, "close": "", "text": label}
         self.cap_n[kind] = self.cap_n.get(kind, 0) + 1
         num = self.cap_n[kind]
-        open_b, close_b = ("<표 ", "> ") if kind == "TABLE" else ("[그림 ", "] ")
+        open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         head = open_b + prefix.format(c=max(self.n["chapter"], 1))
         full = f"{head}{num}{close_b}{text}"
         self.captions.append((kind, full, close_b.strip() + text))
@@ -516,8 +518,8 @@ class ProposalLayout:
     def toc_lists(self) -> list[tuple[str, list[str]]]:
         if not self.p.get("toc_lists"):
             return []
-        return [(TOC_LIST_TITLES[0], [t for k, t, _ in self.captions if k == "TABLE"]),
-                (TOC_LIST_TITLES[1], [t for k, t, _ in self.captions if k == "PICTURE"])]
+        return [(lib.label("toc.tables"), [t for k, t, _ in self.captions if k == "TABLE"]),
+                (lib.label("toc.figures"), [t for k, t, _ in self.captions if k == "PICTURE"])]
 
     def unify_table_widths(self, elems: list[Element]):
         """Turn table width directives into column widths. A directive is a `(폭: ...)` line in the manuscript that the model sets qualitatively after checking whether a layout repeats.
@@ -858,6 +860,35 @@ def record(work: str, key: str, passed: bool, detail: dict):
     save_state(work, st)
 
 
+LABELS_NONE = "none"   # --labels none: clear the label file recorded in the workspace state.json
+
+
+def use_labels(work: str | None, opt: str | None) -> str | None:
+    """Apply the label file. A --labels value is recorded in the workspace state.json. Without a value the recorded file is used. none clears the record
+    Why record it: check (recognition of manuscript notation) and build (document labels) must read the manuscripts with the same labels, or verdicts and typesetting diverge"""
+    path = None
+    if opt and opt != LABELS_NONE:
+        path = os.path.abspath(opt)
+        if not os.path.exists(path):
+            sys.exit(f"ERROR: label file not found {opt}")
+    if work:
+        st = load_state(work)
+        if opt == LABELS_NONE and "labels" in st:
+            st.pop("labels")
+            save_state(work, st)
+        elif path and st.get("labels") != path:
+            st["labels"] = path
+            save_state(work, st)
+        elif not opt:
+            path = st.get("labels")
+            if path and not os.path.exists(path):
+                sys.exit(f"ERROR: label file recorded in state.json not found {path}. Set it again with a --labels path or clear it with --labels none")
+    if path:
+        changed = lib.load_labels(path)
+        print(f"labels: {path} ({len(changed)} keys overridden)")
+    return path
+
+
 def manuscript_kind(path: str) -> str:
     """File name without the sequence prefix. The first character is the check type (3, 5 original. 4, 6 common)"""
     return ORDER_PREFIX_RE.sub("", os.path.basename(path))
@@ -879,13 +910,19 @@ def module_table_path(work: str) -> str:
     return root if os.path.exists(root) else (legacy_module_table(work) or root)
 
 
+def caption_start(line: str) -> bool:
+    """Whether a line starts with the table caption notation (<표> title). The token is the notation.table label (default 표 plus tokens added by a label file)"""
+    st = line.strip()
+    return any(st.startswith(f"<{t}>") for t in lib.label("notation.table"))
+
+
 def module_table_block(work: str) -> str:
     """Take from the caption (<표>) through the last table row in 02_모듈총괄표.md. Includes the (장표: ) and (폭: ) directive lines between caption and table."""
     lines = open(os.path.join(work, F_MODULE_TABLE), encoding="utf-8").read().split("\n")
     rows = [i for i, ln in enumerate(lines) if ln.strip().startswith("|")]
     if not rows:
         sys.exit(f"ERROR: {F_MODULE_TABLE} has no table")
-    caps = [i for i, ln in enumerate(lines[:rows[0]]) if ln.strip().startswith("<표>")]
+    caps = [i for i, ln in enumerate(lines[:rows[0]]) if caption_start(ln)]
     return "\n".join(lines[(caps[-1] if caps else rows[0]):rows[-1] + 1])
 
 
@@ -1107,6 +1144,8 @@ def write_default_skeleton(base_dir: str) -> str:
                     d = _sk_build_header(d)
                 elif n == "Contents/section0.xml":
                     d = _sk_build_section(d)
+                elif n == "Contents/content.hpf":
+                    d = lib.clear_author_metadata(d.decode("utf-8")).encode("utf-8")
                 elif n == "Preview/PrvText.txt":
                     d = b""
                 method = zipfile.ZIP_STORED if n == "mimetype" else zipfile.ZIP_DEFLATED
@@ -1609,6 +1648,10 @@ def manuscript_hash(work: str) -> str:
     for f in manuscript_files(work) + [p for p in [module_table_path(work)] if os.path.exists(p)]:
         h.update(os.path.basename(f).encode("utf-8"))
         h.update(open(f, "rb").read())
+    labels = load_state(work).get("labels")
+    if labels and os.path.exists(labels):  # the label file changes how manuscript notation is recognized, so it is part of the fingerprint. Without a record the fingerprint is as before
+        h.update(b"labels")
+        h.update(open(labels, "rb").read())
     return h.hexdigest()
 
 
@@ -1911,10 +1954,23 @@ def cmd_check(a):
     work = a.work
     kind = work_kind(work)
     results = {}
+    labels = use_labels(work, a.labels)
+    # check all --skip: run without the named checks. The skip and its reason go into 05_점검기록.md and state.json, and build accepts this PASS record
+    skips = [x.strip() for x in (a.skip or "").split(",") if x.strip()]
+    if skips and a.what != "all":
+        sys.exit("ERROR: --skip is for check all only")
+    if (bad := [x for x in skips if x not in CHECK_NAMES]):
+        sys.exit(f"ERROR: unknown check names {bad} (check names: {', '.join(CHECK_NAMES)})")
+    if (extra := [x for x in skips if x not in CHECKS_BY_KIND[kind]]):
+        print(f"WARN: --skip {extra} not in the check all list of the {kind} type. Ignored")
+    skips = [x for x in CHECKS_BY_KIND[kind] if x in skips]
+    reason = a.skip_reason or "no reason given (state one with --skip-reason)"
+    if skips:
+        print(f"[skipped] {', '.join(skips)} (reason: {reason})")
 
     def run(name: str) -> bool:
-        """Individual checks run regardless of type. all runs only the check list for the type (CHECKS_BY_KIND)"""
-        return a.what == name or (a.what == "all" and name in CHECKS_BY_KIND[kind])
+        """Individual checks run regardless of type. all runs the check list for the type (CHECKS_BY_KIND) minus the --skip targets"""
+        return a.what == name or (a.what == "all" and name in CHECKS_BY_KIND[kind] and name not in skips)
     if run("rfp"):
         ok, fails, warns = check_rfp(work)
         _print_result("requirement placement", ok, fails, warns)
@@ -1960,7 +2016,9 @@ def cmd_check(a):
         record(work, "fill", ok, {"fails": fails})
         results[name] = (ok, fails, warns)
     if a.what == "all":
-        out = ["# 점검기록", f"- Run {datetime.now().isoformat(timespec='minutes')}", ""]
+        out = ["# 점검기록", f"- Run {datetime.now().isoformat(timespec='minutes')}"] + ([f"- Labels {labels}"] if labels else []) + [""]
+        if skips:
+            out += ["## Skipped checks", f"- (skipped) {', '.join(skips)} (check all --skip)", f"- (reason) {reason}", ""]
         for name, (ok, fails, warns) in results.items():
             out.append(f"## {name} {'PASS' if ok else 'FAIL'}")
             out += [f"- (defect) {f}" for f in fails] + [f"- (warning) {w}" for w in warns] + [""]
@@ -1968,7 +2026,8 @@ def cmd_check(a):
         allok = all(v[0] for v in results.values())
         st = load_state(work)
         st["stages"]["check"] = datetime.now().isoformat(timespec="seconds")
-        st["checks"]["all"] = {"pass": allok, "hash": manuscript_hash(work)}
+        st["checks"]["all"] = {"pass": allok, "hash": manuscript_hash(work),
+                               **({"skipped": skips, "skip_reason": reason} if skips else {})}
         save_state(work, st)
         print(f"{'OK' if allok else 'FAIL'}: {F_REPORT} recorded. {'build may proceed' if allok else 'fix defects and rerun'}")
         sys.exit(0 if allok else 1)
@@ -2004,7 +2063,7 @@ def module_table_parent(files: list[str]) -> str | None:
         is_table_file = manuscript_kind(f).endswith(MODULE_TABLE_SUFFIX)
         for ln in open(f, encoding="utf-8").read().split("\n"):
             st = ln.strip()
-            if is_table_file and (st.startswith("|") or st.startswith("<표>")):
+            if is_table_file and (st.startswith("|") or caption_start(st)):
                 return parent
             if re.match(r"^#{1,2} ", st):
                 parent = f
@@ -2039,8 +2098,10 @@ def scope_footnotes(text: str, scope: str) -> tuple[str, list[str]]:
 def cmd_build(a):
     work = a.input if os.path.isdir(a.input) else None
     kind = work_kind(work)
+    use_labels(work, a.labels)
     profile_key = a.profile or KINDS[kind]["profile"]
     profile = PROFILES.get(profile_key) if profile_key in PROFILES else json.load(open(profile_key, encoding="utf-8"))
+    profile = lib.apply_format_labels(profile)   # label formats.* override the heading number formats when present
     formats = ("hwpx", "docx") if a.format == "both" else (a.format,)
     if "docx" in formats and (a.skeleton or profile_key not in PROFILES):
         sys.exit("ERROR: docx supports only the default template (settings definitions). Typeset client templates (--skeleton, profile JSON) with --format hwpx")
@@ -2080,7 +2141,7 @@ def cmd_build(a):
                 sys.exit("ERROR: " + msg)
             print("WARN: " + msg)
         src = merged
-        out_base = os.path.splitext(a.output)[0] if a.output else os.path.join(work, D_DELIVER, KINDS[kind]["out"])
+        out_base = os.path.splitext(a.output)[0] if a.output else os.path.join(work, D_DELIVER, lib.label(f"output.{kind}"))
         parent = module_table_parent(files)
         if kind == "proposal" and parent and manuscript_kind(parent)[:1] in PREFIX_FILL:  # --force is for trial typesetting, so it warns instead of stopping
             msg = (f"the module overview table sits under a common part heading ({os.path.basename(parent)}). "
@@ -2093,7 +2154,9 @@ def cmd_build(a):
         if not rec.get("pass") and not a.force:
             sys.exit("ERROR: no `check all` PASS record. Fix the defects, pass check all, then build. Use --force only for trial typesetting")
         if rec.get("hash") and rec["hash"] != manuscript_hash(work) and not a.force:
-            sys.exit("ERROR: manuscripts or the module overview table changed after check all passed. Rerun check all, then build")
+            sys.exit("ERROR: manuscripts, the module overview table, or the label file changed after check all passed. Rerun check all, then build")
+        if rec.get("pass") and rec.get("skipped"):
+            print(f"NOTE: the check all PASS record skipped {', '.join(rec['skipped'])} (reason: {rec.get('skip_reason', '')})")
         print(f"merged {len(files)} files → {merged}")
     else:
         src = a.input
@@ -2407,10 +2470,13 @@ def main():
     p.set_defaults(func=cmd_figure)
 
     p = sub.add_parser("check", help="rfp | density | volume | wording | tone | numbers | fill | all")
-    p.add_argument("what", choices=["rfp", "density", "volume", "wording", "tone", "numbers", "fill", "all"])
+    p.add_argument("what", choices=[*CHECK_NAMES, "all"])
     p.add_argument("work")
     p.add_argument("--file", help="one manuscript for density/volume")
     p.add_argument("--reset-whitelist", action="store_true", help="refix the tone whitelist (only on the user's instruction)")
+    p.add_argument("--skip", help="checks to leave out of check all (comma separated, for example density,wording,tone,numbers). Only for the Korean-specific checks of manuscripts not written in Korean")
+    p.add_argument("--skip-reason", help="reason for --skip. Recorded in 05_점검기록.md and state.json")
+    p.add_argument("--labels", help="label file (JSON). Applied to the recognition of manuscript notation and recorded in state.json (none clears the record)")
     p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("build", help="workspace (merge of 원고/*.md) or manuscript.md → hwpx, docx")
@@ -2432,6 +2498,7 @@ def main():
     p.add_argument("--header", help='header: "text;align=RIGHT"')
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="table width unification: manual=apply only (폭: ...) directives in manuscripts (default), auto=also group tables of the same layout automatically")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="band color theme: navy (default), mono (black and gray). Table format does not depend on the theme")
+    p.add_argument("--labels", help="label file (JSON). Overrides the document's fixed strings, manuscript notation, language tags, and delivered file names. For a workspace it is recorded in state.json (none clears the record)")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_build)
 

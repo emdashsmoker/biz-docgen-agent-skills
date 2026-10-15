@@ -41,7 +41,7 @@
 | `slots.rowFlow` | If true, down arrows between rows |
 | `slots.numbered` | If true, ①, ②, ③ numbers before cell titles |
 | `slots.dividers` | If true, gray divider lines between cells and rows (quadrant chart layout). Vertical lines at the same position in each row join into one line (crossing the horizontal line) |
-| `slots.point` | Point band text under the body (the label is the slide `pointLabel` or `meta.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| `slots.point` | Point band text under the body (the label is the slide `pointLabel`, then `meta.pointLabel`, then `meta.labels.common.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
 | `slots.conclusion` | Conclusion band text under the body |
 
 - A build warning appears when the cell count differs from the `regions` count
@@ -117,6 +117,7 @@
 | `chart` | Native chart | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` is the number format of data labels and the value axis (e.g. "0.0" shows one decimal place. If unset, bar and line charts round to integers) |
 | `image` | Image or placeholder box | `src` (path or data URI), `caption` (description under the image), `label` (placeholder box text) |
 
+- Set deck-wide values of block labels (the label fields of valuechain and porter, and labels of goalsystem, house, logicmodel and canvas) under the block name keys of `meta.labels` (label slots section of `references/templates.md`)
 - Line breaks in block body items (`items`, and `text` of cells, rows and steps) are typeset as item breaks (a bullet per item)
 - Line breaks in labels, titles, conclusion strips (`lead`) and `text` block text are typeset as new lines
 - `x` and `y` of a `matrix` item set the position in the quadrant as a 0-1 ratio (0 is low, 1 is high)

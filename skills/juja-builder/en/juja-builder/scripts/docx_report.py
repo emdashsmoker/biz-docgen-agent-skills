@@ -45,7 +45,6 @@ SPACER_MIN_TWIP = 20       # minimum height of a spacing paragraph (1pt). Word m
 JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIGHT": WD_ALIGN_PARAGRAPH.RIGHT,
       "JUSTIFY": WD_ALIGN_PARAGRAPH.JUSTIFY, "DISTRIBUTE": WD_ALIGN_PARAGRAPH.DISTRIBUTE} if Document else {}
 FOOTNOTE_SUFFIX = ")"      # character after the footnote number. Same as the hwpx footnote number format (number and closing parenthesis)
-SEQ_NAME = {"TABLE": "표", "PICTURE": "그림"}   # caption number field names
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # default table cell margins left, right, top, bottom (same as the python-hwpx table default)
 # Schema order of formatting elements. Word judges elements out of order as corruption
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
@@ -65,6 +64,12 @@ SPACE_SPLIT_RE = __import__("re").compile(r"( +)")
 SECTPR_ORDER = ("headerReference", "footerReference", "footnotePr", "endnotePr", "type", "pgSz", "pgMar", "paperSrc",
                 "pgBorders", "lnNumType", "pgNumType", "cols", "formProt", "vAlign", "noEndnote", "titlePg",
                 "textDirection", "bidi", "rtlGutter", "docGrid", "printerSettings")
+
+
+def seq_name(kind: str) -> str:
+    """Caption number field (SEQ) name. seq of the caption label, otherwise label. Word field names cannot hold spaces, so spaces become underscores"""
+    cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
+    return "_".join((cap["seq"] or cap["label"]).split())
 
 
 def tw(hu: float) -> int:
@@ -173,7 +178,8 @@ class DocxBuilder:
             f'<w:docDefaults {nsdecls("w")}><w:rPrDefault><w:rPr>'
             f'<w:rFonts w:ascii="{f}" w:eastAsia="{f}" w:hAnsi="{f}" w:cs="{f}"/>'
             f'<w:sz w:val="{int(body[3] * 2)}"/><w:szCs w:val="{int(body[3] * 2)}"/>'
-            f'<w:lang w:val="ko-KR" w:eastAsia="ko-KR" w:bidi="ar-SA"/></w:rPr></w:rPrDefault>'
+            f'<w:lang w:val="{lib.label("language.latin")}" w:eastAsia="{lib.label("language.east_asia")}" w:bidi="ar-SA"/>'
+            f'</w:rPr></w:rPrDefault>'
             # 한/글 does not insert spacing between Korean and Latin text automatically. Turn off Word's automatic spacing
             f'<w:pPrDefault><w:pPr><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/>'
             f'<w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>')
@@ -384,7 +390,8 @@ class DocxBuilder:
         return None
 
     def caption_label(self, kind: str, text: str) -> dict:
-        label = f"<{text}>" if kind == "TABLE" else f"[{text}]"   # tables use <title>, figures use [title]
+        cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
+        label = f"{cap['open']}{text}{cap['close']}"   # tables use <title>, figures use [title] (brackets of the caption labels)
         return {"open": label, "num": None, "close": "", "text": label}
 
     def _caption(self, kind: str, text: str, side: str):
@@ -401,7 +408,7 @@ class DocxBuilder:
         self._text(p, label["open"], pt)
         if label["num"] is not None:  # per-chapter numbers: reset the number to 1 at the first caption of a chapter
             reset = " \\r 1" if label["num"] == 1 else ""
-            instr = f" SEQ {SEQ_NAME[kind]} \\* ARABIC{reset} "
+            instr = f" SEQ {seq_name(kind)} \\* ARABIC{reset} "
             fld = parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr="{escape(instr)}"><w:r><w:t>{label["num"]}</w:t></w:r></w:fldSimple>')
             p._p.append(fld)
             self._text(p, label["close"], pt)

@@ -15,6 +15,7 @@
 | headlineStyle | noun(명사형, 기본), polite(존댓말) |
 | marker | 마커 도형 모양. square(기본), bar, triangle |
 | pointLabel | 수행 Point 밴드의 라벨 문구 (기본 "수행 Point"). 슬라이드별 지정도 가능 |
+| labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
@@ -27,6 +28,18 @@
 | rfp.moduleTasks | [{id: "M1-T2", title, rfp: ["T1", "T3"], rfpNamed}] 제안사가 설계한 Task. rfpNamed 는 title 이 RFP 가 정한 명칭일 때 true (예시 모듈명 검사 예외) |
 | rfp.evalItems | [{id: "A-1", name, score, quantitative}] 세부평가항목 |
 | rfp.wording | [{standard, variants: []}] 핵심 워딩의 표준 표기와 교체 대상 변형 표기 |
+
+### meta.labels
+
+- 슬라이드마다 반복하던 라벨 슬롯 값(표지 label, 간트 머리, 모듈 개요 행 라벨 등)을 덱 단위로 한 번 지정
+- 해석 순서는 슬라이드 슬롯 값, meta.labels, 기본값(`assets/labels.json`)
+- 키는 템플릿 또는 composite 블록 이름과 슬롯 이름 (전체 키, 기본값, 영문 예시는 `references/templates.md` 라벨 슬롯 절)
+    + common.pointLabel: 수행 Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선)
+    + language.latin, language.east_asia: PPTX 글자의 언어 태그 (기본 en-US, 한글이 든 run 은 ko-KR)
+    + notation.source: 주석 줄로 인식할 토큰 추가 목록 (기본 토큰 ※, 출처:, 자료:, Source:, Note: 는 유지)
+- 일부 키만 지정 가능 (생략한 키는 기본값)
+- 알 수 없는 이름과 형식 오류는 lint FAIL
+- 예: `"labels": {"cover": {"label": "Proposal"}, "contents": {"title": "Contents"}, "gantt": {"groupHead": "Group", "taskHead": "Task", "reportHead": "Reports"}, "language": {"latin": "en-US"}}`
 
 ### themeColors 색 키
 

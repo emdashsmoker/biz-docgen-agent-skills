@@ -90,25 +90,25 @@
 | Cover and divider | divider | Divider | no("Ⅰ"), title, items[] | Sections 1-8 |
 | Cover and divider | end | Closing | title, company | - |
 | Proposal overview | purpose | Background and purpose | leads[{title, sub[], note}], purpose, issues[], leftHead, rightHead, purposeHead, issueHead, client, clientPos | Leads 2-4. Each lead has a one-sentence title and 2-3 evidence items. The purpose box label is purposeHead (default "목적") |
-| Proposal overview | scope | Vision, goal, module scope, outputs | vision, goal, goalHead, modules[{title, items[]}], outputs[text or per-module text array] | Modules 2-5. The goal label text is goalHead (default "본 과업의 최종 목표"). An OUTPUT label sits left of the output row. If outputs is a list of arrays as long as the module count, items align under the module columns as multi-item bullets. If it is a text list, 1-2 items are centered in cells of module column width, 3-5 items take one line, 6-10 items take two lines with up to 5 cells per line |
+| Proposal overview | scope | Vision, goal, module scope, outputs | vision, goal, goalHead, visionTag, scopeTag, outputTag, modules[{title, items[]}], outputs[text or per-module text array] | Modules 2-5. The goal label text is goalHead (default "본 과업의 최종 목표"). An OUTPUT label sits left of the output row (change the structure labels VISION, SCOPE and OUTPUT with visionTag, scopeTag and outputTag). If outputs is a list of arrays as long as the module count, items align under the module columns as multi-item bullets. If it is a text list, 1-2 items are centered in cells of module column width, 3-5 items take one line, 6-10 items take two lines with up to 5 cells per line |
 | Proposal overview | features | Question banner and capability tiles | question, tiles[{title, items[]}] | Tiles 2-4, 1-4 items per tile |
 | Proposal overview | strategy | House shape with roof (goal), strategy pillars and base (conclusion) | goal, strategies[{title, items[], result}], conclusion | Strategies 2-4, 4-5 items per strategy (enough to fill the pillar). Pillars share one width. The roof and base are 0.2 inch wider than the pillar group on each side. The gap between tiers is 0.16 inch. Text: roof 16pt (shrinks to 14pt if long), pillar titles and base 14pt, pillar items 12pt |
-| Proposal overview | process | Module chevrons and Task boxes | modules[{id, title, tasks[]}] | Modules 2-7, 2-6 Tasks per module. Put the module number in id (title holds only the module name). Task boxes are spread so the last box bottom meets the body bottom (box spacing capped at 1.5x the even spacing). Modules are joined with L-shaped connectors. With 6 or more modules, every chevron gets the same auto-adjusted height and font |
+| Proposal overview | process | Module chevrons and Task boxes | modules[{id, title, tasks[]}], idFormat, titleFormat | Modules 2-7, 2-6 Tasks per module. Put the module number in id (title holds only the module name). Without id, idFormat applies (default "Module {n}"), and the chevron text follows titleFormat (default "M{n}. {t}"). Task boxes are spread so the last box bottom meets the body bottom (box spacing capped at 1.5x the even spacing). Modules are joined with L-shaped connectors. With 6 or more modules, every chevron gets the same auto-adjusted height and font |
 | Execution plan | module_overview | Module overview table | tasks[{title, process[], data[], output[]}], rowLabels | Tasks 2-6. List every output in the output array when there are several (multi-item bullets) |
-| Execution plan | task | Task design table and measured sample | leftHead, head[], rows[[item, content]], sample{head, table or items or image or chart, tag}, point | Rows 3-6. The design table column titles are head (default "항목", "내용") |
-| Execution plan | task_multi | Task bundle matrix (for page limits) | tasks[{id, title, items[]}], rowLabels[], freeLabel, point | Tasks 2-4. items use the "label : value" format (row alignment condition). The label of the row collecting items not in this format is freeLabel (default "주요 내용") |
+| Execution plan | task | Task design table and measured sample | leftHead, head[], rows[[item, content]], sample{head, table or items or image or chart, tag}, point | Rows 3-6. The design table column titles are head (default "항목", "내용"). The sample tag is sample.tag (default Sample) |
+| Execution plan | task_multi | Task bundle matrix (for page limits) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Tasks 2-4. items use the "label : value" format (row alignment condition). The label of the row collecting items not in this format is freeLabel (default "주요 내용"). Without id, idFormat applies (default "Task {n}") |
 | Analysis and comparison | bullets | Panels in 1-4 columns | panels[{head, items or text, headFill, fill}], point | Columns 1-4 |
 | Analysis and comparison | table | Full-width table | title, legend, head[], rows[][], point | Rows 1-16 |
 | Analysis and comparison | chart_text | Chart with findings | chartTitle, chart{type, barDir, categories, series, numFmt}, findings[{head, items}] | Findings 1-3. The chart fields are the same as the chart block in `references/recipes.md` |
 | Analysis and comparison | chart_two | Two charts side by side | left{title, chart, items}, right{title, chart, items} | - |
 | Analysis and comparison | compare | AS-IS, TO-BE, gap | asis{head, items}, tobe{head, items}, gap[], gapHead | Items 2-4. Write each item as a title (text) of about 20 characters and add 1-2 evidence sub-items (sub). Write each gap as an improvement means of about 10 characters per item and match the item count (a one-sentence gap goes in a single gap entry typeset in the strip under the two panels) |
-| Analysis and comparison | swot | SWOT | S[], W[], O[], T[], so[], wo[], st[], wt[], labels{S, W, O, T} | 1-4 per cell. The factor cell titles are labels (default "강점 (S)", "약점 (W)", "기회 (O)", "위협 (T)") |
+| Analysis and comparison | swot | SWOT | S[], W[], O[], T[], so[], wo[], st[], wt[], labels{S, W, O, T, SO, WO, ST, WT} | 1-4 per cell. The factor cell titles are labels (default "강점 (S)", "약점 (W)", "기회 (O)", "위협 (T)"). The strategy cell titles change with SO, WO, ST and WT of labels |
 | Analysis and comparison | cards | N columns of cards | cards[{title, items or text}], point | 2-8 |
 | Analysis and comparison | steps | Chevron steps with descriptions | steps[{title, items[]}], stepLabel, point | 3-5. Set the prefix with stepLabel (default STEP, "" shows the title only). Item spacing is spread to the box height automatically. The description box height is capped at 1.3x the item height. The group is centered vertically in the body |
-| Analysis and comparison | illustrative | Output example | title, table or image | - |
+| Analysis and comparison | illustrative | Output example | title, table or image, tag | The tag is tag (default Illustrative) |
 | Analysis and comparison | conclusion | Synthesis with conclusion band | panels[{head, items}], conclusion | Panels 2-4. Write panel items as judgment sentences of about 20 characters and add evidence figures as sub-items (sub) |
 | Schedule and organization | roadmap | Yearly roadmap by strategy | periods[], lanes[{title, tasks[{text, from, to}]}], laneHead, note | Lanes 2-5. The lane header text is laneHead (default "전략") |
-| Schedule and organization | gantt | Schedule | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead | 6-12 months. The category column header is groupHead (default "구분"), the task column header is taskHead (default "과업"), and the report row group name is reportHead (default "보고회"). When the row height cap (0.32 inch) leaves spare height, the table is centered vertically in the body |
+| Schedule and organization | gantt | Schedule | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12 months. The category column header is groupHead (default "구분"), the task column header is taskHead (default "과업"), the report row group name is reportHead (default "보고회"), and the month header is monthFormat (default "{n}M"). When the row height cap (0.32 inch) leaves spare height, the table is centered vertically in the body |
 | Schedule and organization | org | Project organization chart | client, clientNote, pm, pmTitle, qa, qaTitle, advisory, advisoryTitle, advisoryNote, teams[{name, members[], share}], note | Module boxes 2-8 (7 or more are placed in 2 rows automatically). Boxes show staff only |
 | Schedule and organization | staff_card | Staff cards | people[{role, name, career[], records[], photo}], recordsHead | 2-6 (used from 4 people). Without photos, the photo column is omitted. The track record strip label is recordsHead (default "주요 실적") |
 | Schedule and organization | orgchart | Company organization chart (CEO, advisory board, management support, divisions, teams, staff table, partner network) | ceo, advisory{name, note}, staff{name, note}, units[{name, teams[]}], people[{label, count, ratio}], peopleHead[], network[], leftHead, rightHead, netHead | Divisions 2-8, 1-6 teams per division. Spare height goes to box height, item spacing and connector length in that order. The group then moves down by the remaining height to sit centered vertically |
@@ -120,36 +120,100 @@
 
 ## Label slots
 
-- An empty slot is typeset with the default below (Korean)
-- For English decks and non-proposal outputs, set a label in the slot
+- The fixed labels of templates and blocks resolve in this order: the slide slot value, then `meta.labels`, then the default (Korean)
+    + An empty slot takes the value of the same template (or block) and slot in `meta.labels`
+    + Without a `meta.labels` value, the default below is typeset (the default table is `assets/labels.json`)
+    + A deck without `meta.labels` is typeset with the same Korean labels as before
+- For English decks and non-proposal outputs, set the labels shared by the deck once in `meta.labels` and set only the labels that differ per slide in the slots
+- The form of `meta.labels` is `{template or block: {slot: label}}`
+    + Nested slots use dotted keys (e.g. `"task": {"sample.head": "..."}`)
+    + List labels (rowLabels, head, peopleHead) have the same count as the default
+    + Object labels (labels) are merged per key (only the given keys change)
+    + In format labels (idFormat, titleFormat, monthFormat), `{n}` is the number and `{t}` the title
+    + Any key may be omitted (omitted keys keep the default)
+- The Point band label resolves from the slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default
+- lint reports unknown template, block and slot names and value type errors as FAIL (a format label missing `{n}` or `{t}` is a WARN)
 
 | Template or block | Slot | Default |
 |---|---|---|
-| All | meta.pointLabel (a slide's pointLabel takes precedence) | 수행 Point |
-| All | meta.company | 회사명 |
+| common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | 수행 Point |
+| common | company (the slide company and meta.company take precedence) | 회사명 |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |
 | purpose | leftHead, rightHead, purposeHead, issueHead | 배경 및 필요성, 과업의 목적, 목적, 주요 이슈 및 해결방안 |
-| scope | goalHead | 본 과업의 최종 목표 |
+| scope | goalHead, visionTag, scopeTag, outputTag | 본 과업의 최종 목표, VISION, SCOPE, OUTPUT |
+| process | idFormat, titleFormat | Module {n}, M{n}. {t} |
 | module_overview | rowLabels | 단계, 추진과정, 활용자료, 산출물 |
-| task | leftHead, head, sample.head | Task 수행 설계, [항목, 내용], 실측 표본 (※ 시안) |
-| task_multi | freeLabel | 주요 내용 |
+| task | leftHead, head, sample.head, sample.tag | Task 수행 설계, [항목, 내용], 실측 표본 (※ 시안), Sample |
+| task_multi | freeLabel, idFormat | 주요 내용, Task {n} |
+| compare | asis.head, tobe.head, gapHead | AS-IS, TO-BE, GAP |
+| swot | labels{S, W, O, T, SO, WO, ST, WT} | 강점 (S), 약점 (W), 기회 (O), 위협 (T), SO, WO, ST, WT |
+| steps | stepLabel ("" shows the title only) | STEP |
 | roadmap | laneHead | 전략 |
-| gantt | groupHead, taskHead, reportHead | 구분, 과업, 보고회 |
+| gantt | groupHead, taskHead, reportHead, monthFormat | 구분, 과업, 보고회, {n}M |
 | org | client, pmTitle, qaTitle, advisoryTitle | 발주기관, 총괄책임자 (PM), 품질관리자 (PL), 자문위원회 |
 | staff_card | recordsHead | 주요 실적 |
-| swot | labels{S, W, O, T} | 강점 (S), 약점 (W), 기회 (O), 위협 (T) |
 | orgchart | ceo, leftHead, rightHead, peopleHead, netHead | 대표이사, 조직 구성, 인력 구성, [구분, 인원, 비중], 주요 협력 네트워크 |
-| illustrative | title | 참고자료 및 산출물 예시 |
+| illustrative | title, tag | 참고자료 및 산출물 예시, Illustrative |
 | valuechain block | stageLabel, support.label, base.label | 단계, 지원 기능, 공통 기반 |
 | porter block | supportLabel, primaryLabel, ownerLabel | 지원 활동, 본원적 활동, 담당 부서 |
 | goalsystem block | labels{vision, purpose, goal, performance, strategies, tasks, quant, qual} | 비전, 사업 목적, 사업 목표, 성과 목표, 전략분야, 전략과제 및 세부과제, 정량, 정성 |
 | house block | labels{mission, vision, goals, tasks, base} | 미션, 비전, 전략목표, 전략과제, 핵심가치 |
 | logicmodel block | labels{issue, goal, beneficiary, input, activity, output, outcome, assumption} | 1. 문제/이슈, 2. 목표, 3. 수혜자, 4. 투입, 5. 활동, 6. 산출, 7. 성과/영향, 8. 가정 |
 | canvas block | labels{partners, activities, resources, value, relationships, channels, segments, cost, revenue} | 핵심 파트너, 핵심 활동, 핵심 자원, 가치 제안, 고객 관계, 채널, 고객 세그먼트, 비용 구조, 수익원 |
+| language | latin, east_asia | en-US, ko-KR |
+| notation | source | [] (no extra tokens) |
 
-- Image placeholder box text (이미지, 사진, 표본 화면, 산출물 화면) and staff placeholders ([인력A], [인력]) appear only while the content is empty and disappear once it is filled
+- (language) Language tags of the PPTX text (run lang, chart c:lang)
+    + latin is the tag of ordinary runs and charts, east_asia the tag of runs that contain Hangul
+    + finalize.py applies the values of the build record (<file name>.build.json) (the defaults give the same result as before)
+- (notation) Extra tokens recognized as note lines. Write them without the colon (e.g. `["Fuente", "Nota"]`)
+    + The built-in tokens (※, 출처:, 자료:, Source:, Note:) stay recognized
+    + Extra tokens also make only items starting in the "token:" form notes, and the lint note notation check includes them
+- The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
+- The company name is content, so set it with `meta.company`. Without it, the placeholder is the `common.company` label (default "회사명")
+- The fixed text that is not a label slot is placeholders that show only while the content is empty, and numbering symbols unrelated to language
+    + Image placeholder box text (이미지, 사진, 표본 화면, 산출물 화면, 로고) and staff placeholders ([인력A], [인력]) disappear once the content is filled
+    + The stand-in text of empty custom slide image slots ([기관명], "접수 → 검토 → 승인 → 처리 → 통보", and a description when the source text contains "파쇄") and the sample items of empty chart slots (항목 A, B, C) also disappear once the slot is filled
+    + Contents Roman numerals (Ⅰ-Ⅶ), circled numbers (①-⑩), 1., 1-1. and 1) numbering and the ※ mark stay fixed
+
+### English label example
+
+- A complete `meta.labels` example for English decks (the same keys as `assets/labels.json`)
+- For a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
+
+```json
+{"meta": {"labels": {
+ "common": {"pointLabel": "Key point", "company": "Company name"},
+ "cover": {"label": "Proposal"},
+ "contents": {"title": "Contents"},
+ "end": {"title": "Thank you"},
+ "purpose": {"leftHead": "Background and need", "rightHead": "Purpose of the project", "purposeHead": "Purpose", "issueHead": "Key issues and solutions"},
+ "scope": {"goalHead": "Final goal of the project", "visionTag": "VISION", "scopeTag": "SCOPE", "outputTag": "OUTPUT"},
+ "process": {"idFormat": "Module {n}", "titleFormat": "M{n}. {t}"},
+ "module_overview": {"rowLabels": ["Stage", "Process", "Data used", "Outputs"]},
+ "task": {"leftHead": "Task design", "head": ["Item", "Details"], "sample.head": "Measured sample (※ draft)", "sample.tag": "Sample"},
+ "task_multi": {"freeLabel": "Key content", "idFormat": "Task {n}"},
+ "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},
+ "swot": {"labels": {"S": "Strengths (S)", "W": "Weaknesses (W)", "O": "Opportunities (O)", "T": "Threats (T)", "SO": "SO", "WO": "WO", "ST": "ST", "WT": "WT"}},
+ "steps": {"stepLabel": "STEP"},
+ "roadmap": {"laneHead": "Strategy"},
+ "gantt": {"groupHead": "Group", "taskHead": "Task", "reportHead": "Reports", "monthFormat": "M{n}"},
+ "org": {"client": "Client", "pmTitle": "Project manager (PM)", "qaTitle": "Quality manager (QM)", "advisoryTitle": "Advisory committee"},
+ "staff_card": {"recordsHead": "Key projects"},
+ "orgchart": {"ceo": "CEO", "leftHead": "Organization", "rightHead": "Staff", "peopleHead": ["Group", "Staff", "Share"], "netHead": "Partner network"},
+ "illustrative": {"title": "Reference and output examples", "tag": "Illustrative"},
+ "valuechain": {"stageLabel": "Stage", "support.label": "Support functions", "base.label": "Common base"},
+ "porter": {"supportLabel": "Support activities", "primaryLabel": "Primary activities", "ownerLabel": "Owner"},
+ "goalsystem": {"labels": {"vision": "Vision", "purpose": "Purpose", "goal": "Goal", "performance": "Performance goals", "strategies": "Strategic areas", "tasks": "Strategic tasks\nand sub-tasks", "quant": "Quant.", "qual": "Qual."}},
+ "house": {"labels": {"mission": "Mission", "vision": "Vision", "goals": "Strategic goals", "tasks": "Strategic tasks", "base": "Core values"}},
+ "logicmodel": {"labels": {"issue": "1. Problem/issue", "goal": "2. Goal", "beneficiary": "3. Beneficiaries", "input": "4. Inputs", "activity": "5. Activities", "output": "6. Outputs", "outcome": "7. Outcomes/impact", "assumption": "8. Assumptions"}},
+ "canvas": {"labels": {"partners": "Key partners", "activities": "Key activities", "resources": "Key resources", "value": "Value propositions", "relationships": "Customer relationships", "channels": "Channels", "segments": "Customer segments", "cost": "Cost structure", "revenue": "Revenue streams"}},
+ "language": {"latin": "en-US", "east_asia": "ko-KR"}
+}}}
+```
+
 
 ## free blocks
 

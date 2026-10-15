@@ -79,9 +79,6 @@ class Char:
         return _per_lang(self.spacing)
 
 
-ABSENT = "absent"  # paragraph that does not write the heading element at all (reproduces the form's stored format as is)
-
-
 def bullet(char: str, offset: int = 50, adjust: int = 0) -> tuple:
     """Bullet. offset is the gap between symbol and text (% of font size), adjust is the symbol width adjustment (HWPUNIT)
     The Hangul bullet character U+00AD is a soft hyphen that Hangul draws as '-'; DOCX replaces it with '-'"""
@@ -100,7 +97,7 @@ class Para:
     line: int = 160                               # line spacing % (of font size)
     margin: tuple = (0, 0, 0, 0, 0)               # first line (negative is a hanging indent), left, right, above, below
     legacy_margin: tuple | None = None            # value stored for older Hangul versions. If None, written as 2x margin
-    head: tuple | str | None = None               # bullet(), outline(), ABSENT, None (no bullet)
+    head: tuple | None = None                     # bullet(), outline(), None (no bullet)
     grid: bool = True                             # snap to the page grid
     tab: str = "none"                             # TABS key
     break_word: bool = False                      # Hangul line-break unit (True: character, False: word)
@@ -275,7 +272,7 @@ FLAT = Form(
               Para(margin=(0, 0, 0, 1500, 0), head=outline(2), tab="auto_left", keep_next=True)),
         Style("ganada", "가나다 제목", "Ganada Heading",
               Char(GOTHIC, 13, bold=True, border="brush"),
-              Para(line=140, margin=(0, 500, 0, 1400, 0), legacy_margin=(0, 500, 0, 1400, 0), head=ABSENT,
+              Para(line=140, margin=(0, 500, 0, 1400, 0), legacy_margin=(0, 500, 0, 1400, 0),
                    keep_next=True)),
         Style("square", "□ 내용", "Square Body",
               Char(GOTHIC, 12, bold=True, border="brush"),

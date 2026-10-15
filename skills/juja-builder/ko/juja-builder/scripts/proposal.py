@@ -7,8 +7,9 @@
   figure    발표자료의 쪽 전체 또는 일부를 삽입용 도식 PNG로 캡처 (--grid는 자르기 값을 읽는 눈금 PNG)
   init      작업폴더 생성 (--kind proposal|report|plan. state.json, _양식/proposal.hwpx 기본 스켈레톤. 제안서는 00_제안전략서.md, 회사자료.md, 원고/41 61 62 공통 파트 템플릿 추가. 사전진단보고서는 00_진단서.md, 기획보고서는 00_기획설계.md 추가)
   ledger    01_배점표.md의 결정 섹션을 집계하여 02_섹션대장.md의 통제배점과 상태 갱신
-  check     rfp | density | wording | tone | numbers | fill | volume | all (all은 산출 유형별 점검 목록)
-  build     원고/*.md 합본 → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. 스켈레톤은 실행마다 재생성)
+  check     rfp | density | wording | tone | numbers | fill | volume | all (all은 산출 유형별 점검 목록. --skip은 지정 점검 생략)
+  build     원고/*.md 합본 → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. 스켈레톤은 실행마다 재생성.
+            --labels는 문서 라벨 파일. 기본 라벨은 한국어)
   render    hwpx 또는 docx → PDF + 페이지 PNG (hwpx는 rhwp 우선, 부재 시 LibreOffice와 H2Orestart. docx는 LibreOffice)
   selftest  표본 원고 조판과 렌더링으로 렌더 경로 판정 (착수 관문. 결과는 state.json checks.render)
   skeleton  발주처 양식.hwpx → 스켈레톤.hwpx + 프로파일 초안
@@ -48,7 +49,6 @@ from lxml import etree  # noqa: E402  python-hwpx 의존성으로 함께 설치�
 HP = lib.HP
 HH = "{http://www.hancom.co.kr/hwpml/2011/head}"
 ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"]
-GANADA = "가나다라마바사아자차카타파하"
 
 # ═══════════════════════════════════════════════════════════════════════
 # 설정부 1: 기본 스켈레톤과 제안서 프로파일
@@ -124,7 +124,7 @@ PROFILES = {
         "chapter_format": "{r}. {t}",       # Ⅰ. 제안 개요
         "chapter_label": "{r}",             # 장 밴드 번호 칸
         "section_format": "{s}. {t}",       # 1. 제안 배경 및 필요성
-        "subsection_format": "{g}. {t}",    # 가. 항
+        "subsection_format": "{g} {t}",     # 가. 항 ({g}는 letters 라벨의 글자 표기 "가.")
         "item_format": "{i}) {t}",          # 1) 목
         "caption_prefix": None,             # None=무번호 캡션 <제목> (제안서 관행). "{c}-"를 주면 <표 1-1> 자동번호
         "chapter_pt": 2000, "section_pt": 1600, "subsection_pt": 1400,  # 위계 확보용 크기. None이면 스켈레톤 크기
@@ -136,15 +136,14 @@ PROFILES["plan"] = dict(PROFILES["proposal"])
 PROFILES["report"] = {
     **PROFILES["proposal"],
     "chapter_format": "제{n}장 {t}", "chapter_label": "제{n}장",
-    "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g}. {t}",
+    "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g} {t}",
     "caption_prefix": "{c}-", "toc_lists": True,
     "chapter_band": {"label_w": 7600, "label_pt": 1800},   # "제10장"까지 한 줄. 폭은 Module 밴드와 같아 제목 시작선이 맞음
 }
-# 산출 유형: init --kind로 state.json에 기록. build의 기본 프로파일과 납품 파일명을 정함
-KINDS = {"proposal": {"profile": "proposal", "out": "제안서"},
-         "report": {"profile": "report", "out": "사전진단보고서"},
-         "plan": {"profile": "plan", "out": "기획보고서"}}
-TOC_LIST_TITLES = ("표 목차", "그림 목차")
+# 산출 유형: init --kind로 state.json에 기록. build의 기본 프로파일을 정함. 납품 파일명은 라벨 output.<유형> (hwpx_report.py LABEL_DEFAULTS)
+KINDS = {"proposal": {"profile": "proposal"},
+         "report": {"profile": "report"},
+         "plan": {"profile": "plan"}}
 # 색 테마: 밴드에만 적용. build --theme으로 선택. base는 장 번호 칸 채움, tint는 Module 라벨 칸 채움,
 # dark는 라벨 글자와 Task 라벨 테두리
 THEMES = {
@@ -317,6 +316,7 @@ CLIENT_SLOT_LABEL = "기관 호칭 자리 잔여 (00_제안전략서.md 기관 �
 SUM_LABEL_RE = re.compile(r"^\s*(합\s*계|계|총\s*계|소\s*계|합계)\s*$")
 NUM_CELL_RE = re.compile(r"^[\d,]+(\.\d+)?%?$")
 STAGES = ["strategy", "rfp", "ledger", "core", "common", "check", "build"]
+CHECK_NAMES = ("rfp", "density", "volume", "wording", "tone", "numbers", "fill")   # check 개별 점검 이름 (check all --skip 대상)
 # 유형별 check all 대상. 밀도(Task 단위)와 공통 파트 치환은 제안서 전용. 워딩은 제안전략서의 핵심 워딩 사전이 원천
 CHECKS_BY_KIND = {"proposal": ("rfp", "density", "volume", "wording", "tone", "numbers", "fill"),
                   "report": ("rfp", "volume", "tone", "numbers", "fill"),
@@ -452,12 +452,12 @@ class ProposalLayout:
         elif level == 3:
             self.n.update(subsection=self.n["subsection"] + 1, ganada=0)
             ss = self.n["subsection"]
-            label = self.p["subsection_format"].format(c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=ss, g=GANADA[(ss - 1) % 14], t=text)
+            label = self.p["subsection_format"].format(c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=ss, g=lib.letter_label(ss), t=text)
             pt = self.p.get("subsection_pt")
         else:
             self.n["ganada"] += 1
             i = self.n["ganada"]
-            label = self.p.get("item_format", "{g}. {t}").format(i=i, g=GANADA[(i - 1) % 14], t=text)
+            label = self.p.get("item_format", "{g} {t}").format(i=i, g=lib.letter_label(i), t=text)
         if level == 1:  # 장 제목은 Module, Task와 같은 밴드. 목차와 쪽번호 대조용 표기는 label 그대로 기록
             self.cap_n = {"TABLE": 0, "PICTURE": 0}
             band_label = self.p.get("chapter_label", "{r}").format(n=c, r=ROMAN[(c - 1) % len(ROMAN)])
@@ -500,14 +500,16 @@ class ProposalLayout:
 
     def caption_label(self, kind: str, text: str) -> dict:
         """캡션 문구. 번호 없는 프로파일은 표 <제목>, 그림 [제목]. 번호 있는 프로파일은 <표 1-3> 제목, [그림 1-3] 제목
-        반환: open(번호 앞), num(번호, 없으면 None), close(번호 뒤), text(전체). 번호 캡션은 표 목차와 그림 목차에 등록"""
+        반환: open(번호 앞), num(번호, 없으면 None), close(번호 뒤), text(전체). 번호 캡션은 표 목차와 그림 목차에 등록
+        낱말과 괄호는 caption 라벨(hwpx_report.py LABEL_DEFAULTS)"""
         prefix = self.p.get("caption_prefix")
+        cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
         if prefix is None:
-            label = f"<{text}>" if kind == "TABLE" else f"[{text}]"
+            label = f"{cap['open']}{text}{cap['close']}"
             return {"open": label, "num": None, "close": "", "text": label}
         self.cap_n[kind] = self.cap_n.get(kind, 0) + 1
         num = self.cap_n[kind]
-        open_b, close_b = ("<표 ", "> ") if kind == "TABLE" else ("[그림 ", "] ")
+        open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         head = open_b + prefix.format(c=max(self.n["chapter"], 1))
         full = f"{head}{num}{close_b}{text}"
         self.captions.append((kind, full, close_b.strip() + text))
@@ -516,8 +518,8 @@ class ProposalLayout:
     def toc_lists(self) -> list[tuple[str, list[str]]]:
         if not self.p.get("toc_lists"):
             return []
-        return [(TOC_LIST_TITLES[0], [t for k, t, _ in self.captions if k == "TABLE"]),
-                (TOC_LIST_TITLES[1], [t for k, t, _ in self.captions if k == "PICTURE"])]
+        return [(lib.label("toc.tables"), [t for k, t, _ in self.captions if k == "TABLE"]),
+                (lib.label("toc.figures"), [t for k, t, _ in self.captions if k == "PICTURE"])]
 
     def unify_table_widths(self, elems: list[Element]):
         """표 폭 지시를 열 폭으로 바꾼다. 지시는 원고의 `(폭: ...)` 줄이며 모델이 양식 반복 여부를 보고 정성적으로 지정한다.
@@ -858,6 +860,35 @@ def record(work: str, key: str, passed: bool, detail: dict):
     save_state(work, st)
 
 
+LABELS_NONE = "none"   # --labels none: 작업폴더 state.json에 기록된 라벨 파일 해제
+
+
+def use_labels(work: str | None, opt: str | None) -> str | None:
+    """라벨 파일을 적용. --labels 값은 작업폴더 state.json에 기록하고, 값이 없으면 기록된 파일을 씀. none은 기록 해제
+    Why 기록: check(원고 표기 인식)와 build(문서 라벨)가 같은 라벨로 원고를 읽어야 판정과 조판이 어긋나지 않음"""
+    path = None
+    if opt and opt != LABELS_NONE:
+        path = os.path.abspath(opt)
+        if not os.path.exists(path):
+            sys.exit(f"ERROR: 라벨 파일 없음 {opt}")
+    if work:
+        st = load_state(work)
+        if opt == LABELS_NONE and "labels" in st:
+            st.pop("labels")
+            save_state(work, st)
+        elif path and st.get("labels") != path:
+            st["labels"] = path
+            save_state(work, st)
+        elif not opt:
+            path = st.get("labels")
+            if path and not os.path.exists(path):
+                sys.exit(f"ERROR: state.json에 기록된 라벨 파일 없음 {path}. --labels 경로로 다시 지정하거나 --labels none으로 해제")
+    if path:
+        changed = lib.load_labels(path)
+        print(f"라벨: {path} (덮어쓴 키 {len(changed)}개)")
+    return path
+
+
 def manuscript_kind(path: str) -> str:
     """순번 접두를 뗀 파일명. 첫 글자가 판정 유형(3, 5 오리지널. 4, 6 공통)"""
     return ORDER_PREFIX_RE.sub("", os.path.basename(path))
@@ -879,13 +910,19 @@ def module_table_path(work: str) -> str:
     return root if os.path.exists(root) else (legacy_module_table(work) or root)
 
 
+def caption_start(line: str) -> bool:
+    """줄이 표 캡션 표기(<표> 제목)로 시작하는지. 표기 낱말은 notation.table 라벨 (기본 표에 라벨 파일의 추가 표기)"""
+    st = line.strip()
+    return any(st.startswith(f"<{t}>") for t in lib.label("notation.table"))
+
+
 def module_table_block(work: str) -> str:
     """02_모듈총괄표.md에서 캡션(<표>)부터 표의 마지막 행까지를 꺼낸다. 캡션과 표 사이의 (장표: ), (폭: ) 지시 줄을 포함한다."""
     lines = open(os.path.join(work, F_MODULE_TABLE), encoding="utf-8").read().split("\n")
     rows = [i for i, ln in enumerate(lines) if ln.strip().startswith("|")]
     if not rows:
         sys.exit(f"ERROR: {F_MODULE_TABLE}에 표가 없음")
-    caps = [i for i, ln in enumerate(lines[:rows[0]]) if ln.strip().startswith("<표>")]
+    caps = [i for i, ln in enumerate(lines[:rows[0]]) if caption_start(ln)]
     return "\n".join(lines[(caps[-1] if caps else rows[0]):rows[-1] + 1])
 
 
@@ -1107,6 +1144,8 @@ def write_default_skeleton(base_dir: str) -> str:
                     d = _sk_build_header(d)
                 elif n == "Contents/section0.xml":
                     d = _sk_build_section(d)
+                elif n == "Contents/content.hpf":
+                    d = lib.clear_author_metadata(d.decode("utf-8")).encode("utf-8")
                 elif n == "Preview/PrvText.txt":
                     d = b""
                 method = zipfile.ZIP_STORED if n == "mimetype" else zipfile.ZIP_DEFLATED
@@ -1609,6 +1648,10 @@ def manuscript_hash(work: str) -> str:
     for f in manuscript_files(work) + [p for p in [module_table_path(work)] if os.path.exists(p)]:
         h.update(os.path.basename(f).encode("utf-8"))
         h.update(open(f, "rb").read())
+    labels = load_state(work).get("labels")
+    if labels and os.path.exists(labels):  # 라벨 파일은 원고 표기 인식을 바꾸므로 지문에 포함. 기록이 없으면 종전 지문과 같음
+        h.update(b"labels")
+        h.update(open(labels, "rb").read())
     return h.hexdigest()
 
 
@@ -1911,10 +1954,23 @@ def cmd_check(a):
     work = a.work
     kind = work_kind(work)
     results = {}
+    labels = use_labels(work, a.labels)
+    # check all --skip: 지정한 점검을 빼고 실행. 생략과 사유는 05_점검기록.md와 state.json에 기록하고 build는 이 PASS 기록을 인정
+    skips = [x.strip() for x in (a.skip or "").split(",") if x.strip()]
+    if skips and a.what != "all":
+        sys.exit("ERROR: --skip은 check all에만 사용")
+    if (bad := [x for x in skips if x not in CHECK_NAMES]):
+        sys.exit(f"ERROR: 모르는 점검 이름 {bad} (점검 이름: {', '.join(CHECK_NAMES)})")
+    if (extra := [x for x in skips if x not in CHECKS_BY_KIND[kind]]):
+        print(f"WARN: --skip {extra}는 {kind} 유형의 check all 목록에 없어 무시")
+    skips = [x for x in CHECKS_BY_KIND[kind] if x in skips]
+    reason = a.skip_reason or "사유 미기재 (--skip-reason으로 기재)"
+    if skips:
+        print(f"[생략] {', '.join(skips)} (사유: {reason})")
 
     def run(name: str) -> bool:
-        """개별 지정은 유형과 무관하게 실행. all은 유형별 점검 목록(CHECKS_BY_KIND)만 실행"""
-        return a.what == name or (a.what == "all" and name in CHECKS_BY_KIND[kind])
+        """개별 지정은 유형과 무관하게 실행. all은 유형별 점검 목록(CHECKS_BY_KIND)에서 --skip 대상을 뺀 점검만 실행"""
+        return a.what == name or (a.what == "all" and name in CHECKS_BY_KIND[kind] and name not in skips)
     if run("rfp"):
         ok, fails, warns = check_rfp(work)
         _print_result("요구항목 배치", ok, fails, warns)
@@ -1960,7 +2016,9 @@ def cmd_check(a):
         record(work, "fill", ok, {"fails": fails})
         results[name] = (ok, fails, warns)
     if a.what == "all":
-        out = ["# 점검기록", f"- 실행 {datetime.now().isoformat(timespec='minutes')}", ""]
+        out = ["# 점검기록", f"- 실행 {datetime.now().isoformat(timespec='minutes')}"] + ([f"- 라벨 {labels}"] if labels else []) + [""]
+        if skips:
+            out += ["## 생략 점검", f"- (생략) {', '.join(skips)} (check all --skip)", f"- (사유) {reason}", ""]
         for name, (ok, fails, warns) in results.items():
             out.append(f"## {name} {'PASS' if ok else 'FAIL'}")
             out += [f"- (결함) {f}" for f in fails] + [f"- (경고) {w}" for w in warns] + [""]
@@ -1968,7 +2026,8 @@ def cmd_check(a):
         allok = all(v[0] for v in results.values())
         st = load_state(work)
         st["stages"]["check"] = datetime.now().isoformat(timespec="seconds")
-        st["checks"]["all"] = {"pass": allok, "hash": manuscript_hash(work)}
+        st["checks"]["all"] = {"pass": allok, "hash": manuscript_hash(work),
+                               **({"skipped": skips, "skip_reason": reason} if skips else {})}
         save_state(work, st)
         print(f"{'OK' if allok else 'FAIL'}: {F_REPORT} 기록. {'build 진행 가능' if allok else '결함 수정 후 재실행'}")
         sys.exit(0 if allok else 1)
@@ -2004,7 +2063,7 @@ def module_table_parent(files: list[str]) -> str | None:
         is_table_file = manuscript_kind(f).endswith(MODULE_TABLE_SUFFIX)
         for ln in open(f, encoding="utf-8").read().split("\n"):
             st = ln.strip()
-            if is_table_file and (st.startswith("|") or st.startswith("<표>")):
+            if is_table_file and (st.startswith("|") or caption_start(st)):
                 return parent
             if re.match(r"^#{1,2} ", st):
                 parent = f
@@ -2039,8 +2098,10 @@ def scope_footnotes(text: str, scope: str) -> tuple[str, list[str]]:
 def cmd_build(a):
     work = a.input if os.path.isdir(a.input) else None
     kind = work_kind(work)
+    use_labels(work, a.labels)
     profile_key = a.profile or KINDS[kind]["profile"]
     profile = PROFILES.get(profile_key) if profile_key in PROFILES else json.load(open(profile_key, encoding="utf-8"))
+    profile = lib.apply_format_labels(profile)   # 라벨 formats.*가 있으면 제목 번호 서식을 덮어씀
     formats = ("hwpx", "docx") if a.format == "both" else (a.format,)
     if "docx" in formats and (a.skeleton or profile_key not in PROFILES):
         sys.exit("ERROR: docx는 기본 양식(설정부 정의)만 지원. 발주처 양식(--skeleton, 프로파일 JSON) 조판은 --format hwpx")
@@ -2080,7 +2141,7 @@ def cmd_build(a):
                 sys.exit("ERROR: " + msg)
             print("WARN: " + msg)
         src = merged
-        out_base = os.path.splitext(a.output)[0] if a.output else os.path.join(work, D_DELIVER, KINDS[kind]["out"])
+        out_base = os.path.splitext(a.output)[0] if a.output else os.path.join(work, D_DELIVER, lib.label(f"output.{kind}"))
         parent = module_table_parent(files)
         if kind == "proposal" and parent and manuscript_kind(parent)[:1] in PREFIX_FILL:  # --force는 시험 조판용이므로 중단 대신 경고
             msg = (f"모듈총괄표가 공통 파트 제목({os.path.basename(parent)}) 아래에 놓임. "
@@ -2093,7 +2154,9 @@ def cmd_build(a):
         if not rec.get("pass") and not a.force:
             sys.exit("ERROR: `check all` PASS 기록 없음. 결함을 수정하고 check all을 통과한 뒤 build. 시험 조판만 --force")
         if rec.get("hash") and rec["hash"] != manuscript_hash(work) and not a.force:
-            sys.exit("ERROR: check all 통과 이후 원고나 모듈총괄표가 바뀜. check all을 다시 실행한 뒤 build")
+            sys.exit("ERROR: check all 통과 이후 원고, 모듈총괄표 또는 라벨 파일이 바뀜. check all을 다시 실행한 뒤 build")
+        if rec.get("pass") and rec.get("skipped"):
+            print(f"NOTE: check all PASS 기록의 생략 점검 {', '.join(rec['skipped'])} (사유: {rec.get('skip_reason', '')})")
         print(f"합본 {len(files)}개 파일 → {merged}")
     else:
         src = a.input
@@ -2407,10 +2470,13 @@ def main():
     p.set_defaults(func=cmd_figure)
 
     p = sub.add_parser("check", help="rfp | density | volume | wording | tone | numbers | fill | all")
-    p.add_argument("what", choices=["rfp", "density", "volume", "wording", "tone", "numbers", "fill", "all"])
+    p.add_argument("what", choices=[*CHECK_NAMES, "all"])
     p.add_argument("work")
     p.add_argument("--file", help="density/volume 대상 원고 1개")
     p.add_argument("--reset-whitelist", action="store_true", help="tone 화이트리스트 재고정 (유저 지시 시에만)")
+    p.add_argument("--skip", help="check all에서 뺄 점검 (쉼표 구분. 예: density,wording,tone,numbers). 한국어가 아닌 원고의 한국어 전용 점검에만 사용")
+    p.add_argument("--skip-reason", help="--skip 사유. 05_점검기록.md와 state.json에 기록")
+    p.add_argument("--labels", help="라벨 파일(JSON). 원고 표기 인식에 적용하고 state.json에 기록 (none은 기록 해제)")
     p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("build", help="작업폴더(원고/*.md 합본) 또는 원고.md → hwpx, docx")
@@ -2432,6 +2498,7 @@ def main():
     p.add_argument("--header", help='머리말: "텍스트;align=RIGHT"')
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="표 폭 통일: manual=원고의 (폭: ...) 지시만 적용(기본), auto=같은 양식 표 자동 그룹 추가")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="밴드 색 테마: navy(기본), mono(검정과 회색). 표 서식은 테마와 무관")
+    p.add_argument("--labels", help="라벨 파일(JSON). 문서의 고정 문자열, 원고 표기, 언어 태그, 납품 파일명을 덮어씀. 작업폴더면 state.json에 기록 (none은 기록 해제)")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_build)
 
