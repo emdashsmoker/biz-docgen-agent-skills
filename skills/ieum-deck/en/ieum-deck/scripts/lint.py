@@ -4,6 +4,7 @@ Usage: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger 
 The text checks target Korean deck text, and their word lists and patterns are Korean
 Checks
 - Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes (FAIL)
+- Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
 - Character counts: headline 1-line limit 50 (WARN above) and 2-line limit 100 (FAIL above), marker 30, leftover slots {{ }} and [확인]. If the 1-line limit of the page size (--layout or meta.layout, limits.json HEADLINE_LINE_CHARS, the 16:9 limit scaled by the headline width ratio) is below 50, the 1-line limit is that value and the 2-line limit is double it
@@ -29,7 +30,7 @@ Checks
 - Empty table cells: WARN if a leading category column has 2 or more empty cells without merged
 - Duplicate prefixes: WARN for a STEP prefix in steps titles or an M/Module prefix in process module names
 - Number notation: WARN without a space after the number ("1.목차" → "1. 목차"), WARN if secNo has no period
-- Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:" or "Note:" (※ on note-type slots and source is added by the build, so they are not checked)
+- Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:", "Note:" or a token added with meta.labels.notation.source (※ on note-type slots and source is added by the build, so they are not checked)
 - Module notation: WARN if section titles and contents items use the "Module N." format ([Module N] recommended)
 - Subject term: WARN for mixed subject terms, 과업 left after changing the subject term, engagement labels left in non-proposal outputs, and "본 기획"
 - Leader titles: WARN if the titles of the overall leader and quality leader are mixed within one deck
@@ -56,6 +57,9 @@ BASE_LAYOUT = "16:9"  # Base page size when none is set
 FM_PATH = HERE.parent / "assets" / "font-metrics.json"
 FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # measured NanumGothic widths (em). Estimated widths are used without it
 HANGUL_RE = re.compile(r"[가-힣]")
+# Defaults of the fixed template and block labels (the same table as labels.js of build.js). Used to validate the keys of meta.labels
+LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
+LANG_TAG_RE = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")  # language tag (e.g. en-US, ko-KR)
 
 
 def char_em(ch, bold):
@@ -280,6 +284,70 @@ def texts_of(sl):
     return out
 
 
+def label_checks(labels):
+    """Checks meta.labels. Returns (fails, warns). Names missing from the default table (assets/labels.json) and type errors are FAILs because the label would not apply"""
+    fails, warns = [], []
+    if labels is None:
+        return fails, warns
+    if not isinstance(labels, dict):
+        return [f"meta.labels must be an object of the form {{template or block: {{slot: label}}}}. Input: {str(labels)[:40]}"], warns
+    groups = ", ".join(LABEL_DEFAULTS)
+    for g, slots in labels.items():
+        if g not in LABEL_DEFAULTS:
+            why = "template without label slots" if g in TEMPLATES else "unknown template or block name"
+            fails.append(f"meta.labels.{g}: {why}. Allowed names: {groups}")
+            continue
+        known = LABEL_DEFAULTS[g]
+        if not isinstance(slots, dict):
+            fails.append(f"meta.labels.{g} must be an object of the form {{slot: label}}. Slots: {', '.join(known)}")
+            continue
+        for k, v in slots.items():
+            path = f"meta.labels.{g}.{k}"
+            if k not in known:
+                nested = [x for x in known if x.startswith(k + ".")]
+                hint = f" (write nested slots as dotted keys: {', '.join(nested)})" if nested else ""
+                fails.append(f"{path}: unknown slot{hint}. Slots of {g}: {', '.join(known)}")
+                continue
+            d = known[k]
+            texts = []
+            if g == "notation":
+                if not (isinstance(v, list) and all(isinstance(x, str) and x.strip() for x in v)):
+                    fails.append(f"{path} must be a list of strings (e.g. [\"Fuente\", \"Nota\"])")
+                    continue
+                texts = v
+                for x in v:
+                    if re.search(r"[:：]\s*$", x): warns.append(f"{path}: drop the colon at the end of token '{x}' (the build recognizes the 'token:' form)")
+            elif isinstance(d, list):
+                if not (isinstance(v, list) and len(v) == len(d) and all(isinstance(x, str) and x.strip() for x in v)):
+                    fails.append(f"{path} must be a list of {len(d)} strings (default {d})")
+                    continue
+                texts = v
+            elif isinstance(d, dict):
+                if not isinstance(v, dict):
+                    fails.append(f"{path} must be an object of the form {{key: label}}. Keys: {', '.join(d)}")
+                    continue
+                for sk, sv in v.items():
+                    if sk not in d: fails.append(f"{path}.{sk}: unknown key. Keys: {', '.join(d)}")
+                    elif not isinstance(sv, str) or not sv.strip(): fails.append(f"{path}.{sk} must be a non-empty string")
+                    else: texts.append(sv)
+            elif not isinstance(v, str):
+                fails.append(f"{path} must be a string. Input: {str(v)[:30]}")
+                continue
+            elif g == "language":
+                if not LANG_TAG_RE.fullmatch(v): fails.append(f"{path} must be a language tag (e.g. en-US, ko-KR). Input: {v}")
+                continue
+            elif not v.strip() and not (g == "steps" and k == "stepLabel"):
+                fails.append(f"{path}: empty label (omit the key to keep the default; only steps.stepLabel takes an empty string, to drop the prefix)")
+                continue
+            else:
+                texts = [v]
+                for tok in ("{n}", "{t}"):
+                    if tok in d and tok not in v: warns.append(f"{path}: format string without {tok} (default '{d}'; the number or title will not show)")
+            for tx in texts:
+                if re.search(r"—|–", tx): fails.append(f"{path}: em dash used ({tx[:30]})")
+    return fails, warns
+
+
 def lint(story, ledger=None, story_path=".", layout=None):
     fails, warns = [], []
     meta = story.get("meta", {})
@@ -296,6 +364,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not re.fullmatch(r"#?[0-9A-Fa-f]{6}", str(v)):
                 fails.append(f"meta.themeColors.{key} must be a 6-digit color code (e.g. 1B4332). Input: {v}")
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
+    lf, lw = label_checks(meta.get("labels"))
+    fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
     style = meta.get("headlineStyle", "noun")
     track = meta.get("track", "general")
@@ -515,10 +585,15 @@ def lint(story, ledger=None, story_path=".", layout=None):
             warns.append(f"[{sl.get('id')}] '본 기획' notation (planning research also uses 본 연구 or 본 과업)")
 
     # Notes entered as bullet items: move them to a note slot or source
+    # Tokens added with meta.labels.notation.source ("token:") count as note notation too (same rule as build.js)
+    lab = meta.get("labels") if isinstance(meta.get("labels"), dict) else {}
+    src = lab["notation"].get("source") if isinstance(lab.get("notation"), dict) else None
+    extra = [str(t).strip() for t in src if str(t).strip()] if isinstance(src, list) else []
+    extra_note = re.compile(r"^\s*(?:" + "|".join(re.escape(t) for t in extra) + r")\s*[:：]") if extra else None
     for sl in slides:
         for k, v in texts_of(sl):
             if k in ("note", "notes", "source", "caption", "footnotes"): continue  # Note slots are fine
-            if isinstance(v, str) and re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v):
+            if isinstance(v, str) and (re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v) or (extra_note and extra_note.match(v))):
                 warns.append(f"[{sl.get('id')}] note mark in a body item ('{v[:16]}') → moving it to a note slot or source is recommended")
                 break
 

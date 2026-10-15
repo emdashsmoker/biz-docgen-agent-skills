@@ -12,9 +12,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - The Korean edition is the original and the reference version
 - This edition may work differently from the intent of the original, and output quality may differ from the original
 - The writing rules, examples and lint checks are written for Korean deck text
-    + Quoted Korean strings in this edition are functional values (template labels, placeholders, lint patterns, example headlines) and stay in Korean
+    + Quoted Korean strings in this edition are functional values (default template labels, placeholders, lint patterns, example headlines) and stay in Korean
+    + Decks are typeset with Korean default labels, and `meta.labels` switches the labels and language tags for decks in other languages (English decks section). Korean note tokens such as 출처: stay recognized
     + Decks in other languages use the same build pipeline and fonts, and the Korean-specific writing rules and checks do not cover them
-    + For English decks, follow the English decks section (label slots, common part translation, length limits)
+    + For English decks, follow the English decks section (meta.labels, common part translation, length limits)
 
 ## Overview
 
@@ -155,6 +156,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 11. (Company facts) Whether similar projects, organization and team expertise, staff careers, financials and certifications are provided. Items not provided are output as the `[회사 확인]` placeholder
 12. (Consortium) Participation, share per organization, person-months (M/M)
 13. (Contracting agency practice) Task ID notation (`Module 1 - Task 2` or `M1-T2`), headers with evaluation items, path-style headers ("주제 〉 세부")
+14. (Document language and labels) Korean labels (default) or another language. For another language, set the template labels and language tags in `meta.labels` (English decks section)
 
 ## Company facts
 
@@ -467,6 +469,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - The exceptions are RFP form names (과업지시서, 과업 세부내용) and structural labels such as VISION and SCOPE
 - An engagement label left in a non-proposal output is lint WARN
 - Change proposal-only labels to fit the output type
+    + Set labels shared by the whole deck once in `meta.labels` (keys and defaults in the label slots section of `references/templates.md`)
     + Change the label text of the Point band (default "수행 Point") with `meta.pointLabel`
     + Change the engagement column header and the report row group name of the gantt (defaults "과업", "보고회") with `taskHead` and `reportHead` of gantt
     + Set the company name on the cover and closing slides with `meta.company`
@@ -490,13 +493,21 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - English decks use the same templates, build and review procedure
 - The writing rules, the headline style (kickoff question 5) and the lint writing rule checks apply only to Hangul text
     + The em dash and en dash checks also apply to English text (lint FAIL)
-- Template and block default labels are Korean, so set English labels in the label slots (slot list in the label slots section of `references/templates.md`)
-- Set the 수행 Point band label with `meta.pointLabel`
+- Template and block default labels are Korean, so set English labels for the whole deck in `meta.labels` (keys, defaults and an English example in the label slots section of `references/templates.md`)
+    + The resolution order is the slide slot value, then `meta.labels`, then the default
+    + Set only the labels that differ per slide in the slots
+    + In a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
+    + Keys left out are typeset with the Korean defaults, so set every label of the templates the English deck uses
+    + lint reports unknown template, block and slot names and type errors in `meta.labels` as FAIL
+- Set the 수행 Point band label with `meta.pointLabel` or `meta.labels.common.pointLabel`
+- The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
+- Set the language tags of the PPTX text with `meta.labels.language` (default latin en-US, east_asia ko-KR for runs that contain Hangul; finalize.py applies them)
 - Keep the placeholders (`[회사 확인]`, `[확인 필요]`) as they are in English decks, since lint finds unfinished items by them
 - The common part (company2slides.py output) is generated with Korean text, so translate it into English after copying it into the storyboard
     + Translate headline, marker, section, chapter and slot text
     + Keep id, template, slot keys and placeholders as they are
 - Source and note lines starting with "Source:" or "Note:" are recognized the same way as "출처:" and "자료:"
+    + Add note tokens of other languages in `meta.labels.notation.source` (the built-in tokens stay)
 - Headline and marker character limits are checked in Hangul-equivalent characters (about twice as many English characters fit in the same width)
 - English names and English staffing tables are recognized as described in `references/storyboard-schema.md`
 - In the visual review, check that no slide still shows a Korean default label
@@ -856,8 +867,9 @@ ieum-deck/
 │   ├── atoms.js             Atomic elements (text, shapes, lines, tables, charts, images), band, custom slide playback, shrinking based on measured widths
 │   ├── templates.js         Parametric templates and free
 │   ├── composite.js         Grid and blocks of the composite template
+│   ├── labels.js            Lookup of the fixed template and block labels (slide slot, then meta.labels, then assets/labels.json)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, word-level line breaking, doughnut hole preservation, table cell fill normalization, table cell margin restoration, soffice reserialization
+│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, word-level line breaking, doughnut hole preservation, table cell fill normalization, table cell margin restoration, language tags (meta.labels.language), soffice reserialization
 │   ├── validate.py          Package structure validation (content types, XML syntax, relationship targets, slide ids, shape ids, python-pptx opening; schema validation when OOXML_PML_XSD is set)
 │   ├── lint.py              storyboard checks
 │   ├── check_layout.py      Checks of the typeset result
@@ -871,7 +883,7 @@ ieum-deck/
 │   ├── own_catalog.py       own-deck.json → slot list document
 │   ├── compare.py           Comparison of a source PDF and reproduced PNGs
 │   └── setup_deps.py        Dependency installation and --check
-├── assets/  font-metrics.json, company.md, common-slides.json, proposal-templates.json, recipe-demos.json
+├── assets/  labels.json (label defaults), font-metrics.json, company.md, common-slides.json, proposal-templates.json, recipe-demos.json
 └── references/  storyboard-schema.md, templates.md, recipes.md, custom-slides.md, headline-patterns.md, strategy.md, methods.md, review.md, wording.md, skeletons.md, writing-rules.md
 ```
 

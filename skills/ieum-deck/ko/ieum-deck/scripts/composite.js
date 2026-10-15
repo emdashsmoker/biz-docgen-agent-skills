@@ -8,6 +8,7 @@
 
 const T = require("./tokens.js");
 const A = require("./atoms.js");
+const LB = require("./labels.js"); // 블록 고정 라벨 조회 (블록 필드, meta.labels, assets/labels.json 순)
 
 const GAP_COL = 0.3; // 영역 사이 가로 간격
 const GAP_COL_FLOW = 0.6; // 영역 사이 화살표가 들어갈 때의 가로 간격
@@ -813,7 +814,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   let y = box.y;
   if (nb) {
     const spanH = hs.slice(0, nb).reduce((a, h) => a + h, 0) + VC_GAP * (nb - 1);
-    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: spanH }, k.support.label || "지원 기능", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: spanH }, LB.label("valuechain", "support.label", k.support.label), { sz: T.SIZE.body });
     g.bands.forEach((b, i) => {
       H.frame(ctx, slide, { x: g.gx, y, w: g.gridW, h: hs[i] });
       H.label(ctx, slide, { x: g.gx, y, w: g.bandTW, h: hs[i] }, b.title || "", { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
@@ -822,7 +823,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
     });
   }
   const chev = { x: g.gx, y, w: g.gw, h: VC_CHEV_H };
-  H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: VC_CHEV_H }, k.stageLabel || "단계", { sz: T.SIZE.body });
+  H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: VC_CHEV_H }, LB.label("valuechain", "stageLabel", k.stageLabel), { sz: T.SIZE.body });
   H.chevronRow(ctx, slide, chev, g.stages, { sz: T.SIZE.panelHead });
   y += VC_CHEV_H + VC_GAP;
   const rowHs = hs.slice(nb, nb + nr);
@@ -841,7 +842,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   });
   if (k.base) {
     const bh = hs[nb + nr];
-    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: bh }, k.base.label || "공통 기반", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: bh }, LB.label("valuechain", "base.label", k.base.label), { sz: T.SIZE.body });
     H.frame(ctx, slide, { x: g.gx, y, w: g.gridW, h: bh }, { fill: T.COLOR.tintBg });
     writeItems(ctx, H, slide, { x: g.gx, y, w: g.gridW, h: bh }, [k.base.text || ""], T.SIZE.body, { bold: true });
   }
@@ -866,7 +867,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   const sup = k.support || [], pri = k.primary || [];
   if (!pri.length) { ctx.warn("porter 본원적 활동(primary) 없음"); return; }
   // 라벨 상자 폭은 lw + 0.06 - LABEL_GAP. 좁은 판형에서도 라벨 어절이 한 줄에 들어가도록 어절 폭과 여백을 하한으로 둠 (상한 PT_LABEL_W 우선)
-  const labels = [k.supportLabel || "지원 활동", k.primaryLabel || "본원적 활동", k.ownerLabel || "담당 부서"];
+  const labels = [LB.label("porter", "supportLabel", k.supportLabel), LB.label("porter", "primaryLabel", k.primaryLabel), LB.label("porter", "ownerLabel", k.ownerLabel)];
   const lw = Math.min(PT_LABEL_W, Math.max(box.w * 0.1, A.wordWidthIn(labels, T.SIZE.body, true) + 2 * T.PANEL.LABEL_MG_X + LABEL_GAP - 0.06));
   // 오른쪽 이웃 칸이 있으면 꼭짓점을 열 간격 안으로 내어 이웃 칸과의 간격을 PT_TIP_NEXT_GAP 으로 둠 (이웃이 없으면 칸 오른쪽 끝)
   const tipEnd = box.x + box.w + (box.gapR ? Math.max(0, box.gapR - PT_TIP_NEXT_GAP) : 0);
@@ -892,7 +893,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   if (sup.length) {
     const span = supH.reduce((a, v) => a + v, 0) + PT_SUP_GAP * (sup.length - 1);
     // 지원 활동 라벨은 틴트, 본원적 활동 라벨은 네이비로 두어 본원적 활동을 주 영역으로 표시
-    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: span }, k.supportLabel || "지원 활동", { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
+    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: span }, labels[0], { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
     sup.forEach((st, i) => {
       H.frame(ctx, slide, { x: gx, y, w: gw, h: supH[i] });
       H.label(ctx, slide, { x: gx, y, w: titleW, h: supH[i] }, st.title || "", { sz, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
@@ -900,7 +901,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
       y += supH[i] + (i < sup.length - 1 ? PT_SUP_GAP : PT_GAP);
     });
   }
-  H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: headH + bodyH }, k.primaryLabel || "본원적 활동", { sz: T.SIZE.body });
+  H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: headH + bodyH }, labels[1], { sz: T.SIZE.body });
   const colsB = H.cols({ x: gx, y, w: gw, h: headH + bodyH }, n, PT_GAP);
   const bsz = commonSize(colsB.map((c) => ({ w: c.w, h: bodyH })), pri.map(itemsOf));
   colsB.forEach((c, i) => {
@@ -912,7 +913,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   y += headH + bodyH;
   if (hasOwner) {
     y += PT_GAP;
-    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: PT_OWNER_H }, k.ownerLabel || "담당 부서", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: PT_OWNER_H }, labels[2], { sz: T.SIZE.body });
     H.cols({ x: gx, y, w: gw, h: PT_OWNER_H }, n, PT_GAP).forEach((c, i) => {
       const mark = !!pri[i].mark;
       H.frame(ctx, slide, c, { fill: mark ? T.COLOR.tintHead : undefined });
@@ -975,14 +976,14 @@ BLOCKS.zones = (ctx, H, slide, box, k) => {
 /** 사업 논리모형. 국가연구개발사업 예비타당성조사 수행 세부지침(2024) [그림 3-3] 구조를 고정 배치
  *  상하 방향은 사업 논리의 흐름, 좌우 방향은 사업 추진의 시간 흐름
  *  {issue, goal, beneficiary, input, activity, output, outcome, assumption, labels} 각 값은 문구 배열. labels 는 같은 키로 항목 제목을 바꿈 */
-const LM = { issue: "1. 문제/이슈", goal: "2. 목표", beneficiary: "3. 수혜자", input: "4. 투입", activity: "5. 활동", output: "6. 산출", outcome: "7. 성과/영향", assumption: "8. 가정" };
+// 항목 제목 기본값은 assets/labels.json 의 logicmodel.labels (meta.labels.logicmodel.labels, 블록 labels 순으로 덮어씀)
 const LM_ARROW_GAP = 0.26; // 행 사이 화살표 간격
 const LM_PAD = 0.07; // 점선 묶음 안쪽 여백
 const LM_HEAD_H = 0.28; // 항목 제목 띠 높이 (항목 8개를 한 장에 담기 위해 패널 제목보다 낮춤)
 const LM_COL_GAP = 0.42; // 묶음 안 가로 화살표 간격
 const LM_GOAL_SHARE = 0.5; // 목표와 수혜자 행에서 목표 상자 폭 비율 (지침 원형의 1:1 배치)
 BLOCKS.logicmodel = (ctx, H, slide, box, k) => {
-  const LML = { ...LM, ...(k.labels || {}) }; // 항목 제목 (labels 로 바꿈)
+  const LML = LB.labels("logicmodel", "labels", k.labels); // 항목 제목 (labels 로 바꿈)
   const its = (key) => [].concat(k[key] || []).filter(Boolean);
   const HH = LM_HEAD_H;
   const inW = box.w - 2 * LM_PAD;
@@ -1055,12 +1056,12 @@ function parasNeedH(paras, w) {
  *  {vision, purpose, goal, performance:[{title, quant, qual} 또는 {title, items}], strategies:[{title, text}], tasks:[[{title, text}]], labels}. labels 는 행 라벨과 quant, qual 접두어를 바꿈
  *  열 수는 strategies 수. 같은 순번의 성과 목표, 전략분야, 전략과제가 한 열로 대응
  *  서식은 계층도 격자(grid style hierarchy)와 같음: 회색 굵은 행 라벨, 비전 네이비 칸, 목표 틴트 칸, 나머지 흰 칸, 층 사이 여백 */
-const GS_LABELS = { vision: "비전", purpose: "사업 목적", goal: "사업 목표", performance: "성과 목표", strategies: "전략분야", tasks: "전략과제 및\n세부과제", quant: "정량", qual: "정성" };
+// 행 라벨과 정량, 정성 접두어 기본값은 assets/labels.json 의 goalsystem.labels
 const GS_BAND_MIN = 0.42; // 비전, 목적, 목표 띠 높이 하한
 const GS_BOX_GROW = 1.3; // 칸 높이가 남을 때 열 상자가 늘어나는 배율 상한
 const GS_TASK_GAP_PT = 8; // 전략과제 사이 문단 간격
 BLOCKS.goalsystem = (ctx, H, slide, box, k) => {
-  const L = { ...GS_LABELS, ...(k.labels || {}) };
+  const L = LB.labels("goalsystem", "labels", k.labels);
   const perf = k.performance || [], strat = k.strategies || [], tasks = k.tasks || [];
   const n = Math.max(1, strat.length, perf.length, tasks.length);
   const lw = Math.min(box.w * 0.1, 1.6);
@@ -1117,7 +1118,7 @@ BLOCKS.goalsystem = (ctx, H, slide, box, k) => {
  *  {mission, vision, pillars:[{title, items}], base:[문구], labels, numbered}. 기둥 묶음은 지붕보다 양옆을 들여 처마를 만듦
  *  numbered 가 false 가 아니면 전략목표 앞에 1., 전략과제 앞에 1-1. 번호를 붙임 (번호가 불릿을 대신함)
  *  base 는 핵심가치별 칸으로 나눠 조판하고 생략하면 기둥 아래를 바닥 띠로 닫음 */
-const HOUSE_LABELS = { mission: "미션", vision: "비전", goals: "전략목표", tasks: "전략과제", base: "핵심가치" };
+// 행 라벨 기본값은 assets/labels.json 의 house.labels
 const HOUSE_ROOF_H = 0.5; // 비전 지붕 높이
 const HOUSE_EAVE = 0.18; // 기둥 묶음의 좌우 들임 (처마)
 const HOUSE_PILLAR_GAP = 0.14; // 기둥 사이 간격
@@ -1126,7 +1127,7 @@ const HOUSE_HEAD_PAD = 0.16; // 기둥 머리(전략목표) 글 위아래 여유
 const HOUSE_TASK_GAP_PT = 10; // 전략과제 사이 문단 간격
 const HOUSE_TASK_GAP_MAX_PT = 26; // 기둥 몸체 높이가 남을 때 전략과제 사이 간격 상한
 BLOCKS.house = (ctx, H, slide, box, k) => {
-  const L = { ...HOUSE_LABELS, ...(k.labels || {}) };
+  const L = LB.labels("house", "labels", k.labels);
   const pil = k.pillars || [];
   const num = k.numbered !== false;
   const base = (Array.isArray(k.base) ? k.base : k.base ? [k.base] : []).filter(Boolean);
@@ -1258,16 +1259,16 @@ BLOCKS.flowchart = (ctx, H, slide, box, k) => {
  *  상단 5열: 핵심 파트너 | 핵심 활동, 핵심 자원 | 가치 제안 | 고객 관계, 채널 | 고객 세그먼트. 하단 2칸: 비용 구조 | 수익원
  *  {partners, activities, resources, value, relationships, channels, segments, cost, revenue, numbered, labels}. 각 값은 문구 배열 또는 {items|text}. labels 는 같은 키로 블록 제목을 바꿈
  *  numbered 가 true 이면 캔버스 작성 순서(고객 세그먼트 1 ... 비용 구조 9) 번호를 블록 제목 오른쪽에 표기 */
-const BMC = [
-  { key: "partners", title: "핵심 파트너", order: 8, col: 0 },
-  { key: "activities", title: "핵심 활동", order: 7, col: 1, half: 0 },
-  { key: "resources", title: "핵심 자원", order: 6, col: 1, half: 1 },
-  { key: "value", title: "가치 제안", order: 2, col: 2, core: true },
-  { key: "relationships", title: "고객 관계", order: 4, col: 3, half: 0 },
-  { key: "channels", title: "채널", order: 3, col: 3, half: 1 },
-  { key: "segments", title: "고객 세그먼트", order: 1, col: 4 },
-  { key: "cost", title: "비용 구조", order: 9, bottom: 0 },
-  { key: "revenue", title: "수익원", order: 5, bottom: 1 },
+const BMC = [ // 블록 제목 기본값은 assets/labels.json 의 canvas.labels
+  { key: "partners", order: 8, col: 0 },
+  { key: "activities", order: 7, col: 1, half: 0 },
+  { key: "resources", order: 6, col: 1, half: 1 },
+  { key: "value", order: 2, col: 2, core: true },
+  { key: "relationships", order: 4, col: 3, half: 0 },
+  { key: "channels", order: 3, col: 3, half: 1 },
+  { key: "segments", order: 1, col: 4 },
+  { key: "cost", order: 9, bottom: 0 },
+  { key: "revenue", order: 5, bottom: 1 },
 ];
 const BMC_TOP_SHARE = 0.68; // 상단 5열 높이 비율 (캔버스 원형의 상하 비율)
 const BMC_GAP = 0.1; // 블록 사이 간격 (한 장의 캔버스로 읽히도록 좁게 유지)
@@ -1284,12 +1285,12 @@ BLOCKS.canvas = (ctx, H, slide, box, k) => {
   const itemsFor = (d) => itemsOf(Array.isArray(k[d.key]) ? { items: k[d.key] } : k[d.key] || {});
   const bodies = BMC.map((d) => { const r = rectOf(d); return { w: r.w, h: r.h - BMC_TITLE_H - 0.06 }; });
   const sz = commonSize(bodies, BMC.map(itemsFor));
-  const titles = k.labels || {}; // 블록 제목 (labels 의 블록 키로 바꿈)
+  const own = k.labels || {}, titles = LB.labels("canvas", "labels"); // 블록 제목 (labels 의 블록 키로 바꿈)
   BMC.forEach((d, i) => {
     const r = rectOf(d);
     H.frame(ctx, slide, r, { fill: d.core ? T.COLOR.tintBg : undefined });
     // 블록 제목: 네이비 굵은 글자와 제목 아래 짧은 구분선 (칸 채움 머리띠 대신 글자 위계로 구분)
-    A.text(slide, { x: r.x + 0.1, y: r.y + 0.04, w: r.w - 0.2, h: BMC_TITLE_H - 0.04 }, titles[d.key] || d.title, { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+    A.text(slide, { x: r.x + 0.1, y: r.y + 0.04, w: r.w - 0.2, h: BMC_TITLE_H - 0.04 }, own[d.key] || titles[d.key], { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
     if (k.numbered) A.text(slide, { x: r.x + r.w - 0.4, y: r.y + 0.04, w: 0.3, h: BMC_TITLE_H - 0.04 }, String(d.order), { sz: T.SIZE.body, bold: true, color: T.COLOR.textMuted, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
     hline(ctx, slide, r.x + 0.1, r.y + BMC_TITLE_H, Math.min(r.w - 0.2, 0.9));
     const its = itemsFor(d);

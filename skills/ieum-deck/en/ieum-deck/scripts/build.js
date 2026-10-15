@@ -5,6 +5,7 @@
 // Usage: node build.js <storyboard.json> <out.pptx> [--layout 16:9|A4|10.83|4:3] [--digest] [--marker square|bar|triangle] [--theme navy|mono]
 // --digest : summary keeping only headline and template per slide (for quick structure review)
 // A slide's byLayout replaces the values at its paths only when building with that page size (page-size-specific text)
+// Fixed template and block labels resolve from the slide slot, then meta.labels, then assets/labels.json (labels.js)
 // Custom slides (own:N) play back the own-deck.json at the meta.ownDeck path (relative to the storyboard allowed) or the IEUM_DECK_OWN environment variable
 
 const fs = require("fs");
@@ -13,6 +14,7 @@ const PptxGenJS = require("pptxgenjs");
 const T = require("./tokens.js");
 const A = require("./atoms.js");
 const TEMPLATES = require("./templates.js");
+const LB = require("./labels.js");
 
 const OWN_ENV = "IEUM_DECK_OWN";
 
@@ -124,6 +126,7 @@ async function main() {
   if (!inPath || !outPath) { console.error("usage: node build.js <storyboard.json> <out.pptx> [--layout KEY] [--digest] [--marker square|bar|triangle] [--theme navy|mono]"); process.exit(2); }
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
+  LB.useDeck(meta); // Register the deck-level labels (meta.labels)
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`Page size ${layoutKey} is undefined. Choose: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
@@ -155,8 +158,9 @@ async function main() {
   // Custom slide playback keeps the source font and width-absorbing shrink, so those slides skip the body minimum check (read by check_layout)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout and finalize)
+  // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

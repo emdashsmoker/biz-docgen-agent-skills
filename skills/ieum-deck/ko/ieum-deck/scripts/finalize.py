@@ -7,7 +7,7 @@ WHY: pptxgenjs가 만든 패키지는 LibreOffice에서 열리지만 PowerPoint(
 
 HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선두 배치,
         실재하지 않는 부품의 Override 제거, 내장 xlsx에 재귀 적용
-     2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, 한글 run 의 언어 지정,
+     2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, run 과 차트의 언어 태그 지정(meta.labels.language),
         핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
@@ -300,17 +300,32 @@ HANGUL_PATTERN = re.compile(r"[ᄀ-ᇿ㄰-㆏가-힣]")
 RUN_PATTERN = re.compile(r"<a:r>(.*?)</a:r>", re.S)
 RUN_TEXT_PATTERN = re.compile(r"<a:t(?:\s[^>]*)?>(.*?)</a:t>", re.S)
 RUN_LANG_PATTERN = re.compile(r'(<a:rPr\b[^>]*?\blang=")([^"]*)(")')
-KOREAN_LANG = "ko-KR"
+# 언어 태그. pptxgenjs 는 모든 run, 문단 끝, 차트를 en-US 로 기록하므로 빌드 기록(meta.labels.language)의 태그로 바꿈
+# 기본값은 assets/labels.json 의 language (build.js 와 같은 표). latin 은 일반 run, east_asia 는 한글이 든 run 의 태그
+PPTXGENJS_LANG = "en-US"
+LABELS_PATH = Path(__file__).resolve().parent.parent / "assets" / "labels.json"
+RUN_LANGUAGE = dict(json.loads(LABELS_PATH.read_text(encoding="utf-8"))["language"])
+LANG_TAG_PATTERN = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")
+LATIN_LANG_PATTERN = re.compile(r'(<a:(?:rPr|endParaRPr|defRPr)\b[^>]*?\blang="|<c:lang val=")' + re.escape(PPTXGENJS_LANG) + '(")')
+
+
+def set_latin_language(xml: str) -> tuple[str, int]:
+    """pptxgenjs 가 기록한 en-US 태그(run, 문단 끝, 기본 글자 속성, 차트 언어)를 RUN_LANGUAGE["latin"] 으로 바꿈. 기본값 en-US 는 변경 없음"""
+    latin = RUN_LANGUAGE.get("latin") or PPTXGENJS_LANG
+    if latin == PPTXGENJS_LANG:
+        return xml, 0
+    return LATIN_LANG_PATTERN.subn(lambda m: m.group(1) + latin + m.group(2), xml)
 
 
 def set_hangul_run_language(xml: str) -> tuple[str, int]:
-    """한글이 든 run 의 언어(a:rPr lang)를 ko-KR 로 기록
+    """한글이 든 run 의 언어(a:rPr lang)를 RUN_LANGUAGE["east_asia"](기본 ko-KR)로 기록
 
     WHY: pptxgenjs 는 모든 run 을 lang="en-US" 로 기록. LibreOffice 재직렬화는 run 의 동아시아 문자 부분 언어를
          실행 환경 로캘의 기본값으로 채우므로 로캘이 비어 있는 환경에서는 한글이 zh-CN 으로 저장됨.
          한글 run 의 언어를 문서에 직접 기록하면 실행 환경과 관계없이 ko-KR 로 유지됨 (렌더 결과는 같음)
     """
     count = 0
+    east = RUN_LANGUAGE["east_asia"]
 
     def rep(m: re.Match) -> str:
         nonlocal count
@@ -318,10 +333,10 @@ def set_hangul_run_language(xml: str) -> tuple[str, int]:
         if not HANGUL_PATTERN.search("".join(RUN_TEXT_PATTERN.findall(body))):
             return m.group(0)
         lang = RUN_LANG_PATTERN.search(body)
-        if lang is None or lang.group(2) == KOREAN_LANG:
+        if lang is None or lang.group(2) == east:
             return m.group(0)
         count += 1
-        return "<a:r>" + body[:lang.start(2)] + KOREAN_LANG + body[lang.end(2):] + "</a:r>"
+        return "<a:r>" + body[:lang.start(2)] + east + body[lang.end(2):] + "</a:r>"
 
     return RUN_PATTERN.sub(rep, xml), count
 
@@ -421,6 +436,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
         xml, _ = set_korean_word_wrap(xml)
+        xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang
         return xml.encode("utf-8"), stats
@@ -432,6 +448,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["alien_extensions"] = dropped
         xml, fonts = add_chart_east_asian_fonts(xml)
         stats["chart_ea_fonts"] = fonts
+        xml, _ = set_latin_language(xml)
         return xml.encode("utf-8"), stats
 
     return payload, stats
@@ -675,9 +692,29 @@ def theme_palette(pptx_path: Path) -> set:
         return set()
 
 
+def record_language(pptx_path: Path) -> dict:
+    """빌드 기록(<파일명>.build.json)의 언어 태그(meta.labels.language). 태그 형식이 아닌 값은 무시하고 기본값 유지"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return {}
+    try:
+        lang = json.loads(record.read_text(encoding="utf-8")).get("language") or {}
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for key in ("latin", "east_asia"):
+        val = lang.get(key)
+        if isinstance(val, str) and LANG_TAG_PATTERN.fullmatch(val):
+            out[key] = val
+        elif val is not None:
+            print(f"[finalize] 언어 태그 {key}={val!r} 형식 오류로 기본값 {RUN_LANGUAGE[key]} 유지")
+    return out
+
+
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """입력 PPTX를 후처리하여 같은 경로에 덮어쓰고 처리 전후 수치를 반환"""
     CELL_PALETTE.update(theme_palette(pptx_path))
+    RUN_LANGUAGE.update(record_language(pptx_path))
     before = inspect(pptx_path)
     print(format_metrics("처리 전", before))
 

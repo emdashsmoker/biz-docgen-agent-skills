@@ -4,6 +4,7 @@
 // Coordinates are in inches and colors are 6-digit tokens. Numeric constants come only from tokens.js.
 
 const T = require("./tokens.js");
+const LB = require("./labels.js"); // Note tokens added with meta.labels.notation.source
 const fs = require("fs");
 const path = require("path");
 // Measured NanumGothic widths (em). Without them, tokens.METRIC approximations are used
@@ -1170,7 +1171,7 @@ function substitute(paras, value) {
     const r0 = src.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     // A ※ paragraph in the source is an example note position, so follow the writer's choice
     const srcText = src.runs.map((r) => r.t).join("").trim();
-    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln)) {
+    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
       // Text that is not a note takes the format of the bullet paragraph right above and reads as a normal item
       const prev = base.slice(0, Math.min(i, base.length - 1)).reverse().find((p) => p.bullet);
       if (prev) {

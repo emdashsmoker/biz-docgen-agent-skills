@@ -7,6 +7,7 @@
 const T = require("./tokens.js");
 const A = require("./atoms.js");
 const C = require("./composite.js");
+const LB = require("./labels.js"); // Fixed label lookup (slide slot, then meta.labels, then assets/labels.json)
 
 // Band mode and page number rules. band: full | noMarker | headerOnly | blank
 const SPEC = {
@@ -87,7 +88,8 @@ function bulletParas(list, o, sz) {
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // Lines starting with ※ or 출처 are notes, so they get no bullet and show in small gray
     // To tell them from normal items such as "자료 수집", 출처 and 자료 count as notes only with a colon (English Source and Note follow the same rule)
-    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx));
+    // Tokens added with meta.labels.notation.source ("token:") are notes too
+    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
     if (isNote) {
       paras.push({ bullet: false, indent: 0, marL: 0, align: "left", spcBef: o.gapPt || T.PARA.paraGapPt,
                    runs: [{ t: tx, sz: Math.max(T.SIZE.BODY_MIN, T.SIZE.note), color: T.COLOR.textMuted }] });
@@ -366,13 +368,13 @@ function chevronRow(ctx, slide, box, steps, opt) {
   return w;
 }
 /** Conclusion box: navy label on the left + tinted message on the right */
-/** Conclusion band label. Slide pointLabel, then meta.pointLabel, then the default */
+/** Conclusion band label. Slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default */
 /** Height (inches) for the footnote line count */
 function noteRows(sb) {
   return 0.2 * [].concat((sb && sb.footnotes) || []).filter(Boolean).length;
 }
 function pointLabel(ctx, sb) {
-  return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || "수행 Point";
+  return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
 }
 const CALLOUT_LABEL_W = 1.2; // Point band label cell width (inches on 16:9, scaled by the page width ratio)
 const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Point band text cell insets (left, top, right, bottom inches)
@@ -384,7 +386,7 @@ function calloutLines(text) {
 }
 function callout(ctx, slide, box, lbl, text) {
   const lw = CALLOUT_LABEL_W * ctx.S.sx;
-  label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, lbl || "수행 Point", { sz: T.SIZE.body });
+  label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, lbl || pointLabel(ctx, ctx.sb), { sz: T.SIZE.body });
   // Several lines get bullets to keep items apart (1 line is written as a sentence without a bullet)
   const lines = calloutLines(text);
   const paras = lines.map((t) => ({ align: "left", bullet: lines.length > 1, indent: lines.length > 1 ? T.PARA.bulletIndentIn : 0, marL: lines.length > 1 ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
@@ -435,7 +437,7 @@ function cover(ctx, slide, sb) {
   const tH = 1.1 * S.sy, tMid = (2.03 + 3.76) / 2 * S.sy;
   A.text(slide, { x: 0.66 * S.sx, y: +(tMid - tH / 2).toFixed(3), w: L.W - 1.3 * S.sx, h: tH }, s.title || sb.headline || "", { sz: T.SIZE.coverTitle - 4, bold: true, align: "left", valign: "middle", mg: [0, 0, 0, 0] }); // Holds a 2-line title
   rule(3.76);
-  label(ctx, slide, { x: mx, y: 3.96 * S.sy, w: 1.7 * S.sx, h: 0.4 }, s.label || "제안발표자료", { sz: T.SIZE.body });
+  label(ctx, slide, { x: mx, y: 3.96 * S.sy, w: 1.7 * S.sx, h: 0.4 }, LB.label("cover", "label", s.label), { sz: T.SIZE.body });
   A.text(slide, { x: mx, y: 4.5 * S.sy, w: 4 * S.sx, h: 0.4 }, s.date || "", { sz: T.SIZE.coverSub, align: "left", mg: [0, 0, 0, 0] });
   // The contracting agency goes under the date by default. With clientPos "top", it goes small above the line over the title
   if (s.client) {
@@ -450,7 +452,7 @@ function cover(ctx, slide, sb) {
 function contents(ctx, slide, sb) {
   const S = ctx.S, items = (sb.slots && sb.slots.items) || sb.items || [];
   const L = S.layout;
-  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy, w: 2.2 * S.sx, h: 0.9 }, sb.slots && sb.slots.title || "목차", { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy, w: 2.2 * S.sx, h: 0.9 }, LB.label("contents", "title", sb.slots && sb.slots.title), { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
   slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 2.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
   slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 3.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
   const roman = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ"];
@@ -470,7 +472,7 @@ function divider(ctx, slide, sb) {
 }
 function end(ctx, slide, sb) {
   const S = ctx.S, s = sb.slots || {};
-  A.text(slide, { x: S.marginX, y: 2.9 * S.sy, w: S.contentW, h: 0.9 }, s.title || "감사합니다", { sz: T.SIZE.dividerTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.marginX, y: 2.9 * S.sy, w: S.contentW, h: 0.9 }, LB.label("end", "title", s.title), { sz: T.SIZE.dividerTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
   A.text(slide, { x: S.marginX, y: 3.9 * S.sy, w: S.contentW, h: 0.5 }, s.company || ctx.meta.company || "회사명", { sz: T.SIZE.marker, align: "center", mg: [0, 0, 0, 0] });
 }
 
@@ -480,8 +482,8 @@ function purpose(ctx, slide, sb) {
   const s = sb.slots || {};
   const b = body(ctx, sb);
   const lw = b.w * 0.62, rw = b.w - lw - 0.5 * ctx.S.sx;
-  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h }, s.leftHead || "배경 및 필요성");
-  const R = subhead(ctx, slide, { x: b.x + lw + 0.5 * ctx.S.sx, y: b.y, w: rw, h: b.h }, s.rightHead || "과업의 목적");
+  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h }, LB.label("purpose", "leftHead", s.leftHead));
+  const R = subhead(ctx, slide, { x: b.x + lw + 0.5 * ctx.S.sx, y: b.y, w: rw, h: b.h }, LB.label("purpose", "rightHead", s.rightHead));
   // The background lead group sits on a home plate background. finalize applies the tip width adj(16372) as avLst
   slide.addShape(ctx.pres.ShapeType.homePlate, { x: L.x, y: L.y, w: L.w, h: L.h, fill: { color: T.COLOR.white }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, objectName: "adj:16372" });
   const leads = s.leads || [];
@@ -531,10 +533,10 @@ function purpose(ctx, slide, sb) {
       noteText(notes),
       { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
   });
-  label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, s.purposeHead || "목적", { sz: T.SIZE.body });
+  label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, LB.label("purpose", "purposeHead", s.purposeHead), { sz: T.SIZE.body });
   const pb = { x: R.x, y: R.y + T.PANEL.HEAD_H, w: R.w, h: 1.05 };
   frame(ctx, slide, pb); A.text(slide, pb, s.purpose || "", { sz: T.SIZE.body, bold: true, align: "center" });
-  const ib = subhead(ctx, slide, { x: R.x, y: pb.y + pb.h + 0.2, w: R.w, h: R.h - pb.h - 0.6 }, s.issueHead || "주요 이슈 및 해결방안");
+  const ib = subhead(ctx, slide, { x: R.x, y: pb.y + pb.h + 0.2, w: R.w, h: R.h - pb.h - 0.6 }, LB.label("purpose", "issueHead", s.issueHead));
   const issues = s.issues || [];
   const ih = Math.min(0.5, ib.h / Math.max(issues.length, 1) - 0.08);
   issues.forEach((it, i) => { const bx = { x: ib.x, y: ib.y + i * (ih + 0.08), w: ib.w, h: ih }; frame(ctx, slide, bx); A.text(slide, bx, it, { sz: T.SIZE.body, align: "center" }); });
@@ -568,17 +570,18 @@ function scopeOutputs(outs, nMod, modCols, ix, iw) {
 const SCOPE_TAG_W = 0.7; // structure label (VISION, SCOPE, OUTPUT) column width (16:9 basis, scaled by the page ratio)
 const SCOPE_TAG_GAP = 0.1; // gap between the structure label column and the content
 const SCOPE_TAG_MG = 0.03; // structure label side margin (centered, so a smaller margin keeps the text in place)
-const SCOPE_TAGS = ["VISION", "SCOPE", "OUTPUT"];
+const SCOPE_TAG_KEYS = ["visionTag", "scopeTag", "outputTag"]; // structure label slots (defaults VISION, SCOPE, OUTPUT)
 function scope(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb), S = ctx.S;
   // Set the column width floor to the longest label so structure label words fit on one line even on narrow pages
-  const tagW = Math.max(SCOPE_TAG_W * S.sx, A.wordWidthIn(SCOPE_TAGS, T.SIZE.note, false) + 2 * SCOPE_TAG_MG);
+  const tags = SCOPE_TAG_KEYS.map((k) => LB.label("scope", k, s[k]));
+  const tagW = Math.max(SCOPE_TAG_W * S.sx, A.wordWidthIn(tags, T.SIZE.note, false) + 2 * SCOPE_TAG_MG);
   const ix = b.x + tagW + SCOPE_TAG_GAP * S.sx, iw = b.x + b.w - ix;
   const tag = (y, h, t) => A.text(slide, { x: b.x, y, w: tagW, h }, t, { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [SCOPE_TAG_MG, null, SCOPE_TAG_MG, null] });
-  tag(b.y, 0.5, SCOPE_TAGS[0]);
+  tag(b.y, 0.5, tags[0]);
   const vb = { x: ix, y: b.y, w: iw, h: 0.5 };
   frame(ctx, slide, vb, { line: T.COLOR.navy, pt: 1.0 }); A.text(slide, vb, `"${s.vision || ""}"`, { sz: T.SIZE.panelHead, bold: true, color: T.COLOR.navy, align: "center" });
-  label(ctx, slide, { x: ix, y: vb.y + 0.6, w: iw, h: 0.34 }, s.goalHead || "본 과업의 최종 목표", { sz: T.SIZE.body });
+  label(ctx, slide, { x: ix, y: vb.y + 0.6, w: iw, h: 0.34 }, LB.label("scope", "goalHead", s.goalHead), { sz: T.SIZE.body });
   const gb = { x: ix, y: vb.y + 0.94, w: iw, h: 0.4 };
   frame(ctx, slide, gb, { fill: T.COLOR.tintHead }); A.text(slide, gb, s.goal || "", { sz: T.SIZE.body, bold: true, align: "center" });
   const mods = s.modules || [];
@@ -587,11 +590,11 @@ function scope(ctx, slide, sb) {
   const outLay = scopeOutputs(outs, mods.length, modCols, ix, iw);
   const outH = outLay.h;
   const my = gb.y + gb.h + 0.25, mh = b.y + b.h - my - (outs.length ? outH + 0.25 : 0);
-  tag(my, mh, SCOPE_TAGS[1]);
+  tag(my, mh, tags[1]);
   cols({ x: ix, y: my, w: iw, h: mh }, Math.max(mods.length, 1)).forEach((c, i) => { if (mods[i]) panel(ctx, slide, c, { head: mods[i].title, items: mods[i].items, noWarn: true }); });
   if (outs.length) {
     const oy = b.y + b.h - outH;
-    tag(oy, outH, SCOPE_TAGS[2]);
+    tag(oy, outH, tags[2]);
     outLay.cells.forEach((c) => { const cb = { x: c.x, y: oy + c.y, w: c.w, h: c.h }; frame(ctx, slide, cb); bullets(ctx, slide, cb, c.items, { noWarn: true, valign: "middle" }); });
   }
   source(ctx, slide, sb);
@@ -662,10 +665,10 @@ function process(ctx, slide, sb) {
   const mods = s.modules || [];
   cols(b, Math.max(mods.length, 1), 0.45 * ctx.S.sx).forEach((c, i) => {
     const m = mods[i]; if (!m) return;
-    A.text(slide, { x: c.x, y: c.y, w: c.w, h: 0.3 }, m.id || `Module ${i + 1}`, { sz: T.SIZE.body, color: T.COLOR.textGray, align: "center", mg: [0, 0, 0, 0] });
+    A.text(slide, { x: c.x, y: c.y, w: c.w, h: 0.3 }, m.id || LB.format(LB.label("process", "idFormat", s.idFormat), { n: i + 1 }), { sz: T.SIZE.body, color: T.COLOR.textGray, align: "center", mg: [0, 0, 0, 0] });
     // Many modules make the chevrons narrow, so raise the height and drop the font one step
     const many = mods.length >= 6;
-    chevronRow(ctx, slide, { x: c.x, y: c.y + 0.35, w: c.w, h: many ? 0.62 : 0.5 }, [`M${i + 1}. ${m.title}`], { allChevron: i > 0, sz: many ? T.SIZE.body : T.SIZE.panelHead });
+    chevronRow(ctx, slide, { x: c.x, y: c.y + 0.35, w: c.w, h: many ? 0.62 : 0.5 }, [LB.format(LB.label("process", "titleFormat", s.titleFormat), { n: i + 1, t: `${m.title}` })], { allChevron: i > 0, sz: many ? T.SIZE.body : T.SIZE.panelHead });
     const tasks = m.tasks || [];
     const top0Base = mods.length >= 6 ? 1.22 : 1.1;
     // Spread Task boxes evenly down to the body bottom. Align the last box bottom with the body bottom, but stretch gaps to at most 1.5x the even gap
@@ -704,7 +707,8 @@ function module_overview(ctx, slide, sb) {
   const tasks = s.tasks || [];
   // rowLabels defaults to 4 entries [head row, 3 content rows]. With only 3, prepend the head row label so rows stay aligned
   const given = (s.rowLabels || []).filter(Boolean);
-  const rl = given.length >= 4 ? given.slice(0, 4) : given.length === 3 ? ["단계"].concat(given) : ["단계", "추진과정", "활용자료", "산출물"];
+  const base = LB.label("module_overview", "rowLabels").slice(0, 4);
+  const rl = given.length >= 4 ? given.slice(0, 4) : given.length === 3 ? [base[0]].concat(given) : base;
   // Floor the label box width (lw + grid gap - label gap) at the word width plus margin so row label words fit on one line even on narrow pages
   const lw = Math.max(MO_LABEL_W * S.sx, A.wordWidthIn(rl, T.SIZE.body, true) + 2 * T.PANEL.LABEL_MG_X + T.PANEL.LABEL_GAP - MO_GRID_GAP);
   const gy = [0, 0.55, 0.55 + (b.h - 0.55) * 0.5, 0.55 + (b.h - 0.55) * 0.78, b.h];
@@ -732,9 +736,9 @@ function module_overview(ctx, slide, sb) {
 function task(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
   const lw = b.w * 0.42;
-  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h - (s.point ? 0.7 : 0) }, s.leftHead || "Task 수행 설계");
-  tableBlock(ctx, slide, L, { head: s.head || ["항목", "내용"], rows: s.rows || [] });
-  const R = subhead(ctx, slide, { x: b.x + lw + 0.3, y: b.y, w: b.w - lw - 0.3, h: b.h - (s.point ? 0.7 : 0) }, (s.sample && s.sample.head) || "실측 표본 (※ 시안)");
+  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "leftHead", s.leftHead));
+  tableBlock(ctx, slide, L, { head: LB.label("task", "head", s.head), rows: s.rows || [] });
+  const R = subhead(ctx, slide, { x: b.x + lw + 0.3, y: b.y, w: b.w - lw - 0.3, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "sample.head", s.sample && s.sample.head));
   sampleBlock(ctx, slide, R, s.sample || {});
   if (s.point) callout(ctx, slide, { x: b.x, y: b.y + b.h - 0.5, w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point);
   source(ctx, slide, sb);
@@ -744,7 +748,7 @@ function sampleBlock(ctx, slide, box, sm) {
   else if (sm.chart) A.chart(ctx.pres, slide, box, sm.chart);
   else if (sm.image !== undefined) A.image(ctx.pres, slide, box, sm.image, { label: "표본 화면" });
   else { frame(ctx, slide, box); bullets(ctx, slide, box, sm.items || [], { noWarn: true }); }
-  tag(ctx, slide, { x: box.x + 0.05, y: box.y - 0.5 }, sm.tag || "Sample");
+  tag(ctx, slide, { x: box.x + 0.05, y: box.y - 0.5 }, LB.label("task", "sample.tag", sm.tag));
 }
 /** Group of 2-3 Tasks: per column, a Task label + data, method and output bullets. slots: {tasks:[{id, title, items:[]}], rowLabels, freeLabel, point} */
 function task_multi(ctx, slide, sb) {
@@ -768,7 +772,7 @@ function task_multi(ctx, slide, sb) {
     labels = seen;
   }
   const hasFree = maps.some((m) => m.__free && m.__free.length);
-  const freeLabel = s.freeLabel || "주요 내용"; // label of the row collecting items not in "label : value" form
+  const freeLabel = LB.label("task_multi", "freeLabel", s.freeLabel); // label of the row collecting items not in "label : value" form
   const rows = labels.concat(hasFree ? [freeLabel] : []);
   const cb = { x: b.x, y: b.y, w: b.w, h: b.h - (s.point ? 0.62 : 0) };
   const labW = 1.0 * ctx.S.sx;
@@ -779,7 +783,7 @@ function task_multi(ctx, slide, sb) {
   // Column heads: Task chevrons
   tasks.forEach((t, i) => {
     const x = gridX + i * (colW + T.PANEL.GAP);
-    label(ctx, slide, { x, y: cb.y, w: colW, h: headH }, `${t.id || "Task " + (i + 1)}. ${t.title || ""}`, { sz: T.SIZE.body });
+    label(ctx, slide, { x, y: cb.y, w: colW, h: headH }, `${t.id || LB.format(LB.label("task_multi", "idFormat", s.idFormat), { n: i + 1 })}. ${t.title || ""}`, { sz: T.SIZE.body });
   });
   const rowH = Math.max(0.3, (cb.h - headH - 0.1 - T.PANEL.GAP * (rows.length - 1)) / Math.max(rows.length, 1));
   rows.forEach((rl, r) => {
@@ -944,7 +948,7 @@ function comparePaired(ctx, slide, s, b) {
   const xs = [x0, x0 + lay.w + CMP_COL_GAP, x0 + lay.w + lay.gw + 2 * CMP_COL_GAP];
   const ws = [lay.w, lay.gw, lay.w];
   // Column titles go gray for current, light navy for gap and navy for improved, so they darken from left to right
-  [[s.asis.head || "AS-IS", T.COLOR.textMuted, T.COLOR.white], [s.gapHead || "GAP", T.COLOR.tintHead, T.COLOR.textDark], [s.tobe.head || "TO-BE", T.COLOR.navy, T.COLOR.white]]
+  [[LB.label("compare", "asis.head", s.asis.head), T.COLOR.textMuted, T.COLOR.white], [LB.label("compare", "gapHead", s.gapHead), T.COLOR.tintHead, T.COLOR.textDark], [LB.label("compare", "tobe.head", s.tobe.head), T.COLOR.navy, T.COLOR.white]]
     .forEach(([t, fill, color], j) => label(ctx, slide, { x: xs[j], y: y0, w: ws[j], h: T.PANEL.TITLE_H }, t, { fill, color }));
   const mg = A.boxMargin([CMP_PAD_X, ins, CMP_PAD_X, ins]);
   for (let i = 0; i < n; i++) {
@@ -972,10 +976,10 @@ function compare(ctx, slide, sb) {
   const top = b.y + (b.h - ph - gh) / 2;
   const cb = { x: b.x, y: top, w: b.w, h: ph };
   const [L, R] = cols(cb, 2, 0.8);
-  panel(ctx, slide, L, { head: (s.asis && s.asis.head) || "AS-IS", items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true });
-  panel(ctx, slide, R, { head: (s.tobe && s.tobe.head) || "TO-BE", items: s.tobe && s.tobe.items, noWarn: true });
+  panel(ctx, slide, L, { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true });
+  panel(ctx, slide, R, { head: LB.label("compare", "tobe.head", s.tobe && s.tobe.head), items: s.tobe && s.tobe.items, noWarn: true });
   slide.addShape(ctx.pres.ShapeType.rightArrow, { x: L.x + L.w + 0.15, y: cb.y + cb.h / 2 - 0.25, w: 0.5, h: 0.5, fill: { color: T.COLOR.navy }, line: { color: "FFFFFF", width: 0, transparency: 100 } });
-  if (s.gap) { const gy = top + ph + 0.2; label(ctx, slide, { x: b.x, y: gy, w: 1.2 * ctx.S.sx, h: 0.8 }, "GAP", { sz: T.SIZE.body }); const gb = { x: b.x + 1.2 * ctx.S.sx, y: gy, w: b.w - 1.2 * ctx.S.sx, h: 0.8 }; frame(ctx, slide, gb, { fill: T.COLOR.tintBg }); bullets(ctx, slide, gb, s.gap, { noWarn: true }); }
+  if (s.gap) { const gy = top + ph + 0.2; label(ctx, slide, { x: b.x, y: gy, w: 1.2 * ctx.S.sx, h: 0.8 }, LB.label("compare", "gapHead", s.gapHead), { sz: T.SIZE.body }); const gb = { x: b.x + 1.2 * ctx.S.sx, y: gy, w: b.w - 1.2 * ctx.S.sx, h: 0.8 }; frame(ctx, slide, gb, { fill: T.COLOR.tintBg }); bullets(ctx, slide, gb, s.gap, { noWarn: true }); }
   source(ctx, slide, sb);
 }
 /** Roadmap: strategy rows × year columns. slots: {periods:[], lanes:[{title, tasks:[{text, from, to}]}], note} */
@@ -983,7 +987,7 @@ function roadmap(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb), S = ctx.S;
   const lw = 2.3 * S.sx, periods = s.periods || [], lanes = s.lanes || [];
   const gx = b.x + lw + 0.1, gw = b.w - lw - 0.1, pw = gw / Math.max(periods.length, 1);
-  label(ctx, slide, { x: b.x, y: b.y, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: 0.35 }, s.laneHead || "전략", { sz: T.SIZE.body });
+  label(ctx, slide, { x: b.x, y: b.y, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: 0.35 }, LB.label("roadmap", "laneHead", s.laneHead), { sz: T.SIZE.body });
   periods.forEach((p, i) => label(ctx, slide, { x: gx + i * pw, y: b.y, w: pw - 0.02, h: 0.35 }, p, { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body }));
   const lh = (b.h - 0.45 - (s.note ? 0.4 : 0)) / Math.max(lanes.length, 1);
   lanes.forEach((ln, i) => {
@@ -1009,9 +1013,10 @@ function gantt(ctx, slide, sb) {
   const months = s.months || 4, weeks = s.weeks || 4;
   const groups = s.groups || [];
   // Task column head and report row group name (defaults are proposal terms; general planning decks change them via slots)
-  const taskHead = s.taskHead || "과업", reportHead = s.reportHead || "보고회", groupHead = s.groupHead || "구분";
+  const taskHead = LB.label("gantt", "taskHead", s.taskHead), reportHead = LB.label("gantt", "reportHead", s.reportHead), groupHead = LB.label("gantt", "groupHead", s.groupHead);
+  const monthFormat = LB.label("gantt", "monthFormat", s.monthFormat);
   const head1 = [{ text: groupHead, rowspan: 2 }, { text: taskHead, rowspan: 2 }];
-  for (let i = 0; i < months; i++) { head1.push({ text: `${i + 1}M`, colspan: weeks }); for (let j = 1; j < weeks; j++) head1.push({ merged: true }); }
+  for (let i = 0; i < months; i++) { head1.push({ text: LB.format(monthFormat, { n: i + 1 }), colspan: weeks }); for (let j = 1; j < weeks; j++) head1.push({ merged: true }); }
   const head2 = [{ merged: true }, { merged: true }, ...Array.from({ length: months * weeks }, (_, i) => `${(i % weeks) + 1}`)];
   const rowsOut = [];
   groups.forEach((g) => g.tasks.forEach((t, j) => {
@@ -1059,7 +1064,7 @@ function org(ctx, slide, sb) {
   };
   // Level 1: client agency
   let y = b.y;
-  box(cx - bw / 2, y, bw, h1, s.client || "발주기관", "navy");
+  box(cx - bw / 2, y, bw, h1, LB.label("org", "client", s.client), "navy");
   if (s.clientNote) { // the client role note sits as a bullet list to the right of the box; width and height are capped so it does not overlap the advisory box
     const items = Array.isArray(s.clientNote) ? s.clientNote : String(s.clientNote).split("\n").filter(Boolean);
     const nx = cx + bw / 2 + 0.04;
@@ -1071,10 +1076,10 @@ function org(ctx, slide, sb) {
   line(cx, y + h1, 0, vgap);
   // Level 2: PM, with the advisory committee on the right
   y += h1 + vgap;
-  box(cx - bw / 2, y, bw, h2, `${s.pmTitle || "총괄책임자 (PM)"}\n${s.pm || "[인력A]"}`, "navy");
+  box(cx - bw / 2, y, bw, h2, `${LB.label("org", "pmTitle", s.pmTitle)}\n${s.pm || "[인력A]"}`, "navy");
   if (s.advisory) {
     line(cx + bw / 2, y + h2 / 2, 1.0 * S.sx, 0);
-    box(cx + bw / 2 + 1.0 * S.sx, y, bw, h2, `${s.advisoryTitle || "자문위원회"}\n${s.advisory}`);
+    box(cx + bw / 2 + 1.0 * S.sx, y, bw, h2, `${LB.label("org", "advisoryTitle", s.advisoryTitle)}\n${s.advisory}`);
     if (s.advisoryNote) { // the advisory role note sits next to its box
       const items = Array.isArray(s.advisoryNote) ? s.advisoryNote : String(s.advisoryNote).split("\n").filter(Boolean);
       bullets(ctx, slide, { x: cx + bw / 2 + 1.0 * S.sx, y: y + h2 + 0.04, w: bw, h: 0.26 * items.length }, items, { noWarn: true, valign: "top", fixedSize: true, sz: T.SIZE.body });
@@ -1083,7 +1088,7 @@ function org(ctx, slide, sb) {
   line(cx, y + h2, 0, vgap);
   // Level 3: quality manager (on the vertical line between the PM and the module teams)
   y += h2 + vgap;
-  if (s.qa) { box(cx - bw / 2, y, bw, h2, `${s.qaTitle || "품질관리자 (PL)"}\n${s.qa}`, "tint"); line(cx, y + h2, 0, vgap + 0.03); y += h2 + vgap + 0.03; }
+  if (s.qa) { box(cx - bw / 2, y, bw, h2, `${LB.label("org", "qaTitle", s.qaTitle)}\n${s.qa}`, "tint"); line(cx, y + h2, 0, vgap + 0.03); y += h2 + vgap + 0.03; }
   // Level 4: module teams (4-6 in one row, 7 or more in two rows)
   const teams = s.teams || [];
   const n = Math.max(teams.length, 1);
@@ -1146,7 +1151,7 @@ function staff_card(ctx, slide, sb) {
     if (px) A.image(ctx.pres, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 0.12, w: 0.9, h: 1.1 }, p.photo, { label: "사진" });
     A.text(slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.12, w: c.w - 0.2 - px, h: 0.36 }, p.name || "[인력]", { sz: T.SIZE.panelHead, bold: true, align: px ? "left" : "center" });
     bullets(ctx, slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.5, w: c.w - 0.2 - px, h: 0.75 }, p.career || [], { noWarn: true, valign: "top" });
-    label(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.35, w: c.w - 0.24, h: 0.28 }, s.recordsHead || "주요 실적", { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body });
+    label(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.35, w: c.w - 0.24, h: 0.28 }, LB.label("staff_card", "recordsHead", s.recordsHead), { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body });
     bullets(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.68, w: c.w - 0.24, h: c.h - T.PANEL.TITLE_H - 1.8 }, p.records || [], { noWarn: true, valign: "top", sz: dense ? T.SIZE.tableDense : T.SIZE.body });
   });
   source(ctx, slide, sb);
@@ -1160,7 +1165,7 @@ function swot(ctx, slide, sb) {
   // The middle strategy area holds two cells side by side, so it is wider than the factor columns
   const sideW = (b.w - 2 * SWOT_GAP) * SWOT_SIDE_SHARE, midW = b.w - 2 * SWOT_GAP - 2 * sideW;
   const L = { x: b.x, y: b.y, w: sideW, h: b.h }, M = { x: b.x + sideW + SWOT_GAP, y: b.y, w: midW, h: b.h }, R = { x: M.x + midW + SWOT_GAP, y: b.y, w: sideW, h: b.h };
-  const lb = { S: "강점 (S)", W: "약점 (W)", O: "기회 (O)", T: "위협 (T)", ...(s.labels || {}) }; // factor cell titles (changed through labels)
+  const lb = LB.labels("swot", "labels", s.labels); // factor cell titles (changed through labels)
   rows(L, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.W : lb.S, items: i ? s.W : s.S, noWarn: true }));
   rows(R, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.T : lb.O, items: i ? s.T : s.O, noWarn: true }));
   // Arrows converging from the four factor cells on the middle strategy cells (left column points right, right column points left)
@@ -1170,7 +1175,7 @@ function swot(ctx, slide, sb) {
     slide.addShape(ctx.pres.ShapeType.rightArrow, { x: L.x + L.w + (SWOT_GAP - SWOT_ARROW.w) / 2, y: cy, w: SWOT_ARROW.w, h: SWOT_ARROW.h, fill: { color: T.COLOR.navy }, line: noLine });
     slide.addShape(ctx.pres.ShapeType.leftArrow, { x: M.x + M.w + (SWOT_GAP - SWOT_ARROW.w) / 2, y: cy, w: SWOT_ARROW.w, h: SWOT_ARROW.h, fill: { color: T.COLOR.navy }, line: noLine });
   });
-  const q = [["SO", s.so], ["WO", s.wo], ["ST", s.st], ["WT", s.wt]];
+  const q = [[lb.SO, s.so], [lb.WO, s.wo], [lb.ST, s.st], [lb.WT, s.wt]];
   const cell = (M.w - 0.1) / 2, ch = (M.h - 0.1) / 2;
   q.forEach(([k, v], i) => {
     const bx = { x: M.x + (i % 2) * (cell + 0.1), y: M.y + Math.floor(i / 2) * (ch + 0.1), w: cell, h: ch };
@@ -1221,7 +1226,7 @@ function steps(ctx, slide, sb) {
   // body() already excludes the source line and footnote height, so center within the body height
   const shift = Math.max(0, (b.h - groupH) / 2);
   // stepLabel sets the chevron prefix; an empty string shows the title only
-  const lab = s.stepLabel === undefined ? "STEP" : s.stepLabel;
+  const lab = LB.labelKeep("steps", "stepLabel", s.stepLabel);
   const chev = { x: b.x, y: b.y + shift, w: b.w, h: 0.55 };
   chevronRow(ctx, slide, chev, st.map((x, i) => (lab ? `${lab} ${i + 1}. ${x.title}` : x.title)));
   chevronCols(chev, Math.max(st.length, 1), b.y + 0.7 + shift, bodyH).forEach((c, i) => { if (st[i]) { frame(ctx, slide, c); bullets(ctx, slide, c, st[i].items || [], { noWarn: true, valign: "middle", gapPt: Math.min(14, Math.max(8, (c.h - 0.3) / Math.max((st[i].items || []).length, 1) * 24)) }); } });
@@ -1240,7 +1245,7 @@ function orgchart(ctx, slide, sb) {
   const netH = net.length ? 0.68 : 0;
   // With 7 or more divisions, widen the chart so team names fit on one line
   const leftW = people.length ? b.w * (units.length >= 7 ? 0.76 : 0.62) : b.w;
-  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: leftW, h: b.h - netH }, s.leftHead || "조직 구성");
+  const L = subhead(ctx, slide, { x: b.x, y: b.y, w: leftW, h: b.h - netH }, LB.label("orgchart", "leftHead", s.leftHead));
   const line = (x, y, w, h) => slide.addShape(P.ShapeType.line, { x, y, w, h, line: { color: T.COLOR.border, width: 1 } });
   const ceoW = Math.min(2.4, L.w * 0.26);
   const sideW = Math.min(2.2, L.w * 0.26);
@@ -1284,7 +1289,7 @@ function orgchart(ctx, slide, sb) {
   const top = L.y + Math.max(0, slack / 2);
   const ceoBox = { x: cx - ceoW / 2, y: top, w: ceoW, h: CEO_H };
   const sideMid = top + CEO_H / 2;
-  slide.addText(A.runsOf(A.parasFromString(s.ceo || "대표이사", { sz: T.SIZE.body, b: true, color: T.COLOR.white, align: "center" })),
+  slide.addText(A.runsOf(A.parasFromString(LB.label("orgchart", "ceo", s.ceo), { sz: T.SIZE.body, b: true, color: T.COLOR.white, align: "center" })),
     { ...ceoBox, shape: P.ShapeType.rect, fill: { color: T.COLOR.navy }, line: { color: T.COLOR.navy, width: 0.75 }, valign: "middle", margin: 0, isTextBox: true, autoFit: false });
   // Management support sits left of the CEO and the advisory committee right of the CEO on the same row, so the reporting line stays one horizontal line
   if (s.staff) {
@@ -1320,8 +1325,8 @@ function orgchart(ctx, slide, sb) {
   });
   // Staff composition table on the right
   if (people.length) {
-    const R = subhead(ctx, slide, { x: b.x + leftW + 0.25, y: b.y, w: b.w - leftW - 0.25, h: b.h - netH }, s.rightHead || "인력 구성");
-    const head = s.peopleHead || ["구분", "인원", "비중"];
+    const R = subhead(ctx, slide, { x: b.x + leftW + 0.25, y: b.y, w: b.w - leftW - 0.25, h: b.h - netH }, LB.label("orgchart", "rightHead", s.rightHead));
+    const head = LB.label("orgchart", "peopleHead", s.peopleHead);
     const rows2 = people.map((p) => [p.label || "", p.count || "", p.ratio || ""]);
     tableBlock(ctx, slide, R, { head, rows: rows2 });
   }
@@ -1330,7 +1335,7 @@ function orgchart(ctx, slide, sb) {
     const ny = b.y + b.h - netH + 0.06;
     const lw2 = Math.min(2.1, b.w * 0.18);
     const box = { x: b.x, y: ny + 0.12, w: b.w, h: 0.44 };
-    label(ctx, slide, { x: box.x, y: box.y, w: lw2, h: box.h }, s.netHead || "주요 협력 네트워크", { sz: T.SIZE.tableDense });
+    label(ctx, slide, { x: box.x, y: box.y, w: lw2, h: box.h }, LB.label("orgchart", "netHead", s.netHead), { sz: T.SIZE.tableDense });
     const rest = { x: box.x + lw2 + 0.08, y: box.y, w: box.w - lw2 - 0.08, h: box.h };
     frame(ctx, slide, rest);
     cols(rest, net.length, 0.06).forEach((c, i) => A.text(slide, c, net[i], { sz: T.SIZE.body, bold: true, align: "center", valign: "middle" }));
@@ -1343,10 +1348,10 @@ function illustrative(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
   // If the row height cap leaves the table short, center the title and table group vertically in the body
   const shift = s.table ? Math.max(0, (b.h - 0.45 - tableLayout(s.table, b.w, b.h - 0.45).total) / 2) : 0;
-  A.text(slide, { x: b.x, y: b.y + shift, w: b.w, h: 0.35 }, s.title || "참고자료 및 산출물 예시", { sz: T.SIZE.panelHead, align: "center" });
+  A.text(slide, { x: b.x, y: b.y + shift, w: b.w, h: 0.35 }, LB.label("illustrative", "title", s.title), { sz: T.SIZE.panelHead, align: "center" });
   const box = { x: b.x, y: b.y + 0.45 + shift, w: b.w, h: b.h - 0.45 - 2 * shift };
   if (s.table) tableBlock(ctx, slide, box, s.table); else A.image(ctx.pres, slide, box, s.image, { label: "산출물 화면" });
-  tag(ctx, slide, { x: b.x + 0.05, y: b.y + 0.05 + shift }, "Illustrative");
+  tag(ctx, slide, { x: b.x + 0.05, y: b.y + 0.05 + shift }, LB.label("illustrative", "tag", s.tag));
   source(ctx, slide, sb);
 }
 /** Summary: panels on top + conclusion band at the bottom. slots: {panels, conclusion} */

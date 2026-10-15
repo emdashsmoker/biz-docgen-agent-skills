@@ -3,6 +3,7 @@
 사용: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "유지 사유"]
 검사 항목
 - 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드 (FAIL)
+- 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
 - 글자 수: 헤드라인 1줄 상한 50자(초과 WARN)와 2줄 상한 100자(초과 FAIL), 마커 30, 잔존 슬롯 {{ }} 와 [확인]. 판형(--layout 또는 meta.layout)의 1줄 상한(limits.json HEADLINE_LINE_CHARS, 16:9 상한을 헤드라인 폭 비율로 환산)이 50자보다 작으면 1줄 상한은 그 값, 2줄 상한은 그 2배
@@ -28,7 +29,7 @@
 - 표 빈 셀: 앞쪽 분류 열에 빈 셀이 2개 이상이고 merged 지정이 없으면 WARN
 - 접두 중복: steps title 에 STEP 접두, process 모듈명에 M/Module 접두가 있으면 WARN
 - 번호 표기: 번호 뒤에 공백이 없으면 WARN ("1.목차" → "1. 목차"), secNo 에 마침표가 없으면 WARN
-- 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음)
+- 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" (meta.labels.notation.source 로 추가한 토큰 포함) 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음)
 - 모듈 표기: 절 제목과 목차 항목이 "Module N." 형식이면 WARN ([Module N] 권장)
 - 대상 지칭어: 지칭어 혼용, 지칭어 변경 후 과업 잔존, 제안 외 산출물의 과업 라벨 잔존 시 WARN, "본 기획" 표기 시 WARN
 - 리더 호칭: 총괄 리더와 품질 리더의 호칭이 한 발표자료 안에서 섞이면 WARN
@@ -55,6 +56,9 @@ BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 FM_PATH = HERE.parent / "assets" / "font-metrics.json"
 FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # 나눔고딕 실측 폭 (em). 없으면 추정 폭 사용
 HANGUL_RE = re.compile(r"[가-힣]")
+# 템플릿과 블록의 고정 라벨 기본값 (build.js 의 labels.js 와 같은 표). meta.labels 의 키 검증에 사용
+LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
+LANG_TAG_RE = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")  # 언어 태그 (예: en-US, ko-KR)
 
 
 def char_em(ch, bold):
@@ -279,6 +283,70 @@ def texts_of(sl):
     return out
 
 
+def label_checks(labels):
+    """meta.labels 검사. 반환: (fails, warns). 기본값 표(assets/labels.json)에 없는 이름과 형식 오류는 라벨이 적용되지 않으므로 FAIL"""
+    fails, warns = [], []
+    if labels is None:
+        return fails, warns
+    if not isinstance(labels, dict):
+        return [f"meta.labels 는 {{템플릿 또는 블록: {{슬롯: 라벨}}}} 형식의 객체. 입력값: {str(labels)[:40]}"], warns
+    groups = ", ".join(LABEL_DEFAULTS)
+    for g, slots in labels.items():
+        if g not in LABEL_DEFAULTS:
+            why = "라벨 슬롯이 없는 템플릿" if g in TEMPLATES else "알 수 없는 템플릿 또는 블록 이름"
+            fails.append(f"meta.labels.{g}: {why}. 지정 가능한 이름: {groups}")
+            continue
+        known = LABEL_DEFAULTS[g]
+        if not isinstance(slots, dict):
+            fails.append(f"meta.labels.{g} 는 {{슬롯: 라벨}} 형식의 객체. 슬롯: {', '.join(known)}")
+            continue
+        for k, v in slots.items():
+            path = f"meta.labels.{g}.{k}"
+            if k not in known:
+                nested = [x for x in known if x.startswith(k + ".")]
+                hint = f" (하위 슬롯은 점 경로 키로 지정: {', '.join(nested)})" if nested else ""
+                fails.append(f"{path}: 알 수 없는 슬롯{hint}. {g} 의 슬롯: {', '.join(known)}")
+                continue
+            d = known[k]
+            texts = []
+            if g == "notation":
+                if not (isinstance(v, list) and all(isinstance(x, str) and x.strip() for x in v)):
+                    fails.append(f"{path} 는 문자열 목록 (예: [\"Fuente\", \"Nota\"])")
+                    continue
+                texts = v
+                for x in v:
+                    if re.search(r"[:：]\s*$", x): warns.append(f"{path}: 토큰 '{x}' 끝의 콜론 제거 (빌드가 '토큰:' 형태로 인식)")
+            elif isinstance(d, list):
+                if not (isinstance(v, list) and len(v) == len(d) and all(isinstance(x, str) and x.strip() for x in v)):
+                    fails.append(f"{path} 는 문자열 {len(d)}개의 목록 (기본값 {d})")
+                    continue
+                texts = v
+            elif isinstance(d, dict):
+                if not isinstance(v, dict):
+                    fails.append(f"{path} 는 {{키: 라벨}} 형식의 객체. 키: {', '.join(d)}")
+                    continue
+                for sk, sv in v.items():
+                    if sk not in d: fails.append(f"{path}.{sk}: 알 수 없는 키. 키: {', '.join(d)}")
+                    elif not isinstance(sv, str) or not sv.strip(): fails.append(f"{path}.{sk} 는 빈 값이 아닌 문자열")
+                    else: texts.append(sv)
+            elif not isinstance(v, str):
+                fails.append(f"{path} 는 문자열. 입력값: {str(v)[:30]}")
+                continue
+            elif g == "language":
+                if not LANG_TAG_RE.fullmatch(v): fails.append(f"{path} 는 언어 태그 (예: en-US, ko-KR). 입력값: {v}")
+                continue
+            elif not v.strip() and not (g == "steps" and k == "stepLabel"):
+                fails.append(f"{path}: 빈 라벨 (기본값을 쓰려면 키를 생략, 접두어 생략은 steps.stepLabel 만 빈 문자열 허용)")
+                continue
+            else:
+                texts = [v]
+                for tok in ("{n}", "{t}"):
+                    if tok in d and tok not in v: warns.append(f"{path}: 형식 문자열에 {tok} 없음 (기본값 '{d}', 번호나 제목이 빠짐)")
+            for tx in texts:
+                if re.search(r"—|–", tx): fails.append(f"{path}: em dash 사용 ({tx[:30]})")
+    return fails, warns
+
+
 def lint(story, ledger=None, story_path=".", layout=None):
     fails, warns = [], []
     meta = story.get("meta", {})
@@ -295,6 +363,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not re.fullmatch(r"#?[0-9A-Fa-f]{6}", str(v)):
                 fails.append(f"meta.themeColors.{key} 는 6자리 색상 코드 (예: 1B4332). 입력값: {v}")
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
+    lf, lw = label_checks(meta.get("labels"))
+    fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
     style = meta.get("headlineStyle", "noun")
     track = meta.get("track", "general")
@@ -514,10 +584,15 @@ def lint(story, ledger=None, story_path=".", layout=None):
             warns.append(f"[{sl.get('id')}] '본 기획' 표기 (기획연구도 본 연구 또는 본 과업으로 지칭)")
 
     # 주석을 불릿 항목으로 넣은 경우: 주석 슬롯이나 source 로 옮길 것
+    # meta.labels.notation.source 로 추가한 토큰("토큰:")도 주석 표기로 봄 (build.js 와 같은 규칙)
+    lab = meta.get("labels") if isinstance(meta.get("labels"), dict) else {}
+    src = lab["notation"].get("source") if isinstance(lab.get("notation"), dict) else None
+    extra = [str(t).strip() for t in src if str(t).strip()] if isinstance(src, list) else []
+    extra_note = re.compile(r"^\s*(?:" + "|".join(re.escape(t) for t in extra) + r")\s*[:：]") if extra else None
     for sl in slides:
         for k, v in texts_of(sl):
             if k in ("note", "notes", "source", "caption", "footnotes"): continue  # 주석 슬롯은 정상
-            if isinstance(v, str) and re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v):
+            if isinstance(v, str) and (re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v) or (extra_note and extra_note.match(v))):
                 warns.append(f"[{sl.get('id')}] 본문 항목에 주석 표기 ('{v[:16]}') → note 슬롯이나 source 로 이동 권장")
                 break
 

@@ -15,6 +15,7 @@
 | headlineStyle | noun (noun-ending style, default), polite (polite style) |
 | marker | Marker shape. square (default), bar, triangle |
 | pointLabel | Label text of the Point band (default "수행 Point"). Can also be set per slide |
+| labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
@@ -27,6 +28,18 @@
 | rfp.moduleTasks | [{id: "M1-T2", title, rfp: ["T1", "T3"], rfpNamed}] Tasks designed by the bidder. rfpNamed is true when title is the name set by the RFP (exempt from the sample module name check) |
 | rfp.evalItems | [{id: "A-1", name, score, quantitative}] Detailed evaluation items |
 | rfp.wording | [{standard, variants: []}] Standard spelling of key wording and the variant spellings to replace |
+
+### meta.labels
+
+- Sets label slot values that would otherwise repeat on every slide (cover label, gantt headers, module overview row labels and so on) once per deck
+- The resolution order is the slide slot value, then meta.labels, then the default (`assets/labels.json`)
+- The keys are template or composite block names and slot names (all keys, defaults and an English example are in the label slots section of `references/templates.md`)
+    + common.pointLabel: Point band label (meta.pointLabel takes precedence when set)
+    + language.latin, language.east_asia: language tags of the PPTX text (default en-US, ko-KR for runs that contain Hangul)
+    + notation.source: extra tokens recognized as note lines (the built-in tokens ※, 출처:, 자료:, Source:, Note: stay)
+- Any key may be omitted (omitted keys keep the default)
+- Unknown names and type errors are lint FAILs
+- Example: `"labels": {"cover": {"label": "Proposal"}, "contents": {"title": "Contents"}, "gantt": {"groupHead": "Group", "taskHead": "Task", "reportHead": "Reports"}, "language": {"latin": "en-US"}}`
 
 ### themeColors color keys
 
