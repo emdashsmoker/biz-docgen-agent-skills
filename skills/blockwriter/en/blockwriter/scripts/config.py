@@ -2,7 +2,11 @@
 To change values, edit only this file (typesetting rules) and form.py (form appearance)."""
 from __future__ import annotations
 
+import copy
+import json
 import os
+import sys
+from pathlib import Path
 
 LANG = "en"   # CLI message language: ko | en
 
@@ -19,9 +23,29 @@ PROFILE_FORMATS = {
 PROFILE_DEFAULTS = {"numbering": "manual", "chapter_format": "제{n}장 {t}", "section_format": "{c}.{s} {t}",
                     "subsection_format": "{c}.{s}.{ss} {t}", "caption_prefix": ""}
 NON_ROLE_KEYS = tuple(PROFILE_DEFAULTS)
-GANADA = "가나다라마바사아자차카타파하"
-CAPTION_MARKS = {"TABLE": ("<표 ", "> "), "PICTURE": ("[그림 ", "] ")}   # characters before and after the caption number
-TOC_TITLE = "목  차"
+
+# ── Labels: fixed strings that build prints into documents, and the language tags written into files ──────
+# The defaults are the Korean values. build --labels FILE.json overrides any part with a nested JSON of the same keys; omitted keys keep the defaults
+LABEL_DEFAULTS = {
+    # heading number formats. None keeps the active profile's format (PROFILE_FORMATS or the profile JSON)
+    "formats": {"chapter": None, "section": None, "subsection": None},
+    "letters": {"items": "가나다라마바사아자차카타파하", "format": "{x}."},   # 가나다 level: letter sequence and number format ({x} is the letter)
+    "toc": {"title": "목  차"},
+    # caption number part = open + label + space + number + close + space. seq is the Word SEQ field name (None uses the label)
+    "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
+                "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
+    # manuscript tokens the parser recognizes. Tokens in a label file are added to these and never replace them
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    # DOCX document default language (w:lang). HWPX content.hpf language and style langID (Windows LCID) of the built-in forms
+    "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
+}
+# built-in source tokens that are also written in parentheses ('(출처)'). '(주)' abbreviates 주식회사 (Inc.), so it does not start a source line
+SOURCE_PAREN_TOKENS = ("출처", "자료")
+# placeholders each format may use, and the one it must contain
+LABEL_FORMAT_FIELDS = {"formats.chapter": (("n", "t"), "t"), "formats.section": (("c", "s", "t"), "t"),
+                       "formats.subsection": (("c", "s", "ss", "t"), "t"), "letters.format": (("x",), "x")}
+CAPTION_KINDS = {"TABLE": "table", "PICTURE": "figure"}   # writers' caption kind → caption label key
+LABELS = copy.deepcopy(LABEL_DEFAULTS)   # active labels. set_labels replaces them
 
 XLSX_WIDE_COLS = 6              # if a sheet has more columns than this, ask the user whether to transpose or split the table
 
@@ -167,7 +191,6 @@ DOCX_HEADING_STYLES = {   # heading role → Word built-in heading style (the st
     "chapter": {"chapter": "Heading 1", "section": "Heading 2", "subsection": "Heading 3", "ganada": "Heading 4"},
     "flat": {"chapter": "Title", "section": "Heading 1", "subsection": "Heading 2", "ganada": "Heading 3"},
 }
-DOCX_SEQ_NAMES = {"TABLE": "표", "PICTURE": "그림"}   # caption number field names (same as Word's Korean caption labels)
 DOCX_FULLWIDTH_BULLET = 1.0     # full-width bullet symbol width (ratio of font size)
 DOCX_HALFWIDTH_BULLET = 0.5     # half-width bullet symbol width
 DOCX_SPACER_PT = 1              # line height of the empty paragraph used as spacing below tables
@@ -372,6 +395,26 @@ MESSAGES = {
     "fonts_no_fc": {
         "ko": "WARN: fontconfig 없는 환경. 대체 글꼴 규칙 생략 (Windows와 macOS는 설치된 원래 글꼴 사용)",
         "en": "WARN: no fontconfig on this system; substitution rules skipped (Windows and macOS use the installed original fonts)"},
+    "err_labels_read": {
+        "ko": "ERROR: 라벨 파일을 읽지 못함 {path} ({err})",
+        "en": "ERROR: cannot read the label file {path} ({err})"},
+    "err_labels": {
+        "ko": "ERROR: 라벨 파일 {path} 오류 {n}건: {items}. 키와 기본값은 references/layout.md의 라벨 절",
+        "en": "ERROR: label file {path} has {n} problem(s): {items}. Keys and defaults are in the Labels section of references/layout.md"},
+    "label_unknown": {"ko": "알 수 없는 키 {key}", "en": "unknown key {key}"},
+    "label_type": {"ko": "{key} 값은 {kind}", "en": "{key} must be {kind}"},
+    "label_kind_str": {"ko": "문자열", "en": "a string"},
+    "label_kind_list": {"ko": "빈칸 아닌 문자열의 목록", "en": "a list of non-empty strings"},
+    "label_kind_int": {"ko": "정수", "en": "an integer"},
+    "label_kind_dict": {"ko": "객체", "en": "an object"},
+    "label_format": {
+        "ko": "{key} 형식 오류 ({err}). 쓸 수 있는 자리표시 {fields}",
+        "en": "{key} is not a valid format ({err}); allowed placeholders {fields}"},
+    "label_format_missing": {"ko": "{key}에 {field} 자리표시가 없음", "en": "{key} has no {field} placeholder"},
+    "label_empty": {"ko": "{key} 값이 비어 있음", "en": "{key} is empty"},
+    "label_seq": {
+        "ko": "{key} 값 '{value}'은 Word SEQ 필드 이름으로 쓸 수 없음 (빈칸과 공백 불가). caption 아래 seq를 따로 지정",
+        "en": "{key} value '{value}' cannot be a Word SEQ field name (no blanks or spaces); set seq under caption"},
 }
 
 
@@ -388,3 +431,83 @@ NOTICE = {
 def msg(msg_key: str, /, **kw) -> str:
     entry = MESSAGES[msg_key]
     return (entry.get(LANG) or entry["ko"]).format(**kw)
+
+
+# ── Labels ─────────────────────────────────────────────────────────────────
+def label(key: str):
+    """Active label value of a dotted key (for example 'toc.title')"""
+    node = LABELS
+    for part in key.split("."):
+        node = node[part]
+    return node
+
+
+def caption_marks(kind: str) -> tuple[str, str]:
+    """Characters before and after the caption number ('<표 ', '> ')"""
+    cap = label(f"caption.{CAPTION_KINDS[kind]}")
+    return f"{cap['open']}{cap['label']} ", f"{cap['close']} "
+
+
+def caption_seq(kind: str) -> str:
+    """Word SEQ field name of a caption kind. Without a seq value, the caption label"""
+    cap = label(f"caption.{CAPTION_KINDS[kind]}")
+    return cap["seq"] or cap["label"]
+
+
+def set_labels(path: str):
+    """Reads a label file and merges it over the defaults. Unknown keys and invalid values stop build with the list of all problems"""
+    global LABELS
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as ex:
+        sys.exit(msg("err_labels_read", path=path, err=ex))
+    merged = copy.deepcopy(LABEL_DEFAULTS)
+    problems = _merge_labels(merged, data, "")
+    for key, (fields, required) in LABEL_FORMAT_FIELDS.items():
+        fmt = merged[key.split(".")[0]][key.split(".")[1]]
+        if fmt is None:
+            continue
+        try:
+            fmt.format(**{f: 1 for f in fields})
+        except (KeyError, IndexError, ValueError) as ex:
+            problems.append(msg("label_format", key=key, err=ex, fields=" ".join(f"{{{f}}}" for f in fields)))
+            continue
+        if f"{{{required}}}" not in fmt:
+            problems.append(msg("label_format_missing", key=key, field=f"{{{required}}}"))
+    if not merged["letters"]["items"]:
+        problems.append(msg("label_empty", key="letters.items"))
+    for kind, cap in merged["caption"].items():
+        seq = cap["seq"] or cap["label"]
+        if not seq or any(ch.isspace() for ch in seq):
+            problems.append(msg("label_seq", key=f"caption.{kind}." + ("seq" if cap["seq"] else "label"), value=seq))
+    if problems:
+        sys.exit(msg("err_labels", path=path, n=len(problems), items="; ".join(problems)))
+    LABELS = merged
+
+
+def _merge_labels(base: dict, over, prefix: str) -> list[str]:
+    """Merges over into base in place. Lists (notation tokens) are extended, other values replaced. Returns the problems found"""
+    if not isinstance(over, dict):
+        return [msg("label_type", key=prefix.rstrip(".") or "/", kind=msg("label_kind_dict"))]
+    problems = []
+    for k, v in over.items():
+        key, cur = prefix + k, base.get(k)
+        if k not in base:
+            problems.append(msg("label_unknown", key=key))
+        elif isinstance(cur, dict):
+            problems += _merge_labels(cur, v, key + ".")
+        elif isinstance(cur, list):
+            if isinstance(v, list) and all(isinstance(t, str) and t.strip() for t in v):
+                cur += [t for t in v if t not in cur]
+            else:
+                problems.append(msg("label_type", key=key, kind=msg("label_kind_list")))
+        elif isinstance(cur, int) and not isinstance(cur, bool):
+            if isinstance(v, int) and not isinstance(v, bool):
+                base[k] = v
+            else:
+                problems.append(msg("label_type", key=key, kind=msg("label_kind_int")))
+        elif isinstance(v, str):   # string values; None defaults (formats, seq) also take a string
+            base[k] = v
+        else:
+            problems.append(msg("label_type", key=key, kind=msg("label_kind_str")))
+    return problems

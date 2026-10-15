@@ -2,7 +2,11 @@
 수치를 바꿀 때는 이 파일(조판 규범)과 form.py(양식 모양)만 고친다."""
 from __future__ import annotations
 
+import copy
+import json
 import os
+import sys
+from pathlib import Path
 
 LANG = "ko"   # CLI 메시지 언어: ko | en
 
@@ -19,9 +23,29 @@ PROFILE_FORMATS = {
 PROFILE_DEFAULTS = {"numbering": "manual", "chapter_format": "제{n}장 {t}", "section_format": "{c}.{s} {t}",
                     "subsection_format": "{c}.{s}.{ss} {t}", "caption_prefix": ""}
 NON_ROLE_KEYS = tuple(PROFILE_DEFAULTS)
-GANADA = "가나다라마바사아자차카타파하"
-CAPTION_MARKS = {"TABLE": ("<표 ", "> "), "PICTURE": ("[그림 ", "] ")}   # 캡션 번호 앞뒤 문자
-TOC_TITLE = "목  차"
+
+# ── 라벨: build가 문서에 찍는 고정 문구와 파일에 기록하는 언어 태그 ──────────────────
+# 기본값은 한국어 값. build --labels 파일.json이 같은 키의 중첩 JSON으로 일부를 덮어쓰며 빠진 키는 기본값 유지
+LABEL_DEFAULTS = {
+    # 제목 번호 형식. None이면 현재 프로파일의 형식(PROFILE_FORMATS 또는 프로파일 JSON) 유지
+    "formats": {"chapter": None, "section": None, "subsection": None},
+    "letters": {"items": "가나다라마바사아자차카타파하", "format": "{x}."},   # 가나다 계위: 글자 순서와 번호 형식({x}가 글자)
+    "toc": {"title": "목  차"},
+    # 캡션 번호부 = open + label + 공백 + 번호 + close + 공백. seq는 Word SEQ 필드 이름 (None이면 label 사용)
+    "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
+                "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
+    # 원고 해석기가 인식하는 표기 토큰. 라벨 파일의 토큰은 여기에 추가되며 기본 토큰을 대체하지 않음
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    # DOCX 문서 기본 언어(w:lang). 내장 양식 HWPX의 content.hpf 언어와 스타일 langID(Windows LCID)
+    "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
+}
+# 괄호로도 쓰는 기본 출처 토큰('(출처)'). '(주)'는 주식회사의 약어이므로 출처 줄로 보지 않음
+SOURCE_PAREN_TOKENS = ("출처", "자료")
+# 형식별로 쓸 수 있는 자리표시와 반드시 들어갈 자리표시
+LABEL_FORMAT_FIELDS = {"formats.chapter": (("n", "t"), "t"), "formats.section": (("c", "s", "t"), "t"),
+                       "formats.subsection": (("c", "s", "ss", "t"), "t"), "letters.format": (("x",), "x")}
+CAPTION_KINDS = {"TABLE": "table", "PICTURE": "figure"}   # 조판기의 캡션 종류 → 캡션 라벨 키
+LABELS = copy.deepcopy(LABEL_DEFAULTS)   # 현재 라벨. set_labels가 교체
 
 XLSX_WIDE_COLS = 6              # 시트 열이 이 값을 넘으면 행열 전환 또는 표 분할을 유저에게 질의
 
@@ -167,7 +191,6 @@ DOCX_HEADING_STYLES = {   # 제목 역할 → Word 기본 제목 스타일 (목�
     "chapter": {"chapter": "Heading 1", "section": "Heading 2", "subsection": "Heading 3", "ganada": "Heading 4"},
     "flat": {"chapter": "Title", "section": "Heading 1", "subsection": "Heading 2", "ganada": "Heading 3"},
 }
-DOCX_SEQ_NAMES = {"TABLE": "표", "PICTURE": "그림"}   # 캡션 번호 필드 이름 (Word 한국어 캡션 레이블과 같음)
 DOCX_FULLWIDTH_BULLET = 1.0     # 전각 글머리 기호 폭 (글자 크기 대비)
 DOCX_HALFWIDTH_BULLET = 0.5     # 반각 글머리 기호 폭
 DOCX_SPACER_PT = 1              # 표 아래 간격용 빈 문단의 줄 높이
@@ -372,6 +395,26 @@ MESSAGES = {
     "fonts_no_fc": {
         "ko": "WARN: fontconfig 없는 환경. 대체 글꼴 규칙 생략 (Windows와 macOS는 설치된 원래 글꼴 사용)",
         "en": "WARN: no fontconfig on this system; substitution rules skipped (Windows and macOS use the installed original fonts)"},
+    "err_labels_read": {
+        "ko": "ERROR: 라벨 파일을 읽지 못함 {path} ({err})",
+        "en": "ERROR: cannot read the label file {path} ({err})"},
+    "err_labels": {
+        "ko": "ERROR: 라벨 파일 {path} 오류 {n}건: {items}. 키와 기본값은 references/layout.md의 라벨 절",
+        "en": "ERROR: label file {path} has {n} problem(s): {items}. Keys and defaults are in the Labels section of references/layout.md"},
+    "label_unknown": {"ko": "알 수 없는 키 {key}", "en": "unknown key {key}"},
+    "label_type": {"ko": "{key} 값은 {kind}", "en": "{key} must be {kind}"},
+    "label_kind_str": {"ko": "문자열", "en": "a string"},
+    "label_kind_list": {"ko": "빈칸 아닌 문자열의 목록", "en": "a list of non-empty strings"},
+    "label_kind_int": {"ko": "정수", "en": "an integer"},
+    "label_kind_dict": {"ko": "객체", "en": "an object"},
+    "label_format": {
+        "ko": "{key} 형식 오류 ({err}). 쓸 수 있는 자리표시 {fields}",
+        "en": "{key} is not a valid format ({err}); allowed placeholders {fields}"},
+    "label_format_missing": {"ko": "{key}에 {field} 자리표시가 없음", "en": "{key} has no {field} placeholder"},
+    "label_empty": {"ko": "{key} 값이 비어 있음", "en": "{key} is empty"},
+    "label_seq": {
+        "ko": "{key} 값 '{value}'은 Word SEQ 필드 이름으로 쓸 수 없음 (빈칸과 공백 불가). caption 아래 seq를 따로 지정",
+        "en": "{key} value '{value}' cannot be a Word SEQ field name (no blanks or spaces); set seq under caption"},
 }
 
 
@@ -388,3 +431,83 @@ NOTICE = {
 def msg(msg_key: str, /, **kw) -> str:
     entry = MESSAGES[msg_key]
     return (entry.get(LANG) or entry["ko"]).format(**kw)
+
+
+# ── 라벨 ───────────────────────────────────────────────────────────────────
+def label(key: str):
+    """점으로 이은 키(예 'toc.title')의 현재 라벨 값"""
+    node = LABELS
+    for part in key.split("."):
+        node = node[part]
+    return node
+
+
+def caption_marks(kind: str) -> tuple[str, str]:
+    """캡션 번호 앞뒤 문자 ('<표 ', '> ')"""
+    cap = label(f"caption.{CAPTION_KINDS[kind]}")
+    return f"{cap['open']}{cap['label']} ", f"{cap['close']} "
+
+
+def caption_seq(kind: str) -> str:
+    """캡션 종류의 Word SEQ 필드 이름. seq 값이 없으면 캡션 라벨"""
+    cap = label(f"caption.{CAPTION_KINDS[kind]}")
+    return cap["seq"] or cap["label"]
+
+
+def set_labels(path: str):
+    """라벨 파일을 읽어 기본값 위에 병합. 알 수 없는 키와 잘못된 값은 문제 목록 전체를 출력하고 build를 중단"""
+    global LABELS
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as ex:
+        sys.exit(msg("err_labels_read", path=path, err=ex))
+    merged = copy.deepcopy(LABEL_DEFAULTS)
+    problems = _merge_labels(merged, data, "")
+    for key, (fields, required) in LABEL_FORMAT_FIELDS.items():
+        fmt = merged[key.split(".")[0]][key.split(".")[1]]
+        if fmt is None:
+            continue
+        try:
+            fmt.format(**{f: 1 for f in fields})
+        except (KeyError, IndexError, ValueError) as ex:
+            problems.append(msg("label_format", key=key, err=ex, fields=" ".join(f"{{{f}}}" for f in fields)))
+            continue
+        if f"{{{required}}}" not in fmt:
+            problems.append(msg("label_format_missing", key=key, field=f"{{{required}}}"))
+    if not merged["letters"]["items"]:
+        problems.append(msg("label_empty", key="letters.items"))
+    for kind, cap in merged["caption"].items():
+        seq = cap["seq"] or cap["label"]
+        if not seq or any(ch.isspace() for ch in seq):
+            problems.append(msg("label_seq", key=f"caption.{kind}." + ("seq" if cap["seq"] else "label"), value=seq))
+    if problems:
+        sys.exit(msg("err_labels", path=path, n=len(problems), items="; ".join(problems)))
+    LABELS = merged
+
+
+def _merge_labels(base: dict, over, prefix: str) -> list[str]:
+    """over를 base에 제자리 병합. 목록(표기 토큰)은 덧붙이고 그 밖의 값은 교체. 발견한 문제 목록을 반환"""
+    if not isinstance(over, dict):
+        return [msg("label_type", key=prefix.rstrip(".") or "/", kind=msg("label_kind_dict"))]
+    problems = []
+    for k, v in over.items():
+        key, cur = prefix + k, base.get(k)
+        if k not in base:
+            problems.append(msg("label_unknown", key=key))
+        elif isinstance(cur, dict):
+            problems += _merge_labels(cur, v, key + ".")
+        elif isinstance(cur, list):
+            if isinstance(v, list) and all(isinstance(t, str) and t.strip() for t in v):
+                cur += [t for t in v if t not in cur]
+            else:
+                problems.append(msg("label_type", key=key, kind=msg("label_kind_list")))
+        elif isinstance(cur, int) and not isinstance(cur, bool):
+            if isinstance(v, int) and not isinstance(v, bool):
+                base[k] = v
+            else:
+                problems.append(msg("label_type", key=key, kind=msg("label_kind_int")))
+        elif isinstance(v, str):   # 문자열 값. 기본값이 None인 키(formats, seq)도 문자열을 받음
+            base[k] = v
+        else:
+            problems.append(msg("label_type", key=key, kind=msg("label_kind_str")))
+    return problems

@@ -179,8 +179,8 @@ class DocxBuilder:
         rpr_def.clear()
         for child in rpr_xml(body.char):
             rpr_def.append(child)
-        # with the Latin language set to ko-KR, LibreOffice breaks lines inside numbers (3,|456). Record the same pair as the default of Korean Word documents
-        sub(rpr_def, "w:lang", w__val="en-US", w__eastAsia="ko-KR", w__bidi="ar-SA")
+        # with the Latin language set to ko-KR, LibreOffice breaks lines inside numbers (3,|456). The defaults are the same pair as the default of Korean Word documents
+        sub(rpr_def, "w:lang", w__val=C.label("language.latin"), w__eastAsia=C.label("language.east_asia"), w__bidi="ar-SA")
         ppr_def = defaults.find(qn("w:pPrDefault")).find(qn("w:pPr"))
         ppr_def.clear()
         # turn off automatic spacing between Hangul and Latin text and between Hangul and numbers (same as autoSpacing in the HWPX paragraph shapes)
@@ -445,10 +445,10 @@ class DocxBuilder:
         else:
             sub(extra, "w:ind", w__left=tw(left + side), w__right=tw(right + side), w__firstLine=tw(intent))
         p = self._new_p(role, extra)
-        open_b, close_b = C.CAPTION_MARKS[kind]
+        open_b, close_b = C.caption_marks(kind)
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         p.append(self._run(open_b + prefix))
-        seq = C.DOCX_SEQ_NAMES[kind]
+        seq = C.caption_seq(kind)
         instr = f" SEQ {seq} \\* ARABIC" + (" \\s 1 " if self.p.get("caption_prefix") else " ")
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
@@ -793,7 +793,7 @@ class DocxBuilder:
             if not (self.form.style("toc_chapter") and self.form.style("toc_section")):
                 print(msg("warn_no_toc_style"))
             else:
-                line(C.TOC_TITLE, chapter.char, chapter.para, page_break=bool(self.cover))
+                line(C.label("toc.title"), chapter.char, chapter.para, page_break=bool(self.cover))
                 front.extend(self._toc_paragraphs())
         # end of the front section: a section break with page settings only (no header, footer, or page number)
         if front[-1].tag != qn("w:p"):   # after the TOC content control, a minimum-height paragraph holds the section break

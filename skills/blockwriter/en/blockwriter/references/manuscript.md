@@ -2,11 +2,11 @@
 
 > Translated from the Korean original (blockwriter). When results differ, the Korean version is the reference.
 
-Save the manuscript file as UTF-8. The role of each notation follows the manuscript level rules table in SKILL.md. Korean tokens shown below (such as `<표>`, `(단위: )`, `출처:`) are part of the notation and are written exactly as shown.
+Save the manuscript file as UTF-8. The role of each notation follows the manuscript level rules table in SKILL.md. Korean tokens shown below (such as `<표>`, `(단위: )`, `출처:`) are part of the notation, are written exactly as shown, and are always recognized. A label file (`--labels`, Labels section of references/layout.md) adds tokens in another language, such as `<Table>`, `(Unit: )`, `Source:`, which work the same way.
 
 ## Level notation
 
-- Numbers in headings (`## 1.1 배경`, `# 제2장 현황`, `#### 가. 개요`) are removed, and the form's numbering assigns numbers automatically
+- Numbers in headings (`## 1.1 배경`, `# 제2장 현황`, `#### 가. 개요`) are removed, and the form's numbering assigns numbers automatically. Numbers in a label file's number format (`# Chapter 2. Status`, `#### (b) Overview`) are removed the same way
 - If a heading level is skipped (`###` right after `#`), build reports it with the `[heading skip]` lint. 가나다 (`####`) may sit right under a section or a subsection
 - Bullet markers `-` and `+` are treated the same
 - Bullet levels are ranked by indent width. Across the whole manuscript, the shallowest width is a claim (○), the next width is support (-), and any deeper width is detail (ㆍ)
@@ -53,7 +53,7 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 
 Attached lines are the source lines and ※ note lines that belong to a table, a figure, or a body paragraph.
 
-- (Source line) A line starting with `출처:`, `자료:`, `주:`, `(출처)`, or `(자료)`. `(출처)` and `(자료)` are printed as `출처:` and `자료:`
+- (Source line) A line starting with `출처:`, `자료:`, `주:`, `(출처)`, or `(자료)`. `(출처)` and `(자료)` are printed as `출처:` and `자료:`. Tokens added by a label file work as `token:` and `(token)` (`(Source)` prints as `Source:`)
 - (※ note line) A line starting with `※` or `* ` (an asterisk and a space)
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
