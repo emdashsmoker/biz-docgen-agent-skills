@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 from lxml import etree as ET
 
 import config as C
-from form import BORDER_FILLS, FONT_CATALOG, LANGS, TABS, ABSENT, Form
+from form import BORDER_FILLS, FONT_CATALOG, LANGS, TABS, Form
 
 NS = {
     "ha": "http://www.hancom.co.kr/hwpml/2011/app",
@@ -185,13 +185,12 @@ def _para_properties(root, reg: _Registry):
         el = _sub(pp, HH + "paraPr", id=i, tabPrIDRef=reg.tabs.index(p.tab), condense=0, fontLineHeight=0,
                   snapToGrid=int(p.grid), suppressLineNumbers=0, checked=0)
         _sub(el, HH + "align", horizontal=p.align, vertical="BASELINE")
-        if p.head != ABSENT:
-            if p.head is None:
-                _sub(el, HH + "heading", type="NONE", idRef=0, level=0)
-            elif p.head[0] == "BULLET":
-                _sub(el, HH + "heading", type="BULLET", idRef=reg.bullet_id(p.head), level=0)
-            else:
-                _sub(el, HH + "heading", type="OUTLINE", idRef=0, level=p.head[1])
+        if p.head is None:
+            _sub(el, HH + "heading", type="NONE", idRef=0, level=0)
+        elif p.head[0] == "BULLET":
+            _sub(el, HH + "heading", type="BULLET", idRef=reg.bullet_id(p.head), level=0)
+        else:
+            _sub(el, HH + "heading", type="OUTLINE", idRef=0, level=p.head[1])
         _sub(el, HH + "breakSetting", breakLatinWord="KEEP_WORD",
              breakNonLatinWord="BREAK_WORD" if p.break_word else "KEEP_WORD", widowOrphan=0,
              keepWithNext=1 if p.keep_next else 0,
