@@ -249,7 +249,7 @@ def locate_headings(pages: list[str], entries: list[str]) -> list[int | None]:
 def _locate_pages(pages: list[str], entries: list[str]) -> tuple[list[int | None], int]:
     """Search behind locate_headings. Returns each entry's zero-based rendered page index and the index of the first body page"""
     keys = [_norm(e) for e in entries]
-    title = _norm(C.TOC_TITLE)
+    title = _norm(C.label("toc.title"))
     toc = next((i for i, page in enumerate(pages) if title in _norm(page)), None)
     if toc is None or not keys:
         return [None] * len(keys), 0

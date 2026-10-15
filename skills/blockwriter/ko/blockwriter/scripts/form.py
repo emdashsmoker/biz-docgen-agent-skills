@@ -79,9 +79,6 @@ class Char:
         return _per_lang(self.spacing)
 
 
-ABSENT = "absent"  # heading 요소 자체를 기록하지 않는 문단 (양식 저장 형식 그대로 재현)
-
-
 def bullet(char: str, offset: int = 50, adjust: int = 0) -> tuple:
     """글머리표. offset은 기호와 본문 사이 간격(글자 크기 대비 %), adjust는 기호 폭 조정(HWPUNIT)
     한/글 글머리 문자 U+00AD는 한/글이 '-'로 그리는 붙임표이며 DOCX에서는 '-'로 바꿔 쓴다"""
@@ -100,7 +97,7 @@ class Para:
     line: int = 160                               # 줄 간격 % (글자 크기 대비)
     margin: tuple = (0, 0, 0, 0, 0)               # 첫 줄(음수는 내어쓰기), 왼쪽, 오른쪽, 위, 아래
     legacy_margin: tuple | None = None            # 구형 한/글용 저장값. 없으면 margin의 2배로 기록
-    head: tuple | str | None = None               # bullet(), outline(), ABSENT, None(글머리 없음)
+    head: tuple | None = None                     # bullet(), outline(), None(글머리 없음)
     grid: bool = True                             # 편집 용지 격자에 맞춤
     tab: str = "none"                             # TABS 키
     break_word: bool = False                      # 한글 줄 나눔 기준 (True: 글자, False: 어절)
@@ -275,7 +272,7 @@ FLAT = Form(
               Para(margin=(0, 0, 0, 1500, 0), head=outline(2), tab="auto_left", keep_next=True)),
         Style("ganada", "가나다 제목", "Ganada Heading",
               Char(GOTHIC, 13, bold=True, border="brush"),
-              Para(line=140, margin=(0, 500, 0, 1400, 0), legacy_margin=(0, 500, 0, 1400, 0), head=ABSENT,
+              Para(line=140, margin=(0, 500, 0, 1400, 0), legacy_margin=(0, 500, 0, 1400, 0),
                    keep_next=True)),
         Style("square", "□ 내용", "Square Body",
               Char(GOTHIC, 12, bold=True, border="brush"),

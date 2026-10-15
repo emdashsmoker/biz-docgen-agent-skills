@@ -1,6 +1,6 @@
 ---
 name: "juja-builder"
-description: "연구용역과 정책연구용역 제안서를 RFP 입력에서 hwpx와 docx 납품본까지 작성하는 스킬. 같은 방법론과 조판으로 RFP 기반 사전진단보고서(전략기획, 사업기획, 타당성 조사, 성과분석, 수요조사, 동향 조사분석 등)와 기획보고서(전략기획, 사업기획, 행사기획, 과제카드, 요약보고서, 이슈리포트, 브리핑자료, 가이드라인 등)도 작성. 대상 과업은 정책연구, 전략기획, 기본계획 수립, 사업기획, 성과분석, 경영평가 대응, 조사분석, 정보화계획, 지원사업 운영. 시스템 구축 사업(SI), 국가연구개발과제 연구개발계획서, 공모사업 사업계획서는 범위 밖. 제안 발표자료(pptx, pdf)의 hwpx 제안서 변환도 지원. 유저가 '제안서', '정성제안서', 'RFP', '제안요청서', '입찰', '과업지시서', '용역 제안', '제안서 한글 파일', 'Word 제안서', '발표자료를 제안서로', 'PPT를 한글 제안서로', '사전진단보고서', 'RFP로 보고서', '연구보고서 초안', '기획보고서', '추진계획(안)', '행사 기획안', '과제카드', '요약보고서', '이슈리포트', '브리핑자료', '가이드라인'을 언급하거나 RFP 파일이나 발표자료를 첨부해 제안서 작성과 검토를 요청하면 반드시 사용. 참조 파일은 references/methods.md(과업 유형별 모듈 골격), content-models.md(절별 내용 모델), lexicon.md(관행 어휘), deck-conversion.md(발표자료 변환), report.md(사전진단보고서), planning.md(기획보고서). 양식 파일은 assets/strategy.md(제안전략서), storyline.md(스토리라인), company.md(회사자료), diagnosis.md(진단서), report-storyline.md(보고서 스토리라인), plan-design.md(기획 설계), assets/common/overview.md, organization.md, management.md(공통 파트 원고)."
+description: "연구용역과 정책연구용역 제안서를 RFP 입력에서 hwpx와 docx 납품본까지 작성하는 스킬. 같은 방법론과 조판으로 RFP 기반 사전진단보고서(전략기획, 사업기획, 타당성 조사, 성과분석, 수요조사, 동향 조사분석 등)와 기획보고서(전략기획, 사업기획, 행사기획, 과제카드, 요약보고서, 이슈리포트, 브리핑자료, 가이드라인 등)도 작성. 대상 과업은 정책연구, 전략기획, 기본계획 수립, 사업기획, 성과분석, 경영평가 대응, 조사분석, 정보화계획, 지원사업 운영. 시스템 구축 사업(SI), 국가연구개발과제 연구개발계획서, 공모사업 사업계획서는 범위 밖. 제안 발표자료(pptx, pdf)의 hwpx 제안서 변환도 지원. 유저가 '제안서', '정성제안서', 'RFP', '제안요청서', '입찰', '과업지시서', '용역 제안', '제안서 한글 파일', 'Word 제안서', '발표자료를 제안서로', 'PPT를 한글 제안서로', '사전진단보고서', 'RFP로 보고서', '연구보고서 초안', '기획보고서', '추진계획(안)', '행사 기획안', '과제카드', '요약보고서', '이슈리포트', '브리핑자료', '가이드라인'을 언급하거나 RFP 파일이나 발표자료를 첨부해 제안서 작성과 검토를 요청하면 반드시 사용. 참조 파일은 references/methods.md(과업 유형별 모듈 골격), content-models.md(절별 내용 모델), lexicon.md(관행 어휘), deck-conversion.md(발표자료 변환), report.md(사전진단보고서), planning.md(기획보고서), labels.md(문서 라벨). 양식 파일은 assets/strategy.md(제안전략서), storyline.md(스토리라인), company.md(회사자료), diagnosis.md(진단서), report-storyline.md(보고서 스토리라인), plan-design.md(기획 설계), assets/common/overview.md, organization.md, management.md(공통 파트 원고)."
 license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE.md
 ---
 
@@ -30,6 +30,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | deck-conversion.md | 발표자료 변환 경로의 파싱, 원문 읽기, 이관, RFP 대조, 그림 선별과 도식 캡처 | 제안 발표자료(pptx, pdf)가 입력에 있을 때 0단계 전에 전체 |
 | report.md | 사전진단보고서의 절차, 진단 설계, RFP 우선 원칙, 목차 도출과 목차 사례, 스토리라인 확정, 자료 조사, 원고 작성, 점검 대상, 조판 옵션 | 산출 유형이 사전진단보고서일 때 `init` 직후 전체 |
 | planning.md | 기획보고서의 설계 계통, 기획 유형 예시, 간단한 형식 예시, 과제카드 형식, 절차, 기획 설계, 점검 대상, 조판 옵션 | 산출 유형이 기획보고서일 때 `init` 직후 전체 |
+| labels.md | 문서 라벨의 지정 방법, 키 표와 기본값, 영어 예시, 다른 언어 원고의 진행 | 착수 질의 답변의 문서 언어가 한국어가 아닐 때 첫 check 전에 전체 |
 
 ## 산출 유형
 
@@ -247,14 +248,14 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `check tone 작업폴더 [--reset-whitelist]` | 어조와 어휘 판정. FAIL 조건과 경고 대상은 점검 절. 화이트리스트의 용어는 판정에서 가림 |
 | `check numbers 작업폴더` | 표의 합계 행 재계산과 구성비 합계 확인 |
 | `check fill 작업폴더` | 원고/4*.md와 6*.md의 `[확인]` 잔여와 참여율 초과 판정. 원고/3*.md와 5*.md의 `[확인]` 잔여는 경고 |
-| `check all 작업폴더` | 산출 유형별 판정 일괄 실행(제안서는 위 판정 전부, 사전진단보고서와 기획보고서는 각 참조 파일의 점검 절). 05_점검기록.md 기록. 전부 PASS면 종료 코드 0 |
-| `build 작업폴더 [산출 경로]` | 원고/*.md를 파일명 순으로 합본. 납품/{제안서, 사전진단보고서, 기획보고서}.hwpx와 .docx 조판. 기본 스켈레톤은 실행마다 재생성. 두 형식을 함께 산출하면 문단 글자 순서를 대조하여 결과를 출력 |
+| `check all 작업폴더 [--skip 점검,점검] [--skip-reason 사유]` | 산출 유형별 판정 일괄 실행(제안서는 위 판정 전부, 사전진단보고서와 기획보고서는 각 참조 파일의 점검 절). 05_점검기록.md 기록. 전부 PASS면 종료 코드 0. `--skip`은 지정 점검 생략(점검 절) |
+| `build 작업폴더 [산출 경로]` | 원고/*.md를 파일명 순으로 합본. 납품/{제안서, 사전진단보고서, 기획보고서}.hwpx와 .docx 조판(파일명은 라벨 output.*). 기본 스켈레톤은 실행마다 재생성. 두 형식을 함께 산출하면 문단 글자 순서를 대조하여 결과를 출력 |
 | `render 산출.hwpx 또는 산출.docx` | PDF와 페이지 PNG 산출 (`--engine auto\|rhwp\|soffice`, `--rhwp 경로`, `--outdir 폴더`. docx는 LibreOffice). 기본 산출 위치는 원본 옆. `--outdir`를 주면 PDF와 PNG를 그 폴더에 산출 |
 | `selftest 작업폴더` | 표본 원고의 hwpx와 docx 조판, 렌더링으로 렌더 경로를 판정. 산출은 작업폴더/_렌더시험/. 판정은 state.json checks.render와 checks.render_docx에 기록 (`--engine`, `--rhwp` 옵션은 render와 같음) |
 | `skeleton 양식.hwpx 스켈레톤.hwpx` | 발주처 지정 양식에서 스켈레톤과 프로파일 초안 추출 |
 | `python3 <SKILL>/scripts/extract_images.py 원본 출력폴더 [--min-px 64] [--min-kb 2]` | RFP와 유저 제출 문헌(pdf, hwpx, pptx, docx)에서 삽입 후보 이미지와 manifest.json 추출 |
 
-- build 옵션은 `--format hwpx|docx|both`(산출 형식, 기본 hwpx), `--page-break chapter|section|none`(기본 chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3`(기본 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto`(표 폭 통일 방식, 기본 manual), `--theme navy|mono`(밴드 색 테마, 기본 navy). `--cover`와 `--header`의 값 형식은 `build --help`로 확인
+- build 옵션은 `--format hwpx|docx|both`(산출 형식, 기본 hwpx), `--page-break chapter|section|none`(기본 chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3`(기본 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto`(표 폭 통일 방식, 기본 manual), `--theme navy|mono`(밴드 색 테마, 기본 navy), `--labels 파일.json`(문서 라벨, 조판 절의 문서 라벨). `--cover`와 `--header`의 값 형식은 `build --help`로 확인
     + `--title "문서 제목"`은 본문 첫 줄의 문서 제목(기획보고서). `--chapter-start N`은 첫 장 번호(사전진단보고서의 장 단위 산출)
     + `--divider on|off`는 장 간지. 기본값은 사전진단보고서 on, 제안서와 기획보고서 off
     + `--long-table`은 긴 표의 기본 처리 방식. 값은 착수 질의 답변으로 항상 지정
@@ -263,7 +264,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - build 린트의 `[쪽 나눔 HITL]`은 범용 조판기의 알림. 기본값 chapter는 유저가 쪽 나눔 변경을 요청한 경우에만 바꿈
 - 발주처 양식을 쓰면 `--profile 경로`와 `--skeleton 경로`를 함께 지정. 발주처 양식 조판은 hwpx 전용
 - 판정 결과는 stdout과 state.json에 기록. FAIL 항목 수정 후 재실행
-- `build`는 `check all` PASS 기록이 없으면 중단. PASS 이후 원고나 02_모듈총괄표.md가 바뀌어도 중단(check all 재실행으로 해소). `--force`는 시험 조판과 점검 절의 오판 처리에만 사용
+- `build`는 `check all` PASS 기록이 없으면 중단. PASS 이후 원고, 02_모듈총괄표.md, 라벨 파일이 바뀌어도 중단(check all 재실행으로 해소). `--force`는 시험 조판과 점검 절의 오판 처리에만 사용
 - 배점 합계, 참여율 합계, 인월 등 수치 계산은 코드로 수행
 
 ## 절차
@@ -289,6 +290,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 회사자료.md 채움 여부. 미보유 항목은 `[확인]`으로 남김
     + 과업 유형 판정 결과(배경 골격의 전개형과 압축형 구분 포함). 판정 방법은 01_RFP원문.md의 판별 신호와 과업 유형별 모듈 골격 절의 표 대조. 판별 신호에 걸리지 않는 과업은 methods.md 서두의 계통 표로 판정. 판정 결과는 유저 확인을 받음
     + 스토리라인 확정 깊이. 기본(논증 절의 □ 판단문과 Task별 1줄) 또는 심화(오리지널 섹션 전체의 □ 제목과 ❍ 주장 요지). 무응답이면 기본
+    + 문서 언어와 라벨. 기본은 한국어 문서와 한국어 라벨. 다른 언어면 라벨 파일 작성과 한국어 전용 점검의 생략을 함께 확정(조판 절의 문서 라벨, references/labels.md)
 - 착수 질의 턴에 렌더 시험 결과를 1줄로 보고(엔진, PASS 또는 FAIL). 소스 빌드를 병행 중이면 진행 상태를 같은 줄에 기재
 - 렌더러 확보의 세 경로가 모두 실패하여 렌더 생략을 고지한 경우는 그 고지가 checks.render PASS를 대신함
 - 00_제안전략서.md는 단계별로 채움. 0단계에 착수 질의 답변으로 채우는 필드를 기입. 1단계에 RFP 원문에서 확인하는 필드(사업 기본조건, 작성 규정, 핵심 워딩 사전 포함)를 기입. 2단계에 대응 모듈, 담을 섹션, 대응 섹션을 기입
@@ -862,6 +864,12 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 화이트리스트 밖의 어휘가 FAIL이면 lexicon.md 대체표로 교체. FAIL 회피 목적의 사전 추가와 모듈명 변경은 결함
 - FAIL 처리는 원고의 지적 항목 확인 후 수정. 판정 로직의 오판이면 사유를 최종 보고에 기재
     + 오판 FAIL만 남으면 `check all` PASS 기록이 생기지 않음. 오판 항목과 사유를 유저에게 보고. 유저 승인 후 `build --force`
+- 한국어가 아닌 원고는 한국어 전용 판정을 `check all --skip`으로 생략한 뒤 build
+    + 한국어 전용 판정은 density(라벨 (목적), 산출물 낱말, 한국어 수량 단위), wording(핵심 워딩 사전과 한국어 금지 표현), tone(한국어 어휘와 종결 규칙), numbers(합계 행과 구성비 열을 한국어 낱말로 탐지)
+    + 언어 무관 판정은 rfp, volume, fill. volume의 FAIL 조건은 구조 판정. 글자 수와 줄 상한 경고는 한국어 글자 폭 기준이므로 다른 언어 원고에서는 참고만 함
+    + 형식은 `check all 작업폴더 --skip density,wording,tone,numbers --skip-reason "영어 원고"`. 생략 점검과 사유는 05_점검기록.md의 생략 점검 절과 state.json에 기록. build는 이 PASS 기록을 인정하고 생략 점검을 알림
+    + 언어 판별은 하지 않음. 원고 언어와 생략 대상은 착수 질의 답변으로 정함
+    + 한국어 원고의 FAIL 회피에 쓰지 않음. 한국어 원고의 오판은 위의 오판 FAIL 절차로 처리
 - 오리지널 파트(3*, 5*)의 `[확인]`은 작성 중의 임시 표지. 납품본에 남기지 않음
     + `check fill`이 잔여 위치를 경고로 출력. 5단계에 잔여 목록을 한 턴에 묶어 유저에게 질의
     + 유저가 값을 주면 기입. 값을 확보하지 못한 셀은 유저 승인 후 해당 행이나 열을 삭제
@@ -955,6 +963,17 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 제안서는 누락이 1건이라도 있으면 목차 해제 후 재조판. 목차 유지가 필요하면 한/글의 목차 갱신 필요 문구를 최종 보고에 기재. 사전진단보고서와 기획보고서의 처리는 report.md 조판 절
 - 발주처 양식은 `skeleton 양식.hwpx 스켈레톤.hwpx`로 추출. 프로파일 초안의 null 역할에 스타일명 기입 후 `build --profile 프로파일.json --skeleton 스켈레톤.hwpx` 실행
 
+### 문서 라벨
+
+- 문서에 찍히는 고정 문자열, 원고 표기, docx 언어 태그, 납품 파일명은 라벨. 기본 라벨은 한국어 문서를 만듦(목  차, 표 목차, <표 1-1>, [그림 1-1], 가., 제1장, 납품/제안서)
+- 다른 언어 문서는 라벨 파일(JSON)을 `build --labels 파일` 또는 `check --labels 파일`로 지정. 작업폴더의 지정 경로는 state.json에 기록되어 이후 check와 build가 같은 라벨을 씀. `--labels none`은 기록 해제
+- 바꿀 수 있는 키 묶음은 formats(제목 번호 서식), letters(가나다 계위), toc(목차 제목), caption(캡션 낱말과 괄호, docx 번호 필드), notation(원고 표기 추가), language(docx 언어 태그), output(납품 파일명). 키 표, 기본값, 영어 예시는 references/labels.md
+- 일부 키만 적어도 됨. 빠진 키는 기본값. 모르는 키와 형식 오류는 build와 check가 ERROR로 중단
+- notation은 표기를 추가만 함. `출처:`, `<표>`, `(단위: )` 같은 한국어 기본 표기는 계속 인식
+- 로마자 장 번호와 계위 기호는 언어와 무관하여 라벨 대상이 아님
+- docx 기본 언어 태그는 라틴 en-US, 동아시아 ko-KR. 라틴을 ko-KR로 두면 LibreOffice가 영문 낱말과 숫자 중간에서 줄을 바꿈
+- 한국어가 아닌 원고는 한국어 전용 점검을 `check all --skip`으로 생략(점검 절)
+
 ## 렌더링 검수
 
 - 렌더링 후 페이지 PNG 전부에서 아래 항목을 검수
@@ -979,7 +998,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + rhwp의 알려진 근사 표시도 판정 대상에서 제외. 나눔 글꼴 영문의 좁은 표시, ※ 뒤 간격 소실, 각주 구분선과 본문의 겹침, 어절 중간 줄바꿈, 다음 문단과 함께 설정의 미반영(쪽 끝에 홀로 남은 제목과 □), 쪽번호를 켰을 때 본문 마지막 줄과 쪽번호의 겹침, `(장표: engine)` 표의 하단 여백 침범이 해당
     + rhwp에서만 보이는 배치 결함은 `render --engine soffice --outdir 폴더`로 교차 확인. `--outdir`는 rhwp 산출 PDF를 보존. soffice에서 정상이면 근사 표시로 판정. 근사 표시는 원고 수정 대상에서 제외(수동 쪽 나눔은 한/글의 실제 배치를 바꿈)
     + H2Orestart의 알려진 근사 표시도 판정 대상에서 제외. 캡션 미표시와 셀 안쪽 여백 무시가 해당
-    + LibreOffice의 docx 표시 차이도 판정 대상에서 제외. 한글과 숫자 사이의 자동 간격(docx의 자동 간격 해제 설정을 읽지 않음), 쪽 경계에서 나뉜 표의 제목행 미반복, 영문 어절 중간 줄바꿈이 해당
+    + LibreOffice의 docx 표시 차이도 판정 대상에서 제외. 한글과 숫자 사이의 자동 간격(docx의 자동 간격 해제 설정을 읽지 않음), 쪽 경계에서 나뉜 표의 제목행 미반복이 해당
     + 최종 확정은 유저의 한/글 확인(docx는 Word 확인). 최종 보고에 1줄 고지
 
 ## 실패 패턴

@@ -179,8 +179,8 @@ class DocxBuilder:
         rpr_def.clear()
         for child in rpr_xml(body.char):
             rpr_def.append(child)
-        # 라틴 언어를 ko-KR로 두면 LibreOffice가 숫자 중간(3,|456)에서 줄을 바꾼다. Word 한국어판 기본 문서와 같은 조합으로 기록
-        sub(rpr_def, "w:lang", w__val="en-US", w__eastAsia="ko-KR", w__bidi="ar-SA")
+        # 라틴 언어를 ko-KR로 두면 LibreOffice가 숫자 중간(3,|456)에서 줄을 바꾼다. 기본값은 Word 한국어판 기본 문서와 같은 조합
+        sub(rpr_def, "w:lang", w__val=C.label("language.latin"), w__eastAsia=C.label("language.east_asia"), w__bidi="ar-SA")
         ppr_def = defaults.find(qn("w:pPrDefault")).find(qn("w:pPr"))
         ppr_def.clear()
         # 한글과 영문, 한글과 숫자 사이 자동 간격 끔 (HWPX 문단 모양의 autoSpacing과 같게)
@@ -445,10 +445,10 @@ class DocxBuilder:
         else:
             sub(extra, "w:ind", w__left=tw(left + side), w__right=tw(right + side), w__firstLine=tw(intent))
         p = self._new_p(role, extra)
-        open_b, close_b = C.CAPTION_MARKS[kind]
+        open_b, close_b = C.caption_marks(kind)
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         p.append(self._run(open_b + prefix))
-        seq = C.DOCX_SEQ_NAMES[kind]
+        seq = C.caption_seq(kind)
         instr = f" SEQ {seq} \\* ARABIC" + (" \\s 1 " if self.p.get("caption_prefix") else " ")
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
@@ -793,7 +793,7 @@ class DocxBuilder:
             if not (self.form.style("toc_chapter") and self.form.style("toc_section")):
                 print(msg("warn_no_toc_style"))
             else:
-                line(C.TOC_TITLE, chapter.char, chapter.para, page_break=bool(self.cover))
+                line(C.label("toc.title"), chapter.char, chapter.para, page_break=bool(self.cover))
                 front.extend(self._toc_paragraphs())
         # 앞부분 구역 끝: 쪽 설정만 담은 구역 나눔 (머리말·꼬리말·쪽번호 없음)
         if front[-1].tag != qn("w:p"):   # 목차 콘텐츠 컨트롤 뒤에는 구역 나눔을 담을 최소 높이 문단을 둔다

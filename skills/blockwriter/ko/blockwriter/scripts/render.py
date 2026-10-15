@@ -249,7 +249,7 @@ def locate_headings(pages: list[str], entries: list[str]) -> list[int | None]:
 def _locate_pages(pages: list[str], entries: list[str]) -> tuple[list[int | None], int]:
     """locate_headings의 탐색. 항목마다 렌더 쪽의 0부터 센 위치와 본문 첫 쪽 위치를 돌려준다"""
     keys = [_norm(e) for e in entries]
-    title = _norm(C.TOC_TITLE)
+    title = _norm(C.label("toc.title"))
     toc = next((i for i, page in enumerate(pages) if title in _norm(page)), None)
     if toc is None or not keys:
         return [None] * len(keys), 0

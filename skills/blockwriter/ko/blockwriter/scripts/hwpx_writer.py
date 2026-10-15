@@ -41,8 +41,12 @@ def load_profile(spec: str) -> dict:
             if role in names:
                 prof[role] = names[role]
         prof.setdefault("table_cell_left", names["table_cell"])   # 왼쪽 정렬 표 내용 스타일이 없는 양식
-        return prof
-    return {**C.PROFILE_DEFAULTS, **json.loads(Path(spec).read_text(encoding="utf-8"))}
+    else:
+        prof = {**C.PROFILE_DEFAULTS, **json.loads(Path(spec).read_text(encoding="utf-8"))}
+    for level in ("chapter", "section", "subsection"):   # 라벨 파일의 번호 형식이 현재 프로파일의 형식을 덮어씀
+        if C.label(f"formats.{level}") is not None:
+            prof[f"{level}_format"] = C.label(f"formats.{level}")
+    return prof
 
 
 def builtin_skeleton(form_name: str, workdir: str) -> str:
@@ -332,7 +336,7 @@ class Builder:
                 print(msg("warn_no_toc_style"))
             else:
                 ch = self.refs("chapter")
-                front(C.TOC_TITLE, str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
+                front(C.label("toc.title"), str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
                       pageBreak="1" if cover else "0")
                 sub_pp = None
                 for idx, (lv, text) in enumerate(M.toc_entries(self.headings, self.toc_depth)):
@@ -468,7 +472,7 @@ class Builder:
         cp.element.set("styleIDRef", str(r["style_id_ref"]))
         for run in [c for c in cp.element if c.tag == f"{HP}run"]:
             cp.element.remove(run)
-        open_b, close_b = C.CAPTION_MARKS[kind]
+        open_b, close_b = C.caption_marks(kind)
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         run = cp.add_run(open_b + prefix, char_pr_id_ref=r["char_pr_id_ref"])
         # 필드에 저장하는 번호. 한/글은 열 때 다시 매기며 저장값을 그대로 그리는 렌더러도 올바른 번호를 보이게 함

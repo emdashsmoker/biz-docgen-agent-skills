@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 import zipfile
+from xml.sax.saxutils import escape
 
 from lxml import etree as ET
 
-from form import BORDER_FILLS, FONT_CATALOG, LANGS, TABS, ABSENT, Form
+import config as C
+from form import BORDER_FILLS, FONT_CATALOG, LANGS, TABS, Form
 
 NS = {
     "ha": "http://www.hancom.co.kr/hwpml/2011/app",
@@ -183,13 +185,12 @@ def _para_properties(root, reg: _Registry):
         el = _sub(pp, HH + "paraPr", id=i, tabPrIDRef=reg.tabs.index(p.tab), condense=0, fontLineHeight=0,
                   snapToGrid=int(p.grid), suppressLineNumbers=0, checked=0)
         _sub(el, HH + "align", horizontal=p.align, vertical="BASELINE")
-        if p.head != ABSENT:
-            if p.head is None:
-                _sub(el, HH + "heading", type="NONE", idRef=0, level=0)
-            elif p.head[0] == "BULLET":
-                _sub(el, HH + "heading", type="BULLET", idRef=reg.bullet_id(p.head), level=0)
-            else:
-                _sub(el, HH + "heading", type="OUTLINE", idRef=0, level=p.head[1])
+        if p.head is None:
+            _sub(el, HH + "heading", type="NONE", idRef=0, level=0)
+        elif p.head[0] == "BULLET":
+            _sub(el, HH + "heading", type="BULLET", idRef=reg.bullet_id(p.head), level=0)
+        else:
+            _sub(el, HH + "heading", type="OUTLINE", idRef=0, level=p.head[1])
         _sub(el, HH + "breakSetting", breakLatinWord="KEEP_WORD",
              breakNonLatinWord="BREAK_WORD" if p.break_word else "KEEP_WORD", widowOrphan=0,
              keepWithNext=1 if p.keep_next else 0,
@@ -212,7 +213,7 @@ def _styles(root, form: Form, reg: _Registry):
     for i, st in enumerate(form.styles):
         _sub(sl, HH + "style", id=i, type=st.kind, name=st.name, engName=st.eng,
              paraPrIDRef=reg.para_id(st.para), charPrIDRef=reg.char_id(st.char),
-             nextStyleIDRef=i if st.next_self else 0, langID=1042, lockForm=0)
+             nextStyleIDRef=i if st.next_self else 0, langID=C.label("language.hwpx_style_lcid"), lockForm=0)
 
 
 def header_xml(form: Form) -> bytes:
@@ -292,7 +293,7 @@ def section_xml(form: Form) -> bytes:
 
 CONTENT_HPF = (
     '<opf:package xmlns:opf="http://www.idpf.org/2007/opf/" version="" unique-identifier="" id="">'
-    '<opf:metadata><opf:title/><opf:language>ko</opf:language>'
+    '<opf:metadata><opf:title/><opf:language>{language}</opf:language>'
     + "".join(f'<opf:meta name="{n}" content="text"/>' for n in
               ("creator", "subject", "description", "lastsaveby", "CreatedDate", "ModifiedDate", "date", "keyword"))
     + '</opf:metadata><opf:manifest>'
@@ -326,7 +327,7 @@ def write_skeleton(form: Form, path: str) -> str:
         ("Preview/PrvText.txt", b""),
         ("settings.xml", XML_DECL + SETTINGS_XML.encode("utf-8")),
         ("META-INF/container.xml", XML_DECL + CONTAINER_XML.encode("utf-8")),
-        ("Contents/content.hpf", XML_DECL + CONTENT_HPF.encode("utf-8")),
+        ("Contents/content.hpf", XML_DECL + CONTENT_HPF.format(language=escape(C.label("language.hwpx_package"))).encode("utf-8")),
         ("META-INF/manifest.xml", XML_DECL + MANIFEST_XML.encode("utf-8")),
     ]
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:

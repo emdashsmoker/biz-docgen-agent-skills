@@ -8,6 +8,7 @@
 
 const T = require("./tokens.js");
 const A = require("./atoms.js");
+const LB = require("./labels.js"); // Block label lookup (block field, then meta.labels, then assets/labels.json)
 
 const GAP_COL = 0.3; // horizontal gap between areas
 const GAP_COL_FLOW = 0.6; // horizontal gap between areas when an arrow goes between them
@@ -813,7 +814,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   let y = box.y;
   if (nb) {
     const spanH = hs.slice(0, nb).reduce((a, h) => a + h, 0) + VC_GAP * (nb - 1);
-    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: spanH }, k.support.label || "지원 기능", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: spanH }, LB.label("valuechain", "support.label", k.support.label), { sz: T.SIZE.body });
     g.bands.forEach((b, i) => {
       H.frame(ctx, slide, { x: g.gx, y, w: g.gridW, h: hs[i] });
       H.label(ctx, slide, { x: g.gx, y, w: g.bandTW, h: hs[i] }, b.title || "", { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
@@ -822,7 +823,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
     });
   }
   const chev = { x: g.gx, y, w: g.gw, h: VC_CHEV_H };
-  H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: VC_CHEV_H }, k.stageLabel || "단계", { sz: T.SIZE.body });
+  H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: VC_CHEV_H }, LB.label("valuechain", "stageLabel", k.stageLabel), { sz: T.SIZE.body });
   H.chevronRow(ctx, slide, chev, g.stages, { sz: T.SIZE.panelHead });
   y += VC_CHEV_H + VC_GAP;
   const rowHs = hs.slice(nb, nb + nr);
@@ -841,7 +842,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   });
   if (k.base) {
     const bh = hs[nb + nr];
-    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: bh }, k.base.label || "공통 기반", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: bh }, LB.label("valuechain", "base.label", k.base.label), { sz: T.SIZE.body });
     H.frame(ctx, slide, { x: g.gx, y, w: g.gridW, h: bh }, { fill: T.COLOR.tintBg });
     writeItems(ctx, H, slide, { x: g.gx, y, w: g.gridW, h: bh }, [k.base.text || ""], T.SIZE.body, { bold: true });
   }
@@ -866,7 +867,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   const sup = k.support || [], pri = k.primary || [];
   if (!pri.length) { ctx.warn("porter has no primary activities"); return; }
   // Label box width is lw + 0.06 - LABEL_GAP. Floor it at word width plus margin so label words fit on one line even on narrow pages (the PT_LABEL_W cap wins)
-  const labels = [k.supportLabel || "지원 활동", k.primaryLabel || "본원적 활동", k.ownerLabel || "담당 부서"];
+  const labels = [LB.label("porter", "supportLabel", k.supportLabel), LB.label("porter", "primaryLabel", k.primaryLabel), LB.label("porter", "ownerLabel", k.ownerLabel)];
   const lw = Math.min(PT_LABEL_W, Math.max(box.w * 0.1, A.wordWidthIn(labels, T.SIZE.body, true) + 2 * T.PANEL.LABEL_MG_X + LABEL_GAP - 0.06));
   // With a neighbor cell on the right, push the tip into the column gap and keep PT_TIP_NEXT_GAP from the neighbor (without one, stop at the cell's right edge)
   const tipEnd = box.x + box.w + (box.gapR ? Math.max(0, box.gapR - PT_TIP_NEXT_GAP) : 0);
@@ -892,7 +893,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   if (sup.length) {
     const span = supH.reduce((a, v) => a + v, 0) + PT_SUP_GAP * (sup.length - 1);
     // The support activity label is tinted and the primary activity label is navy, marking primary activities as the main area
-    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: span }, k.supportLabel || "지원 활동", { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
+    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: span }, labels[0], { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
     sup.forEach((st, i) => {
       H.frame(ctx, slide, { x: gx, y, w: gw, h: supH[i] });
       H.label(ctx, slide, { x: gx, y, w: titleW, h: supH[i] }, st.title || "", { sz, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
@@ -900,7 +901,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
       y += supH[i] + (i < sup.length - 1 ? PT_SUP_GAP : PT_GAP);
     });
   }
-  H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: headH + bodyH }, k.primaryLabel || "본원적 활동", { sz: T.SIZE.body });
+  H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: headH + bodyH }, labels[1], { sz: T.SIZE.body });
   const colsB = H.cols({ x: gx, y, w: gw, h: headH + bodyH }, n, PT_GAP);
   const bsz = commonSize(colsB.map((c) => ({ w: c.w, h: bodyH })), pri.map(itemsOf));
   colsB.forEach((c, i) => {
@@ -912,7 +913,7 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
   y += headH + bodyH;
   if (hasOwner) {
     y += PT_GAP;
-    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: PT_OWNER_H }, k.ownerLabel || "담당 부서", { sz: T.SIZE.body });
+    H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: PT_OWNER_H }, labels[2], { sz: T.SIZE.body });
     H.cols({ x: gx, y, w: gw, h: PT_OWNER_H }, n, PT_GAP).forEach((c, i) => {
       const mark = !!pri[i].mark;
       H.frame(ctx, slide, c, { fill: mark ? T.COLOR.tintHead : undefined });
@@ -975,14 +976,14 @@ BLOCKS.zones = (ctx, H, slide, box, k) => {
 /** Program logic model. Fixed layout of [Figure 3-3] in 「국가연구개발사업 예비타당성조사 수행 세부지침」 (2024, detailed guidelines for national R&D program preliminary feasibility studies)
  *  The vertical direction is the program logic flow; the horizontal direction is the program's time flow
  *  {issue, goal, beneficiary, input, activity, output, outcome, assumption, labels} each value is a text array. labels changes item titles with the same keys */
-const LM = { issue: "1. 문제/이슈", goal: "2. 목표", beneficiary: "3. 수혜자", input: "4. 투입", activity: "5. 활동", output: "6. 산출", outcome: "7. 성과/영향", assumption: "8. 가정" };
+// Item title defaults are logicmodel.labels in assets/labels.json (overridden by meta.labels.logicmodel.labels, then the block labels)
 const LM_ARROW_GAP = 0.26; // arrow gap between rows
 const LM_PAD = 0.07; // inner padding of the dashed groups
 const LM_HEAD_H = 0.28; // item title band height (lower than panel titles so all 8 items fit on one slide)
 const LM_COL_GAP = 0.42; // horizontal arrow gap inside a group
 const LM_GOAL_SHARE = 0.5; // goal box width share in the goal and beneficiary row (the guideline's original 1:1 layout)
 BLOCKS.logicmodel = (ctx, H, slide, box, k) => {
-  const LML = { ...LM, ...(k.labels || {}) }; // item titles (changed through labels)
+  const LML = LB.labels("logicmodel", "labels", k.labels); // item titles (changed through labels)
   const its = (key) => [].concat(k[key] || []).filter(Boolean);
   const HH = LM_HEAD_H;
   const inW = box.w - 2 * LM_PAD;
@@ -1055,12 +1056,12 @@ function parasNeedH(paras, w) {
  *  {vision, purpose, goal, performance:[{title, quant, qual} or {title, items}], strategies:[{title, text}], tasks:[[{title, text}]], labels}. labels changes the row labels and the quant and qual prefixes
  *  The column count is the number of strategies. Performance goals, strategic areas and strategic tasks with the same index line up in one column
  *  Styling matches the hierarchy grid (grid style hierarchy): bold gray row labels, a navy vision cell, a tinted goal cell, white cells elsewhere, margins between levels */
-const GS_LABELS = { vision: "비전", purpose: "사업 목적", goal: "사업 목표", performance: "성과 목표", strategies: "전략분야", tasks: "전략과제 및\n세부과제", quant: "정량", qual: "정성" };
+// Row label and quant and qual prefix defaults are goalsystem.labels in assets/labels.json
 const GS_BAND_MIN = 0.42; // vision, purpose and goal band height floor
 const GS_BOX_GROW = 1.3; // growth factor cap for column boxes when the cell has height to spare
 const GS_TASK_GAP_PT = 8; // paragraph gap between strategic tasks
 BLOCKS.goalsystem = (ctx, H, slide, box, k) => {
-  const L = { ...GS_LABELS, ...(k.labels || {}) };
+  const L = LB.labels("goalsystem", "labels", k.labels);
   const perf = k.performance || [], strat = k.strategies || [], tasks = k.tasks || [];
   const n = Math.max(1, strat.length, perf.length, tasks.length);
   const lw = Math.min(box.w * 0.1, 1.6);
@@ -1117,7 +1118,7 @@ BLOCKS.goalsystem = (ctx, H, slide, box, k) => {
  *  {mission, vision, pillars:[{title, items}], base:[text], labels, numbered}. The pillar group is inset from the roof on both sides to form eaves
  *  Unless numbered is false, strategic goals get 1. and strategic tasks get 1-1. prefixes (the numbers replace bullets)
  *  base is split into one cell per core value; without it, a floor band closes the bottom of the pillars */
-const HOUSE_LABELS = { mission: "미션", vision: "비전", goals: "전략목표", tasks: "전략과제", base: "핵심가치" };
+// Row label defaults are house.labels in assets/labels.json
 const HOUSE_ROOF_H = 0.5; // vision roof height
 const HOUSE_EAVE = 0.18; // side inset of the pillar group (eaves)
 const HOUSE_PILLAR_GAP = 0.14; // gap between pillars
@@ -1126,7 +1127,7 @@ const HOUSE_HEAD_PAD = 0.16; // total top and bottom text slack in a pillar head
 const HOUSE_TASK_GAP_PT = 10; // paragraph gap between strategic tasks
 const HOUSE_TASK_GAP_MAX_PT = 26; // cap for the gap between strategic tasks when pillar bodies have height to spare
 BLOCKS.house = (ctx, H, slide, box, k) => {
-  const L = { ...HOUSE_LABELS, ...(k.labels || {}) };
+  const L = LB.labels("house", "labels", k.labels);
   const pil = k.pillars || [];
   const num = k.numbered !== false;
   const base = (Array.isArray(k.base) ? k.base : k.base ? [k.base] : []).filter(Boolean);
@@ -1258,16 +1259,16 @@ BLOCKS.flowchart = (ctx, H, slide, box, k) => {
  *  Top 5 columns: key partners | key activities, key resources | value propositions | customer relationships, channels | customer segments. Bottom 2 cells: cost structure | revenue streams
  *  {partners, activities, resources, value, relationships, channels, segments, cost, revenue, numbered, labels}. Each value is a text array or {items|text}. labels changes block titles with the same keys
  *  With numbered true, the canvas fill-in order number (customer segments 1 ... cost structure 9) shows right of each block title */
-const BMC = [
-  { key: "partners", title: "핵심 파트너", order: 8, col: 0 },
-  { key: "activities", title: "핵심 활동", order: 7, col: 1, half: 0 },
-  { key: "resources", title: "핵심 자원", order: 6, col: 1, half: 1 },
-  { key: "value", title: "가치 제안", order: 2, col: 2, core: true },
-  { key: "relationships", title: "고객 관계", order: 4, col: 3, half: 0 },
-  { key: "channels", title: "채널", order: 3, col: 3, half: 1 },
-  { key: "segments", title: "고객 세그먼트", order: 1, col: 4 },
-  { key: "cost", title: "비용 구조", order: 9, bottom: 0 },
-  { key: "revenue", title: "수익원", order: 5, bottom: 1 },
+const BMC = [ // block title defaults are canvas.labels in assets/labels.json
+  { key: "partners", order: 8, col: 0 },
+  { key: "activities", order: 7, col: 1, half: 0 },
+  { key: "resources", order: 6, col: 1, half: 1 },
+  { key: "value", order: 2, col: 2, core: true },
+  { key: "relationships", order: 4, col: 3, half: 0 },
+  { key: "channels", order: 3, col: 3, half: 1 },
+  { key: "segments", order: 1, col: 4 },
+  { key: "cost", order: 9, bottom: 0 },
+  { key: "revenue", order: 5, bottom: 1 },
 ];
 const BMC_TOP_SHARE = 0.68; // height share of the top 5 columns (the original canvas's top-to-bottom ratio)
 const BMC_GAP = 0.1; // gap between blocks (kept narrow so it reads as one canvas)
@@ -1284,12 +1285,12 @@ BLOCKS.canvas = (ctx, H, slide, box, k) => {
   const itemsFor = (d) => itemsOf(Array.isArray(k[d.key]) ? { items: k[d.key] } : k[d.key] || {});
   const bodies = BMC.map((d) => { const r = rectOf(d); return { w: r.w, h: r.h - BMC_TITLE_H - 0.06 }; });
   const sz = commonSize(bodies, BMC.map(itemsFor));
-  const titles = k.labels || {}; // block titles (changed through labels with the block keys)
+  const own = k.labels || {}, titles = LB.labels("canvas", "labels"); // block titles (changed through labels with the block keys)
   BMC.forEach((d, i) => {
     const r = rectOf(d);
     H.frame(ctx, slide, r, { fill: d.core ? T.COLOR.tintBg : undefined });
     // Block title: bold navy text with a short rule under it (text hierarchy instead of a filled header band)
-    A.text(slide, { x: r.x + 0.1, y: r.y + 0.04, w: r.w - 0.2, h: BMC_TITLE_H - 0.04 }, titles[d.key] || d.title, { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+    A.text(slide, { x: r.x + 0.1, y: r.y + 0.04, w: r.w - 0.2, h: BMC_TITLE_H - 0.04 }, own[d.key] || titles[d.key], { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
     if (k.numbered) A.text(slide, { x: r.x + r.w - 0.4, y: r.y + 0.04, w: 0.3, h: BMC_TITLE_H - 0.04 }, String(d.order), { sz: T.SIZE.body, bold: true, color: T.COLOR.textMuted, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
     hline(ctx, slide, r.x + 0.1, r.y + BMC_TITLE_H, Math.min(r.w - 0.2, 0.9));
     const its = itemsFor(d);
