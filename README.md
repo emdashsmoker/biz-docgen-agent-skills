@@ -51,7 +51,7 @@ The HWPX writers were developed with reference to Hancom's published HWP documen
 
 [AGPL-3.0-or-later](LICENSE). Copyright (C) 2026 Em Dash Smoker.
 
-Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception in `NOTICE.md`, the proposals, reports and decks you make with a skill are free of AGPL terms. Packages, fonts and programs that a skill installs at run time keep their own licenses, listed in the skill's `NOTICE.md`.
+Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception in `NOTICE.md`, the proposals, reports and decks you make with a skill are free of AGPL terms. Packages, fonts and programs that a skill installs at run time keep their own licenses, listed in the skill's `NOTICE.md`. The sample pages in the `demo/` folders are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
 </details>
 
@@ -102,7 +102,7 @@ skills/juja-builder/
 
 [AGPL-3.0-or-later](LICENSE)를 따릅니다. Copyright (C) 2026 Em Dash Smoker.
 
-스킬마다 `LICENSE`와 `NOTICE.md`가 들어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 만든 제안서, 보고서, 발표자료는 AGPL 조건 없이 쓸 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각자의 라이선스를 따르며 그 목록은 스킬의 `NOTICE.md`에 있습니다.
+스킬마다 `LICENSE`와 `NOTICE.md`가 들어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 만든 제안서, 보고서, 발표자료는 AGPL 조건 없이 쓸 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각자의 라이선스를 따르며 그 목록은 스킬의 `NOTICE.md`에 있습니다. `demo/` 폴더의 예시 쪽 이미지는 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ko)을 따릅니다.
 
 </details>
 
