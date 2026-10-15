@@ -66,7 +66,7 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 설치
 
-스킬 폴더마다 설치용 패키지, 소스 폴더, 예시 쪽 이미지가 들어 있습니다.
+스킬 폴더마다 설치용 패키지, 소스 폴더, 예시 페이지 이미지가 들어 있습니다.
 
 ```
 skills/juja-builder/
@@ -74,7 +74,7 @@ skills/juja-builder/
 ├── juja-builder-en.skill    영어판 설치용 패키지
 ├── ko/juja-builder/         한국어판 소스
 ├── en/juja-builder/         영어판 소스
-└── demo/                    예시 쪽 이미지
+└── demo/                    예시 페이지 이미지
 ```
 
 - `.skill` 파일은 스킬 폴더를 묶은 zip 파일입니다. `.zip` 파일만 올릴 수 있는 환경에서는 확장자를 `.zip`으로 바꿔 업로드하면 됩니다.
@@ -94,7 +94,7 @@ skills/juja-builder/
 
 ## 면책 고지
 
-이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다. 예시 쪽 이미지에 나오는 기관은 모두 가상입니다.
+이 저장소의 스킬은 어떠한 보증 없이 있는 그대로 제공합니다. 모든 환경에서 정상 작동을 보장하지 않습니다. 스킬 사용과 결과물에 대한 책임은 최종 사용자에게 있습니다. 예시 페이지 이미지에 나오는 기관은 모두 가상입니다.
 
 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. 한/글, 한컴오피스, HWPX는 한글과컴퓨터의 상표입니다. 이 저장소의 스킬은 한글과컴퓨터와 제휴 관계가 없습니다.
 
@@ -102,7 +102,7 @@ skills/juja-builder/
 
 [AGPL-3.0-or-later](LICENSE)를 따릅니다. Copyright (C) 2026 Em Dash Smoker.
 
-스킬마다 `LICENSE`와 `NOTICE.md`가 들어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 만든 제안서, 보고서, 발표자료는 AGPL 조건 없이 쓸 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각자의 라이선스를 따르며 그 목록은 스킬의 `NOTICE.md`에 있습니다. `demo/` 폴더의 예시 쪽 이미지는 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ko)을 따릅니다.
+스킬마다 `LICENSE`와 `NOTICE.md`가 들어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 만든 제안서, 보고서, 발표자료는 AGPL 조건 없이 쓸 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각자의 라이선스를 따르며 그 목록은 스킬의 `NOTICE.md`에 있습니다. `demo/` 폴더의 예시 페이지 이미지는 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ko)을 따릅니다.
 
 </details>
 
