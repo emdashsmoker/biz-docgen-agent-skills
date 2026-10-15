@@ -1,6 +1,6 @@
 ---
 name: "juja-builder"
-description: "Writes Korean technical proposals for research and policy service contracts, from an RFP to hwpx and docx files. The same methods write RFP-based pre-diagnosis reports (planning, feasibility, performance analysis, surveys) and planning reports (plans, event plans, initiative cards, issue reports, briefings, guidelines). Excludes SI, national R&D plans, and grant plans. Converts proposal decks (pptx, pdf) to hwpx. Use when the user mentions a proposal, RFP, bid, tender, 제안서, 제안요청서, hwpx or Word proposal, deck to proposal, pre-diagnosis report, planning report, initiative card, issue report, briefing, or guideline, or attaches an RFP or deck. Translated from the Korean edition and may not perform as intended. Outputs stay Korean. References: references/methods.md, content-models.md, lexicon.md, deck-conversion.md, report.md, planning.md. Templates: assets/strategy.md, storyline.md, company.md, diagnosis.md, report-storyline.md, plan-design.md, assets/common/overview.md, organization.md, management.md."
+description: "Writes Korean technical proposals for research and policy service contracts, from an RFP to hwpx and docx files. The same methods write RFP-based pre-diagnosis reports (planning, feasibility, performance analysis, surveys) and planning reports (plans, event plans, initiative cards, issue reports, briefings, guidelines). Excludes SI, national R&D plans, and grant plans. Converts proposal decks (pptx, pdf) to hwpx. Use when the user mentions a proposal, RFP, bid, tender, 제안서, 제안요청서, hwpx or Word proposal, deck to proposal, pre-diagnosis report, planning report, initiative card, issue report, briefing, or guideline, or attaches an RFP or deck. Translated from the Korean edition and may not perform as intended. Korean labels by default. References: references/methods.md, content-models.md, lexicon.md, deck-conversion.md, report.md, planning.md. Templates: assets/strategy.md, storyline.md, company.md, diagnosis.md, report-storyline.md, plan-design.md, assets/common/overview.md, organization.md, management.md."
 license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE.md
 ---
 
@@ -18,7 +18,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Informatization boundary) Informatization planning whose final result is a plan (ISP and similar) is in scope. Build projects whose final result is a system are excluded. The criterion is the form of the final result. Whether the project legally counts as a software project is outside the criterion
     + (Excluded input) If the RFP is out of scope, tell the user so before the kickoff questions
     + (Additional outputs) Pre-diagnosis reports (사전진단보고서) and planning reports (기획보고서). Identification and procedure are in the Output Types section
-- (Language) Manuscripts, design-file content, and delivered files are written in Korean. Replies to the user follow the user's language
+- (Language) Manuscripts, design-file content, and delivered files are written in Korean by default. Replies to the user follow the user's language
+    + The default document labels (table of contents title, captions, 가나다 letters, chapter labels, delivered file names) are Korean. A label file (`build --labels`, references/labels.md) switches them for documents in another language. Korean manuscript notation (`출처:`, `<표>`, `(단위: )`) stays accepted
+    + For manuscripts not written in Korean, skip the Korean-specific checks with `check all --skip` (Checks section)
     + Korean strings in backticks, Korean file and folder names, Korean headings and column names of design files, and Korean markers are anchors that the scripts parse or that appear in deliverables. Keep them verbatim
     + An English gloss in parentheses follows a Korean anchor on first use. The gloss is for the reader and is never written into files
 - The default input is one RFP. If a proposal presentation deck (pptx, pdf) is in the input, apply the deck conversion path (Procedure section)
@@ -36,6 +38,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | deck-conversion.md | Parsing, source reading, transfer, RFP comparison, figure selection, and diagram capture for the deck conversion path | All of it before step 0 when a proposal deck (pptx, pdf) is in the input |
 | report.md | Procedure, diagnosis design, RFP-first principle, table of contents derivation and TOC examples, storyline finalization, source research, manuscript writing, check targets, and typesetting options for the pre-diagnosis report | All of it right after `init` when the output type is the pre-diagnosis report |
 | planning.md | Design streams, planning type examples, short-form examples, initiative card format, procedure, planning design, check targets, and typesetting options for the planning report | All of it right after `init` when the output type is the planning report |
+| labels.md | How to supply document labels, the key table with defaults, an English example, and how to proceed with manuscripts in another language | All of it before the first check when the document language in the kickoff answers is not Korean |
 
 ## Output Types
 
@@ -61,7 +64,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - When starting in a new workspace without state.json, show the notice below once, word for word, at the very top of the first reply. Then continue with the start sequence as is
 
 > **juja-builder usage notice**
-> - (Translated edition) This English edition is translated from the Korean original. Its instructions may not deliver the performance intended in the Korean edition. Manuscripts and delivered files are written in Korean
+> - (Translated edition) This English edition is translated from the Korean original. Its instructions may not deliver the performance intended in the Korean edition. Manuscripts and delivered files are written in Korean by default
 > - Documents made by this skill are drafts that assume review and revision by the user
 > - (Before starting) A high-volume task that handles the full text of the RFP or input materials and the whole manuscript over several steps
 >     + Use the top-tier model of each provider to get the intended quality
@@ -254,14 +257,14 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `check tone workspace [--reset-whitelist]` | Judge tone and vocabulary. FAIL conditions and warning targets are in the Checks section. Whitelist terms are masked from the verdict |
 | `check numbers workspace` | Recalculate total rows of tables and check that composition ratios sum correctly |
 | `check fill workspace` | Judge leftover `[확인]` and participation rate overruns in 원고/4*.md and 6*.md. Leftover `[확인]` in 원고/3*.md and 5*.md is a warning |
-| `check all workspace` | Run the checks for the output type in one go (all of the above for a proposal, the Checks section of each reference file for pre-diagnosis and planning reports). Record in 05_점검기록.md. Exit code 0 when everything passes |
-| `build workspace [output path]` | Merge 원고/*.md in file name order. Typeset 납품/{제안서, 사전진단보고서, 기획보고서}.hwpx and .docx. The default skeleton is regenerated on every run. When both formats are produced, compare the character order of paragraphs and print the result |
+| `check all workspace [--skip check,check] [--skip-reason reason]` | Run the checks for the output type in one go (all of the above for a proposal, the Checks section of each reference file for pre-diagnosis and planning reports). Record in 05_점검기록.md. Exit code 0 when everything passes. `--skip` leaves out the named checks (Checks section) |
+| `build workspace [output path]` | Merge 원고/*.md in file name order. Typeset 납품/{제안서, 사전진단보고서, 기획보고서}.hwpx and .docx (file names are the output.* labels). The default skeleton is regenerated on every run. When both formats are produced, compare the character order of paragraphs and print the result |
 | `render output.hwpx or output.docx` | Output PDF and page PNGs (`--engine auto\|rhwp\|soffice`, `--rhwp path`, `--outdir folder`. docx uses LibreOffice). The default output location is next to the original. With `--outdir`, PDF and PNGs go to that folder |
 | `selftest workspace` | Judge the render path by typesetting a sample manuscript to hwpx and docx and rendering it. Output goes to workspace/_렌더시험/. Verdicts are recorded in state.json checks.render and checks.render_docx (the `--engine` and `--rhwp` options are the same as for render) |
 | `skeleton template.hwpx skeleton.hwpx` | Extract a skeleton and a draft profile from a template the client specified |
 | `python3 <SKILL>/scripts/extract_images.py source output_folder [--min-px 64] [--min-kb 2]` | Extract candidate images for insertion and manifest.json from the RFP and user-submitted literature (pdf, hwpx, pptx, docx) |
 
-- build options are `--format hwpx|docx|both` (output format, default hwpx), `--page-break chapter|section|none` (default chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3` (default 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto` (table width unification, default manual), `--theme navy|mono` (band color theme, default navy). Check the value format of `--cover` and `--header` with `build --help`
+- build options are `--format hwpx|docx|both` (output format, default hwpx), `--page-break chapter|section|none` (default chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3` (default 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto` (table width unification, default manual), `--theme navy|mono` (band color theme, default navy), `--labels file.json` (document labels, Document Labels in the Typesetting section). Check the value format of `--cover` and `--header` with `build --help`
     + `--title "document title"` is the document title on the first line of the body (planning report). `--chapter-start N` is the first chapter number (chapter-by-chapter output of the pre-diagnosis report)
     + `--divider on|off` controls chapter divider pages. The default is on for the pre-diagnosis report and off for the proposal and the planning report
     + `--long-table` is the default handling of long tables. Always set its value from the answer to the kickoff questions
@@ -270,7 +273,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - `[page break HITL]` in the build lint is an alert from the general-purpose typesetter. Change the default chapter only when the user asks to change page breaks
 - When using the client's template, set `--profile path` and `--skeleton path` together. Typesetting with a client template is hwpx only
 - Verdicts are recorded in stdout and state.json. Fix FAIL items and rerun
-- `build` stops if there is no `check all` PASS record. It also stops if manuscripts or 02_모듈총괄표.md changed after PASS (resolved by rerunning check all). Use `--force` only for trial typesetting and for handling misjudgments per the Checks section
+- `build` stops if there is no `check all` PASS record. It also stops if manuscripts, 02_모듈총괄표.md, or the label file changed after PASS (resolved by rerunning check all). Use `--force` only for trial typesetting and for handling misjudgments per the Checks section
 - Figure calculations such as point totals, participation rate totals, and person-months are done in code
 
 ## Procedure
@@ -296,6 +299,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
     + The judged engagement type (including the expanded or compressed form of the background framework). Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
     + Storyline finalization depth. Basic (□ judgment statements of argument sections and one line per Task) or deep (□ headings and ❍ claim gists for all original sections). Basic if there is no answer
+    + Document language and labels. The default is a Korean document with Korean labels unless the user wants another language. For another language, settle the label file and the skip of the Korean-specific checks together (Document Labels in the Typesetting section, references/labels.md)
 - In the kickoff question turn, report the render test result in one line (engine, PASS or FAIL). If a source build is running in parallel, state its progress on the same line
 - When all three renderer paths failed and skipping render was announced, that notice replaces checks.render PASS
 - Fill 00_제안전략서.md step by step. At step 0, write the fields filled from the kickoff answers. At step 1, write the fields confirmed from the RFP text (including basic project conditions, writing rules, and the key wording dictionary). At step 2, write the responding modules, the sections that carry them, and the responding sections
@@ -870,6 +874,12 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + If vocabulary outside the whitelist is FAIL, replace it from the lexicon.md replacement table. Adding to the dictionary or renaming modules to avoid FAIL is a defect
 - To handle a FAIL, check the flagged item in the manuscript and fix it. If it is a misjudgment of the verdict logic, record the reason in the final report
     + If only misjudged FAILs remain, no `check all` PASS record is created. Report the misjudged items and reasons to the user. After user approval, run `build --force`
+- For manuscripts not written in Korean, skip the Korean-specific verdicts with `check all --skip`, then build
+    + The Korean-specific verdicts are density (the (목적) label, the word 산출물, Korean count units), wording (key wording dictionary and Korean prohibited expressions), tone (Korean vocabulary and ending rules), and numbers (detects total rows and ratio columns by Korean words)
+    + The language-neutral verdicts are rfp, volume, and fill. The FAIL conditions of volume are structural. Its character count and line cap warnings are calibrated on Korean glyph widths, so for manuscripts in another language they are for reference only
+    + The form is `check all workspace --skip density,wording,tone,numbers --skip-reason "English manuscripts"`. The skipped checks and the reason are recorded in the skipped checks section of 05_점검기록.md and in state.json. build accepts this PASS record and reports the skipped checks
+    + There is no language detection. The manuscript language and the checks to skip are settled by the kickoff answers
+    + Do not use it to get past FAILs in Korean manuscripts. Misjudgments in Korean manuscripts follow the misjudged FAIL procedure above
 - `[확인]` in the original part (3*, 5*) is a temporary marker during writing. Do not leave it in the delivered file
     + `check fill` prints the leftover locations as warnings. At step 5, bundle the leftover list into one turn and ask the user
     + When the user gives values, fill them in. For cells whose values could not be secured, delete the row or column after user approval
@@ -963,6 +973,17 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + For a proposal, if even one entry is missing, turn off the table of contents and retypeset. If the table of contents must stay, state in the final report that the table of contents needs updating in 한/글. Handling for the pre-diagnosis report and the planning report is in the report.md Typesetting section
 - Extract a client template with `skeleton template.hwpx skeleton.hwpx`. Fill style names into the null roles of the draft profile, then run `build --profile profile.json --skeleton skeleton.hwpx`
 
+### Document Labels
+
+- Fixed strings printed into documents, manuscript notation, docx language tags, and delivered file names are labels. The default labels produce Korean documents (목  차, 표 목차, <표 1-1>, [그림 1-1], 가., 제1장, 납품/제안서)
+- For a document in another language, set a label file (JSON) with `build --labels file` or `check --labels file`. A path set for a workspace is recorded in state.json, and later check and build runs use the same labels. `--labels none` clears the record
+- The key groups are formats (heading number formats), letters (the 가나다 level), toc (table of contents titles), caption (caption word and brackets, docx number field), notation (added manuscript notation), language (docx language tags), and output (delivered file names). The key table, defaults, and an English example are in references/labels.md
+- A file may hold only some keys. Missing keys keep the default. Unknown keys and format errors stop build and check with ERROR
+- notation only adds tokens. Korean default notation such as `출처:`, `<표>`, and `(단위: )` stays recognized
+- Roman chapter numbers and level symbols do not depend on language and are not labels
+- The default docx language tags are Latin en-US and East Asian ko-KR. With Latin ko-KR, LibreOffice breaks English words and numbers mid-token
+- For manuscripts not written in Korean, skip the Korean-specific checks with `check all --skip` (Checks section)
+
 ## Render Review
 
 - After rendering, review the items below on every page PNG
@@ -987,7 +1008,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Known approximate displays of rhwp are also excluded from the verdict. They are narrow display of Latin text in Nanum fonts, lost spacing after ※, footnote separators overlapping body text, line breaks in the middle of words, keep-with-next settings not being applied (titles and □ left alone at page end), the last body line overlapping the page number when page numbers are on, and `(장표: engine)` tables intruding on the bottom margin
     + Cross-check layout defects seen only in rhwp with `render --engine soffice --outdir folder`. `--outdir` preserves the PDF rhwp produced. If soffice shows it correctly, judge it an approximate display. Approximate displays are not a reason to edit manuscripts (manual page breaks change the actual layout in 한/글)
     + Known approximate displays of H2Orestart are also excluded from the verdict. They are missing captions and ignored cell padding
-    + Differences in LibreOffice's docx display are also excluded from the verdict. They are automatic spacing between Korean and numbers (it does not read docx's setting that turns off automatic spacing), header rows not repeating in tables split at page boundaries, and line breaks in the middle of English words
+    + Differences in LibreOffice's docx display are also excluded from the verdict. They are automatic spacing between Korean and numbers (it does not read docx's setting that turns off automatic spacing) and header rows not repeating in tables split at page boundaries
     + Final confirmation is the user's check in 한/글 (in Word for docx). State this in one line in the final report
 
 ## Failure Patterns

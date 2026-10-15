@@ -45,7 +45,6 @@ SPACER_MIN_TWIP = 20       # 간격 문단 최소 높이(1pt). Word는 두 표 �
 JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIGHT": WD_ALIGN_PARAGRAPH.RIGHT,
       "JUSTIFY": WD_ALIGN_PARAGRAPH.JUSTIFY, "DISTRIBUTE": WD_ALIGN_PARAGRAPH.DISTRIBUTE} if Document else {}
 FOOTNOTE_SUFFIX = ")"      # 각주 번호 뒤 글자. hwpx 각주 번호 형식(숫자와 닫는 괄호)과 같게 둠
-SEQ_NAME = {"TABLE": "표", "PICTURE": "그림"}   # 캡션 번호 필드 이름
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # 표 기본 셀 여백 좌, 우, 위, 아래 (python-hwpx 표 기본값과 같음)
 # 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 판정함
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
@@ -65,6 +64,12 @@ SPACE_SPLIT_RE = __import__("re").compile(r"( +)")
 SECTPR_ORDER = ("headerReference", "footerReference", "footnotePr", "endnotePr", "type", "pgSz", "pgMar", "paperSrc",
                 "pgBorders", "lnNumType", "pgNumType", "cols", "formProt", "vAlign", "noEndnote", "titlePg",
                 "textDirection", "bidi", "rtlGutter", "docGrid", "printerSettings")
+
+
+def seq_name(kind: str) -> str:
+    """캡션 번호 필드(SEQ) 이름. caption 라벨의 seq, 없으면 label. Word 필드 이름에 빈칸을 쓸 수 없어 밑줄로 바꿈"""
+    cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
+    return "_".join((cap["seq"] or cap["label"]).split())
 
 
 def tw(hu: float) -> int:
@@ -173,7 +178,8 @@ class DocxBuilder:
             f'<w:docDefaults {nsdecls("w")}><w:rPrDefault><w:rPr>'
             f'<w:rFonts w:ascii="{f}" w:eastAsia="{f}" w:hAnsi="{f}" w:cs="{f}"/>'
             f'<w:sz w:val="{int(body[3] * 2)}"/><w:szCs w:val="{int(body[3] * 2)}"/>'
-            f'<w:lang w:val="ko-KR" w:eastAsia="ko-KR" w:bidi="ar-SA"/></w:rPr></w:rPrDefault>'
+            f'<w:lang w:val="{lib.label("language.latin")}" w:eastAsia="{lib.label("language.east_asia")}" w:bidi="ar-SA"/>'
+            f'</w:rPr></w:rPrDefault>'
             # 한/글은 한글과 영문 사이 간격을 자동으로 넣지 않음. Word의 자동 간격을 끔
             f'<w:pPrDefault><w:pPr><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/>'
             f'<w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>')
@@ -384,7 +390,8 @@ class DocxBuilder:
         return None
 
     def caption_label(self, kind: str, text: str) -> dict:
-        label = f"<{text}>" if kind == "TABLE" else f"[{text}]"   # 표는 <제목>, 그림은 [제목]
+        cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
+        label = f"{cap['open']}{text}{cap['close']}"   # 표는 <제목>, 그림은 [제목] (caption 라벨의 괄호)
         return {"open": label, "num": None, "close": "", "text": label}
 
     def _caption(self, kind: str, text: str, side: str):
@@ -401,7 +408,7 @@ class DocxBuilder:
         self._text(p, label["open"], pt)
         if label["num"] is not None:  # 장별 번호: 장의 첫 캡션에서 번호를 1로 되돌림
             reset = " \\r 1" if label["num"] == 1 else ""
-            instr = f" SEQ {SEQ_NAME[kind]} \\* ARABIC{reset} "
+            instr = f" SEQ {seq_name(kind)} \\* ARABIC{reset} "
             fld = parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr="{escape(instr)}"><w:r><w:t>{label["num"]}</w:t></w:r></w:fldSimple>')
             p._p.append(fld)
             self._text(p, label["close"], pt)

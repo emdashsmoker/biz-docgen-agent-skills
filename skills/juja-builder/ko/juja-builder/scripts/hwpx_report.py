@@ -124,10 +124,35 @@ COVER_GAP_LINES = 14            # 일자와 기관 사이 빈 줄 수
 TOC_TAB_POS = 48100             # 목차 스타일의 오른쪽 점선 탭 위치 (스켈레톤 tabPr 값)
 TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기 (절 1500의 2배, 정책보고서 관행 값)
 TOC_UNIT_W = (700, 600)         # 목차 탭 폭 추정용 가중 1단위 폭 (장, 절). 한/글은 탭을 다시 계산하므로 근사 렌더러 표시용
-TOC_TITLE = "목  차"
 TOC_LIST_INDENT = 0             # 표 목차와 그림 목차 항목의 왼쪽 여백 (목차 절 스타일 여백을 덮어씀)
 CAPTION_GAP = 850               # 캡션과 표 사이 간격 (python-hwpx 기본값, 실코퍼스 다수 값)
 BLOCK_GAP_LINES = 0             # 표·그림 블록 앞뒤 빈 문단 수. 간격은 표위치·그림위치 스타일의 문단 여백이 담당
+
+# 라벨: 문서에 찍히는 고정 문자열, 원고에서 인식하는 표기, docx 언어 태그. 기본값은 현행 한국어 표기
+# 라벨 파일(JSON, proposal.py `build --labels`)이 일부 키를 덮어씀. 빠진 키는 기본값, 모르는 키는 ERROR
+# Why 표 1곳과 접근 함수(label): 언어별 분기 없이 라벨 파일만으로 다른 언어 문서를 만들고, 덮어쓰기가 없으면 종전과 같은 문서를 만듦
+LABEL_DEFAULTS = {
+    # 제목 번호 서식. None은 활성 프로파일 값(chapter_format, chapter_label, section_format, subsection_format, item_format)
+    "formats": {"chapter": None, "chapter_label": None, "section": None, "subsection": None, "item": None},
+    "letters": {"items": "가나다라마바사아자차카타파하", "format": "{x}."},   # 가나다 계위의 글자 순서와 표기. 서식의 {g}
+    "toc": {"title": "목  차", "tables": "표 목차", "figures": "그림 목차"},
+    # 캡션: 번호 캡션 <표 1-1>의 낱말(label)과 괄호(open, close), Word 번호 필드 이름(seq, None이면 label)
+    "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
+                "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
+    # 원고 표기: 출처 줄(출처:, (출처)), 단위 줄((단위: )), 표 캡션(<표>), 그림 캡션([그림]). 덮어쓰기는 기본 표기에 추가만 함
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"]},
+    # docx 기본 글자 언어 (w:lang). 라틴 ko-KR은 LibreOffice가 영문 낱말과 숫자 중간(3,|456)에서 줄을 바꾸므로 en-US
+    "language": {"latin": "en-US", "east_asia": "ko-KR"},
+    "output": {"proposal": "제안서", "report": "사전진단보고서", "plan": "기획보고서"},   # 산출 유형별 납품 파일명
+}
+FORMAT_PROFILE_KEYS = {"chapter": "chapter_format", "chapter_label": "chapter_label", "section": "section_format",
+                       "subsection": "subsection_format", "item": "item_format"}
+# 서식별 자리 표시. n 장 번호, r 로마자 장 번호, c 장, s 절, ss 항, g 가나다 글자(letters.format 적용), i 목 번호, t 제목
+FORMAT_FIELDS = {"chapter": ("n", "r", "t"), "chapter_label": ("n", "r"), "section": ("c", "s", "t"),
+                 "subsection": ("c", "s", "ss", "g", "t"), "item": ("i", "g", "t")}
+SOURCE_PAREN_EXCLUDE = ("주",)   # 괄호형 출처 표지에서 뺄 표기. (주)는 주식회사 약칭이므로 출처 줄로 보지 않음
+LANG_TAG_RE = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
+_labels: dict = json.loads(json.dumps(LABEL_DEFAULTS))   # 현재 라벨 (기본값 사본에 load_labels의 덮어쓰기 반영)
 
 # rhwp 렌더러
 RHWP_RELEASE_PAGE = "https://github.com/edwardkim/rhwp/releases/latest"
@@ -152,15 +177,123 @@ HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$")
 BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
-CAPTION_RE = re.compile(r"^[<＜]\s*표\s*[^>＞]*[>＞]\s*(.*)$")
-FIG_CAPTION_RE = re.compile(r"^\[\s*그림\s*[^\]]*\]\s*(.*)$")
-UNIT_RE = re.compile(r"^\(\s*단위\s*[:：].*\)$")
-SOURCE_RE = re.compile(r"^(?:[(（]\s*(?:출처|자료)\s*[)）]|(?:출처|자료|주)\s*[:：])")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
 NUM_PREFIX_RE = re.compile(r"^(제\s*\d+\s*장|\d+(?:\.\d+)*\.?|[가-힣]\.)\s+")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "*")
+
+
+def label(key: str):
+    """라벨 값. key는 점 경로 ("toc.title", "caption.table", "notation.source")"""
+    v = _labels
+    for k in key.split("."):
+        v = v[k]
+    return v
+
+
+def letter_label(i: int) -> str:
+    """가나다 계위의 i번째 글자 표기 (기본 "가.")"""
+    items = label("letters.items")
+    return label("letters.format").format(x=items[(i - 1) % len(items)])
+
+
+def apply_format_labels(profile: dict) -> dict:
+    """formats.* 덮어쓰기를 프로파일 사본에 반영. 값이 None인 키는 프로파일 값을 유지"""
+    out = dict(profile)
+    for k, pk in FORMAT_PROFILE_KEYS.items():
+        if _labels["formats"][k] is not None:
+            out[pk] = _labels["formats"][k]
+    return out
+
+
+def _alt(tokens: list[str]) -> str:
+    """표기 목록을 정규식 택일로 바꿈. 긴 표기를 앞에 두어 앞부분 일치를 막음"""
+    return "|".join(re.escape(t) for t in sorted(tokens, key=len, reverse=True))
+
+
+def _compile_notation():
+    """원고 표기 정규식을 현재 라벨로 다시 만듦. 기본 라벨이면 종전 정규식과 같은 판정"""
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, SOURCE_RE, SOURCE_PAREN_RE
+    n = _labels["notation"]
+    paren = _alt([t for t in n["source"] if t not in SOURCE_PAREN_EXCLUDE])
+    CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(n['table'])})\s*[^>＞]*[>＞]\s*(.*)$")
+    FIG_CAPTION_RE = re.compile(rf"^\[\s*(?:{_alt(n['figure'])})\s*[^\]]*\]\s*(.*)$")
+    UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(n['unit'])})\s*[:：].*\)$")
+    SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{paren})\s*[)）]|(?:{_alt(n['source'])})\s*[:：])")
+    SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({paren})\s*[)）]\s*")   # (출처) 표기를 "출처: "로 바꾸는 자리
+
+
+_compile_notation()
+
+
+def load_labels(path: str) -> list[str]:
+    """라벨 파일(JSON)을 기본값 위에 덮어씀. 빠진 키는 기본값. 모르는 키와 형식 오류는 모아서 ERROR로 중단
+    notation.*는 기본 표기에 추가만 함(기본 표기는 계속 인식). 반환: 덮어쓴 키 목록"""
+    global _labels
+    try:
+        data = json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError) as ex:
+        sys.exit(f"ERROR: 라벨 파일을 읽지 못함 {path} ({ex})")
+    merged = json.loads(json.dumps(LABEL_DEFAULTS))
+    errors: list[str] = []
+    changed: list[str] = []
+
+    def walk(src, dst: dict, base: dict, prefix: str):
+        if not isinstance(src, dict):
+            errors.append(f"{prefix or '최상위'}: JSON 객체 필요")
+            return
+        for k, v in src.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if k not in base:
+                errors.append(f"모르는 키 '{key}' (이 자리의 키: {', '.join(base)})")
+            elif isinstance(base[k], dict):
+                walk(v, dst[k], base[k], key)
+            elif isinstance(base[k], list):  # 원고 표기: 기본 표기 뒤에 추가
+                vals = [v] if isinstance(v, str) else v
+                if not isinstance(vals, list) or not all(isinstance(x, str) and x.strip() for x in vals):
+                    errors.append(f"{key}: 문자열 또는 문자열 목록 필요")
+                    continue
+                dst[k] = list(dict.fromkeys(base[k] + [x.strip() for x in vals]))
+                changed.append(key)
+            elif key == "letters.items" and isinstance(v, list) and v and all(isinstance(x, str) and x for x in v):
+                dst[k] = v
+                changed.append(key)
+            elif not isinstance(v, str):
+                errors.append(f"{key}: 문자열 필요")
+            else:
+                dst[k] = v
+                changed.append(key)
+    walk(data, merged, LABEL_DEFAULTS, "")
+    sample = {"n": 1, "r": "Ⅰ", "t": "T", "c": 1, "s": 1, "ss": 1, "g": "g", "i": 1}
+    for k, fields in FORMAT_FIELDS.items():
+        fmt = merged["formats"][k]
+        if fmt is None:
+            continue
+        try:
+            fmt.format(**{f: sample[f] for f in fields})
+        except (KeyError, IndexError, ValueError):
+            errors.append(f"formats.{k}: 쓸 수 있는 자리 표시는 {', '.join('{' + f + '}' for f in fields)}")
+    try:
+        merged["letters"]["format"].format(x="g")
+    except (KeyError, IndexError, ValueError):
+        errors.append("letters.format: 쓸 수 있는 자리 표시는 {x}")
+    if not merged["letters"]["items"]:
+        errors.append("letters.items: 글자 1개 이상 필요")
+    for kind, cap in merged["caption"].items():
+        if not (cap["seq"] or cap["label"]).strip():
+            errors.append(f"caption.{kind}: label이 빈 문자열이면 seq(Word 번호 필드 이름) 필요")
+    for k, v in merged["language"].items():
+        if not LANG_TAG_RE.fullmatch(v):
+            errors.append(f"language.{k}: 언어 태그 형식(예: ko-KR) 필요 '{v}'")
+    for k, v in merged["output"].items():
+        if not v.strip() or re.search(r"[\\/]", v):
+            errors.append(f"output.{k}: 경로 구분자 없는 파일명 필요 '{v}'")
+    if errors:
+        sys.exit(f"ERROR: 라벨 파일 {path} 오류 {len(errors)}건\n" + "\n".join(f"   {e}" for e in errors))
+    _labels = merged
+    _compile_notation()
+    return changed
 
 
 def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
@@ -225,10 +358,10 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if stripped.startswith(">"):  # 인용 줄은 내용으로 역할 판정 (출처 표기면 출처, 아니면 주석)
             body = stripped.lstrip("> ").strip()
             kind = "source" if SOURCE_RE.match(body) else "note"
-            elems.append(Element(kind, re.sub(r"^[(（]\s*(출처|자료)\s*[)）]\s*", r"\1: ", body)))
+            elems.append(Element(kind, SOURCE_PAREN_RE.sub(r"\1: ", body)))
             continue
         if SOURCE_RE.match(stripped):
-            elems.append(Element("source", re.sub(r"^[(（]\s*(출처|자료)\s*[)）]\s*", r"\1: ", stripped)))
+            elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
@@ -584,7 +717,7 @@ def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, 
         if cover.get("org"):
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
-        items.append({"kind": "toc_title", "text": TOC_TITLE, "page_break": bool(cover)})
+        items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
         items += [{"kind": "toc_entry", "level": lv, "text": text} for lv, text in headings if lv <= toc_depth]
         for title, entries in lists or []:
             if entries:
@@ -994,7 +1127,8 @@ class Builder:
         cp.element.set("styleIDRef", str(r["style_id_ref"]))
         for run in [c for c in cp.element if c.tag == f"{HP}run"]:
             cp.element.remove(run)
-        open_b, close_b = ("<표 ", "> ") if kind == "TABLE" else ("[그림 ", "] ")
+        cap = label("caption.table" if kind == "TABLE" else "caption.figure")
+        open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         prefix = self.p.get("caption_prefix", "").format(c=max(self.n["chapter"], 1))
         run = cp.add_run(open_b + prefix, char_pr_id_ref=r["char_pr_id_ref"])
         import lxml.etree as ET
@@ -1027,7 +1161,7 @@ class Builder:
                 c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=self.n["subsection"], t=text) if manual else text)
         else:
             self.n["ganada"] += 1
-            label = f"{'가나다라마바사아자차카타파하'[(self.n['ganada'] - 1) % 14]}. {text}"
+            label = f"{letter_label(self.n['ganada'])} {text}"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
         if level <= 3:
             self.headings.append((level, label))
@@ -1330,10 +1464,24 @@ def _toc_norm(t: str) -> str:
     return re.sub(r"[\s.]+", "", t)  # 밴드는 번호와 제목을 다른 칸에 두므로 마침표도 무시
 
 
-TOC_TITLES = {"목차", "표목차", "그림목차"}   # 목차 쪽의 제목 줄(공백 제거 후 전체 일치)
 CHAPTER_TOKEN_RE = re.compile(r"제\d+장|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]")   # 간지와 밴드에서 제목 사이에 끼어드는 장 번호
 TOC_TOP_LINES = 6   # 장 제목을 우선 찾는 쪽 머리 줄 수. 장은 새 쪽에서 시작하므로 쪽 머리에 제목이 옴
 TOC_TITLE_WRAP_LINES = 3   # 장 제목 1개가 걸치는 최대 줄 수. 간지의 긴 제목은 두 줄로 접히고 그 사이에 장 번호 줄이 끼어듦
+
+
+def toc_titles() -> set[str]:
+    """목차 쪽의 제목 줄(공백 제거 후 전체 일치). 목차, 표 목차, 그림 목차 라벨을 따름"""
+    return {_toc_norm(label(k)) for k in ("toc.title", "toc.tables", "toc.figures")} - {""}
+
+
+def chapter_token_re() -> re.Pattern:
+    """장 번호 표기. 기본 표기에 formats.chapter와 formats.chapter_label 덮어쓰기의 번호 부분({t} 앞)을 더함"""
+    pats = [CHAPTER_TOKEN_RE.pattern]
+    for k in ("chapter", "chapter_label"):
+        head = _toc_norm((label(f"formats.{k}") or "").split("{t}")[0])
+        if "{n}" in head or "{r}" in head:
+            pats.append(re.escape(head).replace(r"\{n\}", r"\d+").replace(r"\{r\}", "[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]"))
+    return re.compile("|".join(pats))
 
 
 def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[str, str]] | None = None,
@@ -1344,12 +1492,13 @@ def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[st
     Why: 근사 렌더러는 캡션 자동번호를 비워서 그림. 번호 없이도 찾도록 닫는 괄호 뒤 제목을 찾을 문구로 씀.
     간지의 긴 장 제목은 두 줄로 접히고 pdftotext가 장 번호를 두 줄 사이에 끼워 넣으므로 장 번호를 지우고 찾음"""
     norm = _toc_norm
+    chapter_re, titles = chapter_token_re(), toc_titles()
 
     def clean(t: str) -> str:  # 렌더러가 "제 1장"처럼 글자 사이에 빈칸을 넣으므로 빈칸 제거 후 장 번호를 지움
-        return CHAPTER_TOKEN_RE.sub("", norm(t))
+        return chapter_re.sub("", norm(t))
 
     def is_title_page(page: str) -> bool:  # 본문 문장 속 "목차" 낱말은 제목 줄이 아니므로 제외
-        return any(norm(ln) in TOC_TITLES for ln in page.splitlines())
+        return any(norm(ln) in titles for ln in page.splitlines())
     keys = [norm(t) for t in headings + [e for e, _ in extras or []]]
 
     def entry_index(line: str) -> int | None:

@@ -124,10 +124,35 @@ COVER_GAP_LINES = 14            # empty lines between the date and the organizat
 TOC_TAB_POS = 48100             # right dotted tab position of TOC styles (skeleton tabPr value)
 TOC_SUB_INDENT = 3000           # TOC subsection indent (twice the section's 1500, conventional policy report value)
 TOC_UNIT_W = (700, 600)         # width of one weighted unit for estimating TOC tab width (chapter, section). 한/글 recalculates tabs, so this is for approximate renderer display
-TOC_TITLE = "목  차"
 TOC_LIST_INDENT = 0             # left margin of list of tables and list of figures entries (overrides the TOC section style margin)
 CAPTION_GAP = 850               # gap between caption and table (python-hwpx default, the value most common in the real corpus)
 BLOCK_GAP_LINES = 0             # empty paragraphs before and after table and figure blocks. Spacing is handled by paragraph margins of the table position and figure position styles
+
+# Labels: fixed strings printed into documents, manuscript notation the parser recognizes, and docx language tags. Defaults are the current Korean notation
+# A label file (JSON, proposal.py `build --labels`) overrides some keys. Missing keys keep the default, unknown keys are an ERROR
+# Why one table and one accessor (label): documents in other languages come from a label file with no per-language branch, and without overrides the document stays as before
+LABEL_DEFAULTS = {
+    # heading number formats. None keeps the active profile value (chapter_format, chapter_label, section_format, subsection_format, item_format)
+    "formats": {"chapter": None, "chapter_label": None, "section": None, "subsection": None, "item": None},
+    "letters": {"items": "가나다라마바사아자차카타파하", "format": "{x}."},   # letter sequence and notation of the 가나다 level. {g} in formats
+    "toc": {"title": "목  차", "tables": "표 목차", "figures": "그림 목차"},
+    # captions: word (label) and brackets (open, close) of numbered captions <표 1-1>, Word number field name (seq, None means label)
+    "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
+                "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
+    # manuscript notation: source lines (출처:, (출처)), unit lines ((단위: )), table captions (<표>), figure captions ([그림]). Overrides only add tokens
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"]},
+    # docx default run language (w:lang). With Latin ko-KR, LibreOffice breaks English words and numbers mid-token (3,|456), so en-US
+    "language": {"latin": "en-US", "east_asia": "ko-KR"},
+    "output": {"proposal": "제안서", "report": "사전진단보고서", "plan": "기획보고서"},   # delivered file names per output type
+}
+FORMAT_PROFILE_KEYS = {"chapter": "chapter_format", "chapter_label": "chapter_label", "section": "section_format",
+                       "subsection": "subsection_format", "item": "item_format"}
+# placeholders per format. n chapter number, r Roman chapter number, c chapter, s section, ss subsection, g 가나다 letter (letters.format applied), i item number, t title
+FORMAT_FIELDS = {"chapter": ("n", "r", "t"), "chapter_label": ("n", "r"), "section": ("c", "s", "t"),
+                 "subsection": ("c", "s", "ss", "g", "t"), "item": ("i", "g", "t")}
+SOURCE_PAREN_EXCLUDE = ("주",)   # tokens left out of the parenthesized source mark. (주) abbreviates 주식회사 (Inc.), so it is not a source line
+LANG_TAG_RE = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
+_labels: dict = json.loads(json.dumps(LABEL_DEFAULTS))   # current labels (a copy of the defaults with load_labels overrides applied)
 
 # rhwp renderer
 RHWP_RELEASE_PAGE = "https://github.com/edwardkim/rhwp/releases/latest"
@@ -152,15 +177,123 @@ HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$")
 BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
-CAPTION_RE = re.compile(r"^[<＜]\s*표\s*[^>＞]*[>＞]\s*(.*)$")
-FIG_CAPTION_RE = re.compile(r"^\[\s*그림\s*[^\]]*\]\s*(.*)$")
-UNIT_RE = re.compile(r"^\(\s*단위\s*[:：].*\)$")
-SOURCE_RE = re.compile(r"^(?:[(（]\s*(?:출처|자료)\s*[)）]|(?:출처|자료|주)\s*[:：])")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
 NUM_PREFIX_RE = re.compile(r"^(제\s*\d+\s*장|\d+(?:\.\d+)*\.?|[가-힣]\.)\s+")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "*")
+
+
+def label(key: str):
+    """Label value. key is a dotted path ("toc.title", "caption.table", "notation.source")"""
+    v = _labels
+    for k in key.split("."):
+        v = v[k]
+    return v
+
+
+def letter_label(i: int) -> str:
+    """Notation of the i-th letter of the 가나다 level (default "가.")"""
+    items = label("letters.items")
+    return label("letters.format").format(x=items[(i - 1) % len(items)])
+
+
+def apply_format_labels(profile: dict) -> dict:
+    """Apply formats.* overrides to a copy of the profile. Keys whose value is None keep the profile value"""
+    out = dict(profile)
+    for k, pk in FORMAT_PROFILE_KEYS.items():
+        if _labels["formats"][k] is not None:
+            out[pk] = _labels["formats"][k]
+    return out
+
+
+def _alt(tokens: list[str]) -> str:
+    """Turn a token list into a regex alternation. Longer tokens come first to prevent prefix matches"""
+    return "|".join(re.escape(t) for t in sorted(tokens, key=len, reverse=True))
+
+
+def _compile_notation():
+    """Rebuild the manuscript notation regexes from the current labels. With default labels the verdicts equal the previous regexes"""
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, SOURCE_RE, SOURCE_PAREN_RE
+    n = _labels["notation"]
+    paren = _alt([t for t in n["source"] if t not in SOURCE_PAREN_EXCLUDE])
+    CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(n['table'])})\s*[^>＞]*[>＞]\s*(.*)$")
+    FIG_CAPTION_RE = re.compile(rf"^\[\s*(?:{_alt(n['figure'])})\s*[^\]]*\]\s*(.*)$")
+    UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(n['unit'])})\s*[:：].*\)$")
+    SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{paren})\s*[)）]|(?:{_alt(n['source'])})\s*[:：])")
+    SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({paren})\s*[)）]\s*")   # turns the (출처) notation into "출처: "
+
+
+_compile_notation()
+
+
+def load_labels(path: str) -> list[str]:
+    """Override the defaults with a label file (JSON). Missing keys keep the default. Unknown keys and format errors are collected and stop with ERROR
+    notation.* only adds tokens (the default tokens stay recognized). Returns the list of overridden keys"""
+    global _labels
+    try:
+        data = json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError) as ex:
+        sys.exit(f"ERROR: could not read label file {path} ({ex})")
+    merged = json.loads(json.dumps(LABEL_DEFAULTS))
+    errors: list[str] = []
+    changed: list[str] = []
+
+    def walk(src, dst: dict, base: dict, prefix: str):
+        if not isinstance(src, dict):
+            errors.append(f"{prefix or 'top level'}: JSON object required")
+            return
+        for k, v in src.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if k not in base:
+                errors.append(f"unknown key '{key}' (keys at this level: {', '.join(base)})")
+            elif isinstance(base[k], dict):
+                walk(v, dst[k], base[k], key)
+            elif isinstance(base[k], list):  # manuscript notation: appended after the default tokens
+                vals = [v] if isinstance(v, str) else v
+                if not isinstance(vals, list) or not all(isinstance(x, str) and x.strip() for x in vals):
+                    errors.append(f"{key}: string or list of strings required")
+                    continue
+                dst[k] = list(dict.fromkeys(base[k] + [x.strip() for x in vals]))
+                changed.append(key)
+            elif key == "letters.items" and isinstance(v, list) and v and all(isinstance(x, str) and x for x in v):
+                dst[k] = v
+                changed.append(key)
+            elif not isinstance(v, str):
+                errors.append(f"{key}: string required")
+            else:
+                dst[k] = v
+                changed.append(key)
+    walk(data, merged, LABEL_DEFAULTS, "")
+    sample = {"n": 1, "r": "Ⅰ", "t": "T", "c": 1, "s": 1, "ss": 1, "g": "g", "i": 1}
+    for k, fields in FORMAT_FIELDS.items():
+        fmt = merged["formats"][k]
+        if fmt is None:
+            continue
+        try:
+            fmt.format(**{f: sample[f] for f in fields})
+        except (KeyError, IndexError, ValueError):
+            errors.append(f"formats.{k}: allowed placeholders are {', '.join('{' + f + '}' for f in fields)}")
+    try:
+        merged["letters"]["format"].format(x="g")
+    except (KeyError, IndexError, ValueError):
+        errors.append("letters.format: the allowed placeholder is {x}")
+    if not merged["letters"]["items"]:
+        errors.append("letters.items: at least one letter required")
+    for kind, cap in merged["caption"].items():
+        if not (cap["seq"] or cap["label"]).strip():
+            errors.append(f"caption.{kind}: an empty label needs seq (the Word number field name)")
+    for k, v in merged["language"].items():
+        if not LANG_TAG_RE.fullmatch(v):
+            errors.append(f"language.{k}: language tag format (for example ko-KR) required '{v}'")
+    for k, v in merged["output"].items():
+        if not v.strip() or re.search(r"[\\/]", v):
+            errors.append(f"output.{k}: file name without path separators required '{v}'")
+    if errors:
+        sys.exit(f"ERROR: label file {path}: {len(errors)} errors\n" + "\n".join(f"   {e}" for e in errors))
+    _labels = merged
+    _compile_notation()
+    return changed
 
 
 def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
@@ -225,10 +358,10 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if stripped.startswith(">"):  # a quote line gets its role from its content (source if it is a source notation, otherwise a note)
             body = stripped.lstrip("> ").strip()
             kind = "source" if SOURCE_RE.match(body) else "note"
-            elems.append(Element(kind, re.sub(r"^[(（]\s*(출처|자료)\s*[)）]\s*", r"\1: ", body)))
+            elems.append(Element(kind, SOURCE_PAREN_RE.sub(r"\1: ", body)))
             continue
         if SOURCE_RE.match(stripped):
-            elems.append(Element("source", re.sub(r"^[(（]\s*(출처|자료)\s*[)）]\s*", r"\1: ", stripped)))
+            elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
@@ -584,7 +717,7 @@ def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, 
         if cover.get("org"):
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
-        items.append({"kind": "toc_title", "text": TOC_TITLE, "page_break": bool(cover)})
+        items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
         items += [{"kind": "toc_entry", "level": lv, "text": text} for lv, text in headings if lv <= toc_depth]
         for title, entries in lists or []:
             if entries:
@@ -994,7 +1127,8 @@ class Builder:
         cp.element.set("styleIDRef", str(r["style_id_ref"]))
         for run in [c for c in cp.element if c.tag == f"{HP}run"]:
             cp.element.remove(run)
-        open_b, close_b = ("<표 ", "> ") if kind == "TABLE" else ("[그림 ", "] ")
+        cap = label("caption.table" if kind == "TABLE" else "caption.figure")
+        open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         prefix = self.p.get("caption_prefix", "").format(c=max(self.n["chapter"], 1))
         run = cp.add_run(open_b + prefix, char_pr_id_ref=r["char_pr_id_ref"])
         import lxml.etree as ET
@@ -1027,7 +1161,7 @@ class Builder:
                 c=max(self.n["chapter"], 1), s=max(self.n["section"], 1), ss=self.n["subsection"], t=text) if manual else text)
         else:
             self.n["ganada"] += 1
-            label = f"{'가나다라마바사아자차카타파하'[(self.n['ganada'] - 1) % 14]}. {text}"
+            label = f"{letter_label(self.n['ganada'])} {text}"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
         if level <= 3:
             self.headings.append((level, label))
@@ -1330,10 +1464,24 @@ def _toc_norm(t: str) -> str:
     return re.sub(r"[\s.]+", "", t)  # bands put the number and title in different cells, so periods are ignored too
 
 
-TOC_TITLES = {"목차", "표목차", "그림목차"}   # title lines of TOC pages (full match after removing spaces)
 CHAPTER_TOKEN_RE = re.compile(r"제\d+장|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]")   # chapter numbers that intrude between titles on divider pages and bands
 TOC_TOP_LINES = 6   # number of top-of-page lines searched first for chapter titles. Chapters start on a new page, so the title sits at the top
 TOC_TITLE_WRAP_LINES = 3   # maximum lines one chapter title spans. A long divider title wraps to two lines with the chapter number line between them
+
+
+def toc_titles() -> set[str]:
+    """Title lines of TOC pages (full match after removing spaces). Follows the labels of the TOC, list of tables, and list of figures"""
+    return {_toc_norm(label(k)) for k in ("toc.title", "toc.tables", "toc.figures")} - {""}
+
+
+def chapter_token_re() -> re.Pattern:
+    """Chapter number notation. Adds the number part (before {t}) of formats.chapter and formats.chapter_label overrides to the default notation"""
+    pats = [CHAPTER_TOKEN_RE.pattern]
+    for k in ("chapter", "chapter_label"):
+        head = _toc_norm((label(f"formats.{k}") or "").split("{t}")[0])
+        if "{n}" in head or "{r}" in head:
+            pats.append(re.escape(head).replace(r"\{n\}", r"\d+").replace(r"\{r\}", "[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]"))
+    return re.compile("|".join(pats))
 
 
 def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[str, str]] | None = None,
@@ -1344,12 +1492,13 @@ def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[st
     Why: approximate renderers draw automatic caption numbers blank. The title after the closing bracket is used as the search text so it is found without the number.
     Long chapter titles on divider pages fold into two lines and pdftotext puts the chapter number between them, so the chapter number is removed before searching"""
     norm = _toc_norm
+    chapter_re, titles = chapter_token_re(), toc_titles()
 
     def clean(t: str) -> str:  # renderers insert spaces between characters as in "제 1장", so spaces are removed and then the chapter number
-        return CHAPTER_TOKEN_RE.sub("", norm(t))
+        return chapter_re.sub("", norm(t))
 
     def is_title_page(page: str) -> bool:  # the word "목차" inside body sentences is not a title line, so it is excluded
-        return any(norm(ln) in TOC_TITLES for ln in page.splitlines())
+        return any(norm(ln) in titles for ln in page.splitlines())
     keys = [norm(t) for t in headings + [e for e, _ in extras or []]]
 
     def entry_index(line: str) -> int | None:
