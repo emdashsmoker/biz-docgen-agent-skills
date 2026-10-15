@@ -20,7 +20,7 @@ Run every command as `python3 scripts/report.py <command>`. The command notation
 ## Terms
 
 - (Hangul) Hancom's word processor (한/글) that opens HWPX files
-- (Korean tokens) The generated documents are Korean reports. Style names, numbering (제N장, 가.), caption labels (표, 그림), and the Korean tokens in the manuscript notation stay in Korean and are written exactly as shown
+- (Labels) The fixed strings that build prints into documents (numbering such as 제N장 and 가., caption labels 표 and 그림, the TOC title) and the language tags written into the files. The default labels are Korean, and a label file (`--labels`) switches them for documents in other languages. Style names stay in Korean. The Korean tokens of the manuscript notation (such as `<표>`, `출처:`) are always accepted and are written exactly as shown; a label file can add tokens in another language
 - (Manuscript) The Markdown file that is the input to typesetting. Its notation rules are in references/manuscript.md
 - (Heading) A Markdown line that starts with `#`. The number of `#` sets chapter, section, subsection, or 가나다
 - (가나다) The heading level numbered with Korean letters in order (가., 나., 다.)
@@ -85,6 +85,7 @@ build options
 - (`--header "text;align=LEFT|CENTER|RIGHT"`) Page header. Default OFF. Alignment defaults to right. Applies only to the body section
 - (`--skeleton skeleton.hwpx`) Skeleton extracted from a user form (HWPX only)
 - (`--rhwp path`) rhwp executable used for TOC page numbers (HWPX)
+- (`--labels labels.json`) Label file for a document in another language (Labels section below). Default OFF (Korean labels)
 
 The fill replacement JSON has the form `{"replace": {"old text": "new text"}, "cells": {"label > right": "value"}}`. A `cells` key finds the table cell that contains the label text and then points to the cell reached by moving in the given directions (left, right, up, down). Directions can be chained with `>` (for example `"합계 > down > right"`). If the label text appears in more than one table cell of the document, the target cell cannot be determined and fill reports it as failed, so use text that appears only once as the label.
 
@@ -103,6 +104,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (Long tables) Choose engine or split. build reports those tables on a `HITL: [long table]` line
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the TOC depth (chapter, section, subsection), the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
+    - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
 2. (Manuscript) Write the Markdown manuscript with the level rules below and the writing rules in references/manuscript.md
 3. (Typesetting) Run build and act on each output line prefix
     - (`LINT:`) A manuscript defect. Fix the manuscript and run build again
@@ -141,6 +143,14 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 - DOCX supports only the built-in forms (chapter, flat). User forms (`--skeleton`) and fill are HWPX only
 - DOCX puts the chapter, section, subsection, and 가나다 headings on Word's built-in heading styles so that the navigation pane and the TOC field recognize them
 - DOCX mapping rules such as unit conversion, caption number fields, the TOC field, footnotes, and the font table are in references/layout.md
+
+## Labels
+
+- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC title, caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width), and the language tags of DOCX and HWPX
+- (How) `build manuscript.md output.docx --profile chapter --labels labels.json`. A nested JSON object; omitted keys keep the defaults. Unknown keys and invalid values stop build with the list of all problems. Works for HWPX and DOCX and for both built-in forms
+- (Defaults) Without `--labels`, documents get the Korean labels (제N장, 가., 목  차, 표, 그림)
+- (Manuscript tokens) The Korean tokens stay recognized. A label file only adds tokens (for example `Source:`, `<Table>`, `(Unit: )`)
+- The key table with defaults and a complete English example are in the Labels section of references/layout.md
 
 ## Converting existing documents
 

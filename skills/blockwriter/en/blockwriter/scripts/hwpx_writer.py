@@ -41,8 +41,12 @@ def load_profile(spec: str) -> dict:
             if role in names:
                 prof[role] = names[role]
         prof.setdefault("table_cell_left", names["table_cell"])   # forms without a left-aligned table content style
-        return prof
-    return {**C.PROFILE_DEFAULTS, **json.loads(Path(spec).read_text(encoding="utf-8"))}
+    else:
+        prof = {**C.PROFILE_DEFAULTS, **json.loads(Path(spec).read_text(encoding="utf-8"))}
+    for level in ("chapter", "section", "subsection"):   # number formats of a label file override the active profile's formats
+        if C.label(f"formats.{level}") is not None:
+            prof[f"{level}_format"] = C.label(f"formats.{level}")
+    return prof
 
 
 def builtin_skeleton(form_name: str, workdir: str) -> str:
@@ -332,7 +336,7 @@ class Builder:
                 print(msg("warn_no_toc_style"))
             else:
                 ch = self.refs("chapter")
-                front(C.TOC_TITLE, str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
+                front(C.label("toc.title"), str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
                       pageBreak="1" if cover else "0")
                 sub_pp = None
                 for idx, (lv, text) in enumerate(M.toc_entries(self.headings, self.toc_depth)):
@@ -468,7 +472,7 @@ class Builder:
         cp.element.set("styleIDRef", str(r["style_id_ref"]))
         for run in [c for c in cp.element if c.tag == f"{HP}run"]:
             cp.element.remove(run)
-        open_b, close_b = C.CAPTION_MARKS[kind]
+        open_b, close_b = C.caption_marks(kind)
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         run = cp.add_run(open_b + prefix, char_pr_id_ref=r["char_pr_id_ref"])
         # number stored in the field. Hangul renumbers on open, and renderers that draw the stored value also show the right number

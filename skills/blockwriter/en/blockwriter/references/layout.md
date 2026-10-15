@@ -111,13 +111,13 @@ DOCX converts the same form.py definitions into Word units.
 - (Units) twip = HWPUNIT / 5, EMU = HWPUNIT x 127
 - (Fonts) The Hangul slot font goes to Word's East Asian and complex script fonts, and the Latin slot font goes to the Latin fonts. The width ratio becomes the character scale, and the spacing becomes character spacing equal to the font size times the spacing ratio
 - (Automatic spacing) Automatic spacing between Hangul and Latin text and between Hangul and numbers is turned off, the same as the HWPX paragraph setting
-- (Language) The document default language is recorded as en-US for Latin text and ko-KR for East Asian text, the same pair as the default of Korean Word documents
+- (Language) The document default language is recorded as en-US for Latin text and ko-KR for East Asian text, the same pair as the default of Korean Word documents. A label file changes them (language.latin, language.east_asia)
 - (Line spacing) Hangul's percentage of the font size becomes Word's minimum line height (font size x percentage). Because the two programs calculate line height differently, vertical positions can differ slightly
 - (Paragraph margins) Carried over as they are, and a negative first-line indent becomes a Word hanging indent
 - (Bullets) Word bullet lists (single level). The hanging indent is the sum of the symbol width, the gap after the symbol, and the width adjustment, so that the second line aligns with the text start line. The symbol width is 0.5 character for symbols whose Unicode East Asian Width is half-width (Na, H), which is the hyphen in the built-in forms, and 1 character for other symbols
 - (Heading styles) chapter puts the chapter, section, subsection, and 가나다 headings on Word Heading 1-4. flat puts the document title on Word Title and the section, subsection, and 가나다 headings on Heading 1-3. The navigation pane and the TOC field recognize these styles
 - (Other roles) Custom styles named after the form styles
-- (Caption numbers) Word number fields (SEQ 표, SEQ 그림) with prefilled results. chapter adds the chapter number as text, and the field restarts at 1 at each Heading 1. flat numbers continuously through the document
+- (Caption numbers) Word number fields (SEQ 표, SEQ 그림; the name follows the caption label of a label file) with prefilled results. chapter adds the chapter number as text, and the field restarts at 1 at each Heading 1. flat numbers continuously through the document
 - (Caption width) The caption paragraph is indented on both sides by half the difference between the body width and the table width, so it wraps at the same width as the HWPX caption object
 - (Footnotes) Word footnotes with `)` after the footnote number
 - (Tables) A single row does not split across two pages. For tables of 25 rows or fewer, every row is kept with the next row so the table stays on one page. Long tables (engine) repeat the unit row and header rows as title rows
@@ -141,7 +141,7 @@ Page-number calculation (when `--toc` and `--page-number` are both given)
 
 1. Typeset a first-pass document that holds only the TOC entries
 2. Render the first-pass document to a text-extractable PDF and get the text of each page in drawing order. HWPX uses rhwp, or LibreOffice with H2Orestart if rhwp is missing. DOCX uses LibreOffice, which updates the TOC field before saving. The rendering copy and the PDF are made in a temporary folder and removed, so only the document stays in the output folder
-3. Starting from the first page that contains the TOC title (`목  차`), find the TOC entries in order. The pages up to the one containing the last entry are the TOC, and the next page is body page 1. The same applies when the TOC spans several pages
+3. Starting from the first page that contains the TOC title (`목  차`, or toc.title of a label file), find the TOC entries in order. The pages up to the one containing the last entry are the TOC, and the next page is body page 1. The same applies when the TOC spans several pages
 4. Find the TOC entries in order in the body and use the first page where each entry appears as its page number. The search for an entry starts at the page of the previous entry
 5. Render the final document with the page numbers filled in and check it the same way. If there are mismatches, typeset again with the new values (TOC_MAX_PASSES, default 2)
 6. build prints `TOC page check: filled numbers match the re-rendered page positions N/M` (M is the number of TOC entries) or a list of mismatched entries. Entries not found in the body get no page number and a `WARN:` line reports them
@@ -161,7 +161,7 @@ Page-number calculation (when `--toc` and `--page-number` are both given)
 Profile keys
 
 - (numbering) manual writes the section and subsection numbers into the heading text. auto leaves the section and subsection numbers to Hangul outline numbering and writes no number into the heading text. Chapter numbers and 가나다 are written into the heading text in both modes
-- (chapter_format, section_format, subsection_format) Heading formats. chapter_format uses `{n}` (chapter number) and `{t}` (title). section_format and subsection_format use `{c}` (number of the containing chapter, 1 if there is no chapter), `{s}` (section number), `{ss}` (subsection number), and `{t}`. Examples are `"제{n}장 {t}"`, `"{c}.{s} {t}"`, and `"{s}. {t}"`
+- (chapter_format, section_format, subsection_format) Heading formats. chapter_format uses `{n}` (chapter number) and `{t}` (title). section_format and subsection_format use `{c}` (number of the containing chapter, 1 if there is no chapter), `{s}` (section number), `{ss}` (subsection number), and `{t}`. Examples are `"제{n}장 {t}"`, `"{c}.{s} {t}"`, and `"{s}. {t}"`. The formats.* keys of a label file override these values
 - (caption_prefix) Characters before the caption number. `"{c}-"` numbers captions per chapter, and `""` numbers them continuously through the document
 - (Role keys) The values are style names. body, chapter, section, subsection, ganada, square, circle, dash, dot, note, table_pos, table_cell, table_cell_left, table_title, unit, source, fig_pos, fig_title
 - (Optional role keys) toc_chapter, toc_section, table_cell_bullet, table_cell_dash
@@ -173,6 +173,56 @@ Skeleton editing rules
 - H2Orestart conversion needs the engName, langID, and lockForm attributes, so set them when adding a style
 - Fix the margins and paper size before adding a page header or footer. python-hwpx computes the header and footer area width only once, from the margins at creation time, so a later margin change leaves that width out of step with the body width
 - For the page header, the ctrl copy outside secPr is the effective one. Remove the copy inside secPr that the python-hwpx header setting creates, and set the paragraph alignment on the ctrl copy (`--header` does this automatically)
+
+## Labels
+
+The fixed strings that build prints into documents and the language tags it writes into files are labels. The defaults are Korean, so a build without `--labels` produces Korean documents. `build ... --labels labels.json` reads a nested JSON object with the keys below and works for HWPX and DOCX and for both built-in forms. The defaults are in LABEL_DEFAULTS of scripts/config.py.
+
+| Key | Meaning | Default |
+|------|------|------|
+| formats.chapter | Chapter heading format. `{n}` chapter number, `{t}` title | the active profile's value: chapter `제{n}장 {t}`, flat `{t}` |
+| formats.section | Section heading format. `{c}` chapter number, `{s}` section number, `{t}` | chapter `{c}.{s} {t}`, flat `{s}. {t}` |
+| formats.subsection | Subsection heading format. `{c}`, `{s}`, `{ss}` subsection number, `{t}` | chapter `{c}.{s}.{ss} {t}`, flat `{s}.{ss} {t}` |
+| letters.items | Letter sequence of the 가나다 level, one character per heading. After the last one it starts again | `가나다라마바사아자차카타파하` |
+| letters.format | Number format of the 가나다 level. `{x}` letter. The title follows after a space | `{x}.` |
+| toc.title | TOC title. The TOC page-number check also starts from the page with this title | `목  차` |
+| caption.table.label, caption.figure.label | Caption label word | `표`, `그림` |
+| caption.table.open, caption.table.close | Marks around the table caption label and number | `<`, `>` |
+| caption.figure.open, caption.figure.close | Marks around the figure caption label and number | `[`, `]` |
+| caption.table.seq, caption.figure.seq | Word SEQ field name of the caption number (DOCX). No spaces | the caption label |
+| notation.source | Source line tokens (`token:`). Added tokens are also recognized as `(token)` | `출처`, `자료`, `주` (also `(출처)`, `(자료)`) |
+| notation.unit | Unit line token (`(token: )`) | `단위` |
+| notation.table | Table caption line token (`<token> title`) | `표` |
+| notation.figure | Figure caption line token (`[token] caption`) | `그림` |
+| notation.colwidth | Column width line token (`(token: 20, 30, 50)`) | `열 폭` |
+| language.latin, language.east_asia | DOCX document default language (w:lang) for Latin and East Asian text | `en-US`, `ko-KR` |
+| language.hwpx_package | HWPX document language (opf:language in content.hpf) | `ko` |
+| language.hwpx_style_lcid | HWPX style language (langID, a Windows LCID integer) | `1042` |
+
+- (Partial override) Omitted keys keep the defaults. Unknown keys, values of the wrong type, formats with unknown placeholders or without `{t}` (`{x}` for letters.format), and SEQ names with spaces stop build with the list of all problems
+- (Profiles) formats.* overrides the active profile's formats (chapter, flat, or a user profile JSON). A label file for flat sets the flat formats; leave formats.chapter out for flat because the flat document title has no number
+- (Caption) A caption prints as open, label, a space, the number, close, a space, and the title (`<표 1-1> title`, `[그림 1-1] caption`)
+- (Manuscript tokens) notation.* only adds tokens. The Korean tokens stay recognized, so a manuscript may mix both. Tokens are matched as written (case-sensitive), and a space inside a token matches any spacing
+- (Heading numbers) Numbers written in the manuscript in a label file's number format (for example `# Chapter 2. Status`, `#### (b) Overview`) are removed like `제2장` and `가.`, and the form's numbering assigns them again
+- (HWPX language) language.hwpx_package and language.hwpx_style_lcid apply to the built-in forms. A user form (`--skeleton`) keeps its own values
+- (Not labels) Style names (장 제목, □ 내용 and so on, names stored in the form), font names, the level symbols □ ○ - ㆍ ※, the page number `- N -`, and the footnote mark `)` stay as they are. Cover and page header text come from `--cover` and `--header`
+
+English example (a chapter document; the 가나다 level becomes (a), (b), (c))
+
+```json
+{
+  "formats": {"chapter": "Chapter {n}. {t}"},
+  "letters": {"items": "abcdefghijklmnopqrstuvwxyz", "format": "({x})"},
+  "toc": {"title": "Contents"},
+  "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
+  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
+               "colwidth": ["Column widths"]},
+  "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "en", "hwpx_style_lcid": 1033}
+}
+```
+
+- Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
+- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 20, 30, 50)` together with the Korean tokens
 
 ## Review items
 

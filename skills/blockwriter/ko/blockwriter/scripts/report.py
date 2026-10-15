@@ -39,6 +39,9 @@ def cmd_build(a):
     if ext not in (".hwpx", ".docx"):
         sys.exit(msg("err_format"))
     out = a.output or os.path.splitext(a.input)[0] + ext
+    if a.labels:   # 다른 언어 문서의 라벨. 원고 표기 토큰을 추가하므로 원고 해석 전에 읽음
+        C.set_labels(a.labels)
+        M.compile_notation()
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)   # 저장 시점의 폴더 없음 오류 방지
     elems, footnotes = M.parse_markdown(a.input)
     for issue in M.lint(elems, footnotes):   # LINT는 원고를 고쳐 해소
@@ -149,6 +152,8 @@ def main():
                    help="셀 병합: auto=선행 라벨 열 연속 동일값과 '^' '<' 지시(기본), explicit=지시만, none=병합 없음")
     b.add_argument("--rhwp", help="목차 쪽번호 산정에 쓸 rhwp 경로")
     b.add_argument("--numbered-square", action="store_true", help="'□ 1. 제목' 줄을 글머리 없는 숫자 헤더로 출력")
+    b.add_argument("--labels", help="다른 언어 문서용 라벨 JSON: 번호 형식, 목차 제목, 캡션 라벨, 추가 원고 표기 토큰, "
+                                    "언어 태그 (기본: 한국어 라벨)")
     b.set_defaults(func=cmd_build)
 
     f = sub.add_parser("form", help="내장 양식을 빈 HWPX 파일로 저장")

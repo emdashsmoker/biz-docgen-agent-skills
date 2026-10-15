@@ -107,13 +107,13 @@ DOCX는 form.py의 같은 정의를 Word 단위로 옮긴다.
 - (단위) twip = HWPUNIT / 5, EMU = HWPUNIT x 127
 - (글꼴) 한글 칸 글꼴은 Word 동아시아 글꼴과 복합 문자 글꼴에, 영문 칸 글꼴은 라틴 글꼴에 기록. 장평은 문자 폭 비율로, 자간은 글자 크기에 자간 비율을 곱한 문자 간격으로 옮김
 - (자동 간격) 한글과 영문, 한글과 숫자 사이 자동 간격을 끔. HWPX 문단 모양의 자동 간격 설정과 같음
-- (언어) 문서 기본 언어는 라틴 en-US, 동아시아 ko-KR로 기록. Word 한국어판 기본 문서와 같은 조합
+- (언어) 문서 기본 언어는 라틴 en-US, 동아시아 ko-KR로 기록. Word 한국어판 기본 문서와 같은 조합. 라벨 파일로 변경 가능(language.latin, language.east_asia)
 - (줄 간격) 한/글의 글자 크기 대비 비율을 Word의 최소 줄 높이(글자 크기 x 비율)로 옮김. 줄 높이 계산 방식이 달라 세로 위치가 조금 다를 수 있음
 - (문단 여백) 그대로 옮기고 음수 내어쓰기는 Word 내어쓰기로 옮김
 - (글머리) Word 글머리 목록(단일 수준)으로 출력. 둘째 줄이 본문 시작선에 맞도록 내어쓰기 폭을 기호 폭, 기호 뒤 간격, 폭 조정값의 합으로 설정. 기호 폭은 유니코드 동아시아 폭이 반각(Na, H)인 기호(내장 양식에서는 하이픈)가 0.5글자, 그 외 기호가 1글자
 - (제목 스타일) chapter는 장, 절, 소절, 가나다를 Word 제목 1-4에 입히고 flat은 문서 제목을 Word 제목(Title)에, 절, 소절, 가나다를 제목 1-3에 입힘. 탐색 창과 목차 필드가 이 스타일을 인식
 - (그 외 역할) 양식 스타일 이름을 그대로 쓴 사용자 스타일로 출력
-- (캡션 번호) Word 번호 필드(SEQ 표, SEQ 그림)이며 결과값을 미리 채움. chapter는 장 번호를 글자로 붙이고 필드가 제목 1마다 1부터 다시 셈. flat은 문서 전체에 이어지는 번호
+- (캡션 번호) Word 번호 필드(SEQ 표, SEQ 그림. 라벨 파일을 쓰면 캡션 라벨을 따름)이며 결과값을 미리 채움. chapter는 장 번호를 글자로 붙이고 필드가 제목 1마다 1부터 다시 셈. flat은 문서 전체에 이어지는 번호
 - (캡션 폭) 캡션 문단의 좌우를 본문 폭과 표 폭 차이의 절반씩 들여씀. HWPX 캡션 개체와 같은 폭에서 줄을 바꿈
 - (각주) Word 각주로 출력하고 각주 번호 뒤에 `)`를 붙임
 - (표) 행 하나는 두 쪽에 나뉘지 않음. 25행 이하 표는 모든 행을 다음 행과 묶어 한 쪽에 둠. 장표(engine)는 단위 행과 머리글 행을 제목 행으로 반복
@@ -137,7 +137,7 @@ DOCX는 form.py의 같은 정의를 Word 단위로 옮긴다.
 
 1. 목차 항목만 담은 1회차 문서를 조판
 2. 1회차 문서를 글자 추출이 가능한 PDF로 렌더링하고 쪽별 텍스트를 그린 순서대로 얻음. HWPX는 rhwp, 없으면 LibreOffice와 H2Orestart. DOCX는 LibreOffice이며 목차 필드를 갱신한 뒤 저장. 렌더링 사본과 PDF는 임시 폴더에서 만들고 지우므로 산출 폴더에는 문서만 남음
-3. 목차 제목(`목  차`)이 처음 나오는 쪽부터 목차 항목을 차례로 찾아 마지막 항목이 있는 쪽까지를 목차로 보고 그다음 쪽을 본문 1쪽으로 둠. 목차가 여러 쪽이어도 같은 방식
+3. 목차 제목(`목  차` 또는 라벨 파일의 toc.title)이 처음 나오는 쪽부터 목차 항목을 차례로 찾아 마지막 항목이 있는 쪽까지를 목차로 보고 그다음 쪽을 본문 1쪽으로 둠. 목차가 여러 쪽이어도 같은 방식
 4. 본문에서 목차 항목을 차례로 찾아 처음 나오는 쪽을 쪽번호로 삼음. 앞 항목보다 앞쪽에서는 찾지 않음
 5. 쪽번호를 기입한 최종 문서를 다시 렌더링하여 같은 방식으로 대조. 불일치가 있으면 새 값으로 다시 조판(TOC_MAX_PASSES, 기본 2회)
 6. build가 `목차 쪽번호 대조: ... 일치 N/M건`(M은 목차 항목 수) 또는 불일치 항목 목록을 출력. 본문에서 찾지 못한 항목은 쪽번호를 비우고 `WARN:` 줄로 알림
@@ -157,7 +157,7 @@ DOCX는 form.py의 같은 정의를 Word 단위로 옮긴다.
 프로파일 키
 
 - (numbering) manual은 절과 소절 번호를 제목 문구에 기입. auto는 절과 소절 번호를 한/글 개요 번호에 맡기고 제목 문구에는 기입하지 않음. 장 번호와 가나다는 두 방식 모두 제목 문구에 기입
-- (chapter_format, section_format, subsection_format) 제목 형식. chapter_format은 `{n}`(장 번호)과 `{t}`(제목)를 쓰고 section_format과 subsection_format은 `{c}`(속한 장 번호, 장이 없으면 1), `{s}`(절 번호), `{ss}`(소절 번호), `{t}`를 씀. 예시는 `"제{n}장 {t}"`, `"{c}.{s} {t}"`, `"{s}. {t}"`
+- (chapter_format, section_format, subsection_format) 제목 형식. chapter_format은 `{n}`(장 번호)과 `{t}`(제목)를 쓰고 section_format과 subsection_format은 `{c}`(속한 장 번호, 장이 없으면 1), `{s}`(절 번호), `{ss}`(소절 번호), `{t}`를 씀. 예시는 `"제{n}장 {t}"`, `"{c}.{s} {t}"`, `"{s}. {t}"`. 라벨 파일의 formats.* 키가 이 값을 덮어씀
 - (caption_prefix) 캡션 번호 앞 문자. `"{c}-"`이면 장별 번호, `""`이면 문서 전체에 이어지는 번호
 - (역할 키) 값은 스타일 이름. body, chapter, section, subsection, ganada, square, circle, dash, dot, note, table_pos, table_cell, table_cell_left, table_title, unit, source, fig_pos, fig_title
 - (선택 역할 키) toc_chapter, toc_section, table_cell_bullet, table_cell_dash
@@ -169,6 +169,56 @@ DOCX는 form.py의 같은 정의를 Word 단위로 옮긴다.
 - H2Orestart 변환에 필요하므로 스타일을 추가할 때 engName, langID, lockForm 속성을 기입
 - 여백과 용지 크기는 머리말과 꼬리말을 추가하기 전에 확정. python-hwpx는 머리말과 꼬리말의 영역 폭을 생성 시점의 여백으로 한 번만 계산하므로 나중에 여백을 바꾸면 영역 폭이 본문 폭과 어긋남
 - 머리말은 secPr 밖의 ctrl 사본이 유효. python-hwpx의 머리말 설정이 만드는 secPr 안 사본은 제거하고 ctrl 사본의 문단 정렬을 지정 (`--header`가 자동 처리)
+
+## 라벨
+
+build가 문서에 찍는 고정 문구와 파일에 기록하는 언어 태그를 라벨로 둔다. 기본값이 한국어이므로 `--labels` 없이 조판하면 한국어 문서가 나온다. `build ... --labels 라벨.json`은 아래 키의 중첩 JSON 객체를 읽으며 HWPX, DOCX와 두 내장 양식에 모두 적용된다. 기본값은 scripts/config.py의 LABEL_DEFAULTS에 있다.
+
+| 키 | 의미 | 기본값 |
+|------|------|------|
+| formats.chapter | 장 제목 형식. `{n}` 장 번호, `{t}` 제목 | 현재 프로파일의 값. chapter `제{n}장 {t}`, flat `{t}` |
+| formats.section | 절 제목 형식. `{c}` 장 번호, `{s}` 절 번호, `{t}` | chapter `{c}.{s} {t}`, flat `{s}. {t}` |
+| formats.subsection | 소절 제목 형식. `{c}`, `{s}`, `{ss}` 소절 번호, `{t}` | chapter `{c}.{s}.{ss} {t}`, flat `{s}.{ss} {t}` |
+| letters.items | 가나다 계위의 글자 순서. 제목 하나에 한 글자이며 끝 글자 다음은 처음부터 다시 | `가나다라마바사아자차카타파하` |
+| letters.format | 가나다 계위의 번호 형식. `{x}` 글자. 제목은 빈칸 하나 뒤에 붙음 | `{x}.` |
+| toc.title | 목차 제목. 목차 쪽번호 대조도 이 제목이 있는 쪽에서 시작 | `목  차` |
+| caption.table.label, caption.figure.label | 캡션 라벨 단어 | `표`, `그림` |
+| caption.table.open, caption.table.close | 표 캡션 라벨과 번호를 감싸는 기호 | `<`, `>` |
+| caption.figure.open, caption.figure.close | 그림 캡션 라벨과 번호를 감싸는 기호 | `[`, `]` |
+| caption.table.seq, caption.figure.seq | 캡션 번호의 Word SEQ 필드 이름(DOCX). 공백 불가 | 캡션 라벨 |
+| notation.source | 출처 줄 토큰(`토큰:`). 추가한 토큰은 `(토큰)`으로도 인식 | `출처`, `자료`, `주` (`(출처)`, `(자료)` 포함) |
+| notation.unit | 단위 줄 토큰(`(토큰: )`) | `단위` |
+| notation.table | 표 캡션 줄 토큰(`<토큰> 제목`) | `표` |
+| notation.figure | 그림 캡션 줄 토큰(`[토큰] 캡션`) | `그림` |
+| notation.colwidth | 열 폭 줄 토큰(`(토큰: 20, 30, 50)`) | `열 폭` |
+| language.latin, language.east_asia | DOCX 문서 기본 언어(w:lang)의 라틴, 동아시아 값 | `en-US`, `ko-KR` |
+| language.hwpx_package | HWPX 문서 언어(content.hpf의 opf:language) | `ko` |
+| language.hwpx_style_lcid | HWPX 스타일 언어(langID, Windows LCID 정수) | `1042` |
+
+- (부분 지정) 빠진 키는 기본값 유지. 알 수 없는 키, 자료형이 틀린 값, 알 수 없는 자리표시를 쓰거나 `{t}`(letters.format은 `{x}`)가 없는 형식, 공백이 든 SEQ 이름은 문제 목록 전체를 출력하고 build를 중단
+- (프로파일) formats.*는 현재 프로파일(chapter, flat, 유저 프로파일 JSON)의 형식을 덮어씀. flat용 라벨 파일은 flat 형식을 지정하며 flat 문서 제목에는 번호가 없으므로 formats.chapter를 빼고 씀
+- (캡션) 캡션은 open, label, 빈칸, 번호, close, 빈칸, 제목 순으로 출력(`<표 1-1> 제목`, `[그림 1-1] 캡션`)
+- (원고 표기 토큰) notation.*는 토큰을 추가만 함. 한국어 토큰은 계속 인식하므로 한 원고에 섞어 써도 됨. 토큰은 적은 그대로(대소문자 구분) 대조하고 토큰 안의 빈칸은 빈칸 유무와 관계없이 일치
+- (헤더 번호) 원고에 라벨 파일의 번호 형식으로 쓴 번호(예 `# Chapter 2. Status`, `#### (b) Overview`)는 `제2장`, `가.`와 같이 제거한 뒤 양식 번호 체계로 다시 부여
+- (HWPX 언어) language.hwpx_package와 language.hwpx_style_lcid는 내장 양식에 적용. 유저 양식(`--skeleton`)은 양식의 값을 유지
+- (라벨 밖) 스타일 이름(장 제목, □ 내용 등 양식에 저장된 이름), 글꼴 이름, 계위 기호 □ ○ - ㆍ ※, 쪽번호 `- N -`, 각주 번호 뒤 `)`는 그대로 둠. 표지와 머리말 문구는 `--cover`, `--header`로 지정
+
+영어 예시 (chapter 문서. 가나다 계위는 (a), (b), (c))
+
+```json
+{
+  "formats": {"chapter": "Chapter {n}. {t}"},
+  "letters": {"items": "abcdefghijklmnopqrstuvwxyz", "format": "({x})"},
+  "toc": {"title": "Contents"},
+  "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
+  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
+               "colwidth": ["Column widths"]},
+  "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "en", "hwpx_style_lcid": 1033}
+}
+```
+
+- `Chapter 1. 제목`, `1.1 제목`, `(a) 제목`, 목차 제목 `Contents`, 캡션 `<Table 1-1> 제목`(SEQ Table)과 `[Figure 1-1] 캡션`을 출력
+- `<Table> 제목`, `[Figure] 캡션`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, `(Column widths: 20, 30, 50)`을 한국어 토큰과 함께 인식
 
 ## 검수 항목
 

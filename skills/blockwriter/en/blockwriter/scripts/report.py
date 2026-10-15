@@ -40,6 +40,9 @@ def cmd_build(a):
     if ext not in (".hwpx", ".docx"):
         sys.exit(msg("err_format"))
     out = a.output or os.path.splitext(a.input)[0] + ext
+    if a.labels:   # labels for documents in another language. Read before parsing because they add manuscript tokens
+        C.set_labels(a.labels)
+        M.compile_notation()
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)   # avoid a missing-folder error at save time
     elems, footnotes = M.parse_markdown(a.input)
     for issue in M.lint(elems, footnotes):   # LINT is resolved by fixing the manuscript
@@ -150,6 +153,8 @@ def main():
                    help="cell merge: auto=consecutive identical values in leading label columns plus '^' '<' directives (default), explicit=directives only, none=no merge")
     b.add_argument("--rhwp", help="rhwp path used for TOC page-number calculation")
     b.add_argument("--numbered-square", action="store_true", help="print '□ 1. title' lines as numbered headers without a bullet")
+    b.add_argument("--labels", help="label JSON for documents in another language: numbering, TOC title, caption labels, "
+                                    "extra manuscript tokens, language tags (default: Korean labels)")
     b.set_defaults(func=cmd_build)
 
     f = sub.add_parser("form", help="save a built-in form as an empty HWPX file")

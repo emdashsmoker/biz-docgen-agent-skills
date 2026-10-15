@@ -28,15 +28,8 @@ HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$")
 BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
-CAPTION_RE = re.compile(r"^[<＜]\s*표\s*[^>＞]*[>＞]\s*(.*)$")
-FIG_CAPTION_RE = re.compile(r"^\[\s*그림\s*[^\]]*\]\s*(.*)$")
-UNIT_RE = re.compile(r"^\(\s*단위\s*[:：].*\)$")
-COL_WIDTH_RE = re.compile(r"^\(\s*열\s*폭\s*[:：]\s*(.*)\)$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
-SOURCE_RE = re.compile(r"^(?:[(（]\s*(?:출처|자료)\s*[)）]|(?:출처|자료|주)\s*[:：])")
-SOURCE_PAREN_RE = re.compile(r"^[(（]\s*(출처|자료)\s*[)）]\s*")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
-NUM_PREFIX_RE = re.compile(r"^(제\s*\d+\s*장|\d+(?:\.\d+)*\.?|[가-힣]\.)\s+")
 INLINE_RE = re.compile(r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
@@ -46,6 +39,43 @@ NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
 BULLET_PREFIXES = ("·", "•", "ㆍ", "∙", "○", "◦", "❍", "□", "■", "※", "- ", "▪")
 CELL_BULLET_MARKS = ("◦", "○", "ㅇ", "·", "•", "ㆍ")   # 셀 ◦ 글머리 스타일로 바꾸는 줄 머리 기호
 CELL_MARK_RE = re.compile(r"^\s*[◦○ㅇ·•ㆍ-]\s*")        # 셀 글머리 줄에서 지우는 머리 기호와 뒤 빈칸
+
+
+def _alt(tokens) -> str:
+    """원고 표기 토큰의 정규식 선택지. 토큰 안의 공백은 빈칸 유무와 관계없이 일치 ('열 폭'은 '열폭'과도 일치)"""
+    return "|".join(r"\s*".join(re.escape(w) for w in t.split()) for t in tokens)
+
+
+def _format_re(fmt: str, fields: dict[str, str]) -> str | None:
+    """라벨 형식이 쓰는 번호의 정규식 ('Chapter {n}. ' → 'Chapter\\s*\\d+\\s*\\.'). 형식에 번호가 없으면 None"""
+    parts = re.split(r"\{(\w+)\}", fmt)   # 글자, 자리표시, 글자, 자리표시, ...
+    if not any(parts[1::2]):
+        return None
+    words = [p for i, part in enumerate(parts)
+             for p in ([fields[part]] if i % 2 else [re.escape(w) for w in part.split()])]
+    return r"\s*".join(words)
+
+
+def compile_notation():
+    """현재 라벨(기본 토큰과 라벨 파일이 추가한 토큰)로 원고 표기 정규식을 만듦.
+    build는 라벨 파일을 읽은 뒤 다시 호출. 라벨 파일의 번호 형식으로 쓴 헤더 번호도 제N장, 가.와 같이 제거"""
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    src = C.label("notation.source")
+    paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
+    CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
+    FIG_CAPTION_RE = re.compile(rf"^\[\s*(?:{_alt(C.label('notation.figure'))})\s*[^\]]*\]\s*(.*)$")
+    UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.unit'))})\s*[:：].*\)$")
+    COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
+    SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
+    SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
+    extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
+             for lv in ("chapter", "section", "subsection") if C.label(f"formats.{lv}") is not None]
+    if C.label("letters") != C.LABEL_DEFAULTS["letters"]:
+        extra.append(_format_re(C.label("letters.format"), {"x": "[" + "".join(map(re.escape, C.label("letters.items"))) + "]"}))
+    NUM_PREFIX_RE = re.compile(r"^(제\s*\d+\s*장|\d+(?:\.\d+)*\.?|[가-힣]\.%s)\s+" % "".join("|" + p for p in extra if p))
+
+
+compile_notation()
 
 
 def _strip_marker(text: str, marks: tuple) -> str | None:
@@ -723,7 +753,8 @@ def heading_label(profile: dict, counters: dict, level: int, text: str) -> str:
     if level == 3:
         return profile["subsection_format"].format(c=ch, s=max(counters["section"], 1),
                                                    ss=counters["subsection"], t=text) if manual else text
-    return f"{C.GANADA[(counters['ganada'] - 1) % len(C.GANADA)]}. {text}"
+    letters = C.label("letters.items")
+    return f"{C.label('letters.format').format(x=letters[(counters['ganada'] - 1) % len(letters)])} {text}"
 
 
 class Numbering:
