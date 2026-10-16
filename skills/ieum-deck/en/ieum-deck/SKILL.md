@@ -712,7 +712,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py restores the top and bottom margins of table cells in the cell properties (marT, marB) to prevent tables from overflowing when PowerPoint applies default margins
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
-- finalize.py replaces the OpenSymbol font that LibreOffice re-saving sets on hyphen bullets ("-") with the text font, to prevent PowerPoint from showing these bullets as empty boxes (review images look correct because OpenSymbol is installed with LibreOffice)
+- finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
 - LibreOffice rendering ignores word-level line breaking, so if review images show cut words, shorten the text
 - A word wider than the inner width of a text box or table cell is cut in the middle by every renderer (check_layout WARN)
 - Resolve wide words by spacing them, shortening them or widening the box
