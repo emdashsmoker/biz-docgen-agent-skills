@@ -8,7 +8,8 @@ WHY: pptxgenjs가 만든 패키지는 LibreOffice에서 열리지만 PowerPoint(
 HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선두 배치,
         실재하지 않는 부품의 Override 제거, 내장 xlsx에 재귀 적용
      2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, run 과 차트의 언어 태그 지정(meta.labels.language),
-        핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제
+        핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제,
+        OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -264,6 +265,20 @@ def add_chart_east_asian_fonts(xml: str) -> tuple[str, int]:
     return LATIN_ONLY_FONT_PATTERN.subn(r'\1<a:ea typeface="\2"/><a:cs typeface="\2"/>', xml)
 
 
+# LibreOffice 전용 기호 글꼴(OpenSymbol)을 지정한 불릿 글꼴. 같은 자리(buFont 와 buFontTx 는 택일)에 본문 글꼴 따름을 넣음
+OPENSYMBOL_BULLET_FONT_PATTERN = re.compile(r'<a:buFont\s+typeface="OpenSymbol"[^>]*/>')
+TEXT_BULLET_FONT = "<a:buFontTx/>"
+
+
+def use_text_font_for_opensymbol_bullets(xml: str) -> tuple[str, int]:
+    """OpenSymbol 불릿 글꼴 지정을 본문 글꼴 따름(a:buFontTx)으로 교체
+
+    WHY: soffice 재직렬화는 PowerPoint 기호 글꼴로 옮기지 못한 불릿 문자(하위 항목의 줄표 "-")에 OpenSymbol 을 지정.
+         OpenSymbol 이 없는 PowerPoint 는 이 불릿을 빈 네모로 표시. LibreOffice 렌더 검수에서는 OpenSymbol 이 함께 설치되어 정상으로 보임.
+         줄표는 본문 글꼴(나눔고딕)에 있는 문자이므로 본문 글꼴을 따르게 하여 두 프로그램의 표시를 맞춤
+    """
+    return OPENSYMBOL_BULLET_FONT_PATTERN.subn(TEXT_BULLET_FONT, xml)
+
 
 PARA_PATTERN = re.compile(r"<a:p>(.*?)</a:p>", re.S)
 PPR_PATTERN = re.compile(r"<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>", re.S)
@@ -435,6 +450,8 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
+        xml, bf = use_text_font_for_opensymbol_bullets(xml)
+        stats["opensymbol_bullets"] = bf
         xml, _ = set_korean_word_wrap(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
@@ -559,17 +576,17 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML 수준의 결함 수치. id 중복 슬라이드 수와 누적 차트의 레이블 위치 수"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0}
+    """XML 수준의 결함 수치. id 중복 슬라이드 수, 누적 차트의 레이블 위치 수, 슬라이드의 OpenSymbol 불릿 수"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
             if SLIDE_PART_PATTERN.match(name):
-                ids = [match.group(2) for match in CNVPR_ID_PATTERN.finditer(
-                    archive.read(name).decode("utf-8")
-                )]
+                xml = archive.read(name).decode("utf-8")
+                ids = [match.group(2) for match in CNVPR_ID_PATTERN.finditer(xml)]
                 if len(ids) != len(set(ids)):
                     counts["duplicate_id_slides"] += 1
+                counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -592,6 +609,7 @@ FAILABLE_METRICS = {
     "ghost_overrides": "유령 Override",
     "duplicate_id_slides": "id 중복 슬라이드",
     "stacked_label_positions": "누적 차트 레이블 위치",
+    "opensymbol_bullets": "OpenSymbol 불릿",
 }
 
 
