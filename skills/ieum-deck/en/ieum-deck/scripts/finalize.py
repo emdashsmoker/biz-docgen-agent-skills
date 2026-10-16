@@ -8,7 +8,8 @@ WHY: Packages made by pptxgenjs open in LibreOffice, but PowerPoint (Windows) an
 HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml first,
         remove Overrides for missing parts, apply recursively to embedded xlsx
      2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language tags of runs and charts (meta.labels.language),
-        correct the core properties relationship type, clear the application name, remove the document language and presentation format name
+        correct the core properties relationship type, clear the application name, remove the document language and presentation format name,
+        replace the OpenSymbol bullet font with the text font
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -264,6 +265,20 @@ def add_chart_east_asian_fonts(xml: str) -> tuple[str, int]:
     return LATIN_ONLY_FONT_PATTERN.subn(r'\1<a:ea typeface="\2"/><a:cs typeface="\2"/>', xml)
 
 
+# Bullet font set to the LibreOffice-only symbol font (OpenSymbol). The text font setting goes in the same place (buFont and buFontTx are alternatives)
+OPENSYMBOL_BULLET_FONT_PATTERN = re.compile(r'<a:buFont\s+typeface="OpenSymbol"[^>]*/>')
+TEXT_BULLET_FONT = "<a:buFontTx/>"
+
+
+def use_text_font_for_opensymbol_bullets(xml: str) -> tuple[str, int]:
+    """Replaces the OpenSymbol bullet font with the text font setting (a:buFontTx)
+
+    WHY: soffice reserialization sets OpenSymbol on bullet characters it cannot move to a PowerPoint symbol font (the hyphen "-" of sub items).
+         PowerPoint without OpenSymbol shows these bullets as empty boxes. LibreOffice review renders look correct because OpenSymbol is installed with it.
+         The hyphen exists in the body font (NanumGothic), so following the text font makes both programs show the same bullet
+    """
+    return OPENSYMBOL_BULLET_FONT_PATTERN.subn(TEXT_BULLET_FONT, xml)
+
 
 PARA_PATTERN = re.compile(r"<a:p>(.*?)</a:p>", re.S)
 PPR_PATTERN = re.compile(r"<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>", re.S)
@@ -435,6 +450,8 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
+        xml, bf = use_text_font_for_opensymbol_bullets(xml)
+        stats["opensymbol_bullets"] = bf
         xml, _ = set_korean_word_wrap(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
@@ -559,17 +576,17 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML-level defect counts. Number of slides with duplicate ids and number of label positions in stacked charts"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0}
+    """XML-level defect counts. Number of slides with duplicate ids, label positions in stacked charts and OpenSymbol bullets in slides"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
             if SLIDE_PART_PATTERN.match(name):
-                ids = [match.group(2) for match in CNVPR_ID_PATTERN.finditer(
-                    archive.read(name).decode("utf-8")
-                )]
+                xml = archive.read(name).decode("utf-8")
+                ids = [match.group(2) for match in CNVPR_ID_PATTERN.finditer(xml)]
                 if len(ids) != len(set(ids)):
                     counts["duplicate_id_slides"] += 1
+                counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -592,6 +609,7 @@ FAILABLE_METRICS = {
     "ghost_overrides": "ghost_overrides",
     "duplicate_id_slides": "duplicate_id_slides",
     "stacked_label_positions": "stacked_chart_label_positions",
+    "opensymbol_bullets": "opensymbol_bullets",
 }
 
 
