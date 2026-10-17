@@ -15,12 +15,13 @@ HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음
 
 ## Installation
 
-Each skill folder holds the install packages, the source folders and sample pages.
+Each skill folder holds the install packages, a checksum file, the source folders and sample pages.
 
 ```
 skills/juja-builder/
 ├── juja-builder-ko.skill    Korean install package
 ├── juja-builder-en.skill    English install package
+├── SHA256SUMS.txt           SHA-256 checksums of the packages
 ├── ko/juja-builder/         Korean source
 ├── en/juja-builder/         English source
 └── demo/                    sample pages
@@ -66,12 +67,13 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 설치
 
-각 스킬 폴더는 설치용 패키지, 소스 폴더, 예시 페이지 이미지로 구성됩니다.
+각 스킬 폴더는 설치용 패키지, 체크섬 파일, 소스 폴더, 예시 페이지 이미지로 구성됩니다.
 
 ```
 skills/juja-builder/
 ├── juja-builder-ko.skill    한국어판 설치용 패키지
 ├── juja-builder-en.skill    영어판 설치용 패키지
+├── SHA256SUMS.txt           설치용 패키지 SHA-256 체크섬
 ├── ko/juja-builder/         한국어판 소스
 ├── en/juja-builder/         영어판 소스
 └── demo/                    예시 페이지 이미지
