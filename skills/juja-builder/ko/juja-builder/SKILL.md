@@ -202,6 +202,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - 스킬 폴더가 읽기 전용인 환경에서 스크립트 수정이 필요하면 스킬 폴더 전체를 쓰기 가능한 경로에 복사. 이후 `<SKILL>`은 사본 폴더
 - 동작 확인 환경은 Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. 설치는 최신 버전으로 수행. 이 기록은 버전 차이로 실패할 때 원인을 추적하는 기준
 - 렌더러 1순위는 rhwp CLI(https://github.com/edwardkim/rhwp). 아래 절차로 GitHub 릴리스의 CLI 실행 파일을 직접 확보. npm 패키지(@rhwp/core, @rhwp/editor)는 라이브러리와 편집기 용도. CLI 확보 경로에서 제외. PyPI 등 다른 패키지 저장소의 같은 이름 패키지도 제외 대상. 2순위(소스 빌드)로의 이동 조건은 릴리스 확보 실패의 확인
+    + (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 첫 GitHub 접근 전에 호출. 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp`를 각각 따로 전달. 도구 응답이 안내하는 접근 경로는 아래 절차에 반영. 도구가 없거나 호출이 거부되면 이 단계를 건너뜀
     + GitHub의 주소 체계와 페이지 구성은 바뀔 수 있음. 모델은 현재 상태를 확인하여 아래 순서로 릴리스를 확보
     + GitHub 주소는 웹 화면 경로와 파일 전달 경로로 나뉨. 네트워크 허용 목록을 쓰는 실행 환경에서는 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)의 403 상황에서도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜이 통과하는 경우가 있음
     + 1순위 실패는 4번 파일 전달 경로의 수신 실패로만 판정
