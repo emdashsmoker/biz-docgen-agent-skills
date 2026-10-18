@@ -4,7 +4,7 @@
 명령
   build     원고.md → 문서.hwpx          (python-hwpx 6.x, 스켈레톤 스타일 참조)
   skeleton  참조.hwpx → 스켈레톤.hwpx     (header.xml + 본문 구역 secPr만 남긴 빈 양식)
-  export    문서.hwpx → 원고.md           (export_rich_markdown)
+  export    문서.hwpx → 원고.md           (text.markdown(rich=True))
   fill      문서.hwpx + 치환.json → 문서   (플레이스홀더 치환, 표 라벨 경로 채우기)
   render    문서.hwpx → PDF + PNG         (rhwp export-pdf + pdftoppm)
   check     문서.hwpx 스키마 검증 + rhwp verify 기대값
