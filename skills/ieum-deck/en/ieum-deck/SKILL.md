@@ -221,6 +221,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Record the conversion methods used and the compared range in the completion report
 - The order for obtaining a PDF converter for hwpx is the rhwp release binary, an rhwp source build, then the LibreOffice H2Orestart extension
 - Move to the next option only after actually trying to obtain the previous one and failing
+- (GitHub repository attach) If the execution environment has a tool that attaches a GitHub repository to the session, call it before the first GitHub access of options 1 and 2
+    + Pass the owner `edwardkim` and the repository name `rhwp` as separate values
+    + Apply any access route the tool's reply names to the steps below
+    + Skip this step when no such tool exists or the call is refused
 - (Option 1, rhwp release) Get the asset for the current platform (OS, CPU) from the releases of https://github.com/edwardkim/rhwp and place it on PATH
     + GitHub addresses split into web page paths and file download paths
     + Some runtime environments pass the file download path (`releases/download/<tag>/<file name>`) and the git protocol even when the web page paths (`releases/latest`, `releases/expanded_assets`, `api.github.com`) return 403

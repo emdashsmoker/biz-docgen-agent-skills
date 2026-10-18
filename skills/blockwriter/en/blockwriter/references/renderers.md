@@ -4,6 +4,8 @@
 
 The skill does not bundle renderers or fonts. It locates and uses the renderers and fonts installed in the execution environment.
 
+Two parts come from GitHub: rhwp (owner `edwardkim`, repository name `rhwp`) and the fallback fonts of `fonts --setup` (owner `google`, repository name `fonts`). If the execution environment has a tool that attaches a GitHub repository to the session, call it with the matching repository before each part's first GitHub access. Pass the owner and the repository name as separate values. Apply any access route the tool's reply names to the later steps. Skip this step when no such tool exists or the call is refused.
+
 ## Order for obtaining an HWPX renderer
 
 The rhwp release binary is first, an rhwp source build is second, and LibreOffice with H2Orestart is third. Move to the next option only after actually running the previous procedure and failing.
