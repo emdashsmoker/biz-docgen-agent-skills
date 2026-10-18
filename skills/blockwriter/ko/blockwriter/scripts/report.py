@@ -27,6 +27,8 @@ import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+# python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
+warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 import config as C  # noqa: E402
 import manuscript as M  # noqa: E402

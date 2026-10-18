@@ -39,6 +39,8 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+# python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
+warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 sys.path.insert(0, SCRIPT_DIR)

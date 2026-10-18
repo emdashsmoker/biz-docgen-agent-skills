@@ -201,13 +201,18 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - hwpx 본문 XML 직접 추출은 표 셀을 포함한 문단 텍스트만 회수
 - 한글이 회수되지 않는 문서는 스캔본이나 서브셋 글꼴 문서로 판단
 - 스캔본과 서브셋 글꼴 문서는 사용자에게 OCR 필요를 안내
-- 표와 그림 배치를 눈으로 확인할 때는 `--pdf` 로 PDF 를 함께 생성
+- 표와 그림 배치를 눈으로 확인할 때는 `--pdf` 로 PDF 를 함께 생성. 쪽이 비어 있으면 `LANG=C.UTF-8 soffice --headless --convert-to pdf --outdir <작업 폴더> <hwpx>` 로 LibreOffice 변환
 - 변환 결과가 깨지면 다른 변환 수단을 찾아 원문과 대조
     + (깨짐 신호) 한글 일부 깨짐, 병합 셀 표의 열 손실, 표 구조 손실, 문단 순서 뒤섞임
     + (대체 수단) 다른 텍스트 추출 도구, 원문 쪽을 이미지로 렌더하여 눈으로 판독
     + 사용한 변환 수단과 대조 범위는 완료 보고에 기재
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
 - 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동
+- (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 python-hwpx 로 `안녕하세요!` 한 줄짜리 hwpx 를 작업 폴더 밖의 임시 폴더에 만들어 변환을 시험
+    + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (글꼴은 juja-builder, blockwriter 와 같은 방식으로 헤더의 글꼴 이름을 나눔고딕으로 지정. 나눔고딕은 설치 의존성 fonts-nanum 에 포함)
+    + 변환은 `parse_input.py 변환시험.hwpx <임시 폴더>/출력.md --pdf` 로 실행하고 PDF 의 Producer 값으로 그 순위의 변환기가 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
+    + PDF 쪽을 pdftoppm 으로 이미지로 바꿔 `안녕하세요!` 가 보이는지 확인. rhwp 는 문서 글꼴이 없으면 빈 쪽 PDF 를 만들므로 PDF 생성만으로는 판정하지 않음
+    + 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동
 - (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 1, 2순위의 첫 GitHub 접근 전에 호출
     + 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp` 를 각각 따로 전달
     + 도구 응답이 안내하는 접근 경로는 아래 절차에 반영

@@ -37,6 +37,8 @@ import zipfile
 from dataclasses import dataclass, field
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+# python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
+warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
 # 설정부: 조판 수치와 역할·스타일 대응은 모두 여기서만 조정한다

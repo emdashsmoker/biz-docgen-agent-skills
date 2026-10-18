@@ -10,6 +10,8 @@ Two parts come from GitHub: rhwp (owner `edwardkim`, repository name `rhwp`) and
 
 The rhwp release binary is first, an rhwp source build is second, and LibreOffice with H2Orestart is third. Move to the next option only after actually running the previous procedure and failing.
 
+Run a render test right after obtaining a renderer at any rank. After font preparation (`fonts --setup`), put a one-line manuscript reading `안녕하세요!` in a temporary folder outside the output folder and typeset it with `build test.md render-test.hwpx --profile flat`. Then render it with `render render-test.hwpx --engine rhwp` (`--engine soffice` for the third rank) and open the page PNG (the PDF when poppler is missing) to check that `안녕하세요!` is visible. rhwp writes a PDF without the text when the document's fonts are missing, and render still reports success, so a produced PDF alone is not a pass. If the page is blank, check the fonts with `fonts` first. If the page stays blank with the fonts in place, count that rank as failed even though the renderer was obtained, and move to the next rank. Catching renderer problems before writing keeps the review step from breaking off the work.
+
 Depending on the environment, GitHub's web page paths (`releases/latest`, `releases/expanded_assets`, `api.github.com`) may return 403 while the file delivery path (`releases/download/<tag>/<file name>`) and the git protocol still work. Option 1 counts as failed when step 4 (file download) fails.
 
 Option 1 rhwp release binary (https://github.com/edwardkim/rhwp)

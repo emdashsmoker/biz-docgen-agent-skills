@@ -214,13 +214,18 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Direct extraction from the hwpx body XML recovers only paragraph text, including table cells
 - A document from which no Hangul is recovered is judged a scan or a subset-font document
 - For scans and subset-font documents, tell the user that OCR is needed
-- To check table and figure layout by eye, also create a PDF with `--pdf`
+- To check table and figure layout by eye, also create a PDF with `--pdf`. If the pages are blank, convert with LibreOffice: `LANG=C.UTF-8 soffice --headless --convert-to pdf --outdir <work folder> <hwpx>`
 - If the conversion result is broken, find another conversion method and compare with the original
     + (Signs of breakage) Partly broken Hangul, lost columns in tables with merged cells, lost table structure, scrambled paragraph order
     + (Alternatives) Other text extraction tools, rendering source pages as images and reading them by eye
     + Record the conversion methods used and the compared range in the completion report
 - The order for obtaining a PDF converter for hwpx is the rhwp release binary, an rhwp source build, then the LibreOffice H2Orestart extension
 - Move to the next option only after actually trying to obtain the previous one and failing
+- (Conversion test right after obtaining) Right after obtaining a converter at any rank, make a one-line hwpx reading `안녕하세요!` with python-hwpx in a temporary folder outside the work folder and test the conversion
+    + Create it with `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (the font names in the header are set to NanumGothic, as juja-builder and blockwriter do; NanumGothic comes with the fonts-nanum dependency)
+    + Convert it with `parse_input.py 변환시험.hwpx <temp folder>/output.md --pdf` and check from the PDF's Producer value that the converter of that rank was used (parse_input.py falls back to LibreOffice when rhwp fails)
+    + Turn the PDF page into an image with pdftoppm and check that `안녕하세요!` is visible. rhwp writes a blank-page PDF when the document's fonts are missing, so a produced PDF alone is not a pass
+    + If the test fails, count that rank as failed even though the converter was obtained, and move to the next rank
 - (GitHub repository attach) If the execution environment has a tool that attaches a GitHub repository to the session, call it before the first GitHub access of options 1 and 2
     + Pass the owner `edwardkim` and the repository name `rhwp` as separate values
     + Apply any access route the tool's reply names to the steps below
