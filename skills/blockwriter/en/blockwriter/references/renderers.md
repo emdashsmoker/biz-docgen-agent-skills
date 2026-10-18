@@ -88,7 +88,7 @@ Items not judged (every renderer)
 - Vertical position of the page header, compressed table row heights, long-table split positions and title row repetition, and line break positions caused by font substitution
 - How numbers computed by automatic numbering and fields (caption numbers, page numbers) are shown. Check the numbers in the XML's automatic numbers and fields; Hangul and Word compute them
 
-Confirmed examples (as of rhwp v0.8.6 and H2Orestart 0.6.1)
+Confirmed examples (as of rhwp v0.8.6 and H2Orestart 0.6.1; behavior may change in later versions)
 
 - rhwp does not apply the keep-with-next setting, so a heading or □ can stay at the bottom of a page. For a TOC-entry heading, build reports it with the `[stranded TOC heading]` WARN
 - H2Orestart does not draw caption objects of tables and figures, footnote bodies, or footer page numbers. Check these elements in the rhwp render and the XML
