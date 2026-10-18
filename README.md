@@ -7,15 +7,15 @@ HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="skills/blockwriter/demo/en/"><img src="skills/blockwriter/demo/thumbnail.png" width="100%" alt="blockwriter sample: HWPX policy report page"></a>
+      <a href="skills/blockwriter/demo/en/"><img src="skills/blockwriter/demo/thumbs/policy_report_en.png" width="100%" alt="blockwriter sample: HWPX policy report page"></a>
       <br><sub><a href="skills/blockwriter/">blockwriter</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="skills/ieum-deck/demo/en/"><img src="skills/ieum-deck/demo/thumbnail.png" width="100%" alt="ieum-deck sample: PPTX proposal slide"></a>
+      <a href="skills/ieum-deck/demo/en/"><img src="skills/ieum-deck/demo/thumbs/proposal_deck_en.png" width="100%" alt="ieum-deck sample: PPTX proposal slide"></a>
       <br><sub><a href="skills/ieum-deck/">ieum-deck</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="skills/juja-builder/demo/ko/"><img src="skills/juja-builder/demo/thumbnail.png" width="100%" alt="juja-builder sample: HWPX proposal page"></a>
+      <a href="skills/juja-builder/demo/ko/"><img src="skills/juja-builder/demo/thumbs/proposal_ko.png" width="100%" alt="juja-builder sample: HWPX proposal page"></a>
       <br><sub><a href="skills/juja-builder/">juja-builder</a></sub>
     </td>
   </tr>
