@@ -208,6 +208,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 사용한 변환 수단과 대조 범위는 완료 보고에 기재
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
 - 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동
+- (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 입력 hwpx 로 `parse_input.py <hwpx> <작업 폴더/출력.md> --pdf` 를 실행하여 PDF 생성을 확인
+    + PDF 의 Producer 값으로 그 순위의 변환기가 실제로 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
+    + 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동
 - (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 1, 2순위의 첫 GitHub 접근 전에 호출
     + 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp` 를 각각 따로 전달
     + 도구 응답이 안내하는 접근 경로는 아래 절차에 반영

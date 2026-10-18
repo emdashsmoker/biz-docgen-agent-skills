@@ -8,6 +8,8 @@ GitHub에서 받는 요소는 rhwp(소유자 `edwardkim`, 저장소 이름 `rhwp
 
 rhwp 릴리스 바이너리가 1순위, rhwp 소스 빌드가 2순위, LibreOffice와 H2Orestart가 3순위다. 앞 순위 절차를 실제로 수행하고 실패한 경우에만 다음 순위로 이동한다.
 
+각 순위에서 렌더러를 확보한 직후 렌더 시험을 한다. 산출 폴더 밖의 임시 폴더에 `form chapter <임시 폴더>/렌더시험.hwpx`로 빈 양식을 만들고 `render <임시 폴더>/렌더시험.hwpx --engine rhwp`(3순위는 `--engine soffice`)로 PDF가 만들어지는지 확인한다. 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동한다. 렌더러 문제를 문서 작성 전에 걸러야 검수 단계에서 작업이 끊기지 않는다.
+
 실행 환경에 따라 GitHub의 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)는 403이어도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜은 통과할 수 있다. 1순위 실패는 4단계(파일 수신)의 실패로 판정한다.
 
 1순위 rhwp 릴리스 바이너리 (https://github.com/edwardkim/rhwp)
