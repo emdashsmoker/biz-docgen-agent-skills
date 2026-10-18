@@ -201,7 +201,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - hwpx 본문 XML 직접 추출은 표 셀을 포함한 문단 텍스트만 회수
 - 한글이 회수되지 않는 문서는 스캔본이나 서브셋 글꼴 문서로 판단
 - 스캔본과 서브셋 글꼴 문서는 사용자에게 OCR 필요를 안내
-- 표와 그림 배치를 눈으로 확인할 때는 `--pdf` 로 PDF 를 함께 생성
+- 표와 그림 배치를 눈으로 확인할 때는 `--pdf` 로 PDF 를 함께 생성. 쪽이 비어 있으면 `LANG=C.UTF-8 soffice --headless --convert-to pdf --outdir <작업 폴더> <hwpx>` 로 LibreOffice 변환
 - 변환 결과가 깨지면 다른 변환 수단을 찾아 원문과 대조
     + (깨짐 신호) 한글 일부 깨짐, 병합 셀 표의 열 손실, 표 구조 손실, 문단 순서 뒤섞임
     + (대체 수단) 다른 텍스트 추출 도구, 원문 쪽을 이미지로 렌더하여 눈으로 판독
