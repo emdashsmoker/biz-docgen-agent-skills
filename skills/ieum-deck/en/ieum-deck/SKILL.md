@@ -214,7 +214,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Direct extraction from the hwpx body XML recovers only paragraph text, including table cells
 - A document from which no Hangul is recovered is judged a scan or a subset-font document
 - For scans and subset-font documents, tell the user that OCR is needed
-- To check table and figure layout by eye, also create a PDF with `--pdf`
+- To check table and figure layout by eye, also create a PDF with `--pdf`. If the pages are blank, convert with LibreOffice: `LANG=C.UTF-8 soffice --headless --convert-to pdf --outdir <work folder> <hwpx>`
 - If the conversion result is broken, find another conversion method and compare with the original
     + (Signs of breakage) Partly broken Hangul, lost columns in tables with merged cells, lost table structure, scrambled paragraph order
     + (Alternatives) Other text extraction tools, rendering source pages as images and reading them by eye

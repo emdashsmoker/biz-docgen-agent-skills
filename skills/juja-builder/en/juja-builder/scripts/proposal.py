@@ -39,6 +39,8 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+# python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
+warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 sys.path.insert(0, SCRIPT_DIR)

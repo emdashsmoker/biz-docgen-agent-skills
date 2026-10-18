@@ -37,6 +37,8 @@ import zipfile
 from dataclasses import dataclass, field
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+# python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
+warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
 # Settings: typesetting values and the role-to-style mapping are adjusted only here
