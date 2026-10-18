@@ -208,6 +208,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 사용한 변환 수단과 대조 범위는 완료 보고에 기재
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
 - 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동
+- (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 1, 2순위의 첫 GitHub 접근 전에 호출
+    + 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp` 를 각각 따로 전달
+    + 도구 응답이 안내하는 접근 경로는 아래 절차에 반영
+    + 도구가 없거나 호출이 거부되면 이 단계를 건너뜀
 - (1순위 rhwp 릴리스) 저장소 https://github.com/edwardkim/rhwp 의 릴리스에서 현 플랫폼(OS, CPU) 자산을 받아 PATH 에 배치
     + GitHub 주소는 웹 화면 경로와 파일 전달 경로로 나뉨
     + 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)가 403 이어도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜이 통과하는 실행 환경이 있음
