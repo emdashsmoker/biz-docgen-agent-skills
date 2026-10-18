@@ -4,7 +4,7 @@
 Commands
   build     manuscript.md → document.hwpx      (python-hwpx 6.x, references skeleton styles)
   skeleton  reference.hwpx → skeleton.hwpx     (an empty template keeping only header.xml and the body section secPr)
-  export    document.hwpx → manuscript.md      (export_rich_markdown)
+  export    document.hwpx → manuscript.md      (text.markdown(rich=True))
   fill      document.hwpx + values.json → document   (placeholder substitution, filling table label paths)
   render    document.hwpx → PDF + PNG          (rhwp export-pdf + pdftoppm)
   check     document.hwpx schema validation + rhwp verify expected values
