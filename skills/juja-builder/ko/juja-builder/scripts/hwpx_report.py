@@ -819,7 +819,7 @@ class Builder:
             sys.exit(f"ERROR: 스켈레톤에 없는 스타일 {missing}: profile 수정 또는 `skeleton` 명령으로 목록 확인")
         self.n = {"chapter": 0, "section": 0, "subsection": 0, "ganada": 0, "table": 0, "figure": 0,
                   "total_section": 0}
-        self.header = self.doc.headers[0]
+        self.header = self.doc.parts.headers[0]
         self.body_w = self._body_width()
         self.table_max_w = self.body_w - TABLE_INDENT_MARGIN
         self._align_pp: dict[tuple[str, str], str] = {}
@@ -1051,7 +1051,7 @@ class Builder:
         text = parts[0].strip()
         align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
         sec = self.doc.sections[-1]
-        hf = self.doc.set_header_text(text, section=sec)
+        self.doc.page.set_header(text=text, section=sec)
         body_pp = str(self.refs("body")["para_pr_id_ref"])
         pp = self._aligned_pp(body_pp, align)
         HPH = f"{HP}header"
@@ -1290,13 +1290,13 @@ class Builder:
             return
         # 투명 1열 표에 그림을 넣고 표를 그림 번호 유형으로 지정. 내부 그림은 번호 집계에서 제외
         t = self.doc.add_table(1 + len(sources), 1, width=w_hu, **r)
-        item = self.doc.add_image(data, fmt)
+        item = self.doc.media.add_image(data, fmt)
         item_id = getattr(item, "item_id", item)  # 라이브러리 버전에 따라 객체 또는 문자열
         cell = t.cell(0, 0)
         pic = cell.paragraphs[0].add_picture(str(item_id), width=w_hu, height=h_hu, char_pr_id_ref=r["char_pr_id_ref"])
         img = next((el for el in pic.element.iter() if el.tag.endswith("}img")), None)
         if img is None or not img.get("binaryItemIDRef"):
-            sys.exit(f"ERROR: 그림 바이너리 참조 누락 ({e.data['path']}). python-hwpx add_image 반환값 확인 필요")
+            sys.exit(f"ERROR: 그림 바이너리 참조 누락 ({e.data['path']}). python-hwpx media.add_image 반환값 확인 필요")
         pic.element.set("numberingType", "NONE")
         for pe in cell.element.iter(f"{HP}p"):
             pe.set("paraPrIDRef", str(r["para_pr_id_ref"]))
@@ -1667,14 +1667,14 @@ def export_hierarchy(doc, profile: dict, image_dir: str | None) -> str:
     rev = {v: k for k, v in profile.items() if isinstance(v, str) and k in ROLE_MD}
     names = {sid: st.name for sid, st in doc.styles.items()}
     HH = "{http://www.hancom.co.kr/hwpml/2011/head}"
-    hx = doc.headers[0].element
+    hx = doc.parts.headers[0].element
     bullet_char = {b.get("id"): b.get("char") for b in hx.iter(f"{HH}bullet")}
     pp_bullet = {}
     for pp in hx.iter(f"{HH}paraPr"):
         hd = pp.find(f"{HH}heading")
         if hd is not None and hd.get("type") == "BULLET":
             pp_bullet[pp.get("id")] = bullet_char.get(hd.get("idRef"))
-    images = {it.item_id: it for it in doc.list_images()} if hasattr(doc, "list_images") else {}
+    images = {it.item_id: it for it in doc.media.images}
     out, img_n = [], 0
     if image_dir:
         os.makedirs(image_dir, exist_ok=True)
@@ -1731,7 +1731,7 @@ def cmd_export(a):
         print(f"OK: {out} ({len(md)}자, 계위 복원)")
         return
     kw = {"image_dir": a.image_dir, "image_ref_prefix": os.path.basename(a.image_dir) + "/"} if a.image_dir else {}
-    md = doc.export_rich_markdown(detect_headings=True, **kw)
+    md = doc.text.markdown(rich=True, detect_headings=True, **kw)
     out = a.output or os.path.splitext(a.input)[0] + ".md"
     open(out, "w", encoding="utf-8").write(md)
     print(f"OK: {out} ({len(md)}자)")
@@ -1743,9 +1743,9 @@ def cmd_fill(a):
     doc = HwpxDocument.open(os.path.abspath(a.input))
     total = 0
     for old, new in spec.get("replace", {}).items():
-        total += doc.replace_text_in_runs(old, new) or 0
+        total += doc.text.replace(old, new) or 0
     if spec.get("cells"):  # "라벨 > right" 경로로 표 셀 채우기
-        res = doc.fill_by_path(spec["cells"])
+        res = doc.tables.fill_by_path(spec["cells"])
         print(f"표 셀: 적용 {res['applied_count']} 실패 {res['failed_count']}")
     doc.save_to_path(os.path.abspath(a.output or a.input))
     print(f"OK: 텍스트 치환 {total}건 → {a.output or a.input}")
