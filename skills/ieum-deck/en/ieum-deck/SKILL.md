@@ -221,8 +221,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Record the conversion methods used and the compared range in the completion report
 - The order for obtaining a PDF converter for hwpx is the rhwp release binary, an rhwp source build, then the LibreOffice H2Orestart extension
 - Move to the next option only after actually trying to obtain the previous one and failing
-- (Conversion test right after obtaining) Right after obtaining a converter at any rank, run `parse_input.py <hwpx> <work folder/output.md> --pdf` on the input hwpx and check that a PDF is produced
-    + Check from the PDF's Producer value that the converter of that rank was actually used (parse_input.py falls back to LibreOffice when rhwp fails)
+- (Conversion test right after obtaining) Right after obtaining a converter at any rank, make a one-line hwpx reading `안녕하세요!` with python-hwpx in a temporary folder outside the work folder and test the conversion
+    + Create it with `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"`
+    + Convert it with `parse_input.py 변환시험.hwpx <temp folder>/output.md --pdf` and check from the PDF's Producer value that the converter of that rank was used (parse_input.py falls back to LibreOffice when rhwp fails)
+    + Turn the PDF page into an image with pdftoppm and check that `안녕하세요!` is visible. rhwp writes a blank-page PDF when the document's fonts are missing (this file uses Hamchorom, the default font of Hangul), so a produced PDF alone is not a pass
     + If the test fails, count that rank as failed even though the converter was obtained, and move to the next rank
 - (GitHub repository attach) If the execution environment has a tool that attaches a GitHub repository to the session, call it before the first GitHub access of options 1 and 2
     + Pass the owner `edwardkim` and the repository name `rhwp` as separate values

@@ -208,8 +208,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 사용한 변환 수단과 대조 범위는 완료 보고에 기재
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
 - 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동
-- (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 입력 hwpx 로 `parse_input.py <hwpx> <작업 폴더/출력.md> --pdf` 를 실행하여 PDF 생성을 확인
-    + PDF 의 Producer 값으로 그 순위의 변환기가 실제로 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
+- (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 python-hwpx 로 `안녕하세요!` 한 줄짜리 hwpx 를 작업 폴더 밖의 임시 폴더에 만들어 변환을 시험
+    + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"`
+    + 변환은 `parse_input.py 변환시험.hwpx <임시 폴더>/출력.md --pdf` 로 실행하고 PDF 의 Producer 값으로 그 순위의 변환기가 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
+    + PDF 쪽을 pdftoppm 으로 이미지로 바꿔 `안녕하세요!` 가 보이는지 확인. rhwp 는 문서 글꼴(이 파일은 한/글 기본 글꼴인 함초롬)이 없으면 빈 쪽 PDF 를 만들므로 PDF 생성만으로는 판정하지 않음
     + 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동
 - (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 1, 2순위의 첫 GitHub 접근 전에 호출
     + 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp` 를 각각 따로 전달
