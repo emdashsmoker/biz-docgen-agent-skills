@@ -8,7 +8,7 @@ GitHub에서 받는 요소는 rhwp(소유자 `edwardkim`, 저장소 이름 `rhwp
 
 rhwp 릴리스 바이너리가 1순위, rhwp 소스 빌드가 2순위, LibreOffice와 H2Orestart가 3순위다. 앞 순위 절차를 실제로 수행하고 실패한 경우에만 다음 순위로 이동한다.
 
-각 순위에서 렌더러를 확보한 직후 렌더 시험을 한다. 산출 폴더 밖의 임시 폴더에 `form chapter <임시 폴더>/렌더시험.hwpx`로 빈 양식을 만들고 `render <임시 폴더>/렌더시험.hwpx --engine rhwp`(3순위는 `--engine soffice`)로 PDF가 만들어지는지 확인한다. 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동한다. 렌더러 문제를 문서 작성 전에 걸러야 검수 단계에서 작업이 끊기지 않는다.
+각 순위에서 렌더러를 확보한 직후 렌더 시험을 한다. 글꼴 준비(`fonts --setup`)를 마친 뒤 산출 폴더 밖의 임시 폴더에 `안녕하세요!` 한 줄짜리 원고를 두고 `build 시험.md 렌더시험.hwpx --profile flat`으로 조판한다. 이어서 `render 렌더시험.hwpx --engine rhwp`(3순위는 `--engine soffice`)로 렌더하고 쪽 PNG(poppler가 없으면 PDF)를 열어 `안녕하세요!`가 보이는지 확인한다. rhwp는 문서 글꼴이 없으면 글자를 뺀 PDF를 만들고 render도 성공으로 출력하므로 PDF 생성만으로는 판정하지 않는다. 빈 쪽이면 `fonts`로 글꼴 상태를 먼저 확인한다. 글꼴이 갖춰졌는데도 빈 쪽이면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동한다. 렌더러 문제를 문서 작성 전에 걸러야 검수 단계에서 작업이 끊기지 않는다.
 
 실행 환경에 따라 GitHub의 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)는 403이어도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜은 통과할 수 있다. 1순위 실패는 4단계(파일 수신)의 실패로 판정한다.
 
