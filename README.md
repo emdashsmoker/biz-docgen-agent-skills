@@ -4,6 +4,23 @@ Agent Skills that typeset HWPX, DOCX and PPTX document files. Every skill ships 
 
 HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/blockwriter/demo/en/"><img src="skills/blockwriter/demo/thumbnail.png" width="100%" alt="blockwriter sample: HWPX policy report page"></a>
+      <br><sub><a href="skills/blockwriter/"><code>blockwriter</code></a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/ieum-deck/demo/en/"><img src="skills/ieum-deck/demo/thumbnail.png" width="100%" alt="ieum-deck sample: PPTX proposal slide"></a>
+      <br><sub><a href="skills/ieum-deck/"><code>ieum-deck</code></a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/juja-builder/demo/ko/"><img src="skills/juja-builder/demo/thumbnail.png" width="100%" alt="juja-builder sample: HWPX proposal page"></a>
+      <br><sub><a href="skills/juja-builder/"><code>juja-builder</code></a></sub>
+    </td>
+  </tr>
+</table>
+
 <details>
 <summary><b>English</b></summary>
 
