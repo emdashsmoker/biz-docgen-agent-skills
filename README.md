@@ -1,8 +1,8 @@
 # biz-docgen-agent-skills
 
-Agent Skills that typeset HWPX, DOCX and PPTX document files. Every skill ships as a Korean original and an English translation.
+Agent Skills that generate HWPX, DOCX and PPTX document files. Every skill ships as a Korean original and an English translation.
 
-HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
+HWPX, DOCX, PPTX 문서 파일을 직접 생성하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
 <table>
   <tr>
@@ -26,8 +26,8 @@ HWPX, DOCX, PPTX 문서 파일을 직접 조판하는 에이전트 스킬 모음
 
 ## Skills
 
-- [`blockwriter`](skills/blockwriter/): Typesets a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering. [Samples](skills/blockwriter/demo/en/)
-- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and typesets it as an editable PPTX. [Samples](skills/ieum-deck/demo/en/)
+- [`blockwriter`](skills/blockwriter/): Converts a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering. [Samples](skills/blockwriter/demo/en/)
+- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and builds it as an editable PPTX file. [Samples](skills/ieum-deck/demo/en/)
 - [`juja-builder`](skills/juja-builder/): Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files. [Samples](skills/juja-builder/demo/en/)
 
 ## Installation
@@ -83,8 +83,8 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 스킬 목록
 
-- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 조판하고 렌더링으로 검수합니다. [예시](skills/blockwriter/demo/ko/)
-- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX로 조판합니다. [예시](skills/ieum-deck/demo/ko/)
+- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 변환하고 렌더링으로 검수합니다. [예시](skills/blockwriter/demo/ko/)
+- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계해 편집 가능한 PPTX 파일로 만듭니다. [예시](skills/ieum-deck/demo/ko/)
 - [`juja-builder`](skills/juja-builder/): 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다. [예시](skills/juja-builder/demo/ko/)
 
 ## 설치

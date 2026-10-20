@@ -53,7 +53,7 @@ Changelog rules
 - Fixed python-hwpx calls that python-hwpx 7.0 removes, which would stop HWPX builds after the upgrade (#22)
 
 * 실행 중 python-hwpx의 사용 중단 예고 경고를 표시하도록 변경 (#21)
-* python-hwpx 7.0 삭제 예정 호출의 사용으로 업그레이드 이후 HWPX 조판이 중단될 수 있는 오류 수정 (#22)
+* python-hwpx 7.0 삭제 예정 호출의 사용으로 업그레이드 이후 HWPX 파일 생성이 중단될 수 있는 오류 수정 (#22)
 
 ## 2026-10-17
 
