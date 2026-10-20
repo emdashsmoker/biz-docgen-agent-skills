@@ -2,7 +2,7 @@
 
 Agent Skills that generate HWPX, DOCX and PPTX document files. Every skill ships as a Korean original and an English translation.
 
-HWPX, DOCX, PPTX 문서 파일을 직접 생성하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
+HWPX, DOCX, PPTX 문서를 직접 작성하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
 <table>
   <tr>
@@ -131,7 +131,7 @@ skills/juja-builder/
 
 [AGPL-3.0-or-later](LICENSE)를 따릅니다. Copyright (C) 2026 Em Dash Smoker.
 
-각 스킬에는 `LICENSE`와 `NOTICE.md`가 포함되어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 생성한 제안서, 보고서, 발표자료는 AGPL 조건 없이 사용할 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각각의 라이선스를 따릅니다. 해당 목록은 스킬의 `NOTICE.md`에 수록되어 있습니다. `demo/` 폴더의 예시 페이지 이미지는 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ko)을 따릅니다.
+각 스킬에는 `LICENSE`와 `NOTICE.md`가 포함되어 있습니다. `NOTICE.md`의 출력물 예외 조항에 따라 스킬로 작성한 제안서, 보고서, 발표자료는 AGPL 조건 없이 사용할 수 있습니다. 스킬이 실행 중에 설치하는 패키지, 글꼴, 프로그램은 각각의 라이선스를 따릅니다. 해당 목록은 스킬의 `NOTICE.md`에 수록되어 있습니다. `demo/` 폴더의 예시 페이지 이미지는 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ko)을 따릅니다.
 
 </details>
 
