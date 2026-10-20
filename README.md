@@ -26,9 +26,9 @@ HWPX, DOCX, PPTX 문서를 논리적으로 작성하는 에이전트 스킬 모�
 
 ## Skills
 
-- [`blockwriter`](skills/blockwriter/): Writes HWPX (Hangul) or DOCX (Word) reports. It can also turn existing text into a report file. [Samples](skills/blockwriter/demo/en/)
-- [`ieum-deck`](skills/ieum-deck/): Writes PPTX slide decks that can be edited in PowerPoint. It can also turn existing text into a deck. [Samples](skills/ieum-deck/demo/en/)
-- [`juja-builder`](skills/juja-builder/): Writes research service proposals as HWPX (Hangul) or DOCX (Word) files from a request for proposals (RFP). It can also write pre-diagnosis reports and planning reports. [Samples](skills/juja-builder/demo/en/)
+- [`blockwriter`](skills/blockwriter/): Writes HWPX (Hangul) or DOCX reports. It can also turn prepared text into a report file. [Samples](skills/blockwriter/demo/en/)
+- [`ieum-deck`](skills/ieum-deck/): Writes editable PPTX slide decks. It can also turn prepared text into a deck. [Samples](skills/ieum-deck/demo/en/)
+- [`juja-builder`](skills/juja-builder/): Writes research service proposals as HWPX (Hangul) or DOCX files from a request for proposals (RFP). It can also write pre-diagnosis reports and planning reports. [Samples](skills/juja-builder/demo/en/)
 
 ## Installation
 
@@ -60,7 +60,7 @@ Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 - Some skills may duplicate functions of other skills.
 - The skills work through whole RFPs and manuscripts over many steps, so token use is high.
 - The skills need a code execution environment, Python packages and a page review renderer (rhwp or LibreOffice). `ieum-deck` also uses Node.js.
-- The page review renderers approximate the layout, so the review images may differ from the final layout in Hancom Office or Microsoft Word.
+- The page review renderers approximate the layout, so the review images may differ from the final layout in Hancom Office or other word processors.
 - Laws, public programs and methods in the skills reflect the time of writing.
 - The English editions also produce documents that follow Korean public-sector conventions.
 
@@ -83,9 +83,9 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 스킬 목록
 
-- [`blockwriter`](skills/blockwriter/): 한/글(HWPX) 또는 Word(DOCX) 보고서를 작성합니다. 준비한 글을 보고서 파일로 변환할 수도 있습니다. [예시](skills/blockwriter/demo/ko/)
-- [`ieum-deck`](skills/ieum-deck/): PowerPoint에서 편집할 수 있는 PPTX 발표자료를 작성합니다. 준비한 글을 발표자료로 변환할 수도 있습니다. [예시](skills/ieum-deck/demo/ko/)
-- [`juja-builder`](skills/juja-builder/): 제안요청서(RFP)를 바탕으로 연구용역 제안서를 한/글(HWPX) 또는 Word(DOCX) 파일로 작성합니다. 사전진단보고서와 기획보고서도 작성할 수 있습니다. [예시](skills/juja-builder/demo/ko/)
+- [`blockwriter`](skills/blockwriter/): 한/글(HWPX) 또는 DOCX 보고서를 작성합니다. 준비된 글을 보고서 파일로 변환할 수도 있습니다. [예시](skills/blockwriter/demo/ko/)
+- [`ieum-deck`](skills/ieum-deck/): 편집할 수 있는 PPTX 발표자료를 작성합니다. 준비된 글을 발표자료로 변환할 수도 있습니다. [예시](skills/ieum-deck/demo/ko/)
+- [`juja-builder`](skills/juja-builder/): 제안요청서(RFP)를 바탕으로 연구용역 제안서를 한/글(HWPX) 또는 DOCX 파일로 작성합니다. 사전진단보고서와 기획보고서도 작성할 수 있습니다. [예시](skills/juja-builder/demo/ko/)
 
 ## 설치
 
@@ -117,7 +117,7 @@ skills/juja-builder/
 - 일부 스킬은 기능이 중복될 수 있습니다.
 - 모든 스킬은 RFP와 원고 전체를 여러 단계에 걸쳐 처리하므로 토큰 사용량이 많습니다.
 - 모든 스킬은 코드 실행 환경, 파이썬 패키지, 페이지 검수용 렌더러(rhwp 또는 LibreOffice)가 필요합니다. `ieum-deck`은 Node.js도 사용합니다.
-- 페이지 검수용 렌더러는 배치를 근사하여 표현하므로 검수 이미지가 한컴오피스 또는 Microsoft Word의 최종 배치와 다를 수 있습니다.
+- 페이지 검수용 렌더러는 배치를 근사하여 표현하므로 검수 이미지가 한컴오피스 등 문서 편집 프로그램의 최종 배치와 다를 수 있습니다.
 - 스킬에 수록한 법령, 제도, 방법론은 작성 시점을 기준으로 합니다.
 - 영어판도 한국 공공 문서 관행에 따라 문서를 작성합니다.
 
