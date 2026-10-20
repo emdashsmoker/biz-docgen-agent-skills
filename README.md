@@ -26,9 +26,9 @@ HWPX, DOCX, PPTX 문서를 논리적으로 작성하는 에이전트 스킬 모�
 
 ## Skills
 
-- [`blockwriter`](skills/blockwriter/): Converts a Markdown manuscript into an HWPX (Hangul) or DOCX report and reviews the pages by rendering. [Samples](skills/blockwriter/demo/en/)
-- [`ieum-deck`](skills/ieum-deck/): Designs a planning or consulting deck as a storyboard.json and builds it as an editable PPTX file. [Samples](skills/ieum-deck/demo/en/)
-- [`juja-builder`](skills/juja-builder/): Writes proposals, pre-diagnosis reports and planning reports for research and policy service contracts, from the RFP to HWPX and DOCX files. [Samples](skills/juja-builder/demo/en/)
+- [`blockwriter`](skills/blockwriter/): Turns text into an HWPX (Hangul) or DOCX (Word) report file. [Samples](skills/blockwriter/demo/en/)
+- [`ieum-deck`](skills/ieum-deck/): Turns text into a PPTX slide deck that can be edited in PowerPoint. [Samples](skills/ieum-deck/demo/en/)
+- [`juja-builder`](skills/juja-builder/): Writes research service proposals as HWPX (Hangul) or DOCX (Word) files from a request for proposals (RFP). It can also write pre-diagnosis reports and planning reports. [Samples](skills/juja-builder/demo/en/)
 
 ## Installation
 
@@ -83,9 +83,9 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 스킬 목록
 
-- [`blockwriter`](skills/blockwriter/): 마크다운 원고를 HWPX(한/글) 또는 DOCX 보고서로 변환하고 렌더링으로 검수합니다. [예시](skills/blockwriter/demo/ko/)
-- [`ieum-deck`](skills/ieum-deck/): 기획과 컨설팅 발표자료를 storyboard.json으로 설계하여 편집 가능한 PPTX 파일을 생성합니다. [예시](skills/ieum-deck/demo/ko/)
-- [`juja-builder`](skills/juja-builder/): 연구용역과 정책연구용역의 제안서, 사전진단보고서, 기획보고서를 RFP 입력부터 HWPX, DOCX 납품본까지 작성합니다. [예시](skills/juja-builder/demo/ko/)
+- [`blockwriter`](skills/blockwriter/): 작성한 글을 한/글(HWPX) 또는 Word(DOCX) 보고서 파일로 변환합니다. [예시](skills/blockwriter/demo/ko/)
+- [`ieum-deck`](skills/ieum-deck/): 작성한 글을 PowerPoint에서 편집할 수 있는 PPTX 발표자료로 변환합니다. [예시](skills/ieum-deck/demo/ko/)
+- [`juja-builder`](skills/juja-builder/): 제안요청서(RFP)를 바탕으로 연구용역 제안서를 한/글(HWPX) 또는 Word(DOCX) 파일로 작성합니다. 사전진단보고서와 기획보고서도 작성할 수 있습니다. [예시](skills/juja-builder/demo/ko/)
 
 ## 설치
 
