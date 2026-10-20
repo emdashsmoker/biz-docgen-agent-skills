@@ -37,14 +37,14 @@ Changelog rules
 - Added a test that renders a one-line HWPX sample right after each HWPX renderer is obtained (#21)
 - Changed runs to show the deprecation warnings of python-hwpx (#21)
 
-* HWPX 렌더러 확보 직후 한 줄짜리 HWPX 예시의 렌더링을 확인하는 시험 추가 (#21)
+* HWPX 렌더러 확보 직후 한 줄 분량의 HWPX 예시의 렌더링을 확인하는 시험 추가 (#21)
 * 실행 중 python-hwpx의 사용 중단 예고 경고를 표시하도록 변경 (#21)
 
 ### ieum-deck
 - Added a test that converts a one-line HWPX sample right after each HWPX converter is obtained (#21)
 - Added a LibreOffice conversion for layout-check PDFs whose pages come out blank (#21)
 
-* HWPX 변환기 확보 직후 한 줄짜리 HWPX 예시의 변환을 확인하는 시험 추가 (#21)
+* HWPX 변환기 확보 직후 한 줄 분량의 HWPX 예시의 변환을 확인하는 시험 추가 (#21)
 * 배치 확인용 PDF의 쪽이 비어 있을 때 LibreOffice로 변환하는 단계 추가 (#21)
 
 ### juja-builder
@@ -61,21 +61,21 @@ Changelog rules
 - Added a README note on building a dependency skill with offline-deps-builder where network access is blocked (#17)
 
 * 스킬 폴더별 설치용 패키지의 체크섬을 담은 SHA256SUMS.txt 파일 추가 (#16)
-* 네트워크 접근이 차단된 환경에서 offline-deps-builder로 의존성 스킬을 만드는 README 안내 추가 (#17)
+* 네트워크 접근이 차단된 환경에서 offline-deps-builder로 의존성 스킬을 생성하는 README 안내 추가 (#17)
 
 ## 2026-10-16
 
 ### ieum-deck
 - Fixed hyphen bullets that showed as empty boxes in PowerPoint (#13)
 
-* PowerPoint에서 줄표 불릿이 빈 네모로 표시되는 오류 수정 (#13)
+* PowerPoint에서 줄표 불릿이 빈 사각형으로 표시되는 오류 수정 (#13)
 
 ## 2026-10-15
 
 ### Common
 - Added label settings that replace the fixed Korean labels printed in documents and slides (#9)
 
-* 문서와 슬라이드에 고정으로 인쇄되던 한국어 레이블을 바꿀 수 있는 레이블 설정 추가 (#9)
+* 문서와 슬라이드에 고정 출력되던 한국어 레이블을 변경할 수 있는 레이블 설정 추가 (#9)
 
 ### blockwriter
 - Fixed flat HWPX documents that failed the skill's own schema check (#9)
@@ -86,8 +86,8 @@ Changelog rules
 - Fixed DOCX output that tagged Latin text as Korean and split English words and numbers in LibreOffice renders (#9)
 - Fixed the default skeleton that kept the template author and dates in the HWPX document properties (#9)
 
-* DOCX 출력이 라틴 문자를 한국어로 지정하여 LibreOffice 렌더링에서 영어 단어와 숫자가 끊기는 오류 수정 (#9)
-* 기본 스켈레톤이 HWPX 문서 속성에 템플릿 작성자와 날짜를 남기는 오류 수정 (#9)
+* DOCX 출력이 라틴 문자를 한국어로 지정하여 LibreOffice 렌더링에서 영어 단어와 숫자가 중간에 분리되는 오류 수정 (#9)
+* 기본 스켈레톤으로 생성한 HWPX 문서 속성에 템플릿 작성자와 날짜가 잔존하는 오류 수정 (#9)
 
 ## 2026-10-14
 
