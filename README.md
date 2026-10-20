@@ -1,8 +1,8 @@
 # biz-docgen-agent-skills
 
-Agent Skills that generate HWPX, DOCX and PPTX document files. Every skill ships as a Korean original and an English translation.
+Agent Skills that write logically structured HWPX, DOCX and PPTX documents. Every skill ships as a Korean original and an English translation.
 
-HWPX, DOCX, PPTX 문서를 직접 작성하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
+HWPX, DOCX, PPTX 문서를 논리적으로 작성하는 에이전트 스킬 모음입니다. 모든 스킬은 한국어 원본과 영어 번역본을 함께 제공합니다.
 
 <table>
   <tr>
