@@ -49,6 +49,10 @@ skills/juja-builder/
 - The Korean and English editions share one skill name, so only one of them can be installed at a time.
 - On claude.ai, the skills cannot install their dependencies at run time when GitHub access is blocked or the organization account does not allow network access in the code execution container. In that case, use [`offline-deps-builder`](https://github.com/emdashsmoker/biz-agent-skills/tree/main/skills/offline-deps-builder) in an environment with network access to build a dependency skill that holds the required files. Then load the dependency skill together with the original skill.
 
+## Updates
+
+Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
 ## Limitations
 
 - Testing used Claude Opus 5.5 and Claude Fable 5.1. Results may differ with other models and environments.
@@ -101,6 +105,10 @@ skills/juja-builder/
 - 소스로 설치하는 경우 스킬 이름과 같은 폴더(예를 들어 `ko/juja-builder/`)를 에이전트의 스킬 폴더에 복사합니다.
 - 한국어판과 영어판은 스킬 이름이 동일하므로 한 가지만 설치할 수 있습니다.
 - claude.ai에서 GitHub 접근이 차단되거나 조직 계정이 코드 실행 컨테이너의 네트워크 접근을 허용하지 않으면 스킬이 실행 중에 의존성을 설치할 수 없습니다. 이 경우 네트워크를 사용할 수 있는 환경에서 [`offline-deps-builder`](https://github.com/emdashsmoker/biz-agent-skills/tree/main/skills/offline-deps-builder)로 필요한 파일을 포함한 의존성 스킬을 사전에 생성합니다. 생성한 의존성 스킬은 원래 스킬과 함께 로드합니다.
+
+## 업데이트
+
+변경 내역은 [CHANGELOG.md](CHANGELOG.md)에 기록합니다.
 
 ## 한계
 
