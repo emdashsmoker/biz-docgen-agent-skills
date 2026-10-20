@@ -14,8 +14,8 @@ Changelog rules
 - (Entry unit) Write one entry for each change that users can notice.
 - (Grouping) Combine same-day pull requests on the same topic into one entry and list every pull request number.
 - (Splitting) Split a pull request that contains unrelated changes into separate entries.
-- (Skill header) Group the entries of each date under ### headers named after the folders under skills/. Use ### Common (공통) for repository-wide changes and changes that apply to every skill. Repeat a change that applies to several skills under each of their headers.
-- (Entry order) Put the Common (공통) header first and sort the other headers by skill folder name. List the entries under each header in pull request order.
+- (Skill header) Group the entries of each date under ### headers named after the folders under skills/. Use ### Common for repository-wide changes and changes that apply to every skill. Repeat a change that applies to several skills under each of their headers.
+- (Entry order) Put the Common header first and sort the other headers by skill folder name. List the entries under each header in pull request order.
 - (English entries) List the English entries first under each header with the "-" bullet.
 - (Korean entries) Leave one blank line after the English entries and list the same changes in the same order with the "*" bullet so that they render as a separate list.
 - (English format) - Description that starts with the change type verb (#PR number)
@@ -28,7 +28,7 @@ Changelog rules
 
 ## 2026-10-18
 
-### Common (공통)
+### Common
 - Added a step that attaches the rhwp and fonts repositories before accessing GitHub (#20)
 
 * GitHub 접근 전 rhwp 및 fonts 저장소 연결 단계 추가 (#20)
@@ -56,7 +56,7 @@ Changelog rules
 
 ## 2026-10-17
 
-### Common (공통)
+### Common
 - Added SHA256SUMS.txt files with the checksums of the install packages to each skill folder (#16)
 - Added a README note on building a dependency skill with offline-deps-builder where network access is blocked (#17)
 
@@ -72,7 +72,7 @@ Changelog rules
 
 ## 2026-10-15
 
-### Common (공통)
+### Common
 - Added label settings that replace the fixed Korean labels printed in documents and slides (#9)
 
 * 문서와 슬라이드에 고정으로 인쇄되던 한국어 레이블을 바꿀 수 있는 레이블 설정 추가 (#9)
@@ -98,7 +98,7 @@ Changelog rules
 
 ## 2026-10-13
 
-### Common (공통)
-- Added the first public release with the Korean and English editions of blockwriter, ieum-deck and juja-builder
+### Common
+- Added the first public release with the Korean and English editions of every skill
 
-* blockwriter, ieum-deck, juja-builder 스킬의 한국어판 및 영어판을 담은 최초 공개 버전 추가
+* 모든 스킬의 한국어판 및 영어판을 담은 최초 공개 버전 추가
