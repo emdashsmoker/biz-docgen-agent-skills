@@ -20,7 +20,7 @@ Changelog rules
 - (Korean entries) Leave one blank line after the English entries and list the same changes in the same order with the "*" bullet so that they render as a separate list.
 - (English format) - Description that starts with the change type verb (#PR number)
 - (Korean format) * Korean noun-ending description that ends with the change type word (#PR number)
-- (Korean style) Write each Korean entry as one short formal sentence in note style with a noun ending. Avoid colloquial expressions.
+- (Korean style) Write each Korean entry in formal note style as a simple sentence (단문) with a noun ending. Keep one subject-predicate relation per entry, turn other clauses into noun phrases, and split an entry that carries two messages. Avoid colloquial expressions and placeholder nouns such as 것, 곳, 거, 셈 and 부분.
 - (Change types) Added (추가), Changed (변경), Fixed (수정), Removed (삭제), Action needed (필요)
 - (Include) Changes to skill outputs, usage steps, or installation.
 - (Exclude) Typo and wording fixes, demo image replacements, README changes unrelated to installation, internal refactoring without behavior changes, and commits that only change CHANGELOG.md.
@@ -38,22 +38,22 @@ Changelog rules
 - Added a test that renders a one-line HWPX sample right after each HWPX renderer is obtained (#21)
 - Changed runs to show the deprecation warnings of python-hwpx (#21)
 
-* HWPX 렌더러 확보 직후 한 줄 분량의 HWPX 예시의 렌더링을 확인하는 시험 추가 (#21)
+* HWPX 렌더러 확보 직후 한 줄 분량 HWPX 예시로 렌더링을 확인하는 시험 추가 (#21)
 * 실행 중 python-hwpx의 사용 중단 예고 경고를 표시하도록 변경 (#21)
 
 ### ieum-deck
 - Added a test that converts a one-line HWPX sample right after each HWPX converter is obtained (#21)
 - Added a LibreOffice conversion for layout-check PDFs whose pages come out blank (#21)
 
-* HWPX 변환기 확보 직후 한 줄 분량의 HWPX 예시의 변환을 확인하는 시험 추가 (#21)
-* 배치 확인용 PDF의 쪽이 비어 있을 때 LibreOffice로 변환하는 단계 추가 (#21)
+* HWPX 변환기 확보 직후 한 줄 분량 HWPX 예시로 변환을 확인하는 시험 추가 (#21)
+* 배치 확인용 PDF의 빈 쪽 발생 시 LibreOffice로 변환하는 단계 추가 (#21)
 
 ### juja-builder
 - Changed runs to show the deprecation warnings of python-hwpx (#21)
 - Fixed python-hwpx calls that python-hwpx 7.0 removes, which would stop HWPX builds after the upgrade (#22)
 
 * 실행 중 python-hwpx의 사용 중단 예고 경고를 표시하도록 변경 (#21)
-* python-hwpx 7.0에서 삭제되는 호출로 인해 업그레이드 이후 HWPX 조판이 중단될 수 있는 오류 수정 (#22)
+* python-hwpx 7.0 삭제 예정 호출의 사용으로 업그레이드 이후 HWPX 조판이 중단될 수 있는 오류 수정 (#22)
 
 ## 2026-10-17
 
@@ -62,7 +62,7 @@ Changelog rules
 - Added a README note on building a dependency skill with offline-deps-builder where network access is blocked (#17)
 
 * 스킬 폴더별 설치용 패키지의 체크섬을 담은 SHA256SUMS.txt 파일 추가 (#16)
-* 네트워크 접근이 차단된 환경에서 offline-deps-builder로 의존성 스킬을 생성하는 README 안내 추가 (#17)
+* 네트워크 차단 환경에서 offline-deps-builder로 의존성 스킬을 생성하는 README 안내 추가 (#17)
 
 ## 2026-10-16
 
@@ -76,7 +76,7 @@ Changelog rules
 ### Common
 - Added label settings that replace the fixed Korean labels printed in documents and slides (#9)
 
-* 문서와 슬라이드에 고정 출력되던 한국어 레이블을 변경할 수 있는 레이블 설정 추가 (#9)
+* 문서와 슬라이드의 고정 한국어 레이블을 변경할 수 있는 레이블 설정 추가 (#9)
 
 ### blockwriter
 - Fixed flat HWPX documents that failed the skill's own schema check (#9)
@@ -87,8 +87,8 @@ Changelog rules
 - Fixed DOCX output that tagged Latin text as Korean and split English words and numbers in LibreOffice renders (#9)
 - Fixed the default skeleton that kept the template author and dates in the HWPX document properties (#9)
 
-* DOCX 출력이 라틴 문자를 한국어로 지정하여 LibreOffice 렌더링에서 영어 단어와 숫자가 중간에 분리되는 오류 수정 (#9)
-* 기본 스켈레톤으로 생성한 HWPX 문서 속성에 템플릿 작성자와 날짜가 잔존하는 오류 수정 (#9)
+* DOCX 출력에서 라틴 문자의 한국어 언어 태그로 LibreOffice 렌더링 시 영어 단어와 숫자가 분리되는 오류 수정 (#9)
+* 기본 스켈레톤의 HWPX 문서 속성에 템플릿 작성자와 날짜가 잔존하는 오류 수정 (#9)
 
 ## 2026-10-14
 
