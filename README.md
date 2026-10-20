@@ -26,9 +26,9 @@ HWPX, DOCX, PPTX 문서를 논리적으로 작성하는 에이전트 스킬 모�
 
 ## Skills
 
-- [`blockwriter`](skills/blockwriter/): Writes HWPX (Hangul) or DOCX reports. It can also turn prepared text into a report file. [Samples](skills/blockwriter/demo/en/)
+- [`blockwriter`](skills/blockwriter/): Writes HWPX or DOCX reports. It can also turn prepared text into a report file. [Samples](skills/blockwriter/demo/en/)
 - [`ieum-deck`](skills/ieum-deck/): Writes editable PPTX slide decks. It can also turn prepared text into a deck. [Samples](skills/ieum-deck/demo/en/)
-- [`juja-builder`](skills/juja-builder/): Writes research service proposals as HWPX (Hangul) or DOCX files from a request for proposals (RFP). It can also write pre-diagnosis reports and planning reports. [Samples](skills/juja-builder/demo/en/)
+- [`juja-builder`](skills/juja-builder/): Writes research service proposals as HWPX or DOCX files from a request for proposals (RFP). It can also write pre-diagnosis reports and planning reports. [Samples](skills/juja-builder/demo/en/)
 
 ## Installation
 
@@ -83,9 +83,9 @@ Each skill carries its own `LICENSE` and `NOTICE.md`. Under the output exception
 
 ## 스킬 목록
 
-- [`blockwriter`](skills/blockwriter/): 한/글(HWPX) 또는 DOCX 보고서를 작성합니다. 준비된 글을 보고서 파일로 변환할 수도 있습니다. [예시](skills/blockwriter/demo/ko/)
+- [`blockwriter`](skills/blockwriter/): HWPX 또는 DOCX 보고서를 작성합니다. 준비된 글을 보고서 파일로 변환할 수도 있습니다. [예시](skills/blockwriter/demo/ko/)
 - [`ieum-deck`](skills/ieum-deck/): 편집할 수 있는 PPTX 발표자료를 작성합니다. 준비된 글을 발표자료로 변환할 수도 있습니다. [예시](skills/ieum-deck/demo/ko/)
-- [`juja-builder`](skills/juja-builder/): 제안요청서(RFP)를 바탕으로 연구용역 제안서를 한/글(HWPX) 또는 DOCX 파일로 작성합니다. 사전진단보고서와 기획보고서도 작성할 수 있습니다. [예시](skills/juja-builder/demo/ko/)
+- [`juja-builder`](skills/juja-builder/): 제안요청서(RFP)를 바탕으로 연구용역 제안서를 HWPX 또는 DOCX 파일로 작성합니다. 사전진단보고서와 기획보고서도 작성할 수 있습니다. [예시](skills/juja-builder/demo/ko/)
 
 ## 설치
 
