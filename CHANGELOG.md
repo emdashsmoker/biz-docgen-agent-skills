@@ -27,6 +27,13 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-21
+
+### blockwriter
+- Fixed the HWPX page number control being written before the column definition, which made Hangul drop the section page setup and shrink the body width after a re-save (#33)
+
+* HWPX 쪽번호 컨트롤을 단 정의 앞에 기록하여 한/글 재저장 후 구역 쪽 설정이 풀리고 본문 폭이 줄던 결함 수정 (#33)
+
 ## 2026-10-18
 
 ### Common
