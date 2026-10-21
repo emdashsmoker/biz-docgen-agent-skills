@@ -388,8 +388,20 @@ class Builder:
             run = first.find(f"{HP}run")
             ctrl = ET.Element(f"{HP}ctrl")
             ET.SubElement(ctrl, f"{HP}pageNum", pos="BOTTOM_CENTER", formatType="DIGIT", sideChar="-")
-            sec_pr = run.find(f"{HP}secPr")
-            run.insert(list(run).index(sec_pr) + 1 if sec_pr is not None else 0, ctrl)
+            # Follow the Hangul authoring order (section definition secPr, column definition colPr, page number)
+            # and place it after the colPr control. Placed right after secPr (before colPr) it works on the
+            # freshly built file because everything sits in one run, but when Hangul re-saves it splits secPr into
+            # its own run and pushes colPr into the next run; on reopen Hangul then ignores the section settings
+            # and applies the default page setup (30mm left/right, 20mm top, 15mm header), shrinking the body
+            # width from 170mm to 150mm. The form puts newNum (restart page numbering) after colPr, so insert past
+            # that too. secPr is the anchor only when there is no colPr. A user form (skeleton) saved by Hangul keeps
+            # secPr and colPr in different runs, so the search covers the whole first paragraph, not just the first run.
+            anchor = next((c for c in reversed(first.findall(f"{HP}run/{HP}ctrl"))
+                           if c.find(f"{HP}colPr") is not None or c.find(f"{HP}newNum") is not None), None)
+            if anchor is None:
+                anchor = run.find(f"{HP}secPr")
+            host = anchor.getparent() if anchor is not None else run
+            host.insert(list(host).index(anchor) + 1 if anchor is not None else 0, ctrl)
 
     def _cell_line_role(self, line: str) -> str | None:
         """Maps ○ and - lines inside cells to the form's cell bullet styles (only when the profile has them)."""
