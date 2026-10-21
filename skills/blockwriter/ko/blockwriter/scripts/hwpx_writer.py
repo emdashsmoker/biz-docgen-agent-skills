@@ -388,8 +388,18 @@ class Builder:
             run = first.find(f"{HP}run")
             ctrl = ET.Element(f"{HP}ctrl")
             ET.SubElement(ctrl, f"{HP}pageNum", pos="BOTTOM_CENTER", formatType="DIGIT", sideChar="-")
-            sec_pr = run.find(f"{HP}secPr")
-            run.insert(list(run).index(sec_pr) + 1 if sec_pr is not None else 0, ctrl)
+            # 한/글 저작 순서(구역 정의 secPr, 단 정의 colPr, 쪽번호)를 따라 colPr 컨트롤 뒤에 둔다.
+            # secPr 바로 뒤(colPr 앞)에 두면 생성 직후에는 한 run에 모여 있어 한/글이 읽지만, 한/글이
+            # 재저장하면 secPr가 단독 run으로 분리되고 colPr가 다음 run으로 밀려 재오픈 시 구역 설정 대신
+            # 기본 편집 용지(좌우 30mm, 위 20mm, 머리말 15mm)가 적용되어 본문 폭이 170mm에서 150mm로 줄었다.
+            # 양식이 newNum(쪽번호 새로 시작)을 colPr 뒤에 두므로 그 뒤까지 지나 삽입한다. colPr가 없을 때만 secPr 기준.
+            # 한/글이 저장한 유저 양식(스켈레톤)은 secPr와 colPr가 서로 다른 run에 있으므로 첫 run이 아닌 첫 문단 전체에서 찾는다.
+            anchor = next((c for c in reversed(first.findall(f"{HP}run/{HP}ctrl"))
+                           if c.find(f"{HP}colPr") is not None or c.find(f"{HP}newNum") is not None), None)
+            if anchor is None:
+                anchor = run.find(f"{HP}secPr")
+            host = anchor.getparent() if anchor is not None else run
+            host.insert(list(host).index(anchor) + 1 if anchor is not None else 0, ctrl)
 
     def _cell_line_role(self, line: str) -> str | None:
         """셀 안의 ○, - 줄에 양식의 셀 글머리 스타일을 대응 (프로파일에 있을 때만)."""
