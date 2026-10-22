@@ -122,7 +122,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 5 lint                                      python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → exit code 0 is the condition for building
 6 Build                                     node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
 7 Structural check                          python3 scripts/check_layout.py out.pptx → in-depth review (references/review.md) → fix → rebuild
-8 Visual review and delivery                bash scripts/render.sh out.pptx png_dir 60 → view all PNGs → fix → bash scripts/topdf.sh out.pptx
+8 Visual review and delivery                bash scripts/render.sh out.pptx png_dir 60 → view all PNGs → fix → bash scripts/topdf.sh out.pptx (when the PDF is included)
 ```
 
 - Check dependencies with `python3 scripts/setup_deps.py --check` before any other step
@@ -131,12 +131,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Responses contain only file paths, progress status and items that need confirmation
 - Deliver files for review and delivery files with the file delivery tool of the runtime environment
     + (Reason) In runtime environments where the work folder is not visible to the user, a path alone does not let the user open the file
-    + (When) Presenting and re-presenting the step 3 structure confirmation (00_strategy.md, 00_storyline.md), step 8 delivery (PPTX, PDF), and file requests from the user
+    + (When) Presenting and re-presenting the step 3 structure confirmation (00_strategy.md, 00_storyline.md), step 8 delivery (PPTX, and the PDF when included), and file requests from the user
     + When re-presenting, deliver only the changed files
     + With a tool that delivers only files from a designated folder, place a copy in that folder and deliver it (the reference version is the original in the work folder)
     + In runtime environments without a delivery tool, give the file path
-- Deliver the delivery files (PPTX, PDF) after viewing all PNGs
+- Deliver the delivery files (PPTX, and the PDF when included) after viewing all PNGs
 - The completion report lists file paths, viewed contact sheet file names, unresolved issues and remaining user confirmation items
+- When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
 - Record the progress point in `state.json` for session handover
 
 ## Kickoff question items
@@ -157,6 +158,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 12. (Consortium) Participation, share per organization, person-months (M/M)
 13. (Contracting agency practice) Task ID notation (`Module 1 - Task 2` or `M1-T2`), headers with evaluation items, path-style headers ("주제 〉 세부")
 14. (Document language and labels) Korean labels (default) or another language. For another language, set the template labels and language tags in `meta.labels` (English decks section)
+15. (PDF copy) Whether to deliver a PDF for viewing with the PPTX. Included by default
+    + Tell the user that the PDF is an approximate rendering drawn by LibreOffice, so line breaks and text positions may differ from PowerPoint
 
 ## Company facts
 
@@ -849,6 +852,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### Completion conditions
 
 - The outputs are an editable PPTX and a PDF for viewing (created with `scripts/topdf.sh`)
+    + If the user declines the PDF in kickoff question 15, output only the PPTX
 - lint and check_layout exit code 0 (WARNs also count as failures)
 - Zero build warnings
 - finalize.py and validate.py pass

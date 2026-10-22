@@ -38,6 +38,7 @@
     + Whether web search is allowed. If not, figures in literature sections are model knowledge values with a reference year and the `[확인]` marker
     + Whether a field research plan exists (survey targets, sample size, survey timing, and so on). If there is no plan, the model writes a draft survey design
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), whether to insert a cover, band color theme, long-table handling
+    + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
     + The judged report type and engagement type. Judge with the TOC example table of the Table of Contents Design section and the SKILL.md Module Frameworks by Engagement Type section
 - Step 1 applies the requirement transfer rules of the SKILL.md RFP Dissection section. In a pre-diagnosis report workspace, `rfp` places only the requirement table (no scoring table). After the transfer, fill 00_진단서.md according to the Diagnosis Design section
 - Step 2 writes 02_모듈총괄표.md (SKILL.md Module Overview Table section) and 02_스토리라인.md. For 02_스토리라인.md, copy `<SKILL>/assets/report-storyline.md` into the workspace and fill it
