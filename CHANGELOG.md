@@ -27,6 +27,20 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-22
+
+### Common
+- Added a planning question that asks whether to deliver a PDF with the output file, together with a notice that the PDF is an approximate rendering (#34)
+
+* 산출 파일과 함께 PDF를 전달할지 묻는 기획 질의와 근사 렌더링 안내 추가 (#34)
+
+### juja-builder
+- Changed the default delivery to HWPX or DOCX files without a PDF (#34)
+- Changed the location of review PDFs and page PNGs to outside the delivery folder (#34)
+
+* PDF 없이 HWPX 또는 DOCX 파일만 전달하는 방식으로 기본 납품 구성 변경 (#34)
+* 검수용 PDF와 쪽 PNG의 저장 위치를 납품 폴더 밖으로 변경 (#34)
+
 ## 2026-10-21
 
 ### blockwriter
