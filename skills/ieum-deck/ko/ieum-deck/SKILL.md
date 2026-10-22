@@ -109,7 +109,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 5 lint                         python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → 종료 코드 0 이 빌드 조건
 6 빌드                         node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
 7 구조 검수                    python3 scripts/check_layout.py out.pptx → 심층 검토(references/review.md) → 수정 → 재빌드
-8 시각 검수와 납품             bash scripts/render.sh out.pptx png_dir 60 → PNG 전량 열람 → 조치 → bash scripts/topdf.sh out.pptx
+8 시각 검수와 납품             bash scripts/render.sh out.pptx png_dir 60 → PNG 전량 열람 → 조치 → bash scripts/topdf.sh out.pptx (PDF 동봉 시)
 ```
 
 - 의존성은 다른 단계보다 먼저 `python3 scripts/setup_deps.py --check` 로 확인
@@ -118,12 +118,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 응답에는 파일 경로, 진행 상태, 확인 필요 항목만 기재
 - 검토 요청 파일과 납품 파일은 실행 환경의 파일 전달 도구로 전달
     + (전달 이유) 작업 폴더가 사용자에게 보이지 않는 실행 환경에서는 경로 안내만으로 파일을 열 수 없음
-    + (전달 시점) 3단계 구성 확정의 제시와 재제시(00_strategy.md, 00_storyline.md), 8단계 납품(PPTX, PDF), 사용자의 파일 요청
+    + (전달 시점) 3단계 구성 확정의 제시와 재제시(00_strategy.md, 00_storyline.md), 8단계 납품(PPTX, 동봉 시 PDF), 사용자의 파일 요청
     + 재제시에는 바뀐 파일만 전달
     + 지정 폴더의 파일만 전달하는 도구는 사본을 그 폴더에 둔 뒤 전달 (기준본은 작업 폴더의 원본)
     + 전달 도구가 없는 실행 환경에서는 파일 경로를 안내
-- 납품 파일(PPTX, PDF)은 PNG 전량 열람 후 전달
+- 납품 파일(PPTX, 동봉 시 PDF)은 PNG 전량 열람 후 전달
 - 완료 보고에는 파일 경로, 열람한 시트 파일명, 미해결 사항, 남은 사용자 확인 항목을 기재
+- PDF 를 동봉하면 착수 질의 15번의 근사 렌더링 안내를 완료 보고에 1줄로 다시 기재
 - 진행 지점은 세션 인계를 위해 `state.json` 에 기록
 
 ## 착수 질의 항목
@@ -144,6 +145,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 12. (컨소시엄) 참여 여부와 기관별 지분, 투입 인월(M/M)
 13. (발주기관 관행) Task ID 표기(`Module 1 - Task 2` 또는 `M1-T2`), 평가항목 병기형 헤더, 경로형 헤더("주제 〉 세부")
 14. (문서 언어와 라벨) 한국어 라벨(기본) 또는 다른 언어. 다른 언어면 템플릿 라벨과 언어 태그를 `meta.labels` 에 지정 (영문 발표자료 절)
+15. (PDF 동봉) PPTX 와 함께 열람용 PDF 를 전달할지 확인. 기본은 동봉
+    + PDF 는 LibreOffice 가 그린 근사 렌더링이므로 PowerPoint 표시와 줄바꿈, 글자 위치가 다를 수 있음을 함께 안내
 
 ## 회사 사실 정보
 
@@ -835,6 +838,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### 완료 조건
 
 - 산출물은 편집용 PPTX 와 열람용 PDF (`scripts/topdf.sh` 로 생성)
+    + 착수 질의 15번에서 미동봉을 고르면 PPTX 만 산출
 - lint 와 check_layout 종료 코드 0 (WARN 도 실패로 집계)
 - 빌드 경고 0건
 - finalize.py 와 validate.py 통과

@@ -171,7 +171,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Bundle questions in one turn. For items with a reasonable default, state the default and proceed
 - The reply style is short bullet statements. Keep step completion reports short
 - Deliver files that ask the user for review, confirmation, or approval, and delivered files, through the file delivery feature of the execution environment. In an environment where the workspace is not visible to the user, the user cannot open a file from a path alone
-    + The main delivery points are the step 2 approval request and re-presentation, confirmation of source image candidates, the step 6 delivery (hwpx or docx and PDF), and whenever the user asks for a file
+    + The main delivery points are the step 2 approval request and re-presentation, confirmation of source image candidates, the step 6 delivery (hwpx or docx, and the PDF when included), and whenever the user asks for a file
     + In an environment where the delivery feature only sends files from a designated folder, place a copy in that folder and deliver it. The original in the workspace is the reference copy
     + In an environment without a delivery feature, give the file path
 - Read files only as far as needed. Do not read the same file repeatedly (reading the full text of 01_RFP원문.md at step 1, rereading manuscripts in the in-depth review, and reading at session handover are the exceptions). Check only the verdict summary of script stdout
@@ -295,6 +295,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Principal investigator candidates and participating staff candidates
     + Whether an advisory committee runs, and its candidates
     + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover, band color theme (navy by default, mono is black and gray). The conditions for turning on the table of contents and page numbers are in the Typesetting section
+    + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
@@ -966,7 +967,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (Source) Nanum fonts from the Naver Hangeul distribution site (hangeul.naver.com). The required fonts are NanumBarunGothic regular and bold
     + (How to install) On Windows, install for all users from the right-click menu of the font file. On macOS, open the font file and install it with Font Book
     + (Confirmation) Close 한/글 and Word completely and restart them. Done when the font name of the delivered file's body shows NanumBarunGothic
-    + (Sending outside) If it is unknown whether the recipient's PC has the font, send the PDF along
+    + (Sending outside) If it is unknown whether the recipient's PC has the font, send along a PDF saved from 한/글 or Word
 - build's `--toc` (table of contents) and `--page-number` (page numbers) are separate options. Both are OFF by default. The defaults for the pre-diagnosis report are in the references/report.md Typesetting section
     + Turn them on only when the user asked or the RFP writing rules explicitly require them. Record the reason for turning them on (kickoff answer or RFP writing rule) in the writing rules row of basic project conditions in 00_제안전략서.md. For the pre-diagnosis report, record it in the basic report information table of 00_진단서.md, and for the planning report in the basic information table of 00_기획설계.md
     + If the RFP requires only page numbers, turn on only `--page-number`
@@ -1011,6 +1012,16 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Known approximate displays of H2Orestart are also excluded from the verdict. They are missing captions and ignored cell padding
     + Differences in LibreOffice's docx display are also excluded from the verdict. They are automatic spacing between Korean and numbers (it does not read docx's setting that turns off automatic spacing) and header rows not repeating in tables split at page boundaries
     + Final confirmation is the user's check in 한/글 (in Word for docx). State this in one line in the final report
+
+### PDF Copy
+
+- Whether to include a PDF is set by the answer to the kickoff questions. Not included by default
+- Output the review PDF and PNGs outside the delivery folder with `render --outdir`. Output the cross-check rendering to a different folder
+- If the user chose a PDF, copy the PDF of the last render for each format into the delivery folder and deliver it with the hwpx or docx
+- (Approximate rendering notice) Give the following in the kickoff questions and in the final report of a delivery that includes the PDF
+    + The PDF is drawn by an approximate renderer, so it may look different from 한/글 and Word
+    + A PDF of an hwpx document is likely to contain display defects in line breaks, spacing, and page breaks
+    + Save a PDF for submission from 한/글 or Word
 
 ## Failure Patterns
 

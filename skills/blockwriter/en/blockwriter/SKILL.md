@@ -98,6 +98,9 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 
 1. (Plan) Ask the user all of the following at once and continue after the answers. Do not ask again about items the request already answers. If the user explicitly says to run immediately, proceed with the defaults
     - (Output format) HWPX (Hangul) or DOCX (Word). Work on a user form is HWPX only. Recommend choosing one format. Producing both repeats the rendering review and fixes for each format, which uses more of the working context and can lower review quality. If the user wants both, state this in one line and proceed
+    - (PDF copy) Ask whether to deliver a PDF with the document. No PDF by default. Give the following notice with the question
+        - The PDF is an approximate rendering drawn by the review renderer, so it may look different from Hangul or Word
+        - A PDF of an HWPX document is likely to contain display defects in line breaks, spacing, and page breaks
     - (Purpose) chapter for a chaptered document of a full report. flat for a standalone document or a partial manuscript to insert into a full report. A cover and TOC are optional regardless of purpose
     - (Form contrast) Show this when asking about the purpose. chapter sets the 제N장, N.N, N.N.N, and 가. headings in NanumGothic bold and restarts caption numbers in each chapter (표 1-3). flat sets the document title, N., and N.N headings in NanumBarunGothic bold and the 가. headings in NanumGothic bold, and numbers captions continuously through the document (표 3). The body levels □, ○, -, ㆍ, ※ and the body font NanumGothic are the same in both forms. Only chapter has TOC styles
     - (Page breaks) Choose chapter, section, or none. build reports the number of short sections with fewer than 8 elements on a `HITL: [page-break]` line. Under section, each page that holds a short section ends with a large blank area
@@ -112,9 +115,11 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (`WARN:`) A typesetting warning such as a missing style or a missing image
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line (references/manuscript.md) to the manuscript and build again. Run the first build without column width lines
+    - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason
     - (Renderer limits) One line saying that the review renderers are approximate, so the result may look different in Hangul or Word
+    - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
     - (DOCX TOC) If a TOC with page numbers was inserted, one line saying that Word asks whether to update fields when it opens the document, and that choosing "Yes" updates the TOC with Word's page numbers
     - (Font notice) If `fonts` can run on the computer where the user opens the documents (the skill runs on that computer or can send commands to it), run it. If every form font (NanumGothic, plus NanumBarunGothic for flat) is installed with all Hanja present, skip the notice. If a font is missing or lacks Hanja, name it and give the installation steps for the user's computer in references/renderers.md
     - (Remote workspace) If the user's computer cannot be checked, skip the font notice and the question about font installation. Give the installation steps when the user mentions a font or Hanja display problem

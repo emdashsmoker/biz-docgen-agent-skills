@@ -154,6 +154,7 @@
     + Volume and input materials. If the volume is not set, present the model's design at step 1
     + Whether web search is allowed. If not, figures outside the materials get the `[확인]` marker
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), page breaks (chapter, none), band color theme
+    + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
     + Whether to insert a table of contents, page numbers, a cover, and divider pages
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
