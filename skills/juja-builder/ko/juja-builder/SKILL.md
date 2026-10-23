@@ -201,7 +201,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + LibreOffice가 없으면 3순위의 apt 명령으로 설치
 - 스킬 폴더가 읽기 전용인 환경에서 스크립트 수정이 필요하면 스킬 폴더 전체를 쓰기 가능한 경로에 복사. 이후 `<SKILL>`은 사본 폴더
 - 동작 확인 환경은 Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. 설치는 최신 버전으로 수행. 이 기록은 버전 차이로 실패할 때 원인을 추적하는 기준
-- 렌더러 1순위는 rhwp CLI(https://github.com/edwardkim/rhwp). 아래 절차로 GitHub 릴리스의 CLI 실행 파일을 직접 확보. npm 패키지(@rhwp/core, @rhwp/editor)는 라이브러리와 편집기 용도. CLI 확보 경로에서 제외. PyPI 등 다른 패키지 저장소의 같은 이름 패키지도 제외 대상. 2순위(소스 빌드)로의 이동 조건은 릴리스 확보 실패의 확인
+- 렌더러 1순위는 rhwp CLI(https://github.com/edwardkim/rhwp). 아래 절차로 GitHub 릴리스의 CLI 실행 파일을 직접 확보. npm 패키지(@rhwp/core, @rhwp/editor)는 라이브러리와 편집기 용도. CLI 확보 경로에서 제외. PyPI 등 다른 패키지 저장소의 같은 이름 패키지도 제외 대상. 2순위(소스 빌드)로의 이동 조건은 릴리스 확보 실패의 확인. 실행 환경의 권한 거부는 아래 rhwp 권한 거부 항목을 따름
     + (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 첫 GitHub 접근 전에 호출. 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp`를 각각 따로 전달. 도구 응답이 안내하는 접근 경로는 아래 절차에 반영. 도구가 없거나 호출이 거부되면 이 단계를 건너뜀
     + GitHub의 주소 체계와 페이지 구성은 바뀔 수 있음. 모델은 현재 상태를 확인하여 아래 순서로 릴리스를 확보
     + GitHub 주소는 웹 화면 경로와 파일 전달 경로로 나뉨. 네트워크 허용 목록을 쓰는 실행 환경에서는 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)의 403 상황에서도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜이 통과하는 경우가 있음
@@ -228,6 +228,12 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 빌드 후 클론 폴더와 빌드 산출 폴더는 삭제해도 무방
     + git 접근 거부나 빌드 실패 시 3순위로 이동. 사유는 최종 보고에 기재
 - 3순위는 LibreOffice와 H2Orestart. Debian 계열 기준으로 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart fonts-nanum poppler-utils`. 이후 `render --engine soffice`
+- rhwp 권한 거부는 실행 환경의 권한 검사가 rhwp를 받거나 실행하는 명령(태그 조회, 내려받기, 클론, 빌드, 실행)을 거부한 경우. 거부가 나오면 rhwp 확보를 그 자리에서 멈춤. 이어서 유저에게 rhwp 내려받기와 실행의 허용 여부를 질의. 답을 받기 전에는 3순위 확보, `selftest`, 1단계 이후 작업을 진행하지 않음
+    + (판정) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령 실행 뒤의 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
+    + (질의 이유) 권한 거부는 유저의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 유저가 허용할 기회가 사라짐. 3순위의 H2Orestart는 캡션을 그리지 않는 사례가 있음(렌더링 검수 절)
+    + (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp와 무관한 착수 순서 항목(`init`, `rfp` 변환)은 계속 진행
+    + (질의 시점) 착수 순서 2번의 거부는 착수 질의 목록의 맨 앞 항목으로 질의. 이후 단계의 거부는 거부 시점에 질의
+    + (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 `selftest` 진행
 - 세 경로가 모두 실패하면 render를 생략. 생략 사실과 사유는 착수 질의 턴에 유저에게 고지. 최종 보고에도 같은 내용을 기재
 - 발표자료 변환 경로의 pptx 입력은 LibreOffice(`soffice`)로 PDF 변환. 설치는 `apt-get install -y --no-install-recommends libreoffice-impress fonts-nanum fonts-noto-cjk`. 한글 글꼴이 없으면 변환본의 줄바꿈과 도식 배치가 원본과 달라짐. pdf 입력은 LibreOffice 없이 처리
 - 렌더링 검수에는 나눔 글꼴이 필요. Debian 계열은 `apt-get install -y --no-install-recommends fonts-nanum`. 글꼴이 없으면 근사 렌더러가 대체 글꼴을 사용. 이 경우 글자 폭과 줄바꿈이 납품본과 달라짐
@@ -281,6 +287,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | 6 조판과 검수 | 납품/제안서.hwpx 또는 .docx, 페이지 PNG | 검수 항목 통과, 재량 조정 기록 |
 
 - 착수 질의로 아래 항목을 한 번에 질의. 1단계 진입 조건은 답변 수령과 state.json의 checks.render PASS. 렌더러 확보, `init`, `selftest`, `rfp` 변환은 질의 전에 실행(순서는 준비 절의 착수 순서). `rfp` 변환본은 과업 유형 판정에 사용(요구항목과 배점의 이관은 1단계)
+    + rhwp 허용 여부. 준비 절의 rhwp 권한 거부가 있었던 경우 목록의 맨 앞에 배치. 거부된 명령, rhwp 저장소(https://github.com/edwardkim/rhwp), 허용 시 실행할 명령(릴리스 수신, 필요 시 클론과 빌드, rhwp 실행)을 함께 제시. 출처와 명령을 밝힌 질의여야 유저의 허용 범위가 분명해짐
     + 제안 대상의 범위(전체 또는 특정 파트)
     + 컨소시엄 구성 여부와 각 사의 역할
     + 연구책임자 후보와 참여인력 후보
@@ -293,7 +300,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 과업 유형 판정 결과(배경 골격의 전개형과 압축형 구분 포함). 판정 방법은 01_RFP원문.md의 판별 신호와 과업 유형별 모듈 골격 절의 표 대조. 판별 신호에 걸리지 않는 과업은 methods.md 서두의 계통 표로 판정. 판정 결과는 유저 확인을 받음
     + 스토리라인 확정 깊이. 기본(논증 절의 □ 판단문과 Task별 1줄) 또는 심화(오리지널 섹션 전체의 □ 제목과 ❍ 주장 요지). 무응답이면 기본
     + 문서 언어와 라벨. 기본은 한국어 문서와 한국어 라벨. 다른 언어면 라벨 파일 작성과 한국어 전용 점검의 생략을 함께 확정(조판 절의 문서 라벨, references/labels.md)
-- 착수 질의 턴에 렌더 시험 결과를 1줄로 보고(엔진, PASS 또는 FAIL). 소스 빌드를 병행 중이면 진행 상태를 같은 줄에 기재
+- 착수 질의 턴에 렌더 시험 결과를 1줄로 보고(엔진, PASS 또는 FAIL). 소스 빌드를 병행 중이면 진행 상태를 같은 줄에 기재. rhwp 허용 질의 중이면 허용 대기로 기재
 - 렌더러 확보의 세 경로가 모두 실패하여 렌더 생략을 고지한 경우는 그 고지가 checks.render PASS를 대신함
 - 00_제안전략서.md는 단계별로 채움. 0단계에 착수 질의 답변으로 채우는 필드를 기입. 1단계에 RFP 원문에서 확인하는 필드(사업 기본조건, 작성 규정, 핵심 워딩 사전 포함)를 기입. 2단계에 대응 모듈, 담을 섹션, 대응 섹션을 기입
 - 1단계는 01_RFP원문.md 전문을 읽음(`rfp` 미실행이면 먼저 실행). 모델이 요구항목, 세부평가항목, 사업 기본조건, 작성 규정을 RFP 해부 절의 규칙으로 이관

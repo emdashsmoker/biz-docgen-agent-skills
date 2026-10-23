@@ -210,7 +210,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (대체 수단) 다른 텍스트 추출 도구, 원문 쪽을 이미지로 렌더하여 눈으로 판독
     + 사용한 변환 수단과 대조 범위는 완료 보고에 기재
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
-- 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동
+- 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동 (실행 환경의 권한 거부는 아래 rhwp 권한 거부 항목)
 - (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 python-hwpx 로 `안녕하세요!` 한 줄짜리 hwpx 를 작업 폴더 밖의 임시 폴더에 만들어 변환을 시험
     + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (글꼴은 juja-builder, blockwriter 와 같은 방식으로 헤더의 글꼴 이름을 나눔고딕으로 지정. 나눔고딕은 설치 의존성 fonts-nanum 에 포함)
     + 변환은 `parse_input.py 변환시험.hwpx <임시 폴더>/출력.md --pdf` 로 실행하고 PDF 의 Producer 값으로 그 순위의 변환기가 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
@@ -249,7 +249,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 인자 형식이 다르면 hwpx_to_pdf 의 호출부를 수정
     + 변환 실패 시 parse_input.py 는 경고 출력 후 LibreOffice 로 전환
     + 실제로 사용된 변환기는 PDF 의 Producer 값으로 확인
-- (3순위 LibreOffice H2Orestart) 1순위와 2순위가 모두 실패한 경우에 사용
+- (3순위 LibreOffice H2Orestart) 1순위와 2순위가 모두 실패했거나 rhwp 권한 거부 항목이 3순위를 가리키는 경우에 사용
+- (rhwp 권한 거부) 실행 환경의 권한 검사가 rhwp 를 받거나 실행하는 명령(태그 조회, 내려받기, 클론, 빌드, 실행)을 거부한 경우의 처리. 거부가 나오면 rhwp 확보를 그 자리에서 멈춤. 이어서 사용자에게 rhwp 내려받기와 실행의 허용 여부를 질의. 답을 받기 전에는 3순위 확보와 2단계 이후 작업을 진행하지 않음
+    + (판정) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령 실행 뒤의 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
+    + (질의 이유) 권한 거부는 사용자의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 사용자가 허용할 기회가 사라짐
+    + (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp 와 무관한 입력 변환(Markdown 변환, 이미지 추출)은 계속 진행
+    + (질의 내용) 거부된 명령, rhwp 저장소(https://github.com/edwardkim/rhwp), 허용 시 실행할 명령(릴리스 수신, 필요 시 클론과 빌드, rhwp 실행)을 함께 제시. 출처와 명령을 밝힌 질의여야 사용자의 허용 범위가 분명해짐
+    + (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 변환 시험 진행
 - 모든 순위가 실패하면 사용자에게 알린 뒤 Markdown 만 사용
 
 ## 원본 이미지 재사용

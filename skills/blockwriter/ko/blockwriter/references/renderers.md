@@ -21,9 +21,8 @@ rhwp 릴리스 바이너리가 1순위, rhwp 소스 빌드가 2순위, LibreOffi
 - (판정) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령이 실행된 뒤 발생한 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
 - (대상 명령) rhwp의 태그 조회, 내려받기, 클론, 빌드, 실행 명령
 - (재시도 중단) 같은 rhwp 코드를 다른 경로로 받는 시도를 멈춤. 다른 경로는 2순위 소스 빌드와 다른 내려받기 도구
-- (렌더 시험) 렌더 시험은 2순위 없이 3순위로 진행
-- (유저 질문) 기획안 질문 턴에 거부된 명령과 함께 rhwp 내려받기와 실행의 허용 여부를 질문
-- (허용 후 재확보) 유저가 허용하면 1순위부터 다시 확보
+- (유저 질문) 거부가 나오면 rhwp 확보를 멈춤. 이어서 유저에게 rhwp 내려받기와 실행의 허용 여부를 질문. 답을 받기 전에는 3순위로 넘어가지 않음. 질문 시점과 질문 내용은 SKILL.md 준비 절의 rhwp 권한 거부와 1단계의 rhwp 허용 항목
+- (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 렌더 시험 진행
 
 1순위 rhwp 릴리스 바이너리 (https://github.com/edwardkim/rhwp)
 
@@ -55,7 +54,7 @@ rhwp는 명령 체계와 배포 방식이 자주 바뀌는 프로젝트이므로
 
 3순위 LibreOffice와 H2Orestart
 
-1순위와 2순위가 모두 실패했거나 권한 거부 처리에 해당하는 경우에 사용한다. 폴백 사유(순위별 실패 단계 또는 거부된 명령)는 최종 보고에 기재한다.
+1순위와 2순위가 모두 실패했거나 권한 거부 처리가 3순위를 가리키는 경우에 사용한다. 폴백 사유(순위별 실패 단계 또는 거부된 명령)는 최종 보고에 기재한다.
 
 1. Debian 계열은 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
 2. 다른 운영체제는 LibreOffice 공식 배포판을 설치하고 H2Orestart 확장(https://extensions.libreoffice.org/en/extensions/show/27504)을 확장 관리자 또는 `unopkg add`로 등록

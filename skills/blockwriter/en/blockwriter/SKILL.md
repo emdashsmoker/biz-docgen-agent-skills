@@ -58,11 +58,11 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     5. Obtain the HWPX renderer and run the render test at each option (references/renderers.md, Order for obtaining an HWPX renderer)
     6. Ask the planning questions of step 1
 - If obtaining the HWPX renderer moves to option 2 (source build), run the build as a background process detached from the session and ask the planning questions of step 1 while it builds. For HWPX output, confirm that the HWPX render test passes before the typesetting of step 3. If the build has not finished by then, first pass the render test with option 3, and run the render test again with rhwp after the build finishes
-- (rhwp permission denial) If the permission check of the execution environment refuses a command that downloads or runs rhwp, handle it apart from a network failure. The criteria are in references/renderers.md, Permission denial handling
-    - Stop trying to get the same rhwp code through another route (option 2 source build, another download tool)
-    - Run the HWPX render test with option 3 (LibreOffice with H2Orestart)
-    - In the planning question turn, report the denial and ask whether to allow downloading and running rhwp
-    - If the user allows it, obtain rhwp again from option 1
+- (rhwp permission denial) If the permission check of the execution environment refuses a command that downloads or runs rhwp, stop obtaining rhwp at that point. Then ask the user whether to allow downloading and running rhwp. Before the answer, do not run the option 3 render test or work on the manuscript, typesetting, or review. The criteria that separate a permission denial from a network failure are in references/renderers.md, Permission denial handling
+    - (Why ask) Only the user's permission lifts a permission denial. Moving to option 3 without asking takes away the user's chance to allow it. The HWPX review then stays on H2Orestart, which has cases of not drawing captions, footnote bodies, and footer page numbers
+    - (What stops) Also stop trying to get the same rhwp code through another route (option 2 source build, another download tool). Setup items unrelated to rhwp continue
+    - (When to ask) For a denial at item 5 of the start order, put the question first in the planning questions of step 1. Even when the planning questions are skipped (run immediately, or the request answers every item), send the permission question on its own. For a denial at a later step, ask when it occurs
+    - (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2
 
 ## Commands
 
@@ -113,7 +113,8 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 - Create and edit documents only with the scripts/report.py commands. The commands keep the form's styles, bullets, and numbering references intact in the document
 - When an error occurs, use its message to find the cause in the manuscript, the profile, or the script and fix it. If generating a built-in form fails, first check the python-hwpx version and installation
 
-1. (Plan) Ask the user all of the following at once and continue after the answers. Do not ask again about items the request already answers. If the user explicitly says to run immediately, proceed with the defaults
+1. (Plan) Ask the user all of the following at once and continue after the answers. Do not ask again about items the request already answers. If the user explicitly says to run immediately, proceed with the defaults. Even then, do not skip the rhwp permission question (rhwp permission denial in Setup)
+    - (rhwp permission) If an rhwp command was refused by a permission check during setup, put this question first in the list. Present the refused command, the rhwp repository (https://github.com/edwardkim/rhwp), and the commands that run once allowed (release download, clone and build if needed, running rhwp). A question that names the source and the commands makes the scope of the user's permission clear. On the render test result line, mark HWPX as awaiting permission
     - (Output format) HWPX (Hangul) or DOCX (Word). Work on a user form is HWPX only. Recommend choosing one format. Producing both repeats the rendering review and fixes for each format, which uses more of the working context and can lower review quality. If the user wants both, state this in one line and proceed
     - (PDF copy) Ask whether to deliver a PDF with the document. No PDF by default. Give the following notice with the question
         - The PDF is an approximate rendering drawn by the review renderer, so it may look different from Hangul or Word
