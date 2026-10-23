@@ -43,7 +43,10 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
 - Try to install the latest versions first and work with the installed latest versions
 - If a latest API change breaks a script, update the script to the latest API
 - Pinning a version is the last resort when the script cannot be updated. If pinned, state the reason in the final report
-- Review rendering needs a renderer. For HWPX obtain one in this order: rhwp release binary, rhwp source build, LibreOffice with H2Orestart. DOCX uses LibreOffice. The procedure is in references/renderers.md
+- Review rendering needs a renderer. For HWPX obtain one in this order: rhwp release binary, rhwp source build, LibreOffice with H2Orestart. DOCX uses LibreOffice. The procedure (tag choice, asset choice, command set check) is in references/renderers.md
+    - (rhwp origin) Options 1 and 2 use the releases and source of the rhwp repository (https://github.com/edwardkim/rhwp)
+    - (Option 1 release binary) Download the asset from `https://github.com/edwardkim/rhwp/releases/download/<tag>/<file name>` with `curl -fL`. If SHA256SUMS.txt exists, verify the file with `sha256sum -c`. After extracting, make the executable runnable and put it in scripts/rhwp/
+    - (Option 2 source build) Get the rhwp repository with `git clone` and build it from source
 - Page PNGs and TOC page numbers need poppler-utils (pdftoppm, pdftotext). Without them render produces only the PDF and build leaves TOC page numbers empty
 - The built-in forms use 나눔고딕 (NanumGothic), with 나눔바른고딕 (NanumBarunGothic) only for flat headings. For both fonts, only the NAVER release has Hanja. Check installation and Hanja coverage with `fonts` and set up downloads and substitute fonts with `fonts --setup`. The font policy is in references/renderers.md
 - The start order below is fixed for work that produces a document. Obtaining the renderers and running the render tests come before the planning questions of step 1. Work that only produces a manuscript (export, docx2md, xlsx2md) only installs the dependencies
@@ -55,6 +58,11 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     5. Obtain the HWPX renderer and run the render test at each option (references/renderers.md, Order for obtaining an HWPX renderer)
     6. Ask the planning questions of step 1
 - If obtaining the HWPX renderer moves to option 2 (source build), run the build as a background process detached from the session and ask the planning questions of step 1 while it builds. For HWPX output, confirm that the HWPX render test passes before the typesetting of step 3. If the build has not finished by then, first pass the render test with option 3, and run the render test again with rhwp after the build finishes
+- (rhwp permission denial) If the permission check of the execution environment refuses a command that downloads or runs rhwp, handle it apart from a network failure. The criteria are in references/renderers.md, Permission denial handling
+    - Stop trying to get the same rhwp code through another route (option 2 source build, another download tool)
+    - Run the HWPX render test with option 3 (LibreOffice with H2Orestart)
+    - In the planning question turn, report the denial and ask whether to allow downloading and running rhwp
+    - If the user allows it, obtain rhwp again from option 1
 
 ## Commands
 

@@ -8,11 +8,22 @@ GitHub에서 받는 요소는 rhwp(소유자 `edwardkim`, 저장소 이름 `rhwp
 
 ## HWPX 렌더러 확보 순서
 
-rhwp 릴리스 바이너리가 1순위, rhwp 소스 빌드가 2순위, LibreOffice와 H2Orestart가 3순위다. 앞 순위 절차를 실제로 수행하고 실패한 경우에만 다음 순위로 이동한다.
+rhwp 릴리스 바이너리가 1순위, rhwp 소스 빌드가 2순위, LibreOffice와 H2Orestart가 3순위다. 앞 순위 절차를 실제로 수행하고 실패한 경우에만 다음 순위로 이동한다. 실행 환경의 권한 거부는 아래 권한 거부 처리를 따른다.
 
 각 순위에서 렌더러를 확보한 직후 렌더 시험을 한다. 글꼴 준비(`fonts --setup`)를 마친 뒤 산출 폴더 밖의 임시 폴더에 `안녕하세요!` 한 줄짜리 원고를 두고 `build 시험.md 렌더시험.hwpx --profile flat`으로 조판한다. 이어서 `render 렌더시험.hwpx --engine rhwp`(3순위는 `--engine soffice`)로 렌더하고 쪽 PNG(poppler가 없으면 PDF)를 열어 `안녕하세요!`가 보이는지 확인한다. rhwp는 문서 글꼴이 없으면 글자를 뺀 PDF를 만들고 render도 성공으로 출력하므로 PDF 생성만으로는 판정하지 않는다. 빈 쪽이면 `fonts`로 글꼴 상태를 먼저 확인한다. 글꼴이 갖춰졌는데도 빈 쪽이면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동한다. 렌더러 문제를 문서 작성 전에 걸러야 검수 단계에서 작업이 끊기지 않는다.
 
 실행 환경에 따라 GitHub의 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)는 403이어도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜은 통과할 수 있다. 1순위 실패는 4단계(파일 수신)의 실패로 판정한다.
+
+권한 거부 처리
+
+실행 환경의 권한 검사(도구 실행 승인, 자동 승인 판정 등)는 외부 코드를 받거나 실행하는 명령을 실행 전에 거부할 수 있다. 이 거부는 실행 환경이 유저 확인을 요구한다는 신호이므로 허용 여부는 유저가 정한다.
+
+- (판정) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령이 실행된 뒤 발생한 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
+- (대상 명령) rhwp의 태그 조회, 내려받기, 클론, 빌드, 실행 명령
+- (재시도 중단) 같은 rhwp 코드를 다른 경로로 받는 시도를 멈춤. 다른 경로는 2순위 소스 빌드와 다른 내려받기 도구
+- (렌더 시험) 렌더 시험은 2순위 없이 3순위로 진행
+- (유저 질문) 기획안 질문 턴에 거부된 명령과 함께 rhwp 내려받기와 실행의 허용 여부를 질문
+- (허용 후 재확보) 유저가 허용하면 1순위부터 다시 확보
 
 1순위 rhwp 릴리스 바이너리 (https://github.com/edwardkim/rhwp)
 
@@ -44,7 +55,7 @@ rhwp는 명령 체계와 배포 방식이 자주 바뀌는 프로젝트이므로
 
 3순위 LibreOffice와 H2Orestart
 
-1순위와 2순위가 모두 실패한 경우에만 사용하고 폴백 사유(순위별 실패 단계)를 최종 보고에 기재한다.
+1순위와 2순위가 모두 실패했거나 권한 거부 처리에 해당하는 경우에 사용한다. 폴백 사유(순위별 실패 단계 또는 거부된 명령)는 최종 보고에 기재한다.
 
 1. Debian 계열은 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
 2. 다른 운영체제는 LibreOffice 공식 배포판을 설치하고 H2Orestart 확장(https://extensions.libreoffice.org/en/extensions/show/27504)을 확장 관리자 또는 `unopkg add`로 등록
