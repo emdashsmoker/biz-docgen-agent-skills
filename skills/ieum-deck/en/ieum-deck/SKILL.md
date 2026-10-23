@@ -223,7 +223,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Alternatives) Other text extraction tools, rendering source pages as images and reading them by eye
     + Record the conversion methods used and the compared range in the completion report
 - The order for obtaining a PDF converter for hwpx is the rhwp release binary, an rhwp source build, then the LibreOffice H2Orestart extension
-- Move to the next option only after actually trying to obtain the previous one and failing
+- Move to the next option only after actually trying to obtain the previous one and failing (a permission denial by the execution environment follows the rhwp permission denial item below)
 - (Conversion test right after obtaining) Right after obtaining a converter at any rank, make a one-line hwpx reading `안녕하세요!` with python-hwpx in a temporary folder outside the work folder and test the conversion
     + Create it with `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (the font names in the header are set to NanumGothic, as juja-builder and blockwriter do; NanumGothic comes with the fonts-nanum dependency)
     + Convert it with `parse_input.py 변환시험.hwpx <temp folder>/output.md --pdf` and check from the PDF's Producer value that the converter of that rank was used (parse_input.py falls back to LibreOffice when rhwp fails)
@@ -262,7 +262,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + If the argument format differs, fix the call in hwpx_to_pdf
     + On conversion failure, parse_input.py prints a warning and switches to LibreOffice
     + Check which converter was actually used from the Producer value of the PDF
-- (Option 3, LibreOffice H2Orestart) Use when options 1 and 2 both fail
+- (Option 3, LibreOffice H2Orestart) Use when options 1 and 2 both fail or when the rhwp permission denial item points to option 3
+- (rhwp permission denial) Handling when the permission check of the execution environment refuses a command that downloads or runs rhwp (tag lookup, download, clone, build, run). When a denial occurs, stop obtaining rhwp at that point. Then ask the user whether to allow downloading and running rhwp. Before the answer, do not obtain option 3 or start work from step 2 onward
+    + (Judgment) A permission denial is a refusal response from the execution environment without the command running. A 403, a connection error, or a repository access denial after the command ran is a network failure and follows the option order rule above
+    + (Why ask) Only the user's permission lifts a permission denial. Moving to option 3 without asking takes away the user's chance to allow it
+    + (What stops) Also stop trying to get the same rhwp code through another route (option 2 source build, another download tool). Input conversion unrelated to rhwp (Markdown conversion, image extraction) continues
+    + (What to present) Present the refused command, the rhwp repository (https://github.com/edwardkim/rhwp), and the commands that run once allowed (release download, clone and build if needed, running rhwp). A question that names the source and the commands makes the scope of the user's permission clear
+    + (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the conversion test with option 3 without option 2. If the same command is refused again after the user allowed it, continue with option 3. Record this in the completion report
 - If every option fails, tell the user and use Markdown only
 
 ## Reusing source images
