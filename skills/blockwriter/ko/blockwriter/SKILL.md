@@ -54,6 +54,11 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     5. HWPX 렌더러 확보와 순위별 렌더 시험(references/renderers.md의 HWPX 렌더러 확보 순서 절)
     6. 1단계 기획안 질문
 - HWPX 렌더러 확보가 2순위(소스 빌드)로 넘어가면 빌드를 세션과 분리된 백그라운드 프로세스로 실행하고 빌드 중에 1단계 기획안 질문을 진행. HWPX를 산출하는 작업은 3단계 조판 전에 HWPX 렌더 시험 통과를 확인. 빌드가 그때까지 끝나지 않으면 3순위로 렌더 시험 통과를 먼저 확보하고 빌드 완료 후 rhwp로 렌더 시험을 다시 수행
+- (rhwp 권한 거부) 실행 환경의 권한 검사가 rhwp를 받거나 실행하는 명령을 거부하면 네트워크 실패와 구별하여 처리. 판정 기준은 references/renderers.md의 권한 거부 처리
+    - 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도는 중단
+    - HWPX 렌더 시험은 3순위(LibreOffice와 H2Orestart)로 진행
+    - 기획안 질문 턴에 거부 사실과 함께 rhwp 내려받기와 실행의 허용 여부를 질문
+    - 유저가 허용하면 1순위부터 다시 확보
 
 ## 명령
 

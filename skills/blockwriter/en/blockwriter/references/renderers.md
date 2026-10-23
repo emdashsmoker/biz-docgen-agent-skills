@@ -10,11 +10,22 @@ Two parts come from GitHub: rhwp (owner `edwardkim`, repository name `rhwp`) and
 
 ## Order for obtaining an HWPX renderer
 
-The rhwp release binary is first, an rhwp source build is second, and LibreOffice with H2Orestart is third. Move to the next option only after actually running the previous procedure and failing.
+The rhwp release binary is first, an rhwp source build is second, and LibreOffice with H2Orestart is third. Move to the next option only after actually running the previous procedure and failing. A permission denial by the execution environment follows Permission denial handling below.
 
 Run a render test right after obtaining a renderer at any rank. After font preparation (`fonts --setup`), put a one-line manuscript reading `안녕하세요!` in a temporary folder outside the output folder and typeset it with `build test.md render-test.hwpx --profile flat`. Then render it with `render render-test.hwpx --engine rhwp` (`--engine soffice` for the third rank) and open the page PNG (the PDF when poppler is missing) to check that `안녕하세요!` is visible. rhwp writes a PDF without the text when the document's fonts are missing, and render still reports success, so a produced PDF alone is not a pass. If the page is blank, check the fonts with `fonts` first. If the page stays blank with the fonts in place, count that rank as failed even though the renderer was obtained, and move to the next rank. Catching renderer problems before writing keeps the review step from breaking off the work.
 
 Depending on the environment, GitHub's web page paths (`releases/latest`, `releases/expanded_assets`, `api.github.com`) may return 403 while the file delivery path (`releases/download/<tag>/<file name>`) and the git protocol still work. Option 1 counts as failed when step 4 (file download) fails.
+
+Permission denial handling
+
+The permission check of the execution environment (tool approval, automatic approval decisions, and similar) can refuse a command that downloads or runs outside code before the command runs. Such a refusal signals that the execution environment wants the user's confirmation, so the user decides whether to allow it.
+
+- (Judgment) A permission denial is a refusal response from the execution environment without the command running. A 403, a connection error, or a repository access denial after the command ran is a network failure and follows the option order rule above
+- (Commands covered) rhwp tag lookup, download, clone, build, and run commands
+- (Stop retrying) Stop trying to get the same rhwp code through another route. Other routes include the option 2 source build and other download tools
+- (Render test) Run the render test with option 3 directly, without option 2
+- (User question) In the planning question turn, report the refused command and ask whether to allow downloading and running rhwp
+- (Obtain again) If the user allows it, obtain rhwp again from option 1
 
 Option 1 rhwp release binary (https://github.com/edwardkim/rhwp)
 
@@ -46,7 +57,7 @@ Some environments block release file downloads with 403 or repository access den
 
 Option 3 LibreOffice and H2Orestart
 
-Use this only when options 1 and 2 both fail, and state the fallback reason (the failed step of each option) in the final report.
+Use this when options 1 and 2 both fail or when Permission denial handling applies. State the fallback reason (the failed step of each option or the refused command) in the final report.
 
 1. On Debian-based systems, run `apt-get update`, then `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
 2. On other operating systems, install the official LibreOffice distribution and register the H2Orestart extension (https://extensions.libreoffice.org/en/extensions/show/27504) with the Extension Manager or `unopkg add`

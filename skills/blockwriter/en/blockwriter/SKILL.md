@@ -58,6 +58,11 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     5. Obtain the HWPX renderer and run the render test at each option (references/renderers.md, Order for obtaining an HWPX renderer)
     6. Ask the planning questions of step 1
 - If obtaining the HWPX renderer moves to option 2 (source build), run the build as a background process detached from the session and ask the planning questions of step 1 while it builds. For HWPX output, confirm that the HWPX render test passes before the typesetting of step 3. If the build has not finished by then, first pass the render test with option 3, and run the render test again with rhwp after the build finishes
+- (rhwp permission denial) If the permission check of the execution environment refuses a command that downloads or runs rhwp, handle it apart from a network failure. The criteria are in references/renderers.md, Permission denial handling
+    - Stop trying to get the same rhwp code through another route (option 2 source build, another download tool)
+    - Run the HWPX render test with option 3 (LibreOffice with H2Orestart)
+    - In the planning question turn, report the denial and ask whether to allow downloading and running rhwp
+    - If the user allows it, obtain rhwp again from option 1
 
 ## Commands
 
