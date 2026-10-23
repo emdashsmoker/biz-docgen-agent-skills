@@ -46,6 +46,15 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
 - Review rendering needs a renderer. For HWPX obtain one in this order: rhwp release binary, rhwp source build, LibreOffice with H2Orestart. DOCX uses LibreOffice. The procedure is in references/renderers.md
 - Page PNGs and TOC page numbers need poppler-utils (pdftoppm, pdftotext). Without them render produces only the PDF and build leaves TOC page numbers empty
 - The built-in forms use 나눔고딕 (NanumGothic), with 나눔바른고딕 (NanumBarunGothic) only for flat headings. For both fonts, only the NAVER release has Hanja. Check installation and Hanja coverage with `fonts` and set up downloads and substitute fonts with `fonts --setup`. The font policy is in references/renderers.md
+- The start order below is fixed for work that produces a document. Obtaining the renderers and running the render tests come before the planning questions of step 1. Work that only produces a manuscript (export, docx2md, xlsx2md) only installs the dependencies
+    - The review in step 4 is where the working context is fullest with the manuscript and typesetting results. Obtaining a renderer at that point fails more often because attempts get cut short and are given up early. Obtaining and testing at the start leaves time to resolve the causes of failure
+    1. Install the dependencies (the pip command above)
+    2. Install LibreOffice, the Nanum fonts (fonts-nanum), and poppler-utils (references/renderers.md, DOCX renderer). Installing the Nanum fonts from the operating system package first keeps item 3 from downloading a release without Hanja
+    3. Prepare the fonts (`fonts --setup`)
+    4. Run the DOCX render test (references/renderers.md, DOCX renderer)
+    5. Obtain the HWPX renderer and run the render test at each option (references/renderers.md, Order for obtaining an HWPX renderer)
+    6. Ask the planning questions of step 1
+- If obtaining the HWPX renderer moves to option 2 (source build), run the build as a background process detached from the session and ask the planning questions of step 1 while it builds. For HWPX output, confirm that the HWPX render test passes before the typesetting of step 3. If the build has not finished by then, first pass the render test with option 3, and run the render test again with rhwp after the build finishes
 
 ## Commands
 
@@ -108,12 +117,14 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the TOC depth (chapter, section, subsection), the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
+    - (Render test results) Report the render test result of each format (engine, pass or fail) in one line with the questions. If a source build is running, add its progress to the same line. For a format without a renderer, also state that its rendering review is skipped and why
 2. (Manuscript) Write the Markdown manuscript with the level rules below and the writing rules in references/manuscript.md
 3. (Typesetting) Run build and act on each output line prefix
     - (`LINT:`) A manuscript defect. Fix the manuscript and run build again
     - (`HITL:`) A typesetting choice for the user (page breaks, long tables). build prints it only when `--page-break` or `--long-table` is not given, so pass the items decided in step 1 as options
     - (`WARN:`) A typesetting warning such as a missing style or a missing image
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
+    - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line (references/manuscript.md) to the manuscript and build again. Run the first build without column width lines
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
