@@ -230,7 +230,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - 3순위는 LibreOffice와 H2Orestart. Debian 계열 기준으로 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart fonts-nanum poppler-utils`. 이후 `render --engine soffice`
 - rhwp 권한 거부는 실행 환경의 권한 검사가 rhwp를 받거나 실행하는 명령(태그 조회, 내려받기, 클론, 빌드, 실행)을 거부한 경우. 거부가 나오면 rhwp 확보를 그 자리에서 멈춤. 이어서 유저에게 rhwp 내려받기와 실행의 허용 여부를 질의. 답을 받기 전에는 3순위 확보, `selftest`, 1단계 이후 작업을 진행하지 않음
     + (판정) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령 실행 뒤의 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
-    + (질의 이유) 권한 거부는 유저의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 유저가 허용할 기회가 사라짐. rhwp와 H2Orestart는 장단점이 서로 다른 렌더러(렌더링 검수 절)
+    + (질의 이유) 권한 거부는 유저의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 유저가 허용할 기회가 사라짐
     + (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp와 무관한 착수 순서 항목(`init`, `rfp` 변환)은 계속 진행
     + (질의 시점) 착수 순서 2번의 거부는 착수 질의 목록의 맨 앞 항목으로 질의. 이후 단계의 거부는 거부 시점에 질의
     + (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 `selftest` 진행
