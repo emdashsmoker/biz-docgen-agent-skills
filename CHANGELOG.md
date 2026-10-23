@@ -27,6 +27,15 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-23
+
+### blockwriter
+- Changed the start of document work to obtain the HWPX and DOCX renderers and run their render tests before the planning questions (#35)
+- Added a test that renders a one-line DOCX sample after LibreOffice is installed (#35)
+
+* 기획안 질문 전 HWPX 및 DOCX 렌더러의 확보와 렌더 시험을 마치도록 착수 순서 변경 (#35)
+* LibreOffice 설치 후 한 줄 분량 DOCX 예시로 렌더링을 확인하는 시험 추가 (#35)
+
 ## 2026-10-22
 
 ### Common
