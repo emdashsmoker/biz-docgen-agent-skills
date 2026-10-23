@@ -268,7 +268,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Why ask) Only the user's permission lifts a permission denial. Moving to option 3 without asking takes away the user's chance to allow it
     + (What stops) Also stop trying to get the same rhwp code through another route (option 2 source build, another download tool). Input conversion unrelated to rhwp (Markdown conversion, image extraction) continues
     + (What to present) Present the refused command, the rhwp repository (https://github.com/edwardkim/rhwp), and the commands that run once allowed (release download, clone and build if needed, running rhwp). A question that names the source and the commands makes the scope of the user's permission clear
-    + (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the conversion test with option 3 without option 2. If the same command is refused again after the user allowed it, continue with option 3. Record this in the completion report
+    + (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the conversion test with option 3 without option 2
 - If every option fails, tell the user and use Markdown only
 
 ## Reusing source images

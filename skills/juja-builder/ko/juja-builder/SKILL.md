@@ -233,7 +233,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (질의 이유) 권한 거부는 유저의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 유저가 허용할 기회가 사라짐. 3순위의 H2Orestart는 캡션을 그리지 않는 사례가 있음(렌더링 검수 절)
     + (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp와 무관한 착수 순서 항목(`init`, `rfp` 변환)은 계속 진행
     + (질의 시점) 착수 순서 2번의 거부는 착수 질의 목록의 맨 앞 항목으로 질의. 이후 단계의 거부는 거부 시점에 질의
-    + (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 `selftest` 진행. 허용 후에도 같은 명령이 거부되면 3순위로 진행. 이 사실은 최종 보고에 기재
+    + (답에 따른 진행) 허용하면 1순위부터 다시 확보. 허용하지 않거나 답이 없으면 2순위 없이 3순위로 `selftest` 진행
 - 세 경로가 모두 실패하면 render를 생략. 생략 사실과 사유는 착수 질의 턴에 유저에게 고지. 최종 보고에도 같은 내용을 기재
 - 발표자료 변환 경로의 pptx 입력은 LibreOffice(`soffice`)로 PDF 변환. 설치는 `apt-get install -y --no-install-recommends libreoffice-impress fonts-nanum fonts-noto-cjk`. 한글 글꼴이 없으면 변환본의 줄바꿈과 도식 배치가 원본과 달라짐. pdf 입력은 LibreOffice 없이 처리
 - 렌더링 검수에는 나눔 글꼴이 필요. Debian 계열은 `apt-get install -y --no-install-recommends fonts-nanum`. 글꼴이 없으면 근사 렌더러가 대체 글꼴을 사용. 이 경우 글자 폭과 줄바꿈이 납품본과 달라짐

@@ -24,7 +24,7 @@ The permission check of the execution environment (tool approval, automatic appr
 - (Commands covered) rhwp tag lookup, download, clone, build, and run commands
 - (Stop retrying) Stop trying to get the same rhwp code through another route. Other routes include the option 2 source build and other download tools
 - (User question) When a denial occurs, stop obtaining rhwp. Then ask the user whether to allow downloading and running rhwp. Do not move on to option 3 before the answer. When to ask and what to present follow rhwp permission denial in the Setup section of SKILL.md and the rhwp permission item of step 1
-- (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2. If the same command is refused again after the user allowed it, continue with option 3
+- (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2
 
 Option 1 rhwp release binary (https://github.com/edwardkim/rhwp)
 

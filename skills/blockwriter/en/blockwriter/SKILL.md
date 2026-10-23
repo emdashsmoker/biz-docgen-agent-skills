@@ -62,7 +62,7 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     - (Why ask) Only the user's permission lifts a permission denial. Moving to option 3 without asking takes away the user's chance to allow it. The HWPX review then stays on H2Orestart, which has cases of not drawing captions, footnote bodies, and footer page numbers
     - (What stops) Also stop trying to get the same rhwp code through another route (option 2 source build, another download tool). Setup items unrelated to rhwp continue
     - (When to ask) For a denial at item 5 of the start order, put the question first in the planning questions of step 1. Even when the planning questions are skipped (run immediately, or the request answers every item), send the permission question on its own. For a denial at a later step, ask when it occurs
-    - (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2. If the same command is refused again after the user allowed it, continue with option 3. State this in the final report
+    - (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2
 
 ## Commands
 
