@@ -39,7 +39,10 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
 - 최신 버전 설치를 먼저 시도하고 설치된 최신 버전으로 작업
 - 최신 API 변경으로 스크립트가 실패하면 스크립트를 최신 API에 맞게 수정
 - 버전 고정은 수정할 수 없을 때의 마지막 수단. 고정하면 사유를 최종 보고에 기재
-- 검수 렌더링에는 렌더러가 필요. HWPX는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice와 H2Orestart 순으로 확보하고 DOCX는 LibreOffice를 사용. 확보 절차는 references/renderers.md
+- 검수 렌더링에는 렌더러가 필요. HWPX는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice와 H2Orestart 순으로 확보하고 DOCX는 LibreOffice를 사용. 확보 절차(태그 판정, 자산 선택, 명령 체계 확인)는 references/renderers.md
+    - (rhwp 출처) 1순위와 2순위는 rhwp 저장소(https://github.com/edwardkim/rhwp)의 릴리스와 소스를 사용
+    - (1순위 릴리스 바이너리) `https://github.com/edwardkim/rhwp/releases/download/<태그>/<파일명>`의 자산을 `curl -fL`로 수신. SHA256SUMS.txt가 있으면 `sha256sum -c`로 대조. 압축 해제 후 실행 파일에 실행 권한을 부여하여 scripts/rhwp/에 배치
+    - (2순위 소스 빌드) rhwp 저장소를 `git clone`으로 받아 소스에서 빌드
 - 쪽 PNG 생성과 목차 쪽번호 산정에는 poppler-utils(pdftoppm, pdftotext)가 필요. 없으면 render는 PDF까지만 산출하고 build는 목차 쪽번호를 비워 둠
 - 내장 양식 글꼴은 나눔고딕이며 flat 제목만 나눔바른고딕. 두 글꼴 모두 한자는 네이버 배포본에만 있음. `fonts`로 설치 상태와 한자 포함 여부를 확인하고 `fonts --setup`으로 내려받기와 대체 글꼴을 설정. 글꼴 정책은 references/renderers.md
 - 문서를 산출하는 작업의 착수 순서는 아래로 고정. 렌더러 확보와 렌더 시험은 1단계 기획안 질문보다 먼저 수행. 원고만 만드는 작업(export, docx2md, xlsx2md)은 의존성 설치만 수행
