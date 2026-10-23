@@ -2,6 +2,8 @@
 
 스킬은 렌더러와 글꼴을 포함하지 않으며 실행 환경에 설치된 렌더러와 글꼴을 찾아 쓴다.
 
+렌더러 확보와 렌더 시험의 시점은 SKILL.md 준비 절의 착수 순서를 따른다(기획안 질문 전).
+
 GitHub에서 받는 요소는 rhwp(소유자 `edwardkim`, 저장소 이름 `rhwp`)와 `fonts --setup`의 대체 글꼴(소유자 `google`, 저장소 이름 `fonts`)이다. 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 각 요소의 첫 GitHub 접근 전에 해당 저장소로 호출한다. 소유자와 저장소 이름은 각각 따로 전달한다. 도구 응답이 안내하는 접근 경로는 이후 절차에 반영한다. 도구가 없거나 호출이 거부되면 이 단계를 건너뛴다.
 
 ## HWPX 렌더러 확보 순서
@@ -49,13 +51,15 @@ rhwp는 명령 체계와 배포 방식이 자주 바뀌는 프로젝트이므로
 3. `unopkg list --shared`(또는 `unopkg list`)에서 H2Orestart 등록 확인
 4. `render 문서.hwpx --engine soffice`로 변환. render는 전용 사용자 프로필과 ASCII 임시 파일명을 자동 적용
 
-- 세 순위 모두 실패하면 render와 `check --expect`를 생략하고 최종 보고에 사유 기재
+- 세 순위 모두 실패하면 render와 `check --expect`를 생략. 생략 사실과 사유를 기획안 질문 턴에 고지하고 최종 보고에도 기재
 - 변환 실패는 문서 결함 신호일 수 있으므로 check 결과와 교차 확인
 - H2Orestart는 rhwp보다 엄격하여 요소 순서와 참조 ID 결함을 추가로 드러냄
 
 ## DOCX 렌더러
 
 - DOCX는 항상 LibreOffice로 렌더링. 설치는 위 3순위 1-2단계에서 H2Orestart를 제외한 구성
+- LibreOffice 설치와 글꼴 준비(`fonts --setup`)를 마친 뒤 렌더 시험을 수행. HWPX 렌더 시험과 같은 `안녕하세요!` 한 줄 원고를 산출 폴더 밖의 임시 폴더에 두고 `build 시험.md 렌더시험.docx --profile flat`으로 조판. 이어서 `render 렌더시험.docx --outdir <임시 폴더>/docx`로 렌더하고 쪽 PNG(poppler가 없으면 PDF)에서 `안녕하세요!`가 보이는지 확인. `--outdir`를 따로 지정하는 이유는 HWPX 렌더 시험과 PDF 이름이 겹치기 때문
+- 글자가 보이지 않으면 `fonts`로 글꼴 상태를 확인. 해결하지 못하면 DOCX 렌더 검수를 생략하고 생략 사실과 사유를 기획안 질문 턴에 고지
 - LibreOffice 파이썬 연동(uno)이 있으면 문서를 연 뒤 목차와 필드를 갱신하고 PDF로 저장. 현재 파이썬, LibreOffice 동봉 파이썬, /usr/bin/python3 순으로 uno를 찾음
 - uno가 없으면 필드 갱신 없이 변환하고 경고. 이때 목차는 문서에 저장된 값으로 보임
 - pdftoppm(poppler-utils)이 없으면 render는 PDF까지만 산출

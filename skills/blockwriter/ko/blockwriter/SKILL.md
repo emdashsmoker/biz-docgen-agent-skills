@@ -42,6 +42,15 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
 - 검수 렌더링에는 렌더러가 필요. HWPX는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice와 H2Orestart 순으로 확보하고 DOCX는 LibreOffice를 사용. 확보 절차는 references/renderers.md
 - 쪽 PNG 생성과 목차 쪽번호 산정에는 poppler-utils(pdftoppm, pdftotext)가 필요. 없으면 render는 PDF까지만 산출하고 build는 목차 쪽번호를 비워 둠
 - 내장 양식 글꼴은 나눔고딕이며 flat 제목만 나눔바른고딕. 두 글꼴 모두 한자는 네이버 배포본에만 있음. `fonts`로 설치 상태와 한자 포함 여부를 확인하고 `fonts --setup`으로 내려받기와 대체 글꼴을 설정. 글꼴 정책은 references/renderers.md
+- 문서를 산출하는 작업의 착수 순서는 아래로 고정. 렌더러 확보와 렌더 시험은 1단계 기획안 질문보다 먼저 수행. 원고만 만드는 작업(export, docx2md, xlsx2md)은 의존성 설치만 수행
+    - 4단계 검수는 원고와 조판 결과로 작업 문맥(컨텍스트)이 가장 찬 구간. 이 시점의 렌더러 확보는 시도 축소와 조기 포기로 실패율이 높음. 착수 시점의 확보와 시험은 실패 원인을 해결할 시간을 남김
+    1. 의존성 설치(위 pip 명령)
+    2. LibreOffice, 나눔 글꼴(fonts-nanum), poppler-utils 설치(references/renderers.md의 DOCX 렌더러 절). 나눔 글꼴을 운영체제 패키지로 먼저 설치하면 3번이 한자 없는 배포본을 내려받지 않음
+    3. 글꼴 준비(`fonts --setup`)
+    4. DOCX 렌더 시험(references/renderers.md의 DOCX 렌더러 절)
+    5. HWPX 렌더러 확보와 순위별 렌더 시험(references/renderers.md의 HWPX 렌더러 확보 순서 절)
+    6. 1단계 기획안 질문
+- HWPX 렌더러 확보가 2순위(소스 빌드)로 넘어가면 빌드를 세션과 분리된 백그라운드 프로세스로 실행하고 빌드 중에 1단계 기획안 질문을 진행. HWPX를 산출하는 작업은 3단계 조판 전에 HWPX 렌더 시험 통과를 확인. 빌드가 그때까지 끝나지 않으면 3순위로 렌더 시험 통과를 먼저 확보하고 빌드 완료 후 rhwp로 렌더 시험을 다시 수행
 
 ## 명령
 
@@ -104,12 +113,14 @@ check의 `--expect` 값은 rhwp verify의 기대 조건 인자로 그대로 전�
     - (유저 양식의 스타일 부재) build가 `WARN:`으로 프로파일에 없는 스타일을 알리면 가까운 스타일 파생, 양식에 스타일 추가, 기존 계위 흡수 중 택일
     - (선택 요소) 쪽번호, 목차, 표지, 머리말은 기본 OFF이므로 필요 여부를 질문. 목차는 깊이(장, 절, 소절), 표지는 제목, 부제, 일자, 기관, 머리말은 문구를 함께 질문. 머리말 정렬은 유저가 따로 요청할 때만 우측에서 변경
     - (문서 언어와 라벨) 기본은 한국어 라벨. 유저가 다른 언어 문서를 원하면 그 언어의 라벨 파일(references/layout.md의 라벨 절)을 만들어 `--labels`로 지정
+    - (렌더 시험 결과) 질문과 함께 형식별 렌더 시험 결과(엔진, 통과 여부)를 1줄로 보고. 소스 빌드를 진행 중이면 진행 상태를 같은 줄에 기재. 렌더러를 확보하지 못한 형식은 렌더 검수 생략 사실과 사유를 함께 고지
 2. (원고) 아래 계위 규범과 references/manuscript.md의 작성 규칙으로 Markdown 원고 작성
 3. (조판) build를 실행하고 출력 줄 머리에 따라 조치
     - (`LINT:`) 원고 결함. 원고를 고친 뒤 재실행
     - (`HITL:`) 유저가 고를 조판 선택지(쪽 나눔, 장표). build는 `--page-break`, `--long-table`을 지정하지 않은 경우에만 출력하므로 1단계에서 정한 항목은 옵션으로 지정하여 실행
     - (`WARN:`) 스타일 부재, 이미지 없음 등 조판 경고
 4. (검수) check로 구조를 검증하고 render로 만든 쪽 PNG를 열람하여 references/layout.md의 검수 항목 점검과 자유 검수 수행. 검수 PDF와 PNG는 `--outdir`로 납품 폴더 밖에 저장
+    - (렌더러) 착수 시점에 확보한 렌더러를 사용. 실행 환경이 바뀌어 render가 렌더러 부재로 실패하면 준비 절의 착수 순서 2-5번을 다시 수행한 뒤 render를 재실행
     - (열 폭 결함) 자동 산정 열 폭의 결함을 렌더 PNG에서 확인한 표만 원고에 열 폭 줄(references/manuscript.md)을 추가하여 재조판. 첫 조판은 열 폭 줄 없이 수행
     - (PDF 동봉) 1단계에서 동봉을 고른 경우 마지막 render가 만든 PDF를 문서와 같은 폴더에 복사하여 함께 전달
 5. (보고) 아래 항목을 유저에게 전달

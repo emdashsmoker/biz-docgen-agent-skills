@@ -4,6 +4,8 @@
 
 The skill does not bundle renderers or fonts. It locates and uses the renderers and fonts installed in the execution environment.
 
+The timing of obtaining renderers and running render tests follows the start order in the Setup section of SKILL.md (before the planning questions).
+
 Two parts come from GitHub: rhwp (owner `edwardkim`, repository name `rhwp`) and the fallback fonts of `fonts --setup` (owner `google`, repository name `fonts`). If the execution environment has a tool that attaches a GitHub repository to the session, call it with the matching repository before each part's first GitHub access. Pass the owner and the repository name as separate values. Apply any access route the tool's reply names to the later steps. Skip this step when no such tool exists or the call is refused.
 
 ## Order for obtaining an HWPX renderer
@@ -51,13 +53,15 @@ Use this only when options 1 and 2 both fail, and state the fallback reason (the
 3. Confirm that H2Orestart is registered in `unopkg list --shared` (or `unopkg list`)
 4. Convert with `render document.hwpx --engine soffice`. render applies a dedicated user profile and an ASCII temporary file name automatically
 
-- If all three options fail, skip render and `check --expect` and state the reason in the final report
+- If all three options fail, skip render and `check --expect`. State this and the reason in the planning question turn and again in the final report
 - A conversion failure can signal a document defect, so cross-check it with the check results
 - H2Orestart is stricter than rhwp and also exposes element order and reference ID defects
 
 ## DOCX renderer
 
 - DOCX is always rendered with LibreOffice. Install it as in option 3 steps 1-2 without H2Orestart
+- Run a render test after installing LibreOffice and preparing the fonts (`fonts --setup`). Put the same one-line `안녕하세요!` manuscript as the HWPX render test in a temporary folder outside the output folder and typeset it with `build test.md render-test.docx --profile flat`. Then render it with `render render-test.docx --outdir <temporary folder>/docx` and check that `안녕하세요!` is visible in the page PNG (the PDF when poppler is missing). The separate `--outdir` keeps its PDF name from clashing with the HWPX render test
+- If the text is not visible, check the fonts with `fonts`. If the problem cannot be solved, skip the DOCX rendering review and state this and the reason in the planning question turn
 - If the LibreOffice Python bridge (uno) is available, render opens the document, updates the TOC and fields, and saves it as PDF. uno is searched in the current Python, the Python bundled with LibreOffice, and /usr/bin/python3 in that order
 - Without uno, render converts the document without updating fields and prints a warning. The TOC then shows the values stored in the document
 - Without pdftoppm (poppler-utils), render produces only the PDF
