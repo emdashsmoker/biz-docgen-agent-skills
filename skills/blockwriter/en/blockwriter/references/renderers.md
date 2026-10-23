@@ -23,9 +23,8 @@ The permission check of the execution environment (tool approval, automatic appr
 - (Judgment) A permission denial is a refusal response from the execution environment without the command running. A 403, a connection error, or a repository access denial after the command ran is a network failure and follows the option order rule above
 - (Commands covered) rhwp tag lookup, download, clone, build, and run commands
 - (Stop retrying) Stop trying to get the same rhwp code through another route. Other routes include the option 2 source build and other download tools
-- (Render test) Run the render test with option 3 directly, without option 2
-- (User question) In the planning question turn, report the refused command and ask whether to allow downloading and running rhwp
-- (Obtain again) If the user allows it, obtain rhwp again from option 1
+- (User question) When a denial occurs, stop obtaining rhwp. Then ask the user whether to allow downloading and running rhwp. Do not move on to option 3 before the answer. When to ask and what to present follow rhwp permission denial in the Setup section of SKILL.md and the rhwp permission item of step 1
+- (After the answer) If the user allows it, obtain rhwp again from option 1. If the user does not allow it or does not answer, run the render test with option 3 without option 2. If the same command is refused again after the user allowed it, continue with option 3
 
 Option 1 rhwp release binary (https://github.com/edwardkim/rhwp)
 
@@ -57,7 +56,7 @@ Some environments block release file downloads with 403 or repository access den
 
 Option 3 LibreOffice and H2Orestart
 
-Use this when options 1 and 2 both fail or when Permission denial handling applies. State the fallback reason (the failed step of each option or the refused command) in the final report.
+Use this when options 1 and 2 both fail or when Permission denial handling points to option 3. State the fallback reason (the failed step of each option or the refused command) in the final report.
 
 1. On Debian-based systems, run `apt-get update`, then `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
 2. On other operating systems, install the official LibreOffice distribution and register the H2Orestart extension (https://extensions.libreoffice.org/en/extensions/show/27504) with the Extension Manager or `unopkg add`
