@@ -32,9 +32,13 @@ Changelog rules
 ### blockwriter
 - Changed the start of document work to obtain the HWPX and DOCX renderers and run their render tests before the planning questions (#35)
 - Added a test that renders a one-line DOCX sample after LibreOffice is installed (#35)
+- Added the rhwp repository address and its download and source build commands to the HWPX renderer item of SKILL.md (#36)
+- Added a procedure for rhwp commands refused by a permission check: stop other download routes, test rendering with LibreOffice and H2Orestart, and ask in the planning questions whether to allow rhwp (#36)
 
 * 기획안 질문 전 HWPX 및 DOCX 렌더러의 확보와 렌더 시험을 마치도록 착수 순서 변경 (#35)
 * LibreOffice 설치 후 한 줄 분량 DOCX 예시로 렌더링을 확인하는 시험 추가 (#35)
+* SKILL.md의 HWPX 렌더러 항목에 rhwp 저장소 주소와 내려받기 및 소스 빌드 명령 추가 (#36)
+* rhwp 명령의 권한 거부 시 다른 수신 경로의 중단, LibreOffice와 H2Orestart 렌더 시험, 기획안 질문의 rhwp 허용 질의로 이어지는 처리 절차 추가 (#36)
 
 ## 2026-10-22
 
