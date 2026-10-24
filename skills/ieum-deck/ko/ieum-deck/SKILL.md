@@ -212,7 +212,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - hwpx 의 PDF 변환기 확보 순서는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice H2Orestart 확장
 - 앞 순위의 확보를 실제로 시도하여 실패한 경우에만 다음 순위로 이동 (실행 환경의 권한 거부는 아래 rhwp 권한 거부 항목)
 - (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 python-hwpx 로 `안녕하세요!` 한 줄짜리 hwpx 를 작업 폴더 밖의 임시 폴더에 만들어 변환을 시험
-    + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (글꼴은 juja-builder, blockwriter 와 같은 방식으로 헤더의 글꼴 이름을 나눔고딕으로 지정. 나눔고딕은 설치 의존성 fonts-nanum 에 포함)
+    + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (헤더의 글꼴 이름은 나눔고딕으로 지정. 나눔고딕은 설치 의존성 fonts-nanum 에 포함)
     + 변환은 `parse_input.py 변환시험.hwpx <임시 폴더>/출력.md --pdf` 로 실행하고 PDF 의 Producer 값으로 그 순위의 변환기가 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
     + PDF 쪽을 pdftoppm 으로 이미지로 바꿔 `안녕하세요!` 가 보이는지 확인. rhwp 는 문서 글꼴이 없으면 빈 쪽 PDF 를 만들므로 PDF 생성만으로는 판정하지 않음
     + 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동
