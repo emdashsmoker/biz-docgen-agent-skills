@@ -27,6 +27,18 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-25
+
+### blockwriter
+- Removed the description instruction that preferred blockwriter over a general docx skill for report-style Word documents (#41)
+
+* 보고서형 Word 문서에서 일반 docx 스킬보다 blockwriter를 우선하도록 한 description 지시 삭제 (#41)
+
+### ieum-deck
+- Removed the reference to juja-builder and blockwriter from the font setting of the hwpx conversion test (#41)
+
+* hwpx 변환 시험의 글꼴 지정 안내에서 juja-builder와 blockwriter 참조 삭제 (#41)
+
 ## 2026-10-23
 
 ### blockwriter
