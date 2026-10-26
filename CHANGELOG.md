@@ -33,10 +33,18 @@ Changelog rules
 - Added kickoff question 16 that sets the line break unit (`meta.lineBreak`), with word-level breaking as the default and character-level breaking as the opt-out (#43)
 - Added a finalize.py check that fails when slide paragraphs lack the line break unit, because LibreOffice review images cannot show PowerPoint line breaks (#43)
 - Fixed the missing latinLnBrk attribute so that PowerPoint keeps English words whole at line ends along with Korean words (#43)
+- Changed the proposal strategy format so that strategy pillars derive from a task trait, risk, strategy and value table while differentiation points feed only the features tiles, with a slot mapping, a duty removal test and a self-check in strategy.md (#45)
+- Added a rule that the strategy slide carries only the measure and the positive form of the value, keeping risk wording in 00_strategy.md (#45)
+- Added the duty removal question to the distinctiveness row of the deep review (#45)
+- Changed the S07 strategy sample to three output design principles with pillar items that fit one line (#45)
 
 * 단어 단위 기본값과 글자 단위 선택지를 갖춘 줄바꿈 단위 착수 질의 16번(`meta.lineBreak`) 추가 (#43)
 * LibreOffice 검수 이미지로 확인할 수 없는 PowerPoint 줄바꿈 단위의 미기록 문단 검사를 finalize.py에 추가 (#43)
 * PowerPoint에서 한글 어절과 함께 영문 단어를 줄 끝에서 나누지 않기 위한 latinLnBrk 속성 누락 수정 (#43)
+* 과업 특성, 위험 요인, 추진전략, 확보하는 가치의 도출 표에서 전략 기둥을 도출하고 차별화 포인트는 특징 타일만 공급하도록 슬롯 대응, 의무 삭제 시험, 자체 점검을 갖춘 제안전략 양식 변경 (#45)
+* 위험 어휘를 00_strategy.md 에 남기고 슬라이드에는 수단과 가치의 긍정형만 올리는 규칙 추가 (#45)
+* 심층 검토 변별력 항목에 의무 삭제 시험 질문 추가 (#45)
+* S07 추진전략 견본을 결과물 설계 원칙 3개와 1줄 분량 기둥 항목으로 변경 (#45)
 
 ## 2026-10-25
 
