@@ -101,6 +101,8 @@
 | strategies[].result | Positive form of the value secured (the risk removed is not written) | Value column of the derivation table |
 | conclusion | A sentence that bundles the values to qualify the output (e.g. "an evaluation indicator system with acceptance, validity and readiness to start") | Value column of the derivation table |
 
+- Write each pillar item to fit one line of the pillar width (about 16 Korean characters at 16:9)
+    + The build distributes the spare height as item spacing, so only a pillar with a two-line item gets tighter spacing
 - The headline substitutes the strategy names into the strategy pattern in `references/headline-patterns.md`
 - When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body and place a supporting table as the Sample
     + The supporting table is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table)
