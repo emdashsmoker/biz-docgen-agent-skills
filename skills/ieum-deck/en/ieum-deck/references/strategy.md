@@ -73,7 +73,11 @@
 
 - Strategies are derived from why this task is hard (one row per strategy, 2-4 rows)
 - Strategies derived from the problem in the background end up as the module list under strategy names
-- The derivation table stays in 00_strategy.md only (the slide carries only the strategy and value columns)
+- The derivation table stays in 00_strategy.md only (the writer's internal reasoning)
+- The slide carries only the measure from the strategy column and the positive form of the value column
+    + Words that expose a risk (risk, remove, prevent, omission, distrust, rejection, shelving) do not go on the slide
+    + When a risk points at the contracting agency's organization or its current institution, the slide states only the measure and the value (respect for the contracting agency)
+    + (Rewrite example) The derivation table's "현장 거부를 해소하는 수용성" becomes "부서가 수용하는 지표" on the slide
 
 | Task trait | Risk | Strategy | Value secured |
 |---|---|---|---|
@@ -94,7 +98,7 @@
 | goal | Final goal (same wording as the goal and scope slide) | 00_rfp.md basic conditions |
 | strategies[].title | Strategy name. Name the measure in the task's language (module names and activity names are excluded) | Strategy column of the derivation table |
 | strategies[].items | 4-5 design details of the measure (target, composition criterion, timing, tool, judgment criterion) | Strategy column of the derivation table |
-| strategies[].result | Value secured (paired with the risk removed) | Value column of the derivation table |
+| strategies[].result | Positive form of the value secured (the risk removed is not written) | Value column of the derivation table |
 | conclusion | A sentence that bundles the values to qualify the output (e.g. "an evaluation indicator system with acceptance, validity and readiness to start") | Value column of the derivation table |
 
 - The headline substitutes the strategy names into the strategy pattern in `references/headline-patterns.md`
@@ -107,7 +111,8 @@
 - Every risk has a pillar that answers it
 - Pillar titles and items do not repeat module names or activity names (diagnosis, survey, advisory committee operation)
 - A measure remains in the strategy column after removing RFP task items and statutory duties
-- No result declares a completion date, and no result is a value word without its paired risk
+- Every value in the derivation table is paired with the risk it removes
+- No pillar title, item or result exposes a risk or declares a completion date
 - Every differentiation point has a capability tile, and no tile carries a strength absent from the table
 
 ## Competitor search
