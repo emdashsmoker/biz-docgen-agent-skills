@@ -74,9 +74,9 @@
 - Strategies are derived from why this task is hard (one row per strategy, 2-4 rows)
 - Strategies derived from the problem in the background end up as the module list under strategy names
 - The derivation table stays in 00_strategy.md only (the writer's internal reasoning)
-- The slide carries only the measure from the strategy column and the positive form of the value column
-    + Words that expose a risk (risk, remove, prevent, omission, distrust, rejection, shelving) do not go on the slide
-    + When a risk points at the contracting agency's organization or its current institution, the slide states only the measure and the value (respect for the contracting agency)
+- Write pillar titles, items and results as the positive form of the measure and the value
+    + Every phrase on a slide is an independent element of equal weight, and the result box is bold and framed, so a negative phrase reads loudest on the page
+    + The purpose slide's issues already carry the task's difficulties, so the strategy slide keeps its logic by showing only the answers
     + (Rewrite example) The derivation table's "현장 거부를 해소하는 수용성" becomes "부서가 수용하는 지표" on the slide
 
 | Task trait | Risk | Strategy | Value secured |
@@ -114,7 +114,7 @@
 - Pillar titles and items do not repeat module names or activity names (diagnosis, survey, advisory committee operation)
 - A measure remains in the strategy column after removing RFP task items and statutory duties
 - Every value in the derivation table is paired with the risk it removes
-- No pillar title, item or result exposes a risk or declares a completion date
+- Pillar titles, items and results are in the positive form and declare no completion date
 - Every differentiation point has a capability tile, and no tile carries a strength absent from the table
 
 ## Competitor search
