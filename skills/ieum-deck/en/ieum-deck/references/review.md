@@ -21,7 +21,7 @@
 | Source reliability | Can each cited figure be submitted as an attachment? Are there paid reports or press figures without a source? Are well-known organizations missing from an industry top list? | Market size taken from press coverage. Growth rate without a source |
 | Logical leaps | Are there intermediate steps from the data to the conclusion? Are facts with different conditions equated, such as stock and flow or amount and count? Does a cited figure support the opposite conclusion? | Treating growth in patent filings as proof of technological competitiveness |
 | Underlying needs | Is there a slide that answers the underlying needs hypothesis in 00_strategy.md? | No module responding to audit findings |
-| Distinctiveness | Could a competitor write the same sentence? Is there evidence only the bidder can offer (track record, data, staff)? | "풍부한 경험을 바탕으로" |
+| Distinctiveness | Could a competitor write the same sentence? Is there evidence only the bidder can offer (track record, data, staff)? Does a measure remain in a strategy pillar after the RFP task items and statutory duties are removed? | "풍부한 경험을 바탕으로". "요구 산출물의 충실한 작성" |
 | RFP response | Does the slide content hold every requirement of the matching RFP work item text? Are the output names and the standard spellings of key wording required by the RFP kept as is? | Part of the survey targets set by the work item text missing. Altered output names |
 | Respect for the contracting agency | Is there a sentence implying shortcomings in the contracting agency's policies or RFP? | "기존 지표가 부실하여" |
 
