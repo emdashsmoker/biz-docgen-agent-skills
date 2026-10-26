@@ -27,6 +27,17 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-26
+
+### ieum-deck
+- Added kickoff question 16 that sets the line break unit (`meta.lineBreak`), with word-level breaking as the default and character-level breaking as the opt-out (#43)
+- Added a finalize.py check that fails when slide paragraphs lack the line break unit, because LibreOffice review images cannot show PowerPoint line breaks (#43)
+- Fixed the missing latinLnBrk attribute so that PowerPoint keeps English words whole at line ends along with Korean words (#43)
+
+* 단어 단위 기본값과 글자 단위 선택지를 갖춘 줄바꿈 단위 착수 질의 16번(`meta.lineBreak`) 추가 (#43)
+* LibreOffice 검수 이미지로 확인할 수 없는 PowerPoint 줄바꿈 단위의 미기록 문단 검사를 finalize.py에 추가 (#43)
+* PowerPoint에서 한글 어절과 함께 영문 단어를 줄 끝에서 나누지 않기 위한 latinLnBrk 속성 누락 수정 (#43)
+
 ## 2026-10-25
 
 ### blockwriter
