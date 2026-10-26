@@ -147,6 +147,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 14. (문서 언어와 라벨) 한국어 라벨(기본) 또는 다른 언어. 다른 언어면 템플릿 라벨과 언어 태그를 `meta.labels` 에 지정 (영문 발표자료 절)
 15. (PDF 동봉) PPTX 와 함께 열람용 PDF 를 전달할지 확인. 기본은 동봉
     + PDF 는 LibreOffice 가 그린 근사 렌더링이므로 PowerPoint 표시와 줄바꿈, 글자 위치가 다를 수 있음을 함께 안내
+16. (줄바꿈 단위) 단어 단위(기본) 또는 글자 단위. 선택 값은 `meta.lineBreak` 에 word 나 char 로 기록
+    + 단어 단위는 줄 끝에서 한글 어절과 영문 단어를 나누지 않음
+    + 글자 단위는 줄 끝 글자에서 줄을 바꾸므로 단어 중간 줄바꿈을 허용
 
 ## 회사 사실 정보
 
@@ -712,13 +715,19 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - 납품 기준 렌더러는 PowerPoint
 - 검수 이미지(`render.sh`)는 LibreOffice 렌더링 결과
-- finalize.py 는 모든 문단에 단어 단위 줄바꿈(eaLnBrk=0)을 적용하여 PowerPoint 의 한글 단어 중간 잘림을 방지
+- finalize.py 는 착수 질의 16번의 줄바꿈 단위(`meta.lineBreak`)를 모든 문단 속성에 직접 기록
+    + (단어 단위) eaLnBrk=0, latinLnBrk=0 으로 PowerPoint 의 한글 어절과 영문 단어 중간 줄바꿈을 방지
+    + (글자 단위) eaLnBrk=1, latinLnBrk=1 로 줄 끝 글자에서 줄을 바꿈
+    + (직접 기록 이유) soffice 재직렬화가 마스터와 프레젠테이션의 기본 문단 스타일을 지우므로 상속에 맡긴 값은 PowerPoint 프로그램 기본값을 따름
+    + 처리 후 줄바꿈 단위 미기록 문단이 남으면 finalize.py 가 종료 코드 1 로 실패
 - finalize.py 는 표 셀 위아래 여백을 셀 속성(marT, marB)에 복원하여 PowerPoint 의 기본 여백 적용으로 표가 넘치는 현상을 방지
 - finalize.py 는 차트 글자(범주, 범례, 데이터 레이블)에 나눔고딕을 동아시아 글꼴로 지정하여 차트 한글이 테마 기본 글꼴로 바뀌는 현상을 방지
 - finalize.py 는 한글이 든 글자 조각의 언어를 ko-KR 로 기록하여 LibreOffice 재저장이 실행 환경 로캘에 따라 한글을 다른 언어(zh-CN 등)로 저장하는 현상을 방지
 - finalize.py 는 줄표 불릿("-")이 본문 글꼴을 따르게 하여 PowerPoint 의 불릿 빈 네모 표시를 방지
-- LibreOffice 렌더링은 단어 단위 줄바꿈을 무시하므로 검수 이미지에서 잘림이 보이면 문구를 줄임
-- 글 상자나 표 셀의 안쪽 폭보다 넓은 어절은 모든 렌더러에서 중간이 잘림 (check_layout WARN)
+- LibreOffice 렌더링은 두 속성을 읽지 않고 한글 어절과 영문 단어 경계에서 줄을 바꿈
+    + PowerPoint 의 줄바꿈 단위 반영 여부는 검수 이미지 대신 finalize.py 의 미기록 문단 수치로 확인
+    + 글자 단위 덱은 PowerPoint 의 줄 끝 위치가 검수 이미지와 다를 수 있음
+- 글 상자나 표 셀의 안쪽 폭보다 넓은 어절은 모든 렌더러에서 중간이 잘림 (check_layout WARN, 글자 단위 덱은 검사 제외)
 - 넓은 어절은 띄어 쓰거나 줄여 쓰거나 상자를 넓혀 해소
 - PowerPoint 는 LibreOffice 보다 줄 높이를 크게 잡으므로 불릿 상자의 간격 분배는 PowerPoint 줄 높이(글꼴 크기의 1.4배)를 기준으로 계산
 
@@ -874,7 +883,7 @@ ieum-deck/
 │   ├── composite.js         composite 템플릿의 격자와 블록
 │   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 단어 단위 줄바꿈, 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사

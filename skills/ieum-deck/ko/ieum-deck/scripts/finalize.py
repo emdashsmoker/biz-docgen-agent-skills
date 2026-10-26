@@ -9,7 +9,7 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
         실재하지 않는 부품의 Override 제거, 내장 xlsx에 재귀 적용
      2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, run 과 차트의 언어 태그 지정(meta.labels.language),
         핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제,
-        OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체
+        OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak)
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -356,18 +356,59 @@ def set_hangul_run_language(xml: str) -> tuple[str, int]:
     return RUN_PATTERN.sub(rep, xml), count
 
 
-def set_korean_word_wrap(xml: str) -> tuple[str, int]:
-    """모든 문단 속성에 eaLnBrk="0" 을 두어 한글 단어 중간 줄바꿈을 막음 (PowerPoint 아시아 타이포그래피 옵션)"""
+# 줄바꿈 단위(meta.lineBreak)별 문단 속성 값. word 는 한글 어절과 영문 단어를 줄 끝에서 나누지 않고, char 는 줄 끝 글자에서 나눔
+LINE_BREAK_ATTRS = {
+    "word": {"eaLnBrk": "0", "latinLnBrk": "0"},
+    "char": {"eaLnBrk": "1", "latinLnBrk": "1"},
+}
+DEFAULT_LINE_BREAK = "word"
+# 실행 중 적용할 줄바꿈 단위. finalize() 가 빌드 기록(lineBreak)으로 갱신
+LINE_BREAK = {"mode": DEFAULT_LINE_BREAK}
+PPR_OPEN_PATTERN = re.compile(r"<a:pPr(?:\s[^>]*)?/?>")
+PARA_WITHOUT_PPR_PATTERN = re.compile(r"<a:p>(?!\s*<a:pPr\b)")
+
+
+def line_break_attrs() -> dict:
+    """빌드 기록의 줄바꿈 단위(LINE_BREAK["mode"])에 해당하는 문단 속성 값"""
+    return LINE_BREAK_ATTRS[LINE_BREAK["mode"]]
+
+
+def set_paragraph_line_break(xml: str) -> tuple[str, int]:
+    """모든 문단 속성(a:pPr)에 줄바꿈 단위 속성(eaLnBrk, latinLnBrk)을 기록. 문단 속성이 없는 문단에는 문단 속성을 만들어 기록
+
+    WHY: 두 속성은 PowerPoint 가 문단마다 읽는 줄바꿈 옵션(한글 단어 잘림 허용, 영문 단어 잘림 허용).
+         soffice 재직렬화는 마스터의 txStyles 와 presentation.xml 의 defaultTextStyle 을 지우므로
+         상속에 맡긴 값은 PowerPoint 의 프로그램 기본값으로 바뀜. 문단마다 직접 기록해야 PowerPoint 에서 같은 결과가 나옴.
+         기존 값도 덮어써서 빌드 기록의 줄바꿈 단위와 어긋난 값이 남지 않게 함
+    """
+    attrs = line_break_attrs()
     count = 0
-    def rep(m):
+
+    def set_attrs(m: re.Match) -> str:
         nonlocal count
         tag = m.group(0)
-        if "eaLnBrk" in tag:
-            return tag
+        closing = "/>" if tag.endswith("/>") else ">"
+        body = tag[:-len(closing)]
+        for name, val in attrs.items():
+            body = re.sub(rf'\s{name}="[^"]*"', "", body) + f' {name}="{val}"'
+        if "hangingPunct=" not in body:
+            body += ' hangingPunct="1"'
         count += 1
-        return tag[:-1].rstrip("/") + ' eaLnBrk="0" hangingPunct="1"' + ("/>" if tag.endswith("/>") else ">")
-    xml = re.sub(r"<a:pPr(?:\s[^>]*)?/?>", rep, xml)
-    return xml, count
+        return body + closing
+
+    xml = PARA_WITHOUT_PPR_PATTERN.sub("<a:p><a:pPr/>", xml)
+    return PPR_OPEN_PATTERN.sub(set_attrs, xml), count
+
+
+def count_line_break_unset(xml: str) -> int:
+    """줄바꿈 단위 속성이 빌드 기록 값과 다르거나 빠진 문단 수 (문단 속성이 없는 문단 포함)"""
+    attrs = line_break_attrs()
+    unset = 0
+    for m in PARA_PATTERN.finditer(xml):
+        ppr = PPR_OPEN_PATTERN.search(m.group(1))
+        if ppr is None or any(f'{name}="{val}"' not in ppr.group(0) for name, val in attrs.items()):
+            unset += 1
+    return unset
 
 
 def apply_shape_adjust(xml: str) -> tuple[str, int]:
@@ -452,7 +493,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["cell_margin"] = cm
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
         stats["opensymbol_bullets"] = bf
-        xml, _ = set_korean_word_wrap(xml)
+        xml, _ = set_paragraph_line_break(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang
@@ -576,8 +617,8 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML 수준의 결함 수치. id 중복 슬라이드 수, 누적 차트의 레이블 위치 수, 슬라이드의 OpenSymbol 불릿 수"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0}
+    """XML 수준의 결함 수치. id 중복 슬라이드 수, 누적 차트의 레이블 위치 수, 슬라이드의 OpenSymbol 불릿 수, 슬라이드의 줄바꿈 단위 미기록 문단 수"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
@@ -587,6 +628,7 @@ def count_xml_defects(data: bytes) -> dict:
                 if len(ids) != len(set(ids)):
                     counts["duplicate_id_slides"] += 1
                 counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
+                counts["line_break_unset"] += count_line_break_unset(xml)
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -610,6 +652,7 @@ FAILABLE_METRICS = {
     "duplicate_id_slides": "id 중복 슬라이드",
     "stacked_label_positions": "누적 차트 레이블 위치",
     "opensymbol_bullets": "OpenSymbol 불릿",
+    "line_break_unset": "줄바꿈 단위 미기록 문단",
 }
 
 
@@ -729,10 +772,26 @@ def record_language(pptx_path: Path) -> dict:
     return out
 
 
+def record_line_break(pptx_path: Path) -> str:
+    """빌드 기록(<파일명>.build.json)의 줄바꿈 단위(meta.lineBreak). 기록이 없거나 정의되지 않은 값이면 기본값 word"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return DEFAULT_LINE_BREAK
+    try:
+        mode = json.loads(record.read_text(encoding="utf-8")).get("lineBreak") or DEFAULT_LINE_BREAK
+    except (OSError, ValueError):
+        return DEFAULT_LINE_BREAK
+    if not isinstance(mode, str) or mode not in LINE_BREAK_ATTRS:
+        print(f"[finalize] 줄바꿈 단위 lineBreak={mode!r} 미정의로 기본값 {DEFAULT_LINE_BREAK} 적용")
+        return DEFAULT_LINE_BREAK
+    return mode
+
+
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """입력 PPTX를 후처리하여 같은 경로에 덮어쓰고 처리 전후 수치를 반환"""
     CELL_PALETTE.update(theme_palette(pptx_path))
     RUN_LANGUAGE.update(record_language(pptx_path))
+    LINE_BREAK["mode"] = record_line_break(pptx_path)
     before = inspect(pptx_path)
     print(format_metrics("처리 전", before))
 

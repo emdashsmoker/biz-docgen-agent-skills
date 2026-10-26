@@ -2,7 +2,7 @@
 """lint.py: storyboard.json 검사. FAIL 0건이 빌드 착수 조건.
 사용: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "유지 사유"]
 검사 항목
-- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드 (FAIL)
+- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char) (FAIL)
 - 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
@@ -53,6 +53,7 @@ LIMITS = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "lim
 L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
+LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
 FM_PATH = HERE.parent / "assets" / "font-metrics.json"
 FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # 나눔고딕 실측 폭 (em). 없으면 추정 폭 사용
 HANGUL_RE = re.compile(r"[가-힣]")
@@ -363,6 +364,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not re.fullmatch(r"#?[0-9A-Fa-f]{6}", str(v)):
                 fails.append(f"meta.themeColors.{key} 는 6자리 색상 코드 (예: 1B4332). 입력값: {v}")
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
+    if meta.get("lineBreak", LINE_BREAKS[0]) not in LINE_BREAKS:
+        fails.append(f"meta.lineBreak 는 {' 또는 '.join(LINE_BREAKS)}. 입력값: {meta.get('lineBreak')}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
