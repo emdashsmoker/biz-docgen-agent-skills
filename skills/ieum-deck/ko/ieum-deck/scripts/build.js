@@ -17,6 +17,8 @@ const TEMPLATES = require("./templates.js");
 const LB = require("./labels.js");
 
 const OWN_ENV = "IEUM_DECK_OWN";
+// 줄바꿈 단위(meta.lineBreak). word 는 단어 단위(기본), char 는 글자 단위. finalize.py 가 빌드 기록을 읽어 모든 문단 속성에 기록
+const LINE_BREAKS = ["word", "char"];
 
 function parseArgs(argv) {
   const o = { layout: null, digest: false, marker: null, theme: null, args: [] };
@@ -131,6 +133,8 @@ async function main() {
   if (!T.LAYOUTS[layoutKey]) throw new Error(`판형 ${layoutKey} 미정의. 선택: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
   if (!T.THEMES[theme] && !meta.themeColors) throw new Error(`색 테마 ${theme} 미정의. 선택: ${Object.keys(T.THEMES).join(", ")} 또는 meta.themeColors 지정`);
+  const lineBreak = meta.lineBreak || LINE_BREAKS[0];
+  if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`줄바꿈 단위 ${lineBreak} 미정의. 선택: ${LINE_BREAKS.join(", ")}`);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);
@@ -159,8 +163,9 @@ async function main() {
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout, finalize 가 읽음)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
+  // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

@@ -17,6 +17,8 @@ const TEMPLATES = require("./templates.js");
 const LB = require("./labels.js");
 
 const OWN_ENV = "IEUM_DECK_OWN";
+// Line break unit (meta.lineBreak). word is word-level (default), char is character-level. finalize.py reads the build record and writes it on every paragraph property
+const LINE_BREAKS = ["word", "char"];
 
 function parseArgs(argv) {
   const o = { layout: null, digest: false, marker: null, theme: null, args: [] };
@@ -131,6 +133,8 @@ async function main() {
   if (!T.LAYOUTS[layoutKey]) throw new Error(`Page size ${layoutKey} is undefined. Choose: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
   if (!T.THEMES[theme] && !meta.themeColors) throw new Error(`Color theme ${theme} is undefined. Choose: ${Object.keys(T.THEMES).join(", ")} or set meta.themeColors`);
+  const lineBreak = meta.lineBreak || LINE_BREAKS[0];
+  if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`Line break unit ${lineBreak} is undefined. Choose: ${LINE_BREAKS.join(", ")}`);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);
@@ -159,8 +163,9 @@ async function main() {
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout and finalize)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
+  // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

@@ -160,6 +160,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 14. (Document language and labels) Korean labels (default) or another language. For another language, set the template labels and language tags in `meta.labels` (English decks section)
 15. (PDF copy) Whether to deliver a PDF for viewing with the PPTX. Included by default
     + Tell the user that the PDF is an approximate rendering drawn by LibreOffice, so line breaks and text positions may differ from PowerPoint
+16. (Line break unit) Word-level (default) or character-level. Record the choice in `meta.lineBreak` as word or char
+    + Word-level keeps Korean words and English words whole at line ends
+    + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 
 ## Company facts
 
@@ -726,13 +729,19 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - The reference renderer for delivery is PowerPoint
 - Review images (`render.sh`) are LibreOffice renderings
-- finalize.py applies word-level line breaking (eaLnBrk=0) to every paragraph to prevent PowerPoint from breaking Korean words in the middle
+- finalize.py writes the line break unit from kickoff question 16 (`meta.lineBreak`) directly on every paragraph property
+    + (Word-level) eaLnBrk=0 and latinLnBrk=0 prevent PowerPoint from breaking Korean and English words in the middle
+    + (Character-level) eaLnBrk=1 and latinLnBrk=1 break the line at the last character
+    + (Why write them directly) soffice reserialization removes the default paragraph styles of the master and the presentation, so values left to inheritance follow PowerPoint's program defaults
+    + finalize.py fails with exit code 1 when paragraphs without the line break unit remain after processing
 - finalize.py restores the top and bottom margins of table cells in the cell properties (marT, marB) to prevent tables from overflowing when PowerPoint applies default margins
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
 - finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
-- LibreOffice rendering ignores word-level line breaking, so if review images show cut words, shorten the text
-- A word wider than the inner width of a text box or table cell is cut in the middle by every renderer (check_layout WARN)
+- LibreOffice rendering does not read the two attributes and breaks lines at Korean and English word boundaries
+    + Confirm that PowerPoint receives the line break unit through the finalize.py count of paragraphs without it, since review images cannot show it
+    + In a character-level deck, PowerPoint line ends may differ from the review images
+- A word wider than the inner width of a text box or table cell is cut in the middle by every renderer (check_layout WARN, skipped for character-level decks)
 - Resolve wide words by spacing them, shortening them or widening the box
 - PowerPoint uses taller line heights than LibreOffice, so spacing distribution in bullet boxes is computed with PowerPoint line height (1.4 times the font size)
 
@@ -889,7 +898,7 @@ ieum-deck/
 │   ├── composite.js         Grid and blocks of the composite template
 │   ├── labels.js            Lookup of the fixed template and block labels (slide slot, then meta.labels, then assets/labels.json)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, word-level line breaking, doughnut hole preservation, table cell fill normalization, table cell margin restoration, language tags (meta.labels.language), bullet font correction, soffice reserialization
+│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, line break unit (meta.lineBreak), doughnut hole preservation, table cell fill normalization, table cell margin restoration, language tags (meta.labels.language), bullet font correction, soffice reserialization
 │   ├── validate.py          Package structure validation (content types, XML syntax, relationship targets, slide ids, shape ids, python-pptx opening; schema validation when OOXML_PML_XSD is set)
 │   ├── lint.py              storyboard checks
 │   ├── check_layout.py      Checks of the typeset result

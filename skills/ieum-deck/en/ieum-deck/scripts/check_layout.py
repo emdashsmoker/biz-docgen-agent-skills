@@ -2,7 +2,7 @@
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 Checks: estimated text overflow (needed height from measured NanumGothic widths, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
-        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
+        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
 import json
@@ -160,6 +160,8 @@ def main():
     OWN_SMALL = _own_small_boxes(record)
     # Add the theme colors in the build record (custom themes included) to the allowed table cell colors
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
+    # A character-level deck (meta.lineBreak=char) is one where the user allowed mid-word breaks, so the mid-word line break estimate is skipped
+    word_break = record.get("lineBreak", "word") != "char"
     W, H = inch(prs.slide_width), inch(prs.slide_height)
     sy = H / 7.5
     sx = W / 13.333  # Horizontal scale against the 16:9 base
@@ -335,7 +337,7 @@ def main():
                     fails.append(f"[{n}] Element overlap {boxes[i][1]} / {boxes[j][1]} ({inter / small:.0%})")
 
         # Estimated mid-word line breaks: a word wider than the inner box width is cut in the middle by every renderer (text boxes and table cells)
-        for sh in slide.shapes:
+        for sh in (slide.shapes if word_break else []):
             if sh.width is None: continue
             y = sh.top / 914400 if sh.top else 0
             if y < RULE_Y * sy + 0.35: continue

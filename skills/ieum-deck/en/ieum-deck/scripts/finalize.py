@@ -9,7 +9,7 @@ HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml fi
         remove Overrides for missing parts, apply recursively to embedded xlsx
      2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language tags of runs and charts (meta.labels.language),
         correct the core properties relationship type, clear the application name, remove the document language and presentation format name,
-        replace the OpenSymbol bullet font with the text font
+        replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak)
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -356,18 +356,59 @@ def set_hangul_run_language(xml: str) -> tuple[str, int]:
     return RUN_PATTERN.sub(rep, xml), count
 
 
-def set_korean_word_wrap(xml: str) -> tuple[str, int]:
-    """Sets eaLnBrk="0" on every paragraph property so Korean words do not break mid-word (PowerPoint Asian typography option)"""
+# Paragraph attribute values per line break unit (meta.lineBreak). word keeps Korean eojeol and English words whole at line ends; char breaks at the last character on the line
+LINE_BREAK_ATTRS = {
+    "word": {"eaLnBrk": "0", "latinLnBrk": "0"},
+    "char": {"eaLnBrk": "1", "latinLnBrk": "1"},
+}
+DEFAULT_LINE_BREAK = "word"
+# Line break unit applied during the run. finalize() updates it from the build record (lineBreak)
+LINE_BREAK = {"mode": DEFAULT_LINE_BREAK}
+PPR_OPEN_PATTERN = re.compile(r"<a:pPr(?:\s[^>]*)?/?>")
+PARA_WITHOUT_PPR_PATTERN = re.compile(r"<a:p>(?!\s*<a:pPr\b)")
+
+
+def line_break_attrs() -> dict:
+    """Paragraph attribute values for the line break unit in the build record (LINE_BREAK["mode"])"""
+    return LINE_BREAK_ATTRS[LINE_BREAK["mode"]]
+
+
+def set_paragraph_line_break(xml: str) -> tuple[str, int]:
+    """Writes the line break unit attributes (eaLnBrk, latinLnBrk) on every paragraph property (a:pPr). Paragraphs without one get a new paragraph property
+
+    WHY: Both attributes are line break options PowerPoint reads per paragraph (allow Korean word break, allow Latin word break).
+         soffice reserialization removes txStyles from the master and defaultTextStyle from presentation.xml,
+         so values left to inheritance fall back to PowerPoint's program defaults. Writing them on each paragraph gives the same result in PowerPoint.
+         Existing values are overwritten so no value that disagrees with the build record's line break unit remains
+    """
+    attrs = line_break_attrs()
     count = 0
-    def rep(m):
+
+    def set_attrs(m: re.Match) -> str:
         nonlocal count
         tag = m.group(0)
-        if "eaLnBrk" in tag:
-            return tag
+        closing = "/>" if tag.endswith("/>") else ">"
+        body = tag[:-len(closing)]
+        for name, val in attrs.items():
+            body = re.sub(rf'\s{name}="[^"]*"', "", body) + f' {name}="{val}"'
+        if "hangingPunct=" not in body:
+            body += ' hangingPunct="1"'
         count += 1
-        return tag[:-1].rstrip("/") + ' eaLnBrk="0" hangingPunct="1"' + ("/>" if tag.endswith("/>") else ">")
-    xml = re.sub(r"<a:pPr(?:\s[^>]*)?/?>", rep, xml)
-    return xml, count
+        return body + closing
+
+    xml = PARA_WITHOUT_PPR_PATTERN.sub("<a:p><a:pPr/>", xml)
+    return PPR_OPEN_PATTERN.sub(set_attrs, xml), count
+
+
+def count_line_break_unset(xml: str) -> int:
+    """Number of paragraphs whose line break unit attributes are missing or differ from the build record (including paragraphs without a paragraph property)"""
+    attrs = line_break_attrs()
+    unset = 0
+    for m in PARA_PATTERN.finditer(xml):
+        ppr = PPR_OPEN_PATTERN.search(m.group(1))
+        if ppr is None or any(f'{name}="{val}"' not in ppr.group(0) for name, val in attrs.items()):
+            unset += 1
+    return unset
 
 
 def apply_shape_adjust(xml: str) -> tuple[str, int]:
@@ -452,7 +493,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["cell_margin"] = cm
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
         stats["opensymbol_bullets"] = bf
-        xml, _ = set_korean_word_wrap(xml)
+        xml, _ = set_paragraph_line_break(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang
@@ -576,8 +617,8 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML-level defect counts. Number of slides with duplicate ids, label positions in stacked charts and OpenSymbol bullets in slides"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0}
+    """XML-level defect counts. Number of slides with duplicate ids, label positions in stacked charts, OpenSymbol bullets in slides and slide paragraphs without the line break unit"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
@@ -587,6 +628,7 @@ def count_xml_defects(data: bytes) -> dict:
                 if len(ids) != len(set(ids)):
                     counts["duplicate_id_slides"] += 1
                 counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
+                counts["line_break_unset"] += count_line_break_unset(xml)
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -610,6 +652,7 @@ FAILABLE_METRICS = {
     "duplicate_id_slides": "duplicate_id_slides",
     "stacked_label_positions": "stacked_chart_label_positions",
     "opensymbol_bullets": "opensymbol_bullets",
+    "line_break_unset": "line_break_unset_paragraphs",
 }
 
 
@@ -729,10 +772,26 @@ def record_language(pptx_path: Path) -> dict:
     return out
 
 
+def record_line_break(pptx_path: Path) -> str:
+    """Line break unit (meta.lineBreak) in the build record (<file name>.build.json). The default word applies when the record is missing or the value is undefined"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return DEFAULT_LINE_BREAK
+    try:
+        mode = json.loads(record.read_text(encoding="utf-8")).get("lineBreak") or DEFAULT_LINE_BREAK
+    except (OSError, ValueError):
+        return DEFAULT_LINE_BREAK
+    if not isinstance(mode, str) or mode not in LINE_BREAK_ATTRS:
+        print(f"[finalize] Line break unit lineBreak={mode!r} is undefined, applying the default {DEFAULT_LINE_BREAK}")
+        return DEFAULT_LINE_BREAK
+    return mode
+
+
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """Post-processes the input PPTX, overwrites it in place and returns the metrics before and after"""
     CELL_PALETTE.update(theme_palette(pptx_path))
     RUN_LANGUAGE.update(record_language(pptx_path))
+    LINE_BREAK["mode"] = record_line_break(pptx_path)
     before = inspect(pptx_path)
     print(format_metrics("before", before))
 

@@ -16,6 +16,7 @@
 | marker | Marker shape. square (default), bar, triangle |
 | pointLabel | Label text of the Point band (default "수행 Point"). Can also be set per slide |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
+| lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |

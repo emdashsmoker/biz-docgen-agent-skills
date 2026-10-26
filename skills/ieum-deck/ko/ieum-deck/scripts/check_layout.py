@@ -2,7 +2,7 @@
 """check_layout.py: 빌드된 pptx 의 구조 검수 (python-pptx 는 검수에만 사용).
 사용: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 검사: 텍스트 넘침 추정(나눔고딕 실측 폭으로 소요 높이 산정, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
-      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
+      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
 결과: FAIL 과 WARN 목록. 종료 코드 1 이면 FAIL 존재
 """
 import json
@@ -160,6 +160,8 @@ def main():
     OWN_SMALL = _own_small_boxes(record)
     # 빌드 기록의 테마 색(사용자 지정 테마 포함)을 표 셀 허용 색에 더함
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
+    # 글자 단위 줄바꿈(meta.lineBreak=char)은 사용자가 단어 중간 줄바꿈을 허용한 덱이므로 어절 중간 줄바꿈 추정을 생략
+    word_break = record.get("lineBreak", "word") != "char"
     W, H = inch(prs.slide_width), inch(prs.slide_height)
     sy = H / 7.5
     sx = W / 13.333  # 16:9 기준 대비 가로 배율
@@ -335,7 +337,7 @@ def main():
                     fails.append(f"[{n}] 요소 겹침 {boxes[i][1]} / {boxes[j][1]} ({inter / small:.0%})")
 
         # 어절 중간 줄바꿈 추정: 상자 안쪽 폭보다 넓은 어절은 모든 렌더러에서 중간이 잘림 (글 상자와 표 셀)
-        for sh in slide.shapes:
+        for sh in (slide.shapes if word_break else []):
             if sh.width is None: continue
             y = sh.top / 914400 if sh.top else 0
             if y < RULE_Y * sy + 0.35: continue

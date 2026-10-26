@@ -3,7 +3,7 @@
 Usage: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "reason for keeping"]
 The text checks target Korean deck text, and their word lists and patterns are Korean
 Checks
-- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes (FAIL)
+- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char) (FAIL)
 - Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
@@ -54,6 +54,7 @@ LIMITS = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "lim
 L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
+LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
 FM_PATH = HERE.parent / "assets" / "font-metrics.json"
 FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # measured NanumGothic widths (em). Estimated widths are used without it
 HANGUL_RE = re.compile(r"[가-힣]")
@@ -364,6 +365,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not re.fullmatch(r"#?[0-9A-Fa-f]{6}", str(v)):
                 fails.append(f"meta.themeColors.{key} must be a 6-digit color code (e.g. 1B4332). Input: {v}")
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
+    if meta.get("lineBreak", LINE_BREAKS[0]) not in LINE_BREAKS:
+        fails.append(f"meta.lineBreak is {' or '.join(LINE_BREAKS)}. Input: {meta.get('lineBreak')}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
