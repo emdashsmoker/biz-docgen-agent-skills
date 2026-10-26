@@ -43,19 +43,72 @@
 ## 4 External conditions                   Policy schedule, higher-level plans, budget review and similar programs around the contracting agency (opportunities and threats, where they are reflected)
 ## 5 Competitors                           Eligibility judgment, expected strengths and weaknesses by competitor type, competing candidate table, previous contractor of the same agency, excluded organizations (competitor table format below)
 ## 6 Own strengths and weaknesses          4 columns: track record, staff, domain knowledge, methodology. Missing elements and how to cover them (consortium, advisors)
-## 7 Proposal strategy                     2-4 differentiation points (basis, slides that carry them). One-line storyline. 3 key keywords
+## 7 Proposal strategy                     Differentiation point table (2-4 points, basis, tile). Strategy derivation table (2-4 rows). One-line storyline. 3 key keywords
 ## 8 Execution decisions                   Principal investigator and staffing. Advisor candidates. Success points and failure points. Price direction (bid range)
 ```
 
 - Candidates for the underlying needs hypothesis: the revision cycle of a higher-level plan, audit findings, the first year of a new institution, reorganization, budget review, gaps left by a previous engagement's results
 - The hypothesis names where the contracting agency will use the output
-- The differentiation points are the source of two deck slides
-    + The capability tiles of the "제안의 특징 및 장점" slide (features)
-    + The strategy pillars of the "추진전략" slide (strategy)
-- Match the number of differentiation points to the range of capability tiles and strategy pillars (2-4)
-- Attach at least one basis to each differentiation point: track record, data or staff
 - The one-line storyline is a sentence running from the problem awareness in the background to the modules and outputs
 - The deck's table of contents and headline flow follow the storyline sentence
+- Item 7 consists of the differentiation point table and the strategy derivation table
+    + The differentiation point table feeds the capability tiles of the "제안의 특징 및 장점" slide (features)
+    + The strategy derivation table feeds the strategy pillars of the "추진전략" slide (strategy)
+    + The features slide shows what the bidder holds (methodology, track record, staff, tools, data)
+    + The strategy slide shows the measures that overcome the task's difficulties (output design principles, the design of activities)
+    + When the same methodology appears on both slides, the feature tile carries the holding and its application record, and the strategy pillar carries how it is applied in this task
+
+### Differentiation point table
+
+| Differentiation point | Basis | Tile |
+|---|---|---|
+| [확인] | [확인] | [확인] |
+
+- Match the number of points to the range of capability tiles (2-4)
+- Attach at least one basis to each point: track record, data or staff
+- The named past tasks, tools and staff in the basis column are the material of the tile items
+- When a strategy pillar uses a point as its basis, add the pillar number in the tile column
+
+### Strategy derivation table
+
+- Strategies are derived from why this task is hard (one row per strategy, 2-4 rows)
+- Strategies derived from the problem in the background end up as the module list under strategy names
+- The derivation table stays in 00_strategy.md only (the slide carries only the strategy and value columns)
+
+| Task trait | Risk | Strategy | Value secured |
+|---|---|---|---|
+| [확인] | [확인] | [확인] | [확인] |
+
+- (Task trait) The scope the task must complete and the nature of what it handles. RFP task items, statutory procedures, compliance duties and constraints also go in this column (duties are the premise shared by every bidder)
+- (Risk) The point where the output can go wrong because of the task trait
+- (Strategy) The specialized measure that overcomes the risk: an output design principle, or the design of an activity (composition criterion, target, timing)
+- (Value secured) What the contracting agency gains when the risk is removed. Write it paired with the risk it removes (e.g. "reliability that removes distrust of wrong answers")
+- (Conditions) Specialization and differentiation. Specialization is design fitted to the traits of the task's subject. Differentiation is design the bidder adds above the level the RFP and the institution require
+- (Duty removal test) What remains in the strategy column after removing compliance with RFP task items and statutory duties is the strategy. If nothing remains, the row restates a duty and is rewritten
+- Rows where both the risk and the measure are generic (schedule delay and a monthly meeting) leave the table and move to the organization or schedule slide
+
+### Strategy slide slot mapping
+
+| Slot | Content | Source |
+|---|---|---|
+| goal | Final goal (same wording as the goal and scope slide) | 00_rfp.md basic conditions |
+| strategies[].title | Strategy name. Name the measure in the task's language (module names and activity names are excluded) | Strategy column of the derivation table |
+| strategies[].items | 4-5 design details of the measure (target, composition criterion, timing, tool, judgment criterion) | Strategy column of the derivation table |
+| strategies[].result | Value secured (paired with the risk removed) | Value column of the derivation table |
+| conclusion | A sentence that bundles the values to qualify the output (e.g. "an evaluation indicator system with acceptance, validity and readiness to start") | Value column of the derivation table |
+
+- The headline substitutes the strategy names into the strategy pattern in `references/headline-patterns.md`
+- When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body and place a supporting table as the Sample
+    + The supporting table is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table)
+    + Write "참고용 시안, 확정치 아님" (illustrative draft, not final figures) in the `footnotes` of the specimen table
+
+### Self-check before presenting
+
+- Every risk has a pillar that answers it
+- Pillar titles and items do not repeat module names or activity names (diagnosis, survey, advisory committee operation)
+- A measure remains in the strategy column after removing RFP task items and statutory duties
+- No result declares a completion date, and no result is a value word without its paired risk
+- Every differentiation point has a capability tile, and no tile carries a strength absent from the table
 
 ## Competitor search
 
