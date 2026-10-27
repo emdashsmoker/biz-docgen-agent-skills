@@ -126,7 +126,7 @@
 - The headline substitutes the strategy names, worded the same as the pillar titles, into the strategy pattern in `references/headline-patterns.md`
 - When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body
     + Place a supporting table that is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table) as the Sample
-    + Do not use the derivation table or a table rebuilt from its columns as the Sample (the writer's internal reasoning)
+    + Do not place a table that lists risks or values secured by strategy, such as the derivation table, as the Sample
     + Write "참고용 시안, 확정치 아님" (illustrative draft, not final figures) in the `footnotes` of the specimen table
 
 ### Self-check before presenting
