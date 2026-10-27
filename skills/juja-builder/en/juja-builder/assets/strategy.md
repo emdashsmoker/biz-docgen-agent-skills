@@ -90,7 +90,7 @@
 |---|---|---|
 | [확인] | [확인] | [확인] |
 
-- (Implementation strategy derivation) One row per strategy. This table stays only in the proposal strategy file. Column definitions are in the SKILL.md Proposal Strategy section
+- (Implementation strategy derivation) One row per strategy. This table is the author's internal reasoning record. Do not carry it into the manuscript. Column definitions are in the SKILL.md Proposal Strategy section
     + (Engagement characteristics) The scope the engagement must finish and the nature of what it must handle. Data forms, security systems, stakeholders, scope against the period. RFP task content, institutional procedures, compliance duties, and constraints also go in this column
     + (Risk factors) Points where the final results can go wrong because of the engagement characteristics
     + (Key success factors) The conditions the final results must meet to overcome the risk, with a one-line test
