@@ -15,6 +15,9 @@
 - Rewrite a sentence with the predicate cut off in the "수립을 목적으로 추진" form (noun-ending conversion rules in `references/headline-patterns.md`)
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
 - Body style is noun-ending regardless of the headline style
+- Headlines and body text use no colloquial style
+- Colloquial markers are hedged and softened endings (-듯함, -인 셈, -로 보임), explanatory endings (-는데, -거든), spoken contractions (-하는 게, -할 거) and colloquial adverbs (일단, 좀, 그냥)
+- Delete colloquial markers or replace them with formal expressions (a hedged ending becomes "-로 판단" or "-로 확인" with its evidence)
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
@@ -45,6 +48,8 @@
     + Exposed framework names (MECE, pyramid)
     + The subject term repeated in every section ("본 과업은")
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
+    + Colloquial markers (correct them by the list in the Sentences section)
+    + Two nouns joined with "와" or "과" (change to "및")
 
 ## lint WARN vocabulary
 
@@ -80,8 +85,8 @@
 ## Notation
 
 - Space long names word by word (a word wider than the inner box width is cut in the middle)
-- Labels, cell titles, row labels and markers joining two nouns use "및" (e.g. 전략과제 및 세부과제)
-- Headlines and body item sentences keep "와" and "과" as connectors
+- Two listed nouns are joined with "및" in labels, headlines and body text alike (e.g. 전략과제 및 세부과제)
+    + (Exception) RFP original names (engagement names, output names, stage names, subject names) keep the original wording
 - Write section numbers as a number and a period (e.g. "1.")
 - The builder corrects the period of section numbers automatically
 - Write numbers and symbols once
