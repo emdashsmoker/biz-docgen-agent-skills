@@ -170,7 +170,7 @@
 ## Implementation Strategy
 
 - Implementation Strategy usually has 3-4 strategies. Each strategy consists of a □ judgment statement, 2-3 ❍, and one supporting table or figure, in that order
-- Strategies unfold from the implementation strategy derivation table of 00_제안전략서.md. The materials for derivation are engagement characteristics and risk factors. The derivation table is defined in the SKILL.md Proposal Strategy section
+- Strategies unfold from the implementation strategy derivation table of 00_제안전략서.md. Unfolding means writing out each row as □ judgment statements and ❍. Neither the derivation table nor a table rebuilt from its columns goes into the manuscript. The materials for derivation are engagement characteristics and risk factors. The derivation table and the reason it stays out of the manuscript are in the SKILL.md Proposal Strategy section
 - For each strategy, specify one risk factor from the derivation table and one factual ground about the engagement's subjects. Provide at least one strategy that answers each risk factor. The validity conditions of a strategy (specialization and differentiation) are in the SKILL.md Proposal Strategy section
 - The examples below are judgment statements that take the work the RFP and institutions require as a premise. Their content is a specialized measure that fulfills the duty or a measure added on top of it
 - The strategy example table is a reference for sentence patterns and composition
