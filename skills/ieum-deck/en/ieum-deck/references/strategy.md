@@ -113,7 +113,7 @@
 | strategies[].result | Positive form of the value secured (the risk removed is not written) | Value column of the derivation table |
 | conclusion | A sentence that bundles the values to qualify the output (e.g. "an evaluation indicator system with acceptance, validity and readiness to start") | Value column of the derivation table |
 
-- End each strategy name with an action noun that names the measure's action (수립, 연계, 운영, 제시, 설계, 도출, 반영 in a Korean deck; establishment, linkage, operation, design in an English deck)
+- End each strategy name with an action noun that names the measure's action (for example, 수립, 연계, 운영, 제시, 설계, 도출, 반영 in a Korean deck; establishment, linkage, operation, design in an English deck)
     + (Output name ending) A name ending in "지표 체계" or "로드맵" reads as an output on the goal and scope slide
     + (Meeting body name ending) A name ending in "자문위원회" or "실무협의회" reads as an operating means on the organization slide
     + (Methodology name ending) A name ending in "로직모델" or "델파이" reads as a held asset on the features slide
