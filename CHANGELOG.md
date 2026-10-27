@@ -41,7 +41,7 @@ Changelog rules
 - Added a rule against colloquial style in headlines and body text, with example markers (#66)
 - Changed the "및" rule for two listed nouns from labels only to all text, including headlines and body text (#66)
 - Added exceptions that keep "와" and "과" in RFP original names, established names such as "학습과 성장", relations between two nouns and partners of an action (#66)
-- Changed two-noun lists in the headline patterns, reference examples and sample slides to "및" (#66)
+- Changed two-noun lists in the headline patterns, reference examples and sample slides to "및" (#66, #68)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
@@ -54,7 +54,7 @@ Changelog rules
 * 구어체 표지 예시를 갖춘 헤드라인 및 본문의 구어체 미사용 규칙 추가 (#66)
 * 두 명사 나열의 "및" 연결 적용 범위를 라벨 전용에서 텍스트 전체로 변경 (#66)
 * RFP 원문 명칭, 관용 명칭(학습과 성장 등), 두 명사 사이의 관계, 동작의 상대에 쓰인 "와", "과"의 유지 예외 추가 (#66)
-* 헤드라인 문형, 참조 문서 예시, 견본 슬라이드의 두 명사 나열을 "및" 연결로 변경 (#66)
+* 헤드라인 문형, 참조 문서 예시, 견본 슬라이드의 두 명사 나열을 "및" 연결로 변경 (#66, #68)
 
 ### juja-builder
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
