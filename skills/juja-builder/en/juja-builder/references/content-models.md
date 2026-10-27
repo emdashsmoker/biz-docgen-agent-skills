@@ -170,7 +170,7 @@
 ## Implementation Strategy
 
 - Implementation Strategy usually has 3-4 strategies. Each strategy consists of a □ judgment statement, 2-3 ❍, and one supporting table or figure, in that order
-- Strategies unfold from the implementation strategy derivation table of 00_제안전략서.md. Unfolding means writing out each row as □ judgment statements and ❍. Neither the derivation table nor a table rebuilt from its columns goes into the manuscript. The materials for derivation are engagement characteristics and risk factors. The derivation table and the reason it stays out of the manuscript are in the SKILL.md Proposal Strategy section
+- Strategies unfold from the implementation strategy derivation table of 00_제안전략서.md. Unfolding means writing out each row as □ judgment statements and ❍. A table that lists risk factors or values secured by strategy, such as the derivation table, does not go into the manuscript. The materials for derivation are engagement characteristics and risk factors. The derivation table and the reason it stays out of the manuscript are in the SKILL.md Proposal Strategy section
 - For each strategy, specify one risk factor from the derivation table and one factual ground about the engagement's subjects. Provide at least one strategy that answers each risk factor. The validity conditions of a strategy (specialization and differentiation) are in the SKILL.md Proposal Strategy section
 - The examples below are judgment statements that take the work the RFP and institutions require as a premise. Their content is a specialized measure that fulfills the duty or a measure added on top of it
 - The strategy example table is a reference for sentence patterns and composition
@@ -194,7 +194,7 @@
     + Institutional events after the engagement ("예산 반영" (budget reflection), "상급 기관 심의 대응" (response to a supervising agency's review)) are material for section messages
     + Put timing where it qualifies the method, as in "착수 초기의 초안 공유" (sharing drafts early in the engagement) and "기획 일정에 맞춘 시범 적용" (pilot application aligned with the planning schedule). Declaring completion timing of work products is schedule chart content. The reason is in the SKILL.md Argument Section Structure section
 - What ❍ describes is the grounds for choosing the means (facts about the engagement's subjects), how the means is implemented (steps, tools, judgment criteria, participants, work products), and the value secured
-- A supporting table is a sample of the method. It is evidence of practical understanding that previews what the engagement's final results will look like. Add the note `※ 참고용 시안, 확정치 아님` under the table
+- A supporting table is a sample of the method. It is evidence of practical understanding that previews what the engagement's final results will look like. Add the note `※ 참고용 시안 (착수 후 확정)` under the table
 - Implementation Strategy is the HOW section. It describes by what principles and activities the engagement's difficulties are overcome. Introductions of track records, staff, and held tools go in the Features and Strengths section
 - When a grounds ❍ cites a held fact, continue with how it is applied in this engagement
 - Write strategy names in the language of the engagement
@@ -228,7 +228,7 @@
 | 변환 | 텍스트 추출률 | 추출 용량 ÷ 원문 추정 용량 × 100 | [확인] |
 | 정제 | 비식별 정확도 | 가명 처리한 개인정보 수 ÷ 전체 개인정보 수 × 100 | 100% |
 | 활용 | 검색 재현율 | 시험 질의의 상위 5건 안 정답 근거 비율 | [확인] |
-※ 참고용 시안, 확정치 아님
+※ 참고용 시안 (착수 후 확정)
 ```
 
 ```
