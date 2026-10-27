@@ -34,22 +34,30 @@ Changelog rules
 - Changed the strategy headline to substitute the strategy names as written in the pillar titles (#50)
 - Changed the S07 strategy sample to pillar names that end with 정렬, 확보 and 설계 (#50)
 - Changed the S17 roadmap sample lane "환류 체계" to "환류 체계 운영" so that every lane name ends with an action noun (#52)
+- Added a rule that keeps tables listing risks or values secured by strategy, such as the strategy derivation table, out of the Sample of strategy slides, with a deep review item for such tables (#58)
+- Changed the sample table note from "참고용 시안, 확정치 아님" to "참고용 시안 (착수 후 확정)" (#58)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
 * S07 추진전략 견본을 정렬, 확보, 설계로 끝나는 기둥 이름으로 변경 (#50)
 * S17 추진 로드맵 견본의 "환류 체계" 레인명을 "환류 체계 운영"으로 변경 (#52)
+* 전략별 위험 요인이나 확보하는 가치를 정리한 표를 견본 표(Sample)에서 제외하는 규칙과 심층 검토 항목 추가 (#58)
+* 견본 표 부기를 "참고용 시안, 확정치 아님"에서 "참고용 시안 (착수 후 확정)"으로 변경 (#58)
 
 ### juja-builder
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
 - Added a kickoff question for the narrative length of the proposal background (detailed or brief), with a recommended value by engagement type (#54)
 - Removed the background framework form name attached to the engagement type result in the kickoff questions (#54)
-- Added a rule that keeps the implementation strategy derivation table and tables rebuilt from its columns out of the manuscript, with a row-by-row expansion definition (□ judgment statements and ❍), a deep review item and a failure pattern (#56)
+- Added a rule that keeps tables listing risk factors or values secured by strategy, such as the strategy derivation table, out of the manuscript (#56, #58)
+- Added a row-by-row expansion definition of the derivation table (□ judgment statements and ❍), with a deep review item and a failure pattern for a leaked table (#56, #58)
+- Changed the sample table note from "참고용 시안, 확정치 아님" to "참고용 시안 (착수 후 확정)" (#58)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 실패 패턴과 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 과업 유형별 추천값을 갖춘 제안 배경의 서술 분량(상세, 간결) 착수 질의 추가 (#54)
 * 착수 질의에서 과업 유형 판정 결과에 붙던 배경 골격의 구분 명칭 삭제 (#54)
-* 행 단위 전개 정의(□ 판단문과 ❍), 심층 검토 항목, 실패 패턴을 갖춘 추진전략 도출 표와 그 열로 재구성한 표의 원고 미반영 규칙 추가 (#56)
+* 추진전략 도출 표처럼 전략별 위험 요인이나 확보하는 가치를 정리한 표의 원고 미반영 규칙 추가 (#56, #58)
+* 도출 표의 행 단위 전개 정의(□ 판단문과 ❍), 도출 표 유출의 심층 검토 항목, 실패 패턴 추가 (#56, #58)
+* 견본 표 부기를 "참고용 시안, 확정치 아님"에서 "참고용 시안 (착수 후 확정)"으로 변경 (#58)
 
 ## 2026-10-26
 
