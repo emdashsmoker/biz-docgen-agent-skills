@@ -198,7 +198,7 @@
 - Implementation Strategy is the HOW section. It describes by what principles and activities the engagement's difficulties are overcome. Introductions of track records, staff, and held tools go in the Features and Strengths section
 - When a grounds ❍ cites a held fact, continue with how it is applied in this engagement
 - Write strategy names in the language of the engagement
-- End strategy names with an action noun that names the measure's action (수립, 연계, 운영, 제시, 설계, 도출, 반영 in Korean; establishment, linkage, operation, design in English)
+- End strategy names with an action noun that names the measure's action (for example, 수립, 연계, 운영, 제시, 설계, 도출, 반영 in Korean; establishment, linkage, operation, design in English)
     + (Output name ending) A name ending in "지표 체계" (indicator system) or "로드맵" (roadmap) reads as a work product of the Proposal Scope section
     + (Meeting body name ending) A name ending in "자문위원회" (advisory committee) or "실무협의회" (working council) reads as a committee of the implementation structure
     + (Methodology name ending) A name ending in "로직모델" (logic model) or "델파이" (Delphi) reads as a held asset of the Features and Strengths section
