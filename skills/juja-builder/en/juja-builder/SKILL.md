@@ -840,6 +840,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not use the colloquial "것" ending. "남은 것", "해야 할 것", "과업의 포인트인 것", and "OO것임" are endings of online community colloquial style. `check tone` flags them as FAIL. Convert to nominal endings ("OO 잔존", "OO 필요", "OO이 과업의 핵심"). The verdict target is a "것" ending at the end of a line
 - Do not join two predicates with connective endings (-으며, -하며, -이며, -하고) or conjunctive adverbs (그리고, 그러나, 그래서). Split the sentences. Express relations between sentences through the hierarchy
 - Use commas only for lists of three or more items of the same category. Write a list of two as "A 및 B". "및" is the conventional notation of client official letters
+    + Established names in a field keep their customary wording. For example, the BSC perspective name "학습과 성장"
 - Do not use em dashes, tildes, separator symbols (/, ·, →), or connecting hyphens (hyphens for ranges are allowed). A line break inside a table cell is `<br>`
 - Do not use contrast constructions ("X가 아닌 Y", "단순한 X를 넘어 Y"). Describe Y directly
 - For count declarations, apply the verdict in the Reader-Perspective Writing section
