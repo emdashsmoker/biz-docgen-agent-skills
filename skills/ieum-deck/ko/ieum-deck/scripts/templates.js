@@ -110,23 +110,48 @@ function bulletFitSize(box, items, opt) {
   const first = fitted.find((p) => p.bullet && !p.lvl) || fitted[0];
   return first ? first.runs[0].sz : sz;
 }
-/** 불릿 목록. items: string | {text, sub:[]} */
+/** 불릿 문단 높이 합 (ratio 는 줄 높이 배수, 생략하면 렌더링 판정치) */
+function bulletParasH(ps, innerW, ratio) {
+  return ps.reduce((h, p) => h + A.estimateLines(p.runs[0].t, innerW - T.PARA.bulletIndentIn, p.runs[0].sz, p.runs[0].b) * A.lineHeightIn(p.runs[0].sz, ratio) + (p.spcBef || 0) / 72, 0);
+}
+/** 상자에 맞춘 불릿 문단과 상자 안쪽 크기. bullets 와 bulletGap 이 같은 문단으로 간격을 재도록 공유 */
+function fitBullets(box, items, o) {
+  const list = Array.isArray(items) ? items : [items];
+  const innerW = box.w - 2 * T.PANEL.INSET, innerH = box.h - 2 * T.PANEL.INSET;
+  return { list, innerW, innerH, fitted: A.fitParas(bulletParas(list, o, o.sz || T.SIZE.body), innerW, innerH, T.SIZE.BODY_MIN) };
+}
+/** 남는 높이를 문단 사이에 나눠 더할 간격(pt)
+ *  기준 높이는 PowerPoint 줄 높이(PP_LINE_RATIO)로 재어 PowerPoint 에서 줄이 높아져도 상자를 넘지 않게 함 */
+function slackGapPt(fitted, innerW, innerH) {
+  const slack = innerH - bulletParasH(fitted, innerW, PP_LINE_RATIO);
+  return Math.min(T.PARA.paraGapMaxPt, Math.max(0, (slack * 72) / (fitted.length + 1)));
+}
+/** 상자 1개에 홀로 둘 때의 불릿 문단 간격(pt) = 기본 간격 + 남는 높이 분배. 문단이 1개 이하이면 나눌 간격이 없어 null */
+function bulletGap(box, items, opt) {
+  const o = opt || {};
+  const { fitted, innerW, innerH } = fitBullets(box, items, o);
+  return fitted.length > 1 ? (o.gapPt || T.PARA.paraGapPt) + slackGapPt(fitted, innerW, innerH) : null;
+}
+/** 같은 계층 형제 상자 묶음의 공통 문단 간격 (상자별 간격의 최솟값)
+ *  상자마다 간격을 따로 나누면 이웃 상자끼리 간격이 어긋나므로 묶음에 하나의 간격을 씀. 가장 빡빡한 상자 기준이라 어느 상자도 높이가 늘지 않음
+ *  opt 는 bullets 에 넘길 옵션 (상자마다 다르면 boxes 와 같은 순서의 배열). 빈 자리는 null 상자로 둠. 문단이 2개 이상인 상자가 없으면 undefined */
+function groupGap(boxes, itemsList, opt) {
+  const gaps = boxes.map((box, i) => (box ? bulletGap(box, itemsList[i] || [], Array.isArray(opt) ? opt[i] : opt) : null)).filter((g) => g != null);
+  return gaps.length ? Math.min(...gaps) : undefined;
+}
+/** 불릿 목록. items: string | {text, sub:[]}. opt.groupGapPt 를 주면 남는 높이 분배 대신 그 값을 문단 간격으로 씀 (groupGap 결과) */
 function bullets(ctx, slide, box, items, opt) {
   const o = opt || {};
-  const sz = o.sz || T.SIZE.body;
-  const list = Array.isArray(items) ? items : [items];
-  const paras = bulletParas(list, o, sz);
-  const innerW = box.w - 2 * T.PANEL.INSET, innerH = box.h - 2 * T.PANEL.INSET;
-  let fitted = A.fitParas(paras, innerW, innerH, T.SIZE.BODY_MIN);
-  const need = (ps, ratio) => ps.reduce((h, p) => h + A.estimateLines(p.runs[0].t, innerW - T.PARA.bulletIndentIn, p.runs[0].sz, p.runs[0].b) * A.lineHeightIn(p.runs[0].sz, ratio) + (p.spcBef || 0) / 72, 0);
+  const { list, innerW, innerH, fitted: fit0 } = fitBullets(box, items, o);
+  let fitted = fit0;
   // 남는 높이는 항목 간격으로만 분배. 글꼴은 계층 기준값을 유지하여 이웃 상자와 크기가 어긋나지 않게 함
-  // 간격 분배의 기준 높이는 PowerPoint 줄 높이(PP_LINE_RATIO)로 재어 PowerPoint 에서 줄이 높아져도 상자를 넘지 않게 함
+  // 형제 상자 묶음은 공통 간격을 받아 본문 문단 간격을 그 값으로 맞춤 (하위 항목은 기본 간격을 넘는 몫만 받음)
   if (fitted.length > 1) {
-    const slack = innerH - need(fitted, PP_LINE_RATIO);
-    const extra = Math.min(T.PARA.paraGapMaxPt, Math.max(0, (slack * 72) / (fitted.length + 1)));
-    fitted = fitted.map((p) => ({ ...p, spcBef: (p.spcBef || 0) + extra }));
+    const base = o.gapPt || T.PARA.paraGapPt;
+    const extra = o.groupGapPt != null ? o.groupGapPt - base : slackGapPt(fitted, innerW, innerH);
+    fitted = fitted.map((p) => ({ ...p, spcBef: Math.max(0, (p.spcBef || 0) + extra) }));
   }
-  const used = need(fitted);
+  const used = bulletParasH(fitted, innerW);
   if (used < box.h * (1 - T.PANEL.SLACK_WARN) && list.length > 1 && !o.noWarn) ctx.warn(`빈 공간 ${Math.round((1 - used / box.h) * 100)}% (불릿 ${list.length}개, 상자 ${box.h.toFixed(2)}in)`);
   // 가로 채움: 불릿 항목 글줄이 상자 안쪽 폭에서 차지하는 비율의 평균 (짧은 항목만 있으면 오른쪽이 비어 보임)
   const bl = fitted.filter((p) => p.bullet && !p.lvl);
@@ -140,15 +165,24 @@ function bullets(ctx, slide, box, items, opt) {
   }
   slide.addText(A.runsOf(fitted), { x: box.x, y: box.y, w: box.w, h: box.h, isTextBox: true, valign: o.valign || "middle", margin: A.boxMargin([T.PANEL.INSET, T.PANEL.INSET, T.PANEL.INSET, T.PANEL.INSET]), fill: o.fill ? { color: o.fill } : undefined, line: o.line ? { color: o.line, width: T.PANEL.LINE_PT } : undefined, autoFit: false });
 }
+/** 패널 몸체 상자 (라벨 바 아래) */
+function panelBody(box, p) {
+  const headH = p.head ? T.PANEL.TITLE_H : 0;
+  return { x: box.x, y: box.y + headH, w: box.w, h: box.h - headH };
+}
 /** 패널: 라벨 바 + 테두리 몸체 + 불릿 */
 function panel(ctx, slide, box, p) {
-  const headH = p.head ? T.PANEL.TITLE_H : 0;
-  if (p.head) label(ctx, slide, { x: box.x, y: box.y, w: box.w, h: headH }, p.head, { fill: p.headFill });
-  const bd = { x: box.x, y: box.y + headH, w: box.w, h: box.h - headH };
+  if (p.head) label(ctx, slide, { x: box.x, y: box.y, w: box.w, h: T.PANEL.TITLE_H }, p.head, { fill: p.headFill });
+  const bd = panelBody(box, p);
   frame(ctx, slide, bd, { fill: p.fill });
-  if (p.items) bullets(ctx, slide, bd, p.items, { noWarn: p.noWarn, sz: p.sz, subSz: p.subSz });
+  if (p.items) bullets(ctx, slide, bd, p.items, { noWarn: p.noWarn, sz: p.sz, subSz: p.subSz, groupGapPt: p.groupGapPt });
   else if (p.text) A.text(slide, bd, p.text, { sz: T.SIZE.body, align: "center" });
   return bd;
+}
+/** 나란한 패널 묶음의 공통 문단 간격. ps 는 boxes 와 같은 순서로 panel 에 넘길 값 (빈 자리는 null) */
+function panelsGap(boxes, ps) {
+  const has = (p) => !!(p && p.items);
+  return groupGap(boxes.map((b, i) => (has(ps[i]) ? panelBody(b, ps[i]) : null)), ps.map((p) => (has(p) ? p.items : [])), ps.map((p) => ({ sz: p && p.sz, subSz: p && p.subSz })));
 }
 /** 표. head[], rows[][], colW(비율, 생략 시 자동), align[] */
 // 표 셀 값 판별. 셀 안 항목은 배열 원소나 줄바꿈으로 구분
@@ -520,12 +554,15 @@ function purpose(ctx, slide, sb) {
   geo.forEach((g) => { g.fit = g.subs.length ? bulletFitSize(g.sbox, g.subs, subOpt) : null; });
   const fits = geo.filter((g) => g.fit != null).map((g) => g.fit);
   const subSz = fits.length ? Math.min(...fits) : T.SIZE.body;
-  geo.forEach(({ ld, y, rh, th, subs, notes, noteH, sbox, fit }, i) => {
+  // 공통 크기보다 크게 맞춰지는 리드만 공통 크기로 시작 (공통 크기를 정한 리드는 기존 맞춤을 그대로 사용)
+  const subOpts = geo.map((g) => (g.fit > subSz ? { ...subOpt, sz: subSz } : subOpt));
+  // 근거 불릿의 문단 간격도 리드 사이에 같은 값을 씀
+  const subGap = groupGap(geo.map((g) => (g.subs.length ? g.sbox : null)), geo.map((g) => g.subs), subOpts);
+  geo.forEach(({ ld, y, rh, th, subs, notes, noteH, sbox }, i) => {
     label(ctx, slide, { x: L.x + 0.33, y: y + 0.15, w: 0.37, h: 0.36 }, String(i + 1), { sz: T.SIZE.body });
     A.text(slide, { x: L.x + 0.8, y: y + 0.1, w: tw, h: th }, ld.title, { sz: T.SIZE.panelHead, bold: true, align: "left", valign: "middle" });
     // 리드 칸을 넘지 않도록 글꼴을 줄여 맞추고 그래도 넘치면 검수에서 잡음
-    // 공통 크기보다 크게 맞춰지는 리드만 공통 크기로 시작 (공통 크기를 정한 리드는 기존 맞춤을 그대로 사용)
-    if (subs.length) bullets(ctx, slide, sbox, subs, fit > subSz ? { ...subOpt, sz: subSz } : subOpt);
+    if (subs.length) bullets(ctx, slide, sbox, subs, { ...subOpts[i], groupGapPt: subGap });
     // 주석은 근거 불릿 상자 바로 아래에 둠 (불릿은 남는 높이를 항목 간격으로 나누어 상자를 채우므로 항목 수 기준 고정 오프셋이면 겹침)
     // 근거 상자는 주석 높이(noteH)를 뺀 높이로 잡았으므로 주석은 리드 칸 안에 들어감
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
@@ -591,11 +628,18 @@ function scope(ctx, slide, sb) {
   const outH = outLay.h;
   const my = gb.y + gb.h + 0.25, mh = b.y + b.h - my - (outs.length ? outH + 0.25 : 0);
   tag(my, mh, tags[1]);
-  cols({ x: ix, y: my, w: iw, h: mh }, Math.max(mods.length, 1)).forEach((c, i) => { if (mods[i]) panel(ctx, slide, c, { head: mods[i].title, items: mods[i].items, noWarn: true }); });
+  // 모듈 행과 산출물 행은 행마다 문단 간격을 하나로 맞춤
+  const mcols = cols({ x: ix, y: my, w: iw, h: mh }, Math.max(mods.length, 1));
+  const mps = mcols.map((c, i) => (mods[i] ? { head: mods[i].title, items: mods[i].items, noWarn: true } : null));
+  const mgap = panelsGap(mcols, mps);
+  mcols.forEach((c, i) => { if (mps[i]) panel(ctx, slide, c, { ...mps[i], groupGapPt: mgap }); });
   if (outs.length) {
     const oy = b.y + b.h - outH;
     tag(oy, outH, tags[2]);
-    outLay.cells.forEach((c) => { const cb = { x: c.x, y: oy + c.y, w: c.w, h: c.h }; frame(ctx, slide, cb); bullets(ctx, slide, cb, c.items, { noWarn: true, valign: "middle" }); });
+    const ocbs = outLay.cells.map((c) => ({ x: c.x, y: oy + c.y, w: c.w, h: c.h }));
+    const oopt = { noWarn: true, valign: "middle" };
+    const ogap = groupGap(ocbs, outLay.cells.map((c) => c.items), oopt);
+    ocbs.forEach((cb, j) => { frame(ctx, slide, cb); bullets(ctx, slide, cb, outLay.cells[j].items, { ...oopt, groupGapPt: ogap }); });
   }
   source(ctx, slide, sb);
 }
@@ -649,11 +693,15 @@ function strategy(ctx, slide, sb) {
   const bottom = s.conclusion ? baseY - STRAT_GAP : b.y + b.h;
   const cb = { x: b.x + STRAT_EAVE, y: top, w: b.w - 2 * STRAT_EAVE, h: bottom - top };
   const resH = hasRes ? STRAT_GAP + STRAT_RES_H : 0;
-  cols(cb, Math.max(st.length, 1)).forEach((c, i) => {
+  const scols = cols(cb, Math.max(st.length, 1));
+  const bds = scols.map((c) => ({ x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H - resH }));
+  // 기둥 열은 문단 간격을 하나로 맞춤
+  const sgap = groupGap(bds.map((bd, i) => (st[i] ? bd : null)), st.map((x) => (x && x.items) || []), { noWarn: true });
+  scols.forEach((c, i) => {
     const x = st[i]; if (!x) return;
     label(ctx, slide, { x: c.x, y: c.y, w: c.w, h: T.PANEL.TITLE_H }, `${["①", "②", "③", "④", "⑤"][i]} ${x.title}`);
-    const bd = { x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H - resH };
-    frame(ctx, slide, bd); bullets(ctx, slide, bd, x.items || [], { noWarn: true });
+    const bd = bds[i];
+    frame(ctx, slide, bd); bullets(ctx, slide, bd, x.items || [], { noWarn: true, groupGapPt: sgap });
     if (x.result) { const rb = { x: c.x, y: bd.y + bd.h + STRAT_GAP, w: c.w, h: STRAT_RES_H }; frame(ctx, slide, rb, { line: T.COLOR.navy, pt: 1 }); A.text(slide, rb, x.result, { sz: T.SIZE.body, bold: true, align: "center" }); }
   });
   if (s.conclusion) label(ctx, slide, { x: b.x, y: baseY, w: b.w, h: STRAT_BASE_H }, s.conclusion, { fill: T.COLOR.navyDeep, sz: T.SIZE.panelHead });
@@ -718,16 +766,18 @@ function module_overview(ctx, slide, sb) {
   chevronRow(ctx, slide, chev, tasks.map((t) => t.title), {});
   const tcols = chevronCols(chev, Math.max(tasks.length, 1), grid.y, grid.h);
   // 같은 행의 상자는 한 글꼴로 통일 (행마다 공통 크기 계산)
-  const rowSz = {};
+  // 문단 간격도 행마다 하나로 맞춤 (공통 크기를 정한 뒤 그 크기로 상자별 간격을 재어 최솟값 사용)
+  const rowSz = {}, rowGap = {};
   [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
     const boxes = tcols.map((c) => ({ x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 }));
     rowSz[k] = groupSize(boxes, tasks.map((t) => (t && t[k]) || []));
+    rowGap[k] = groupGap(boxes, tasks.map((t) => (t && t[k]) || []), { sz: rowSz[k] });
   });
   tcols.forEach((c, i) => {
     const t = tasks[i]; if (!t) return;
     [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
       const bx = { x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 };
-      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k] });
+      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k] });
     });
   });
   source(ctx, slide, sb);
@@ -789,12 +839,17 @@ function task_multi(ctx, slide, sb) {
   rows.forEach((rl, r) => {
     const y = cb.y + headH + 0.1 + r * (rowH + T.PANEL.GAP);
     label(ctx, slide, { x: cb.x, y, w: labW + 0.08 - T.PANEL.LABEL_GAP, h: rowH }, rl, { sz: T.SIZE.tableDense, fill: T.COLOR.navyDeep });
+    const valsOf = (i) => (rl === freeLabel ? (maps[i].__free || []) : (maps[i][rl] || []));
+    // 같은 행의 불릿 칸(값 2개 이상)은 문단 간격을 하나로 맞춤
+    const vopt = { noWarn: true, sz: T.SIZE.tableDense, forceBullet: true };
+    const vboxes = tasks.map((t, i) => (valsOf(i).length > 1 ? { x: gridX + i * (colW + T.PANEL.GAP), y, w: colW, h: rowH } : null));
+    const vgap = groupGap(vboxes, tasks.map((t, i) => valsOf(i)), vopt);
     tasks.forEach((t, i) => {
       const x = gridX + i * (colW + T.PANEL.GAP);
-      const vals = rl === freeLabel ? (maps[i].__free || []) : (maps[i][rl] || []);
+      const vals = valsOf(i);
       frame(ctx, slide, { x, y, w: colW, h: rowH });
       if (vals.length === 1) A.text(slide, { x: x + 0.08, y, w: colW - 0.16, h: rowH }, vals[0], { sz: T.SIZE.tableDense, align: "center", valign: "middle" });
-      else if (vals.length) bullets(ctx, slide, { x, y, w: colW, h: rowH }, vals, { noWarn: true, sz: T.SIZE.tableDense, forceBullet: true });
+      else if (vals.length) bullets(ctx, slide, vboxes[i], vals, { ...vopt, groupGapPt: vgap });
     });
   });
   if (s.point) callout(ctx, slide, { x: b.x, y: b.y + b.h - 0.5, w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point);
@@ -822,7 +877,10 @@ function bulletsT(ctx, slide, sb) {
   // 패널 높이는 내용 높이 기준으로 두고 패널과 수행 Point 묶음을 본문 세로 가운데에 둠
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
   const top = b.y + (b.h - gh - ptH) / 2;
-  cols({ x: x0, y: top, w: gw, h: gh }, n, gap).forEach((c, i) => { if (pn[i]) panel(ctx, slide, c, { ...pn[i], sz: psz, subSz: ssz }); });
+  const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
+  const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: psz, subSz: ssz } : null));
+  const pgap = panelsGap(pboxes, pps); // 나란한 패널은 문단 간격도 하나로 맞춤
+  pboxes.forEach((c, i) => { if (pps[i]) panel(ctx, slide, c, { ...pps[i], groupGapPt: pgap }); });
   if (point) callout(ctx, slide, { x: x0, y: top + gh + 0.2, w: gw, h: 0.5 }, pointLabel(ctx, sb), point);
   source(ctx, slide, sb);
 }
@@ -890,7 +948,10 @@ function chart_text(ctx, slide, sb) {
   const fAvail = (R.h - T.PANEL.GAP * (nf - 1)) / nf - T.PANEL.TITLE_H;
   const fh = T.PANEL.TITLE_H + panelBodyH(f.map(() => R.w), f.map((x) => (x && x.items) || []), T.SIZE.body, fAvail);
   const fH = fh * nf + T.PANEL.GAP * (nf - 1);
-  rows({ ...R, y: R.y + (R.h - fH) / 2, h: fH }, nf).forEach((r, i) => { if (f[i]) panel(ctx, slide, r, { head: f[i].head, items: f[i].items, noWarn: true }); });
+  const fboxes = rows({ ...R, y: R.y + (R.h - fH) / 2, h: fH }, nf);
+  const fps = fboxes.map((r, i) => (f[i] ? { head: f[i].head, items: f[i].items, noWarn: true } : null));
+  const fgap = panelsGap(fboxes, fps); // 발견 패널은 문단 간격도 하나로 맞춤
+  fboxes.forEach((r, i) => { if (fps[i]) panel(ctx, slide, r, { ...fps[i], groupGapPt: fgap }); });
   source(ctx, slide, sb);
 }
 /** 차트 2개 나란히 + 각 발견. slots: {left:{title, chart, items}, right:{...}} */
@@ -976,8 +1037,11 @@ function compare(ctx, slide, sb) {
   const top = b.y + (b.h - ph - gh) / 2;
   const cb = { x: b.x, y: top, w: b.w, h: ph };
   const [L, R] = cols(cb, 2, 0.8);
-  panel(ctx, slide, L, { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true });
-  panel(ctx, slide, R, { head: LB.label("compare", "tobe.head", s.tobe && s.tobe.head), items: s.tobe && s.tobe.items, noWarn: true });
+  const lp = { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true };
+  const rp = { head: LB.label("compare", "tobe.head", s.tobe && s.tobe.head), items: s.tobe && s.tobe.items, noWarn: true };
+  const pgap = panelsGap([L, R], [lp, rp]); // 대비 패널은 문단 간격을 하나로 맞춤
+  panel(ctx, slide, L, { ...lp, groupGapPt: pgap });
+  panel(ctx, slide, R, { ...rp, groupGapPt: pgap });
   slide.addShape(ctx.pres.ShapeType.rightArrow, { x: L.x + L.w + 0.15, y: cb.y + cb.h / 2 - 0.25, w: 0.5, h: 0.5, fill: { color: T.COLOR.navy }, line: { color: "FFFFFF", width: 0, transparency: 100 } });
   if (s.gap) { const gy = top + ph + 0.2; label(ctx, slide, { x: b.x, y: gy, w: 1.2 * ctx.S.sx, h: 0.8 }, LB.label("compare", "gapHead", s.gapHead), { sz: T.SIZE.body }); const gb = { x: b.x + 1.2 * ctx.S.sx, y: gy, w: b.w - 1.2 * ctx.S.sx, h: 0.8 }; frame(ctx, slide, gb, { fill: T.COLOR.tintBg }); bullets(ctx, slide, gb, s.gap, { noWarn: true }); }
   source(ctx, slide, sb);
@@ -1143,16 +1207,24 @@ function staff_card(ctx, slide, sb) {
   const people = s.people || [];
   // 5명 이상이면 사진을 생략하고 텍스트 폭을 확보 (조직도의 모듈 수 증가에 대응)
   const dense = people.length >= 4;
-  cols(b, Math.max(people.length, 1), dense ? 0.12 : T.PANEL.GAP).forEach((c, i) => {
+  const pcols = cols(b, Math.max(people.length, 1), dense ? 0.12 : T.PANEL.GAP);
+  const pxOf = (p) => (dense && !p.photo ? 0 : 1.0); // 사진 열 폭
+  const careerBox = (c, p) => ({ x: c.x + 0.1 + pxOf(p), y: c.y + T.PANEL.TITLE_H + 0.5, w: c.w - 0.2 - pxOf(p), h: 0.75 });
+  const recordBox = (c) => ({ x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.68, w: c.w - 0.24, h: c.h - T.PANEL.TITLE_H - 1.8 });
+  const copt = { noWarn: true, valign: "top" }, ropt = { noWarn: true, valign: "top", sz: dense ? T.SIZE.tableDense : T.SIZE.body };
+  // 경력 칸끼리, 실적 칸끼리 문단 간격을 하나로 맞춤
+  const cgap = groupGap(pcols.map((c, i) => (people[i] ? careerBox(c, people[i]) : null)), people.map((p) => (p && p.career) || []), copt);
+  const rgap = groupGap(pcols.map((c, i) => (people[i] ? recordBox(c) : null)), people.map((p) => (p && p.records) || []), ropt);
+  pcols.forEach((c, i) => {
     const p = people[i]; if (!p) return;
     label(ctx, slide, { x: c.x, y: c.y, w: c.w, h: T.PANEL.TITLE_H }, p.role);
     frame(ctx, slide, { x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H });
-    const px = dense && !p.photo ? 0 : 1.0; // 사진 열 폭
+    const px = pxOf(p);
     if (px) A.image(ctx.pres, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 0.12, w: 0.9, h: 1.1 }, p.photo, { label: "사진" });
     A.text(slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.12, w: c.w - 0.2 - px, h: 0.36 }, p.name || "[인력]", { sz: T.SIZE.panelHead, bold: true, align: px ? "left" : "center" });
-    bullets(ctx, slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.5, w: c.w - 0.2 - px, h: 0.75 }, p.career || [], { noWarn: true, valign: "top" });
+    bullets(ctx, slide, careerBox(c, p), p.career || [], { ...copt, groupGapPt: cgap });
     label(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.35, w: c.w - 0.24, h: 0.28 }, LB.label("staff_card", "recordsHead", s.recordsHead), { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body });
-    bullets(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.68, w: c.w - 0.24, h: c.h - T.PANEL.TITLE_H - 1.8 }, p.records || [], { noWarn: true, valign: "top", sz: dense ? T.SIZE.tableDense : T.SIZE.body });
+    bullets(ctx, slide, recordBox(c), p.records || [], { ...ropt, groupGapPt: rgap });
   });
   source(ctx, slide, sb);
 }
@@ -1166,8 +1238,11 @@ function swot(ctx, slide, sb) {
   const sideW = (b.w - 2 * SWOT_GAP) * SWOT_SIDE_SHARE, midW = b.w - 2 * SWOT_GAP - 2 * sideW;
   const L = { x: b.x, y: b.y, w: sideW, h: b.h }, M = { x: b.x + sideW + SWOT_GAP, y: b.y, w: midW, h: b.h }, R = { x: M.x + midW + SWOT_GAP, y: b.y, w: sideW, h: b.h };
   const lb = LB.labels("swot", "labels", s.labels); // 요인 칸 제목 (labels 로 바꿈)
-  rows(L, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.W : lb.S, items: i ? s.W : s.S, noWarn: true }));
-  rows(R, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.T : lb.O, items: i ? s.T : s.O, noWarn: true }));
+  // 네 요인 칸은 문단 간격을 하나로 맞춤 (그리는 순서는 S, W, O, T)
+  const fboxes = rows(L, 2).concat(rows(R, 2));
+  const fps = [{ head: lb.S, items: s.S, noWarn: true }, { head: lb.W, items: s.W, noWarn: true }, { head: lb.O, items: s.O, noWarn: true }, { head: lb.T, items: s.T, noWarn: true }];
+  const fgap = panelsGap(fboxes, fps);
+  fboxes.forEach((r, i) => panel(ctx, slide, r, { ...fps[i], groupGapPt: fgap }));
   // 네 요인 칸에서 가운데 전략 칸으로 모이는 화살표 (왼쪽 열은 오른쪽으로, 오른쪽 열은 왼쪽으로)
   const noLine = { color: "FFFFFF", width: 0, transparency: 100 };
   rows(L, 2).forEach((r) => {
@@ -1177,11 +1252,15 @@ function swot(ctx, slide, sb) {
   });
   const q = [[lb.SO, s.so], [lb.WO, s.wo], [lb.ST, s.st], [lb.WT, s.wt]];
   const cell = (M.w - 0.1) / 2, ch = (M.h - 0.1) / 2;
+  const qboxes = q.map((_, i) => ({ x: M.x + (i % 2) * (cell + 0.1), y: M.y + Math.floor(i / 2) * (ch + 0.1), w: cell, h: ch }));
+  const qbody = (bx) => ({ x: bx.x, y: bx.y + 0.3, w: bx.w, h: bx.h - 0.3 });
+  const qopt = { noWarn: true, valign: "middle" };
+  const qgap = groupGap(qboxes.map(qbody), q.map(([, v]) => v || []), qopt); // 네 전략 칸은 문단 간격을 하나로 맞춤
   q.forEach(([k, v], i) => {
-    const bx = { x: M.x + (i % 2) * (cell + 0.1), y: M.y + Math.floor(i / 2) * (ch + 0.1), w: cell, h: ch };
+    const bx = qboxes[i];
     frame(ctx, slide, bx);
     A.text(slide, { x: bx.x, y: bx.y, w: bx.w, h: 0.3 }, k, { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "center" });
-    bullets(ctx, slide, { x: bx.x, y: bx.y + 0.3, w: bx.w, h: bx.h - 0.3 }, v || [], { noWarn: true, valign: "middle" });
+    bullets(ctx, slide, qbody(bx), v || [], { ...qopt, groupGapPt: qgap });
   });
   source(ctx, slide, sb);
 }
@@ -1208,7 +1287,9 @@ function cards(ctx, slide, sb) {
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);
   const top = b.y + (b.h - gridH - ptH) / 2;
   const cboxes = rows({ x: x0, y: top, w: gw, h: gridH }, nrow).flatMap((r) => cols(r, ncol));
-  cboxes.forEach((c, k) => { if (cd[k]) panel(ctx, slide, c, { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz }); });
+  const cps = cboxes.map((c, k) => (cd[k] ? { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz } : null));
+  const cgap = panelsGap(cboxes, cps); // 카드는 문단 간격도 하나로 맞춤
+  cboxes.forEach((c, k) => { if (cps[k]) panel(ctx, slide, c, { ...cps[k], groupGapPt: cgap }); });
   if (s.point) callout(ctx, slide, { x: x0, y: top + gridH + 0.2, w: gw, h: 0.5 }, pointLabel(ctx, sb), s.point);
   source(ctx, slide, sb);
 }
@@ -1229,7 +1310,11 @@ function steps(ctx, slide, sb) {
   const lab = LB.labelKeep("steps", "stepLabel", s.stepLabel);
   const chev = { x: b.x, y: b.y + shift, w: b.w, h: 0.55 };
   chevronRow(ctx, slide, chev, st.map((x, i) => (lab ? `${lab} ${i + 1}. ${x.title}` : x.title)));
-  chevronCols(chev, Math.max(st.length, 1), b.y + 0.7 + shift, bodyH).forEach((c, i) => { if (st[i]) { frame(ctx, slide, c); bullets(ctx, slide, c, st[i].items || [], { noWarn: true, valign: "middle", gapPt: Math.min(14, Math.max(8, (c.h - 0.3) / Math.max((st[i].items || []).length, 1) * 24)) }); } });
+  const scols = chevronCols(chev, Math.max(st.length, 1), b.y + 0.7 + shift, bodyH);
+  const sopts = scols.map((c, i) => ({ noWarn: true, valign: "middle", gapPt: Math.min(14, Math.max(8, (c.h - 0.3) / Math.max(((st[i] && st[i].items) || []).length, 1) * 24)) }));
+  // 단계 상자는 문단 간격을 하나로 맞춤 (상자별 기본 간격과 남는 높이 분배를 합한 값의 최솟값)
+  const sgap = groupGap(scols.map((c, i) => (st[i] ? c : null)), st.map((x) => (x && x.items) || []), sopts);
+  scols.forEach((c, i) => { if (st[i]) { frame(ctx, slide, c); bullets(ctx, slide, c, st[i].items || [], { ...sopts[i], groupGapPt: sgap }); } });
   if (s.point) callout(ctx, slide, { x: b.x, y: Math.min(b.y + 0.7 + shift + bodyH + 0.25, b.y + b.h - 0.5), w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point); // 상자 바로 아래
   source(ctx, slide, sb);
 }
@@ -1370,7 +1455,10 @@ function conclusion(ctx, slide, sb) {
   // 패널 높이는 내용 높이 기준으로 두고 패널과 결론 밴드 묶음을 본문 세로 가운데에 둠
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, CONC_ITEM_SZ, b.h - bandH - bandGap - T.PANEL.TITLE_H, CONC_SUB_SZ);
   const top = b.y + (b.h - gh - bandGap - bandH) / 2;
-  cols({ x: x0, y: top, w: gw, h: gh }, n, gap).forEach((c, i) => { if (pn[i]) panel(ctx, slide, c, { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true }); });
+  const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
+  const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true } : null));
+  const pgap = panelsGap(pboxes, pps); // 나란한 패널은 문단 간격도 하나로 맞춤
+  pboxes.forEach((c, i) => { if (pps[i]) panel(ctx, slide, c, { ...pps[i], groupGapPt: pgap }); });
   label(ctx, slide, { x: x0, y: top + gh + bandGap, w: gw, h: bandH }, s.conclusion || "", { fill: T.COLOR.navyDeep, sz: T.SIZE.panelHead });
   source(ctx, slide, sb);
 }
@@ -1409,6 +1497,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

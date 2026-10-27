@@ -611,6 +611,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + A single box with a different alignment is limited to cases with a clear emphasis purpose
 - (Vertical fill) Distribute the remaining height of a panel to the item spacing (18pt limit)
     + The spacing distribution is based on the remaining height measured with PowerPoint line height (1.4 times the font size)
+    + Side-by-side boxes of the same level use the smallest of their per-box spacings as one shared spacing (it follows the tightest box, so overflow does not grow)
     + Fonts keep the level's reference size during filling
     + The target fill ratio is 70% or more
     + If a bullet box with two or more items still has more than 45% empty space after widening item spacing to 18pt, build warning (empty space)
