@@ -1,2 +1,2 @@
-e6e6a235048ccbe414024adcf624a5ada54c8fe7c475236e3b81ad7b0cfe58b4  ieum-deck-en.skill
-7c48b76cc5ad70f47e53cd4a1282a7451922ddeac7096500c98f473c6911cb58  ieum-deck-ko.skill
+f5e6e706a3a4a92d9500e17f03103b010908462434729ce299a2356f89573d3a  ieum-deck-en.skill
+b94eee4bc42ffeaaa39af772b42033341dfbaf346f35db3044cedfcfd7173c0c  ieum-deck-ko.skill
