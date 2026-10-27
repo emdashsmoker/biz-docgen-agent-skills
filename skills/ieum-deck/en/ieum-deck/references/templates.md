@@ -167,7 +167,7 @@
 
 - (language) Language tags of the PPTX text (run lang, chart c:lang)
     + latin is the tag of ordinary runs and charts, east_asia the tag of runs that contain Hangul
-    + finalize.py applies the values of the build record (<file name>.build.json) (the defaults give the same result as before)
+    + finalize.py applies the values of the build record (`<file name>.build.json`) (the defaults give the same result as before)
 - (notation) Extra tokens recognized as note lines. Write them without the colon (e.g. `["Fuente", "Nota"]`)
     + The built-in tokens (※, 출처:, 자료:, Source:, Note:) stay recognized
     + Extra tokens also make only items starting in the "token:" form notes, and the lint note notation check includes them
