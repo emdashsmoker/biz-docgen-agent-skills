@@ -198,6 +198,11 @@
 - Implementation Strategy is the HOW section. It describes by what principles and activities the engagement's difficulties are overcome. Introductions of track records, staff, and held tools go in the Features and Strengths section
 - When a grounds ❍ cites a held fact, continue with how it is applied in this engagement
 - Write strategy names in the language of the engagement
+- End strategy names with an action noun that names the measure's action (수립, 연계, 운영, 제시, 설계, 도출, 반영 in Korean; establishment, linkage, operation, design in English)
+    + (Output name ending) A name ending in "지표 체계" (indicator system) or "로드맵" (roadmap) reads as a work product of the Proposal Scope section
+    + (Meeting body name ending) A name ending in "자문위원회" (advisory committee) or "실무협의회" (working council) reads as a committee of the implementation structure
+    + (Methodology name ending) A name ending in "로직모델" (logic model) or "델파이" (Delphi) reads as a held asset of the Features and Strengths section
+    + For example, write "근거 제시형 검색 구조" (evidence-presenting retrieval structure) as "근거 제시형 검색 구조 설계" (design of an evidence-presenting retrieval structure), and "기술 특성별 분과 위원회" (subcommittees by technology trait) as "기술 특성별 분과 위원회 구성" (composition of subcommittees by technology trait)
 - Place the advisory member candidate pool table and the per-session operation (draft) table in this section only when the implementation structure content sits in the Implementation Strategy section. The placement criteria are in the SKILL.md Placement of the Implementation Structure section. These tables are implementation structure content. If a committee is a means of the strategy, use the subcommittee composition table as the sample
 - Select the advisory member candidate pool table from the advisory network in 회사자료.md or a list the user provides. Write names as `OOO` or `[확인]`
 
