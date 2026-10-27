@@ -37,6 +37,7 @@ Changelog rules
 - Added a rule that keeps tables listing risks or values secured by strategy, such as the strategy derivation table, out of the Sample of strategy slides, with a deep review item for such tables (#58)
 - Changed the sample table note from "참고용 시안, 확정치 아님" to "참고용 예시 (미확정)" (#58, #60)
 - Fixed the build record file name in the English templates.md that GitHub hid (#62)
+- Fixed paragraph spacing that differed between sibling bullet boxes on the same tier, such as the boxes in one row, by sharing the smallest per-box spacing within each group (#64)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
@@ -45,6 +46,7 @@ Changelog rules
 * 전략별 위험 요인이나 확보하는 가치를 정리한 표를 견본 표(Sample)에서 제외하는 규칙과 심층 검토 항목 추가 (#58)
 * 견본 표 부기를 "참고용 시안, 확정치 아님"에서 "참고용 예시 (미확정)"으로 변경 (#58, #60)
 * GitHub 화면에서 영어판 templates.md의 빌드 기록 파일명이 사라지던 오류 수정 (#62)
+* 묶음 안 최솟값의 공통 적용으로 같은 계층 형제 불릿 상자마다 문단 간격이 다르던 오류 수정 (#64)
 
 ### juja-builder
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
