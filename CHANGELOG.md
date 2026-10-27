@@ -38,6 +38,10 @@ Changelog rules
 - Changed the sample table note from "참고용 시안, 확정치 아님" to "참고용 예시 (미확정)" (#58, #60)
 - Fixed the build record file name in the English templates.md that GitHub hid (#62)
 - Fixed paragraph spacing that differed between sibling bullet boxes on the same tier, such as the boxes in one row, by sharing the smallest per-box spacing within each group (#64)
+- Added a rule against colloquial style in headlines and body text, with example markers (#66)
+- Changed the "및" rule for two listed nouns from labels only to all text, including headlines and body text (#66)
+- Added exceptions that keep "와" and "과" in RFP original names, established names such as "학습과 성장", relations between two nouns and partners of an action (#66)
+- Changed two-noun lists in the headline patterns, reference examples and sample slides to "및" (#66)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
@@ -47,6 +51,10 @@ Changelog rules
 * 견본 표 부기를 "참고용 시안, 확정치 아님"에서 "참고용 예시 (미확정)"으로 변경 (#58, #60)
 * GitHub 화면에서 영어판 templates.md의 빌드 기록 파일명이 사라지던 오류 수정 (#62)
 * 묶음 안 최솟값의 공통 적용으로 같은 계층 형제 불릿 상자마다 문단 간격이 다르던 오류 수정 (#64)
+* 구어체 표지 예시를 갖춘 헤드라인 및 본문의 구어체 미사용 규칙 추가 (#66)
+* 두 명사 나열의 "및" 연결 적용 범위를 라벨 전용에서 텍스트 전체로 변경 (#66)
+* RFP 원문 명칭, 관용 명칭(학습과 성장 등), 두 명사 사이의 관계, 동작의 상대에 쓰인 "와", "과"의 유지 예외 추가 (#66)
+* 헤드라인 문형, 참조 문서 예시, 견본 슬라이드의 두 명사 나열을 "및" 연결로 변경 (#66)
 
 ### juja-builder
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
@@ -55,6 +63,7 @@ Changelog rules
 - Added a rule that keeps tables listing risk factors or values secured by strategy, such as the strategy derivation table, out of the manuscript (#56, #58)
 - Added a row-by-row expansion definition of the derivation table (□ judgment statements and ❍), with a deep review item and a failure pattern for a leaked table (#56, #58)
 - Changed the sample table note from "참고용 시안, 확정치 아님" to "참고용 예시 (미확정)" (#58, #60)
+- Added exceptions to the two-item "A 및 B" rule that keep "와" and "과" in established names such as "학습과 성장", relations between two nouns and partners of an action (#66)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 실패 패턴과 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 과업 유형별 추천값을 갖춘 제안 배경의 서술 분량(상세, 간결) 착수 질의 추가 (#54)
@@ -62,6 +71,7 @@ Changelog rules
 * 추진전략 도출 표처럼 전략별 위험 요인이나 확보하는 가치를 정리한 표의 원고 미반영 규칙 추가 (#56, #58)
 * 도출 표의 행 단위 전개 정의(□ 판단문과 ❍), 도출 표 유출의 심층 검토 항목, 실패 패턴 추가 (#56, #58)
 * 견본 표 부기를 "참고용 시안, 확정치 아님"에서 "참고용 예시 (미확정)"으로 변경 (#58, #60)
+* 2개 나열 "A 및 B" 규칙에 관용 명칭(학습과 성장 등), 두 명사 사이의 관계, 동작의 상대에 쓰인 "와", "과"의 유지 예외 추가 (#66)
 
 ## 2026-10-26
 
