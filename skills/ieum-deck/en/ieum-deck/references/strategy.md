@@ -113,9 +113,17 @@
 | strategies[].result | Positive form of the value secured (the risk removed is not written) | Value column of the derivation table |
 | conclusion | A sentence that bundles the values to qualify the output (e.g. "an evaluation indicator system with acceptance, validity and readiness to start") | Value column of the derivation table |
 
+- End each strategy name with an action noun that names the measure's action (수립, 연계, 운영, 제시, 설계, 도출, 반영 in a Korean deck; establishment, linkage, operation, design in an English deck)
+    + (Output name ending) A name ending in "지표 체계" or "로드맵" reads as an output on the goal and scope slide
+    + (Meeting body name ending) A name ending in "자문위원회" or "실무협의회" reads as an operating means on the organization slide
+    + (Methodology name ending) A name ending in "로직모델" or "델파이" reads as a held asset on the features slide
+- Rewrite examples of strategy names
+    + "임무 연계형 지표 체계" becomes "임무와 부서 지표 정렬"
+    + "분야별 분과 위원회" becomes "기술 분야별 분과 구성"
+    + "성과 로직모델" becomes "로직모델 적용 성과 경로 설계"
 - Write each pillar item to fit one line of the pillar width (about 16 Korean characters at 16:9)
 - A pillar with a two-line item gets tighter item spacing than the other pillars (the build distributes the spare height as item spacing)
-- The headline substitutes the strategy names into the strategy pattern in `references/headline-patterns.md`
+- The headline substitutes the strategy names, worded the same as the pillar titles, into the strategy pattern in `references/headline-patterns.md`
 - When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body
     + Place a supporting table that is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table) as the Sample
     + Write "참고용 시안, 확정치 아님" (illustrative draft, not final figures) in the `footnotes` of the specimen table
@@ -124,6 +132,7 @@
 
 - Every risk has a pillar that answers it
 - Pillar titles and items do not repeat module names or activity names (diagnosis, survey, advisory committee operation)
+- Strategy names in the pillar titles and the headline end with an action noun
 - A measure remains in the strategy column after removing RFP task items and statutory duties
 - Every value in the derivation table is paired with the risk it removes
 - Pillar titles, items and results are in the positive form without a declared completion date
