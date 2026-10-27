@@ -841,6 +841,8 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not join two predicates with connective endings (-으며, -하며, -이며, -하고) or conjunctive adverbs (그리고, 그러나, 그래서). Split the sentences. Express relations between sentences through the hierarchy
 - Use commas only for lists of three or more items of the same category. Write a list of two as "A 및 B". "및" is the conventional notation of client official letters
     + Established names in a field keep their customary wording. For example, the BSC perspective name "학습과 성장"
+    + "와" and "과" marking a relation between two nouns (사이, 간, 격차, 차이, 일치, 불일치) stay. For example, "현행과 기준의 격차"
+    + "와" and "과" marking the partner of an action stay. For example, "OO공단과 공유", "사유와 함께 관리", "지역 대학과 공동 운영"
 - Do not use em dashes, tildes, separator symbols (/, ·, →), or connecting hyphens (hyphens for ranges are allowed). A line break inside a table cell is `<br>`
 - Do not use contrast constructions ("X가 아닌 Y", "단순한 X를 넘어 Y"). Describe Y directly
 - For count declarations, apply the verdict in the Reader-Perspective Writing section
