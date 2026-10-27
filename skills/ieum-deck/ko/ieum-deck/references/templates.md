@@ -107,7 +107,7 @@
 | 분석과 비교 | steps | 셰브론 단계와 설명 | steps[{title, items[]}], stepLabel, point | 3-5. 접두는 stepLabel 로 지정 (기본값 STEP, "" 이면 제목만 표기). 항목 간격은 상자 높이에 맞춰 자동 배분. 설명 상자 높이 상한은 항목 높이의 1.3배. 묶음은 본문 세로 가운데 |
 | 분석과 비교 | illustrative | 산출물 예시 | title, table 또는 image, tag | 꼬리표는 tag (기본값 Illustrative) |
 | 분석과 비교 | conclusion | 종합과 결론 밴드 | panels[{head, items}], conclusion | 패널 2-4. 패널 항목은 20자 안팎의 판단 문장으로 작성하고 근거 수치는 하위 항목(sub)으로 병기 |
-| 일정과 조직 | roadmap | 전략별 연차 로드맵 | periods[], lanes[{title, tasks[{text, from, to}]}], laneHead, note | 레인 2-5. 레인 머리 칸 문구는 laneHead (기본값 "전략"). 레인명은 전략명과 같이 동작 명사로 종결 (`references/strategy.md`) |
+| 일정과 조직 | roadmap | 전략별 연차 로드맵 | periods[], lanes[{title, tasks[{text, from, to}]}], laneHead, note | 레인 2-5. 레인 머리 칸 문구는 laneHead (기본값 "전략") |
 | 일정과 조직 | gantt | 추진일정 | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12개월. 구분 열 머리 문구는 groupHead (기본값 "구분"), 과업 열 머리 문구는 taskHead (기본값 "과업"), 보고 행 묶음 이름은 reportHead (기본값 "보고회"), 월 머리 문구는 monthFormat (기본값 "{n}M"). 행 높이 상한(0.32인치)에 걸려 높이가 남으면 표를 본문 세로 가운데에 배치 |
 | 일정과 조직 | org | 수행조직도 | client, clientNote, pm, pmTitle, qa, qaTitle, advisory, advisoryTitle, advisoryNote, teams[{name, members[], share}], note | 모듈 상자 2-8 (7개 이상은 2행 자동 배치). 상자에는 인력만 표기 |
 | 일정과 조직 | staff_card | 인력 카드 | people[{role, name, career[], records[], photo}], recordsHead | 2-6 (사용 기준은 4명 이상). 사진이 없으면 사진 열 생략. 실적 띠 라벨은 recordsHead (기본값 "주요 실적") |
