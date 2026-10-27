@@ -44,10 +44,12 @@ Changelog rules
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
 - Added a kickoff question for the narrative length of the proposal background (detailed or brief), with a recommended value by engagement type (#54)
 - Removed the background framework form name attached to the engagement type result in the kickoff questions (#54)
+- Added a rule that keeps the implementation strategy derivation table and tables rebuilt from its columns out of the manuscript, with a row-by-row expansion definition (□ judgment statements and ❍), a deep review item and a failure pattern (#56)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 실패 패턴과 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 과업 유형별 추천값을 갖춘 제안 배경의 서술 분량(상세, 간결) 착수 질의 추가 (#54)
 * 착수 질의에서 과업 유형 판정 결과에 붙던 배경 골격의 구분 명칭 삭제 (#54)
+* 행 단위 전개 정의(□ 판단문과 ❍), 심층 검토 항목, 실패 패턴을 갖춘 추진전략 도출 표와 그 열로 재구성한 표의 원고 미반영 규칙 추가 (#56)
 
 ## 2026-10-26
 
