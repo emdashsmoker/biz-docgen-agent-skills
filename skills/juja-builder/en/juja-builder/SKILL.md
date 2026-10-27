@@ -306,7 +306,8 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
-    + The judged engagement type (including the expanded or compressed form of the background framework). Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
+    + The judged engagement type. Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
+    + Narrative length of the proposal background. Detailed (the situation and the problem described across several points) or brief (one or two points each). Present a recommended value with the question by checking the judged engagement type against the lists in the Background Framework section. For an engagement outside the lists, ask without a recommended value. The recommended value if there is no answer. For an engagement without a recommended value, detailed if there is no answer. The question wording does not use design language such as the names of the forms in the Background Framework section
     + Storyline finalization depth. Basic (□ judgment statements of argument sections and one line per Task) or deep (□ headings and ❍ claim gists for all original sections). Basic if there is no answer
     + Document language and labels. The default is a Korean document with Korean labels unless the user wants another language. For another language, settle the label file and the skip of the Korean-specific checks together (Document Labels in the Typesetting section, references/labels.md)
 - In the kickoff question turn, report the render test result in one line (engine, PASS or FAIL). If a source build is running in parallel, state its progress on the same line. While the rhwp permission question is pending, mark it as awaiting permission
@@ -508,6 +509,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Write □ headings and bracketed subheadings in the language of the engagement. Framework names, stage names, and framework language such as "과업의 답" and "전제조건" are design language (Terms section)
 - The expanded form (business planning, informatization planning, strategic planning) develops S and C across several points
 - The compressed form (performance analysis, management evaluation response, organization and HR, problem solving) gives S and C one or two points each. Each point still meets the lower bounds of composition units
+- The length the user chose in the kickoff questions takes precedence over these lists
 
 ### Module Frameworks by Engagement Type
 
