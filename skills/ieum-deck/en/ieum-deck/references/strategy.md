@@ -122,7 +122,7 @@
     + "분야별 분과 위원회" becomes "기술 분야별 분과 구성"
     + "성과 로직모델" becomes "로직모델 적용 성과 경로 설계"
 - Write each pillar item to fit one line of the pillar width (about 16 Korean characters at 16:9)
-- A pillar with a two-line item gets tighter item spacing than the other pillars (the build distributes the spare height as item spacing)
+- One pillar with a two-line item tightens the item spacing of every pillar to match it (the build uses the smallest per-pillar spacing as the shared spacing)
 - The headline substitutes the strategy names, worded the same as the pillar titles, into the strategy pattern in `references/headline-patterns.md`
 - When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body
     + Place a supporting table that is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table) as the Sample

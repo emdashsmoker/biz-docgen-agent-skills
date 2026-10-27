@@ -110,23 +110,48 @@ function bulletFitSize(box, items, opt) {
   const first = fitted.find((p) => p.bullet && !p.lvl) || fitted[0];
   return first ? first.runs[0].sz : sz;
 }
-/** Bullet list. items: string | {text, sub:[]} */
+/** Total height of bullet paragraphs (ratio is the line height multiple, the rendering value when omitted) */
+function bulletParasH(ps, innerW, ratio) {
+  return ps.reduce((h, p) => h + A.estimateLines(p.runs[0].t, innerW - T.PARA.bulletIndentIn, p.runs[0].sz, p.runs[0].b) * A.lineHeightIn(p.runs[0].sz, ratio) + (p.spcBef || 0) / 72, 0);
+}
+/** Bullet paragraphs fitted to the box and the inner box size. Shared by bullets and bulletGap so both measure spacing on the same paragraphs */
+function fitBullets(box, items, o) {
+  const list = Array.isArray(items) ? items : [items];
+  const innerW = box.w - 2 * T.PANEL.INSET, innerH = box.h - 2 * T.PANEL.INSET;
+  return { list, innerW, innerH, fitted: A.fitParas(bulletParas(list, o, o.sz || T.SIZE.body), innerW, innerH, T.SIZE.BODY_MIN) };
+}
+/** Spacing (pt) added between paragraphs by splitting the spare height
+ *  The height is measured in PowerPoint line height (PP_LINE_RATIO) so taller lines in PowerPoint still stay inside the box */
+function slackGapPt(fitted, innerW, innerH) {
+  const slack = innerH - bulletParasH(fitted, innerW, PP_LINE_RATIO);
+  return Math.min(T.PARA.paraGapMaxPt, Math.max(0, (slack * 72) / (fitted.length + 1)));
+}
+/** Bullet paragraph spacing (pt) of one box on its own = base spacing + share of the spare height. null with one paragraph or fewer (no gap to split) */
+function bulletGap(box, items, opt) {
+  const o = opt || {};
+  const { fitted, innerW, innerH } = fitBullets(box, items, o);
+  return fitted.length > 1 ? (o.gapPt || T.PARA.paraGapPt) + slackGapPt(fitted, innerW, innerH) : null;
+}
+/** Shared paragraph spacing of a group of sibling boxes on the same tier (the smallest per-box spacing)
+ *  Splitting spare height per box makes neighboring boxes disagree, so the group uses one spacing. It follows the tightest box, so no box gets taller
+ *  opt is the option passed to bullets (an array in boxes order when it differs per box). Empty slots are null boxes. undefined when no box has two or more paragraphs */
+function groupGap(boxes, itemsList, opt) {
+  const gaps = boxes.map((box, i) => (box ? bulletGap(box, itemsList[i] || [], Array.isArray(opt) ? opt[i] : opt) : null)).filter((g) => g != null);
+  return gaps.length ? Math.min(...gaps) : undefined;
+}
+/** Bullet list. items: string | {text, sub:[]}. With opt.groupGapPt the value is used as paragraph spacing instead of splitting the spare height (groupGap result) */
 function bullets(ctx, slide, box, items, opt) {
   const o = opt || {};
-  const sz = o.sz || T.SIZE.body;
-  const list = Array.isArray(items) ? items : [items];
-  const paras = bulletParas(list, o, sz);
-  const innerW = box.w - 2 * T.PANEL.INSET, innerH = box.h - 2 * T.PANEL.INSET;
-  let fitted = A.fitParas(paras, innerW, innerH, T.SIZE.BODY_MIN);
-  const need = (ps, ratio) => ps.reduce((h, p) => h + A.estimateLines(p.runs[0].t, innerW - T.PARA.bulletIndentIn, p.runs[0].sz, p.runs[0].b) * A.lineHeightIn(p.runs[0].sz, ratio) + (p.spcBef || 0) / 72, 0);
+  const { list, innerW, innerH, fitted: fit0 } = fitBullets(box, items, o);
+  let fitted = fit0;
   // Spare height goes only to item spacing. The font keeps the tier size so it matches neighboring boxes
-  // The height for spacing distribution is measured in PowerPoint line height (PP_LINE_RATIO) so taller lines in PowerPoint still stay inside the box
+  // A group of sibling boxes receives the shared spacing and sets body paragraph spacing to it (sub items get only the part above the base spacing)
   if (fitted.length > 1) {
-    const slack = innerH - need(fitted, PP_LINE_RATIO);
-    const extra = Math.min(T.PARA.paraGapMaxPt, Math.max(0, (slack * 72) / (fitted.length + 1)));
-    fitted = fitted.map((p) => ({ ...p, spcBef: (p.spcBef || 0) + extra }));
+    const base = o.gapPt || T.PARA.paraGapPt;
+    const extra = o.groupGapPt != null ? o.groupGapPt - base : slackGapPt(fitted, innerW, innerH);
+    fitted = fitted.map((p) => ({ ...p, spcBef: Math.max(0, (p.spcBef || 0) + extra) }));
   }
-  const used = need(fitted);
+  const used = bulletParasH(fitted, innerW);
   if (used < box.h * (1 - T.PANEL.SLACK_WARN) && list.length > 1 && !o.noWarn) ctx.warn(`empty space ${Math.round((1 - used / box.h) * 100)}% (${list.length} bullets, box ${box.h.toFixed(2)}in)`);
   // Horizontal fill: average share of bullet item lines in the inner box width (only short items leave the right side empty)
   const bl = fitted.filter((p) => p.bullet && !p.lvl);
@@ -140,15 +165,24 @@ function bullets(ctx, slide, box, items, opt) {
   }
   slide.addText(A.runsOf(fitted), { x: box.x, y: box.y, w: box.w, h: box.h, isTextBox: true, valign: o.valign || "middle", margin: A.boxMargin([T.PANEL.INSET, T.PANEL.INSET, T.PANEL.INSET, T.PANEL.INSET]), fill: o.fill ? { color: o.fill } : undefined, line: o.line ? { color: o.line, width: T.PANEL.LINE_PT } : undefined, autoFit: false });
 }
+/** Panel body box (below the label bar) */
+function panelBody(box, p) {
+  const headH = p.head ? T.PANEL.TITLE_H : 0;
+  return { x: box.x, y: box.y + headH, w: box.w, h: box.h - headH };
+}
 /** Panel: label bar + bordered body + bullets */
 function panel(ctx, slide, box, p) {
-  const headH = p.head ? T.PANEL.TITLE_H : 0;
-  if (p.head) label(ctx, slide, { x: box.x, y: box.y, w: box.w, h: headH }, p.head, { fill: p.headFill });
-  const bd = { x: box.x, y: box.y + headH, w: box.w, h: box.h - headH };
+  if (p.head) label(ctx, slide, { x: box.x, y: box.y, w: box.w, h: T.PANEL.TITLE_H }, p.head, { fill: p.headFill });
+  const bd = panelBody(box, p);
   frame(ctx, slide, bd, { fill: p.fill });
-  if (p.items) bullets(ctx, slide, bd, p.items, { noWarn: p.noWarn, sz: p.sz, subSz: p.subSz });
+  if (p.items) bullets(ctx, slide, bd, p.items, { noWarn: p.noWarn, sz: p.sz, subSz: p.subSz, groupGapPt: p.groupGapPt });
   else if (p.text) A.text(slide, bd, p.text, { sz: T.SIZE.body, align: "center" });
   return bd;
+}
+/** Shared paragraph spacing of side-by-side panels. ps holds the values passed to panel in boxes order (null for empty slots) */
+function panelsGap(boxes, ps) {
+  const has = (p) => !!(p && p.items);
+  return groupGap(boxes.map((b, i) => (has(ps[i]) ? panelBody(b, ps[i]) : null)), ps.map((p) => (has(p) ? p.items : [])), ps.map((p) => ({ sz: p && p.sz, subSz: p && p.subSz })));
 }
 /** Table. head[], rows[][], colW (ratios, automatic if omitted), align[] */
 // Table cell value checks. Items in a cell are separated by array elements or line breaks
@@ -520,12 +554,15 @@ function purpose(ctx, slide, sb) {
   geo.forEach((g) => { g.fit = g.subs.length ? bulletFitSize(g.sbox, g.subs, subOpt) : null; });
   const fits = geo.filter((g) => g.fit != null).map((g) => g.fit);
   const subSz = fits.length ? Math.min(...fits) : T.SIZE.body;
-  geo.forEach(({ ld, y, rh, th, subs, notes, noteH, sbox, fit }, i) => {
+  // Only leads that would fit larger than the common size start from it (the lead that set the common size keeps its own fit)
+  const subOpts = geo.map((g) => (g.fit > subSz ? { ...subOpt, sz: subSz } : subOpt));
+  // Evidence bullets also use one paragraph spacing across leads
+  const subGap = groupGap(geo.map((g) => (g.subs.length ? g.sbox : null)), geo.map((g) => g.subs), subOpts);
+  geo.forEach(({ ld, y, rh, th, subs, notes, noteH, sbox }, i) => {
     label(ctx, slide, { x: L.x + 0.33, y: y + 0.15, w: 0.37, h: 0.36 }, String(i + 1), { sz: T.SIZE.body });
     A.text(slide, { x: L.x + 0.8, y: y + 0.1, w: tw, h: th }, ld.title, { sz: T.SIZE.panelHead, bold: true, align: "left", valign: "middle" });
     // Shrink the font to fit the lead cell; review catches anything that still overflows
-    // Only leads that would fit larger than the common size start from it (the lead that set the common size keeps its own fit)
-    if (subs.length) bullets(ctx, slide, sbox, subs, fit > subSz ? { ...subOpt, sz: subSz } : subOpt);
+    if (subs.length) bullets(ctx, slide, sbox, subs, { ...subOpts[i], groupGapPt: subGap });
     // The note sits right below the evidence bullet box (bullets spread leftover height into item gaps and fill the box, so a fixed per-item offset overlaps)
     // The evidence box height already excludes the note height (noteH), so the note stays inside the lead cell
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
@@ -591,11 +628,18 @@ function scope(ctx, slide, sb) {
   const outH = outLay.h;
   const my = gb.y + gb.h + 0.25, mh = b.y + b.h - my - (outs.length ? outH + 0.25 : 0);
   tag(my, mh, tags[1]);
-  cols({ x: ix, y: my, w: iw, h: mh }, Math.max(mods.length, 1)).forEach((c, i) => { if (mods[i]) panel(ctx, slide, c, { head: mods[i].title, items: mods[i].items, noWarn: true }); });
+  // The module row and the output row each use one paragraph spacing
+  const mcols = cols({ x: ix, y: my, w: iw, h: mh }, Math.max(mods.length, 1));
+  const mps = mcols.map((c, i) => (mods[i] ? { head: mods[i].title, items: mods[i].items, noWarn: true } : null));
+  const mgap = panelsGap(mcols, mps);
+  mcols.forEach((c, i) => { if (mps[i]) panel(ctx, slide, c, { ...mps[i], groupGapPt: mgap }); });
   if (outs.length) {
     const oy = b.y + b.h - outH;
     tag(oy, outH, tags[2]);
-    outLay.cells.forEach((c) => { const cb = { x: c.x, y: oy + c.y, w: c.w, h: c.h }; frame(ctx, slide, cb); bullets(ctx, slide, cb, c.items, { noWarn: true, valign: "middle" }); });
+    const ocbs = outLay.cells.map((c) => ({ x: c.x, y: oy + c.y, w: c.w, h: c.h }));
+    const oopt = { noWarn: true, valign: "middle" };
+    const ogap = groupGap(ocbs, outLay.cells.map((c) => c.items), oopt);
+    ocbs.forEach((cb, j) => { frame(ctx, slide, cb); bullets(ctx, slide, cb, outLay.cells[j].items, { ...oopt, groupGapPt: ogap }); });
   }
   source(ctx, slide, sb);
 }
@@ -649,11 +693,15 @@ function strategy(ctx, slide, sb) {
   const bottom = s.conclusion ? baseY - STRAT_GAP : b.y + b.h;
   const cb = { x: b.x + STRAT_EAVE, y: top, w: b.w - 2 * STRAT_EAVE, h: bottom - top };
   const resH = hasRes ? STRAT_GAP + STRAT_RES_H : 0;
-  cols(cb, Math.max(st.length, 1)).forEach((c, i) => {
+  const scols = cols(cb, Math.max(st.length, 1));
+  const bds = scols.map((c) => ({ x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H - resH }));
+  // Pillar columns use one paragraph spacing
+  const sgap = groupGap(bds.map((bd, i) => (st[i] ? bd : null)), st.map((x) => (x && x.items) || []), { noWarn: true });
+  scols.forEach((c, i) => {
     const x = st[i]; if (!x) return;
     label(ctx, slide, { x: c.x, y: c.y, w: c.w, h: T.PANEL.TITLE_H }, `${["①", "②", "③", "④", "⑤"][i]} ${x.title}`);
-    const bd = { x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H - resH };
-    frame(ctx, slide, bd); bullets(ctx, slide, bd, x.items || [], { noWarn: true });
+    const bd = bds[i];
+    frame(ctx, slide, bd); bullets(ctx, slide, bd, x.items || [], { noWarn: true, groupGapPt: sgap });
     if (x.result) { const rb = { x: c.x, y: bd.y + bd.h + STRAT_GAP, w: c.w, h: STRAT_RES_H }; frame(ctx, slide, rb, { line: T.COLOR.navy, pt: 1 }); A.text(slide, rb, x.result, { sz: T.SIZE.body, bold: true, align: "center" }); }
   });
   if (s.conclusion) label(ctx, slide, { x: b.x, y: baseY, w: b.w, h: STRAT_BASE_H }, s.conclusion, { fill: T.COLOR.navyDeep, sz: T.SIZE.panelHead });
@@ -718,16 +766,18 @@ function module_overview(ctx, slide, sb) {
   chevronRow(ctx, slide, chev, tasks.map((t) => t.title), {});
   const tcols = chevronCols(chev, Math.max(tasks.length, 1), grid.y, grid.h);
   // Boxes in the same row share one font size (a common size is computed per row)
-  const rowSz = {};
+  // Paragraph spacing is also one value per row (after the common size is set, per-box spacing is measured at that size and the smallest is used)
+  const rowSz = {}, rowGap = {};
   [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
     const boxes = tcols.map((c) => ({ x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 }));
     rowSz[k] = groupSize(boxes, tasks.map((t) => (t && t[k]) || []));
+    rowGap[k] = groupGap(boxes, tasks.map((t) => (t && t[k]) || []), { sz: rowSz[k] });
   });
   tcols.forEach((c, i) => {
     const t = tasks[i]; if (!t) return;
     [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
       const bx = { x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 };
-      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k] });
+      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k] });
     });
   });
   source(ctx, slide, sb);
@@ -789,12 +839,17 @@ function task_multi(ctx, slide, sb) {
   rows.forEach((rl, r) => {
     const y = cb.y + headH + 0.1 + r * (rowH + T.PANEL.GAP);
     label(ctx, slide, { x: cb.x, y, w: labW + 0.08 - T.PANEL.LABEL_GAP, h: rowH }, rl, { sz: T.SIZE.tableDense, fill: T.COLOR.navyDeep });
+    const valsOf = (i) => (rl === freeLabel ? (maps[i].__free || []) : (maps[i][rl] || []));
+    // Bullet cells (two or more values) in the same row use one paragraph spacing
+    const vopt = { noWarn: true, sz: T.SIZE.tableDense, forceBullet: true };
+    const vboxes = tasks.map((t, i) => (valsOf(i).length > 1 ? { x: gridX + i * (colW + T.PANEL.GAP), y, w: colW, h: rowH } : null));
+    const vgap = groupGap(vboxes, tasks.map((t, i) => valsOf(i)), vopt);
     tasks.forEach((t, i) => {
       const x = gridX + i * (colW + T.PANEL.GAP);
-      const vals = rl === freeLabel ? (maps[i].__free || []) : (maps[i][rl] || []);
+      const vals = valsOf(i);
       frame(ctx, slide, { x, y, w: colW, h: rowH });
       if (vals.length === 1) A.text(slide, { x: x + 0.08, y, w: colW - 0.16, h: rowH }, vals[0], { sz: T.SIZE.tableDense, align: "center", valign: "middle" });
-      else if (vals.length) bullets(ctx, slide, { x, y, w: colW, h: rowH }, vals, { noWarn: true, sz: T.SIZE.tableDense, forceBullet: true });
+      else if (vals.length) bullets(ctx, slide, vboxes[i], vals, { ...vopt, groupGapPt: vgap });
     });
   });
   if (s.point) callout(ctx, slide, { x: b.x, y: b.y + b.h - 0.5, w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point);
@@ -822,7 +877,10 @@ function bulletsT(ctx, slide, sb) {
   // Base panel height on content height and center the panels plus 수행 Point group vertically in the body
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
   const top = b.y + (b.h - gh - ptH) / 2;
-  cols({ x: x0, y: top, w: gw, h: gh }, n, gap).forEach((c, i) => { if (pn[i]) panel(ctx, slide, c, { ...pn[i], sz: psz, subSz: ssz }); });
+  const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
+  const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: psz, subSz: ssz } : null));
+  const pgap = panelsGap(pboxes, pps); // side-by-side panels also share one paragraph spacing
+  pboxes.forEach((c, i) => { if (pps[i]) panel(ctx, slide, c, { ...pps[i], groupGapPt: pgap }); });
   if (point) callout(ctx, slide, { x: x0, y: top + gh + 0.2, w: gw, h: 0.5 }, pointLabel(ctx, sb), point);
   source(ctx, slide, sb);
 }
@@ -890,7 +948,10 @@ function chart_text(ctx, slide, sb) {
   const fAvail = (R.h - T.PANEL.GAP * (nf - 1)) / nf - T.PANEL.TITLE_H;
   const fh = T.PANEL.TITLE_H + panelBodyH(f.map(() => R.w), f.map((x) => (x && x.items) || []), T.SIZE.body, fAvail);
   const fH = fh * nf + T.PANEL.GAP * (nf - 1);
-  rows({ ...R, y: R.y + (R.h - fH) / 2, h: fH }, nf).forEach((r, i) => { if (f[i]) panel(ctx, slide, r, { head: f[i].head, items: f[i].items, noWarn: true }); });
+  const fboxes = rows({ ...R, y: R.y + (R.h - fH) / 2, h: fH }, nf);
+  const fps = fboxes.map((r, i) => (f[i] ? { head: f[i].head, items: f[i].items, noWarn: true } : null));
+  const fgap = panelsGap(fboxes, fps); // finding panels also share one paragraph spacing
+  fboxes.forEach((r, i) => { if (fps[i]) panel(ctx, slide, r, { ...fps[i], groupGapPt: fgap }); });
   source(ctx, slide, sb);
 }
 /** Two charts side by side + findings for each. slots: {left:{title, chart, items}, right:{...}} */
@@ -976,8 +1037,11 @@ function compare(ctx, slide, sb) {
   const top = b.y + (b.h - ph - gh) / 2;
   const cb = { x: b.x, y: top, w: b.w, h: ph };
   const [L, R] = cols(cb, 2, 0.8);
-  panel(ctx, slide, L, { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true });
-  panel(ctx, slide, R, { head: LB.label("compare", "tobe.head", s.tobe && s.tobe.head), items: s.tobe && s.tobe.items, noWarn: true });
+  const lp = { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true };
+  const rp = { head: LB.label("compare", "tobe.head", s.tobe && s.tobe.head), items: s.tobe && s.tobe.items, noWarn: true };
+  const pgap = panelsGap([L, R], [lp, rp]); // contrast panels share one paragraph spacing
+  panel(ctx, slide, L, { ...lp, groupGapPt: pgap });
+  panel(ctx, slide, R, { ...rp, groupGapPt: pgap });
   slide.addShape(ctx.pres.ShapeType.rightArrow, { x: L.x + L.w + 0.15, y: cb.y + cb.h / 2 - 0.25, w: 0.5, h: 0.5, fill: { color: T.COLOR.navy }, line: { color: "FFFFFF", width: 0, transparency: 100 } });
   if (s.gap) { const gy = top + ph + 0.2; label(ctx, slide, { x: b.x, y: gy, w: 1.2 * ctx.S.sx, h: 0.8 }, LB.label("compare", "gapHead", s.gapHead), { sz: T.SIZE.body }); const gb = { x: b.x + 1.2 * ctx.S.sx, y: gy, w: b.w - 1.2 * ctx.S.sx, h: 0.8 }; frame(ctx, slide, gb, { fill: T.COLOR.tintBg }); bullets(ctx, slide, gb, s.gap, { noWarn: true }); }
   source(ctx, slide, sb);
@@ -1143,16 +1207,24 @@ function staff_card(ctx, slide, sb) {
   const people = s.people || [];
   // With many people, drop photos to free text width (matches org charts with more modules)
   const dense = people.length >= 4;
-  cols(b, Math.max(people.length, 1), dense ? 0.12 : T.PANEL.GAP).forEach((c, i) => {
+  const pcols = cols(b, Math.max(people.length, 1), dense ? 0.12 : T.PANEL.GAP);
+  const pxOf = (p) => (dense && !p.photo ? 0 : 1.0); // photo column width
+  const careerBox = (c, p) => ({ x: c.x + 0.1 + pxOf(p), y: c.y + T.PANEL.TITLE_H + 0.5, w: c.w - 0.2 - pxOf(p), h: 0.75 });
+  const recordBox = (c) => ({ x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.68, w: c.w - 0.24, h: c.h - T.PANEL.TITLE_H - 1.8 });
+  const copt = { noWarn: true, valign: "top" }, ropt = { noWarn: true, valign: "top", sz: dense ? T.SIZE.tableDense : T.SIZE.body };
+  // Career cells and record cells each use one paragraph spacing
+  const cgap = groupGap(pcols.map((c, i) => (people[i] ? careerBox(c, people[i]) : null)), people.map((p) => (p && p.career) || []), copt);
+  const rgap = groupGap(pcols.map((c, i) => (people[i] ? recordBox(c) : null)), people.map((p) => (p && p.records) || []), ropt);
+  pcols.forEach((c, i) => {
     const p = people[i]; if (!p) return;
     label(ctx, slide, { x: c.x, y: c.y, w: c.w, h: T.PANEL.TITLE_H }, p.role);
     frame(ctx, slide, { x: c.x, y: c.y + T.PANEL.TITLE_H, w: c.w, h: c.h - T.PANEL.TITLE_H });
-    const px = dense && !p.photo ? 0 : 1.0; // photo column width
+    const px = pxOf(p);
     if (px) A.image(ctx.pres, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 0.12, w: 0.9, h: 1.1 }, p.photo, { label: "사진" });
     A.text(slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.12, w: c.w - 0.2 - px, h: 0.36 }, p.name || "[인력]", { sz: T.SIZE.panelHead, bold: true, align: px ? "left" : "center" });
-    bullets(ctx, slide, { x: c.x + 0.1 + px, y: c.y + T.PANEL.TITLE_H + 0.5, w: c.w - 0.2 - px, h: 0.75 }, p.career || [], { noWarn: true, valign: "top" });
+    bullets(ctx, slide, careerBox(c, p), p.career || [], { ...copt, groupGapPt: cgap });
     label(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.35, w: c.w - 0.24, h: 0.28 }, LB.label("staff_card", "recordsHead", s.recordsHead), { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body });
-    bullets(ctx, slide, { x: c.x + 0.12, y: c.y + T.PANEL.TITLE_H + 1.68, w: c.w - 0.24, h: c.h - T.PANEL.TITLE_H - 1.8 }, p.records || [], { noWarn: true, valign: "top", sz: dense ? T.SIZE.tableDense : T.SIZE.body });
+    bullets(ctx, slide, recordBox(c), p.records || [], { ...ropt, groupGapPt: rgap });
   });
   source(ctx, slide, sb);
 }
@@ -1166,8 +1238,11 @@ function swot(ctx, slide, sb) {
   const sideW = (b.w - 2 * SWOT_GAP) * SWOT_SIDE_SHARE, midW = b.w - 2 * SWOT_GAP - 2 * sideW;
   const L = { x: b.x, y: b.y, w: sideW, h: b.h }, M = { x: b.x + sideW + SWOT_GAP, y: b.y, w: midW, h: b.h }, R = { x: M.x + midW + SWOT_GAP, y: b.y, w: sideW, h: b.h };
   const lb = LB.labels("swot", "labels", s.labels); // factor cell titles (changed through labels)
-  rows(L, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.W : lb.S, items: i ? s.W : s.S, noWarn: true }));
-  rows(R, 2).forEach((r, i) => panel(ctx, slide, r, { head: i ? lb.T : lb.O, items: i ? s.T : s.O, noWarn: true }));
+  // The four factor cells use one paragraph spacing (drawn in S, W, O, T order)
+  const fboxes = rows(L, 2).concat(rows(R, 2));
+  const fps = [{ head: lb.S, items: s.S, noWarn: true }, { head: lb.W, items: s.W, noWarn: true }, { head: lb.O, items: s.O, noWarn: true }, { head: lb.T, items: s.T, noWarn: true }];
+  const fgap = panelsGap(fboxes, fps);
+  fboxes.forEach((r, i) => panel(ctx, slide, r, { ...fps[i], groupGapPt: fgap }));
   // Arrows converging from the four factor cells on the middle strategy cells (left column points right, right column points left)
   const noLine = { color: "FFFFFF", width: 0, transparency: 100 };
   rows(L, 2).forEach((r) => {
@@ -1177,11 +1252,15 @@ function swot(ctx, slide, sb) {
   });
   const q = [[lb.SO, s.so], [lb.WO, s.wo], [lb.ST, s.st], [lb.WT, s.wt]];
   const cell = (M.w - 0.1) / 2, ch = (M.h - 0.1) / 2;
+  const qboxes = q.map((_, i) => ({ x: M.x + (i % 2) * (cell + 0.1), y: M.y + Math.floor(i / 2) * (ch + 0.1), w: cell, h: ch }));
+  const qbody = (bx) => ({ x: bx.x, y: bx.y + 0.3, w: bx.w, h: bx.h - 0.3 });
+  const qopt = { noWarn: true, valign: "middle" };
+  const qgap = groupGap(qboxes.map(qbody), q.map(([, v]) => v || []), qopt); // the four strategy cells use one paragraph spacing
   q.forEach(([k, v], i) => {
-    const bx = { x: M.x + (i % 2) * (cell + 0.1), y: M.y + Math.floor(i / 2) * (ch + 0.1), w: cell, h: ch };
+    const bx = qboxes[i];
     frame(ctx, slide, bx);
     A.text(slide, { x: bx.x, y: bx.y, w: bx.w, h: 0.3 }, k, { sz: T.SIZE.body, bold: true, color: T.COLOR.navy, align: "center" });
-    bullets(ctx, slide, { x: bx.x, y: bx.y + 0.3, w: bx.w, h: bx.h - 0.3 }, v || [], { noWarn: true, valign: "middle" });
+    bullets(ctx, slide, qbody(bx), v || [], { ...qopt, groupGapPt: qgap });
   });
   source(ctx, slide, sb);
 }
@@ -1208,7 +1287,9 @@ function cards(ctx, slide, sb) {
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);
   const top = b.y + (b.h - gridH - ptH) / 2;
   const cboxes = rows({ x: x0, y: top, w: gw, h: gridH }, nrow).flatMap((r) => cols(r, ncol));
-  cboxes.forEach((c, k) => { if (cd[k]) panel(ctx, slide, c, { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz }); });
+  const cps = cboxes.map((c, k) => (cd[k] ? { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz } : null));
+  const cgap = panelsGap(cboxes, cps); // cards also share one paragraph spacing
+  cboxes.forEach((c, k) => { if (cps[k]) panel(ctx, slide, c, { ...cps[k], groupGapPt: cgap }); });
   if (s.point) callout(ctx, slide, { x: x0, y: top + gridH + 0.2, w: gw, h: 0.5 }, pointLabel(ctx, sb), s.point);
   source(ctx, slide, sb);
 }
@@ -1229,7 +1310,11 @@ function steps(ctx, slide, sb) {
   const lab = LB.labelKeep("steps", "stepLabel", s.stepLabel);
   const chev = { x: b.x, y: b.y + shift, w: b.w, h: 0.55 };
   chevronRow(ctx, slide, chev, st.map((x, i) => (lab ? `${lab} ${i + 1}. ${x.title}` : x.title)));
-  chevronCols(chev, Math.max(st.length, 1), b.y + 0.7 + shift, bodyH).forEach((c, i) => { if (st[i]) { frame(ctx, slide, c); bullets(ctx, slide, c, st[i].items || [], { noWarn: true, valign: "middle", gapPt: Math.min(14, Math.max(8, (c.h - 0.3) / Math.max((st[i].items || []).length, 1) * 24)) }); } });
+  const scols = chevronCols(chev, Math.max(st.length, 1), b.y + 0.7 + shift, bodyH);
+  const sopts = scols.map((c, i) => ({ noWarn: true, valign: "middle", gapPt: Math.min(14, Math.max(8, (c.h - 0.3) / Math.max(((st[i] && st[i].items) || []).length, 1) * 24)) }));
+  // Step boxes use one paragraph spacing (the smallest of each box's base spacing plus its spare-height share)
+  const sgap = groupGap(scols.map((c, i) => (st[i] ? c : null)), st.map((x) => (x && x.items) || []), sopts);
+  scols.forEach((c, i) => { if (st[i]) { frame(ctx, slide, c); bullets(ctx, slide, c, st[i].items || [], { ...sopts[i], groupGapPt: sgap }); } });
   if (s.point) callout(ctx, slide, { x: b.x, y: Math.min(b.y + 0.7 + shift + bodyH + 0.25, b.y + b.h - 0.5), w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point); // right below the boxes
   source(ctx, slide, sb);
 }
@@ -1370,7 +1455,10 @@ function conclusion(ctx, slide, sb) {
   // Base panel height on content height and center the panels plus conclusion band group vertically in the body
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, CONC_ITEM_SZ, b.h - bandH - bandGap - T.PANEL.TITLE_H, CONC_SUB_SZ);
   const top = b.y + (b.h - gh - bandGap - bandH) / 2;
-  cols({ x: x0, y: top, w: gw, h: gh }, n, gap).forEach((c, i) => { if (pn[i]) panel(ctx, slide, c, { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true }); });
+  const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
+  const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true } : null));
+  const pgap = panelsGap(pboxes, pps); // side-by-side panels also share one paragraph spacing
+  pboxes.forEach((c, i) => { if (pps[i]) panel(ctx, slide, c, { ...pps[i], groupGapPt: pgap }); });
   label(ctx, slide, { x: x0, y: top + gh + bandGap, w: gw, h: bandH }, s.conclusion || "", { fill: T.COLOR.navyDeep, sz: T.SIZE.panelHead });
   source(ctx, slide, sb);
 }
@@ -1409,6 +1497,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

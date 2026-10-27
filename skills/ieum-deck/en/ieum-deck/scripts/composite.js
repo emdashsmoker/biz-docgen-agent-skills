@@ -97,6 +97,12 @@ function commonSize(boxes, lists) {
   return T.SIZE.BODY_MIN;
 }
 
+/** Shared paragraph spacing of cells on the same tier (the same group as commonSize). Measures each cell with the same text split as writeItems and uses the smallest
+ *  Cells not drawn as bullets (labels, cylinders and so on) are null in boxes */
+function commonGap(H, boxes, lists, sz) {
+  return H.groupGap(boxes, lists.map(splitItems), { sz, forceBullet: true });
+}
+
 // ---------------------------------------------------------------- Shared drawing
 function writeItems(ctx, H, slide, box, items, sz, opt) {
   const o = opt || {};
@@ -106,7 +112,7 @@ function writeItems(ctx, H, slide, box, items, sz, opt) {
     A.text(slide, box, textOf(list[0]), { sz, bold: o.bold, align: o.align || "center", valign: "middle", color: o.color });
     return;
   }
-  H.bulletsBlock(ctx, slide, box, list, { sz, noWarn: true, valign: o.valign || "middle", forceBullet: true, color: o.color, numbered: o.numbered });
+  H.bulletsBlock(ctx, slide, box, list, { sz, noWarn: true, valign: o.valign || "middle", forceBullet: true, color: o.color, numbered: o.numbered, groupGapPt: o.groupGapPt });
 }
 function arrowShape(ctx, slide, cx, cy, dir, w, h) {
   const aw = w || ARROW_W, ah = h || ARROW_H;
@@ -173,13 +179,14 @@ BLOCKS.stack = (ctx, H, slide, box, k) => {
   const { hs, gap } = spread(needs, nats, box.h, GAP_ITEM, GAP_ITEM_MAX, 0.55);
   const bodies = hs.map((h, i) => ({ w: box.w, h: h - (list[i].head ? T.PANEL.HEAD_H : 0) }));
   const sz = commonSize(bodies, list.map(itemsOf));
+  const cgap = commonGap(H, bodies, list.map(itemsOf), sz);
   let y = box.y;
   list.forEach((x, i) => {
     const b = { x: box.x, y, w: box.w, h: hs[i] };
     if (x.head) H.label(ctx, slide, { x: b.x, y: b.y, w: b.w, h: T.PANEL.HEAD_H }, x.head, { sz: T.SIZE.body, fill: x.headFill === "tint" ? T.COLOR.tintHead : undefined, color: x.headFill === "tint" ? T.COLOR.textDark : undefined });
     const bd = { x: b.x, y: b.y + (x.head ? T.PANEL.HEAD_H : 0), w: b.w, h: b.h - (x.head ? T.PANEL.HEAD_H : 0) };
     H.frame(ctx, slide, bd, { fill: x.fill === "tint" ? T.COLOR.tintBg : undefined });
-    writeItems(ctx, H, slide, bd, itemsOf(x), sz);
+    writeItems(ctx, H, slide, bd, itemsOf(x), sz, { groupGapPt: cgap });
     y += hs[i] + gap;
   });
 };
@@ -246,12 +253,13 @@ BLOCKS.labeled = (ctx, H, slide, box, k) => {
   const sp = spread(rows.map((r) => needH(itemsOf(r), cw, T.SIZE.body, true)), nats, box.h, CELL_GAP_V, CELL_GAP_V_MAX, 0.34);
   const hs = evenRows(sp.hs, rowNeeds), gap = sp.gap;
   const sz = commonSize(hs.map((h) => ({ w: cw, h })), rows.map(itemsOf));
+  const cgap = commonGap(H, hs.map((h) => ({ w: cw, h })), rows.map(itemsOf), sz);
   let y = box.y;
   rows.forEach((r, i) => {
     H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: hs[i] }, r.label || "", { sz: T.SIZE.body });
     const cb = { x: box.x + lw + 0.06, y, w: cw, h: hs[i] };
     H.frame(ctx, slide, cb, { fill: r.fill === "tint" ? T.COLOR.tintBg : undefined });
-    writeItems(ctx, H, slide, cb, itemsOf(r), sz, { align: r.align });
+    writeItems(ctx, H, slide, cb, itemsOf(r), sz, { align: r.align, groupGapPt: cgap });
     y += hs[i] + gap;
   });
 };
@@ -310,10 +318,15 @@ BLOCKS.grid = (ctx, H, slide, box, k) => {
   rows.forEach((r, i) => { if (!r.sz) cellsOf(r).forEach((c) => { cellBoxes.push({ w: c.w, h: hs[i] }); cellLists.push(c.items); }); });
   const sz = commonSize(cellBoxes, cellLists);
   const fitRow = (r, h) => { for (let p = rowPt(r); p > T.SIZE.BODY_MIN; p--) if (cellsOf(r).every((c) => needH(c.items, c.w, p, true) <= h + 0.02)) return p; return T.SIZE.BODY_MIN; };
+  // Paragraph spacing is also one value per font group (per row for rows with their own sz). Label and cylinder cells are not bullets, so they are left out
+  const textCell = (c, j, r, h) => { const cell = (r.cells || [])[j]; return cell && (cell.fill === "navy" || isDb(cell)) ? null : { w: c.w, h }; };
+  const rowGap = (rs, z) => commonGap(H, rs.flatMap(([r, i]) => cellsOf(r).map((c, j) => textCell(c, j, r, hs[i]))), rs.flatMap(([r]) => cellsOf(r).map((c) => c.items)), z);
+  const cgap = rowGap(rows.map((r, i) => [r, i]).filter(([r]) => !r.sz), sz);
   rows.forEach((r, i) => {
     if (hasLabel && hier) A.text(slide, { x: box.x, y, w: lw, h: hs[i] }, r.label || "", { sz: T.SIZE.body, bold: true, color: T.COLOR.textGray, align: "center", valign: "middle", mg: [0, 0, 0, 0] });
     else if (hasLabel) H.label(ctx, slide, { x: box.x, y, w: lw + lg - LABEL_GAP, h: hs[i] }, r.label || "", { sz: T.SIZE.body });
     const rsz = r.sz ? fitRow(r, hs[i]) : sz;
+    const rgap = r.sz ? rowGap([[r, i]], rsz) : cgap;
     let col = 0;
     (r.cells || []).forEach((c) => {
       const cell = typeof c === "string" ? { text: c } : c || {};
@@ -321,7 +334,7 @@ BLOCKS.grid = (ctx, H, slide, box, k) => {
       const cb = { x: gx + col * (cw + cg), y, w: cw * span + cg * (span - 1), h: hs[i] };
       if (cell.fill === "navy") H.label(ctx, slide, cb, textOf(cell) || itemsOf(cell).join("\n"), { sz: rsz });
       else if (isDb(cell)) dbBox(ctx, slide, cb, textOf(cell), rsz);
-      else { H.frame(ctx, slide, cb, { fill: cell.fill === "tint" ? T.COLOR.tintHead : undefined }); writeItems(ctx, H, slide, cb, itemsOf(cell), rsz, { bold: !!cell.bold, color: cell.color === "navy" ? T.COLOR.navy : undefined, numbered: !!cell.numbered }); }
+      else { H.frame(ctx, slide, cb, { fill: cell.fill === "tint" ? T.COLOR.tintHead : undefined }); writeItems(ctx, H, slide, cb, itemsOf(cell), rsz, { bold: !!cell.bold, color: cell.color === "navy" ? T.COLOR.navy : undefined, numbered: !!cell.numbered, groupGapPt: rgap }); }
       col += span;
     });
     y += hs[i] + vg;
@@ -343,6 +356,7 @@ BLOCKS.vsteps = (ctx, H, slide, box, k) => {
   const sp = spread(needs, needs.map((v) => grow(v, 0.42)), box.h, arrows ? STEP_GAP : GAP_ITEM, arrows ? STEP_GAP_MAX : GAP_ITEM_MAX, 0.42);
   const hs = evenRows(sp.hs, needs), gap = sp.gap;
   const sz = commonSize(hs.map((h) => ({ w: cw, h })), st.map(itemsOf));
+  const cgap = commonGap(H, hs.map((h) => ({ w: cw, h })), st.map(itemsOf), sz);
   let y = box.y;
   st.forEach((s, i) => {
     const pre = k.label === "" ? "" : k.label ? `${k.label} ${i + 1}. ` : `${i + 1}. `;
@@ -352,7 +366,7 @@ BLOCKS.vsteps = (ctx, H, slide, box, k) => {
     H.label(ctx, slide, { x: box.x, y, w: lw + 0.08 - LABEL_GAP, h: hs[i] }, txt, { sz: T.SIZE.body });
     const cb = { x: box.x + lw + 0.08, y, w: cw, h: hs[i] };
     H.frame(ctx, slide, cb);
-    writeItems(ctx, H, slide, cb, itemsOf(s), sz);
+    writeItems(ctx, H, slide, cb, itemsOf(s), sz, { groupGapPt: cgap });
     if (arrows && i < st.length - 1) arrowShape(ctx, slide, box.x + (lw + 0.08 - LABEL_GAP) / 2, y + hs[i] + gap / 2, "down", 0.16, 0.2);
     y += hs[i] + gap;
   });
@@ -371,7 +385,8 @@ BLOCKS.chevrons = (ctx, H, slide, box, k) => {
   // Align each box's right edge with the chevron shoulder (where the tip starts to narrow)
   const cs = H.chevronCols(chev, st.length, box.y + chH + 0.12, box.h - chH - 0.12);
   const sz = commonSize(cs, st.map(itemsOf));
-  cs.forEach((c, i) => { H.frame(ctx, slide, c); writeItems(ctx, H, slide, c, itemsOf(st[i]), sz); });
+  const cgap = commonGap(H, cs, st.map(itemsOf), sz);
+  cs.forEach((c, i) => { H.frame(ctx, slide, c); writeItems(ctx, H, slide, c, itemsOf(st[i]), sz, { groupGapPt: cgap }); });
 };
 
 /** Flow of boxes joined by arrows. {nodes:[{title?, items|text, fill}], dir: h | v} */
@@ -387,6 +402,8 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
     : H.cols(box, nodes.length, gap);
   const bodies = parts.map((p, i) => ({ w: p.w, h: p.h - (nodes[i].title && itemsOf(nodes[i]).length ? T.PANEL.HEAD_H : 0) }));
   const sz = commonSize(bodies, nodes.map(itemsOf));
+  // Navy label boxes are not bullets, so they are left out of the spacing group
+  const cgap = commonGap(H, bodies.map((bd, i) => (nodes[i].fill === "navy" && !(nodes[i].title && itemsOf(nodes[i]).length) ? null : bd)), nodes.map(itemsOf), sz);
   parts.forEach((p, i) => {
     const n = nodes[i];
     const its = itemsOf(n);
@@ -394,9 +411,9 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
       H.label(ctx, slide, { x: p.x, y: p.y, w: p.w, h: T.PANEL.HEAD_H }, n.title, { sz: T.SIZE.body });
       const bd = { x: p.x, y: p.y + T.PANEL.HEAD_H, w: p.w, h: p.h - T.PANEL.HEAD_H };
       H.frame(ctx, slide, bd, { fill: n.fill === "tint" ? T.COLOR.tintBg : undefined });
-      writeItems(ctx, H, slide, bd, its, sz);
+      writeItems(ctx, H, slide, bd, its, sz, { groupGapPt: cgap });
     } else if (n.fill === "navy") H.label(ctx, slide, p, n.title || textOf(its[0]), { sz });
-    else { H.frame(ctx, slide, p, { fill: n.fill === "tint" ? T.COLOR.tintHead : undefined }); if (n.title) A.text(slide, p, n.title, { sz, bold: true, align: "center", valign: "middle" }); else writeItems(ctx, H, slide, p, its, sz); }
+    else { H.frame(ctx, slide, p, { fill: n.fill === "tint" ? T.COLOR.tintHead : undefined }); if (n.title) A.text(slide, p, n.title, { sz, bold: true, align: "center", valign: "middle" }); else writeItems(ctx, H, slide, p, its, sz, { groupGapPt: cgap }); }
     if (i < parts.length - 1) {
       if (vertical) arrowShape(ctx, slide, p.x + p.w / 2, p.y + p.h + gap / 2, "down", 0.2, 0.26);
       else arrowShape(ctx, slide, p.x + p.w + gap / 2, p.y + p.h / 2, "right", 0.22, 0.28);
@@ -465,6 +482,9 @@ BLOCKS.pyramid = (ctx, H, slide, box, k) => {
   const pw = side.length ? box.w * 0.46 : box.w;
   const n = lv.length, gap = 0.06;
   const lh = (box.h - gap * (n - 1)) / n;
+  // Level description cells use one paragraph spacing
+  const sideItems = (v) => itemsOf(typeof v === "string" ? { text: v } : v);
+  const sgap = commonGap(H, lv.map((_, i) => (side[i] ? { w: box.x + box.w - (box.x + pw + 0.2), h: lh } : null)), lv.map((_, i) => (side[i] ? sideItems(side[i]) : [])), T.SIZE.body);
   lv.forEach((t, i) => {
     const y = box.y + i * (lh + gap);
     const topW = (pw * i) / n, botW = (pw * (i + 1)) / n;
@@ -489,7 +509,7 @@ BLOCKS.pyramid = (ctx, H, slide, box, k) => {
       hline(ctx, slide, box.x + pw / 2 + botW / 2 - inset / 2, y + lh / 2, sx - (box.x + pw / 2 + botW / 2 - inset / 2), { dash: true });
       const sb = { x: sx, y, w: box.x + box.w - sx, h: lh };
       H.frame(ctx, slide, sb);
-      writeItems(ctx, H, slide, sb, itemsOf(typeof side[i] === "string" ? { text: side[i] } : side[i]), T.SIZE.body);
+      writeItems(ctx, H, slide, sb, sideItems(side[i]), T.SIZE.body, { groupGapPt: sgap });
     }
   });
 };
@@ -517,6 +537,7 @@ BLOCKS.cycle = (ctx, H, slide, box, k) => {
   }
   const bodies = st.map(() => ({ w: nw, h: nh - 0.32 }));
   const sz = commonSize(bodies, st.map((s) => (s.text ? [s.text] : [])));
+  const cgap = commonGap(H, bodies, st.map((s) => (s.text ? [s.text] : [])), sz);
   st.forEach((s, i) => {
     const nx = cx + rx * Math.cos(ang(i)) - nw / 2, ny = cy + ry * Math.sin(ang(i)) - nh / 2;
     const hasText = !!s.text;
@@ -524,7 +545,7 @@ BLOCKS.cycle = (ctx, H, slide, box, k) => {
     if (hasText) {
       const bd = { x: nx, y: ny + 0.32, w: nw, h: nh - 0.32 };
       H.frame(ctx, slide, bd);
-      writeItems(ctx, H, slide, bd, [s.text], sz);
+      writeItems(ctx, H, slide, bd, [s.text], sz, { groupGapPt: cgap });
     }
   });
 };
@@ -631,15 +652,17 @@ BLOCKS.governance = (ctx, H, slide, box, k) => {
   const wordFits = (z) => nodes.every((nd, i) => A.wordWidthIn(sp[i], z, true) + 2 * GOV_TEXT_MG <= nd.w) && sides.every((s) => A.wordWidthIn(textOf(s), z, false) + 2 * GOV_TEXT_MG <= side);
   let sz = commonSize(nodes.concat(sides.map(sideBox)), sp.map((t) => [t]).concat(sides.map((s) => [textOf(s)])));
   while (sz > T.SIZE.BODY_MIN && !wordFits(sz)) sz--;
+  // The top label box is not a bullet box, so it is left out of the spacing group
+  const cgap = commonGap(H, nodes.map((nd, i) => (i ? nd : null)).concat(sides.map(sideBox)), sp.map((t) => [t]).concat(sides.map((s) => [textOf(s)])), sz);
   nodes.forEach((nd, i) => {
     if (i === 0) H.label(ctx, slide, nd, sp[i], { sz });
-    else { H.frame(ctx, slide, nd, { fill: T.COLOR.tintHead }); writeItems(ctx, H, slide, nd, [sp[i]], sz, { bold: true }); }
+    else { H.frame(ctx, slide, nd, { fill: T.COLOR.tintHead }); writeItems(ctx, H, slide, nd, [sp[i]], sz, { bold: true, groupGapPt: cgap }); }
     if (i < n - 1) seg(ctx, slide, nd.x + nd.w / 2, nd.y + nd.h, nd.x + nd.w / 2, nodes[i + 1].y, true);
   });
   sides.forEach((s) => {
     const b = sideBox(s), nd = nodes[s.at];
     H.frame(ctx, slide, b);
-    writeItems(ctx, H, slide, b, [textOf(s)], sz);
+    writeItems(ctx, H, slide, b, [textOf(s)], sz, { groupGapPt: cgap });
     const x1 = s.side === "left" ? b.x + b.w : nd.x + nd.w, x2 = s.side === "left" ? nd.x : b.x;
     hline(ctx, slide, x1, nd.y + nd.h / 2, x2 - x1, { dash: !!s.dash });
   });
@@ -665,6 +688,7 @@ BLOCKS.timeline = (ctx, H, slide, box, k) => {
   const hasTitle = ev.some((e) => e.title);
   const bodies = cols.map((c) => ({ w: c.w, h: c.h - (hasTitle ? TL_TITLE_H : 0) }));
   const sz = commonSize(bodies, ev.map(itemsOf));
+  const cgap = commonGap(H, bodies, ev.map(itemsOf), sz);
   // Time axis: starts left of the first marker and ends in an arrowhead past the last marker to show the direction of time
   seg(ctx, slide, box.x, axisY, box.x + box.w, axisY, true);
   ev.forEach((e, i) => {
@@ -679,7 +703,7 @@ BLOCKS.timeline = (ctx, H, slide, box, k) => {
       hline(ctx, slide, c.x + 0.12, c.y + TL_TITLE_H, c.w - 0.24);
       bd = { x: c.x, y: c.y + TL_TITLE_H, w: c.w, h: c.h - TL_TITLE_H };
     }
-    writeItems(ctx, H, slide, bd, itemsOf(e), sz, { forceBullet: itemsOf(e).length > 1 });
+    writeItems(ctx, H, slide, bd, itemsOf(e), sz, { forceBullet: itemsOf(e).length > 1, groupGapPt: cgap });
   });
 };
 
@@ -720,6 +744,7 @@ BLOCKS.funnel = (ctx, H, slide, box, k) => {
   const darkOf = (i) => fillOf(i) === ramp[0] || fillOf(i) === ramp[1];
   const lists = st.map((s) => fnCells(k, s));
   const sz = commonSize(lists.flat().map(() => ({ w: cw, h: bh })), lists.flat());
+  const cgap = commonGap(H, lists.flat().map(() => ({ w: cw, h: bh })), lists.flat(), sz);
   const cx = box.x + fw / 2;
   const span = bh * n + FN_GAP * (n - 1);
   const widthAt = (y) => fw * (1 - (1 - FN_NARROW) * ((y - top) / span));
@@ -737,7 +762,7 @@ BLOCKS.funnel = (ctx, H, slide, box, k) => {
     lists[i].forEach((its, c) => {
       const db = { x: dx + c * (cw + FN_COL_GAP), y, w: cw, h: bh };
       H.frame(ctx, slide, db);
-      writeItems(ctx, H, slide, db, its, sz, { forceBullet: its.length > 1 });
+      writeItems(ctx, H, slide, db, its, sz, { forceBullet: its.length > 1, groupGapPt: cgap });
     });
     for (let c = lists[i].length; c < nc; c++) H.frame(ctx, slide, { x: dx + c * (cw + FN_COL_GAP), y, w: cw, h: bh });
     hline(ctx, slide, cx + (wt + wb) / 4, y + bh / 2, dx - (cx + (wt + wb) / 4), { dash: true });
@@ -815,10 +840,12 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   if (nb) {
     const spanH = hs.slice(0, nb).reduce((a, h) => a + h, 0) + VC_GAP * (nb - 1);
     H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: spanH }, LB.label("valuechain", "support.label", k.support.label), { sz: T.SIZE.body });
+    // Support activity bands use one paragraph spacing
+    const bgap = commonGap(H, g.bands.map((b, i) => ({ w: g.gridW - g.bandTW, h: hs[i] })), g.bands.map(itemsOf), T.SIZE.body);
     g.bands.forEach((b, i) => {
       H.frame(ctx, slide, { x: g.gx, y, w: g.gridW, h: hs[i] });
       H.label(ctx, slide, { x: g.gx, y, w: g.bandTW, h: hs[i] }, b.title || "", { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
-      writeItems(ctx, H, slide, { x: g.gx + g.bandTW, y, w: g.gridW - g.bandTW, h: hs[i] }, itemsOf(b), T.SIZE.body);
+      writeItems(ctx, H, slide, { x: g.gx + g.bandTW, y, w: g.gridW - g.bandTW, h: hs[i] }, itemsOf(b), T.SIZE.body, { groupGapPt: bgap });
       y += hs[i] + VC_GAP;
     });
   }
@@ -829,6 +856,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
   const rowHs = hs.slice(nb, nb + nr);
   const grid = g.rows.map((r, i) => H.chevronCols(chev, g.stages.length, 0, rowHs[i]));
   const sz = commonSize(grid.flat(), g.rows.flatMap((r) => g.stages.map((_, j) => g.cellItems((r.cells || [])[j] || ""))));
+  const cgap = commonGap(H, grid.flat(), g.rows.flatMap((r) => g.stages.map((_, j) => g.cellItems((r.cells || [])[j] || ""))), sz);
   g.rows.forEach((r, i) => {
     H.label(ctx, slide, { x: box.x, y, w: g.lw + 0.06 - LABEL_GAP, h: rowHs[i] }, r.label || "", { sz: T.SIZE.body });
     grid[i].forEach((c, j) => {
@@ -836,7 +864,7 @@ BLOCKS.valuechain = (ctx, H, slide, box, k) => {
       const mark = cell && typeof cell === "object" && cell.mark;
       const cb = { x: c.x, y, w: c.w, h: rowHs[i] };
       H.frame(ctx, slide, cb, { fill: mark ? T.COLOR.tintHead : undefined });
-      writeItems(ctx, H, slide, cb, g.cellItems(cell || ""), sz, { bold: !!mark });
+      writeItems(ctx, H, slide, cb, g.cellItems(cell || ""), sz, { bold: !!mark, groupGapPt: cgap });
     });
     y += rowHs[i] + VC_GAP;
   });
@@ -894,21 +922,23 @@ BLOCKS.porter = (ctx, H, slide, box, k) => {
     const span = supH.reduce((a, v) => a + v, 0) + PT_SUP_GAP * (sup.length - 1);
     // The support activity label is tinted and the primary activity label is navy, marking primary activities as the main area
     H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: span }, labels[0], { sz: T.SIZE.body, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
+    const sgap = commonGap(H, supH.map((h) => ({ w: gw - titleW, h })), sup.map(itemsOf), sz); // support activity bands use one paragraph spacing
     sup.forEach((st, i) => {
       H.frame(ctx, slide, { x: gx, y, w: gw, h: supH[i] });
       H.label(ctx, slide, { x: gx, y, w: titleW, h: supH[i] }, st.title || "", { sz, fill: T.COLOR.tintHead, color: T.COLOR.textDark });
-      writeItems(ctx, H, slide, { x: gx + titleW, y, w: gw - titleW, h: supH[i] }, itemsOf(st), sz);
+      writeItems(ctx, H, slide, { x: gx + titleW, y, w: gw - titleW, h: supH[i] }, itemsOf(st), sz, { groupGapPt: sgap });
       y += supH[i] + (i < sup.length - 1 ? PT_SUP_GAP : PT_GAP);
     });
   }
   H.label(ctx, slide, { x: box.x, y, w: lw + 0.06 - LABEL_GAP, h: headH + bodyH }, labels[1], { sz: T.SIZE.body });
   const colsB = H.cols({ x: gx, y, w: gw, h: headH + bodyH }, n, PT_GAP);
   const bsz = commonSize(colsB.map((c) => ({ w: c.w, h: bodyH })), pri.map(itemsOf));
+  const bgap = commonGap(H, colsB.map((c) => ({ w: c.w, h: bodyH })), pri.map(itemsOf), bsz);
   colsB.forEach((c, i) => {
     H.label(ctx, slide, { x: c.x, y, w: c.w, h: headH }, pri[i].title || "", { sz: T.SIZE.body });
     const bd = { x: c.x, y: y + headH, w: c.w, h: bodyH };
     H.frame(ctx, slide, bd);
-    writeItems(ctx, H, slide, bd, itemsOf(pri[i]), bsz);
+    writeItems(ctx, H, slide, bd, itemsOf(pri[i]), bsz, { groupGapPt: bgap });
   });
   y += headH + bodyH;
   if (hasOwner) {
@@ -1005,18 +1035,22 @@ BLOCKS.logicmodel = (ctx, H, slide, box, k) => {
     ...four.map((key, i) => [key, box.x + LM_PAD + i * (w4 + LM_COL_GAP), ys[2] + LM_PAD, w4, hs[2] - 2 * LM_PAD]),
     ["assumption", box.x, ys[3], box.w, hs[3]]];
   const sz = commonSize(cells.map((c) => ({ w: c[3], h: c[4] - HH })), cells.map((c) => its(c[0])));
+  // Paragraph spacing is measured per drawn cell (a wide cell is split into columns) and set to one value
+  const wide = (key) => (key === "issue" || key === "assumption") && its(key).length > 1;
+  const drawn = cells.flatMap(([key, , , w, h]) => (wide(key) ? its(key).map((t) => [{ w: wideW(key), h: h - HH }, [t]]) : [[{ w, h: h - HH }, its(key)]]));
+  const cgap = commonGap(H, drawn.map((d) => d[0]), drawn.map((d) => d[1]), sz);
   [1, 2].forEach((r) => slide.addShape(ctx.pres.ShapeType.rect, { x: box.x, y: ys[r], w: box.w, h: hs[r], fill: { color: T.COLOR.white }, line: { color: T.COLOR.border, width: 1, dashType: "dash" } }));
   cells.forEach(([key, x, y, w, h]) => {
     H.label(ctx, slide, { x, y, w, h: HH }, LML[key], { sz: T.SIZE.body });
     const bd = { x, y: y + HH, w, h: h - HH };
     H.frame(ctx, slide, bd);
-    if ((key === "issue" || key === "assumption") && its(key).length > 1) {
+    if (wide(key)) {
       const cw = wideW(key);
       its(key).forEach((t, i) => {
         if (i) vline(ctx, slide, bd.x + i * (cw + LM_COL_GAP) - LM_COL_GAP / 2, bd.y + 0.08, bd.h - 0.16);
-        writeItems(ctx, H, slide, { x: bd.x + i * (cw + LM_COL_GAP), y: bd.y, w: cw, h: bd.h }, [t], sz, { forceBullet: true });
+        writeItems(ctx, H, slide, { x: bd.x + i * (cw + LM_COL_GAP), y: bd.y, w: cw, h: bd.h }, [t], sz, { forceBullet: true, groupGapPt: cgap });
       });
-    } else writeItems(ctx, H, slide, bd, its(key), sz, { forceBullet: its(key).length > 1 });
+    } else writeItems(ctx, H, slide, bd, its(key), sz, { forceBullet: its(key).length > 1, groupGapPt: cgap });
   });
   // Arrows between groups: down from issue, up from assumption
   arrowShape(ctx, slide, box.x + box.w / 2, ys[1] - LM_ARROW_GAP / 2, "down", 0.18, 0.2);
@@ -1285,6 +1319,10 @@ BLOCKS.canvas = (ctx, H, slide, box, k) => {
   const itemsFor = (d) => itemsOf(Array.isArray(k[d.key]) ? { items: k[d.key] } : k[d.key] || {});
   const bodies = BMC.map((d) => { const r = rectOf(d); return { w: r.w, h: r.h - BMC_TITLE_H - 0.06 }; });
   const sz = commonSize(bodies, BMC.map(itemsFor));
+  const copt = { sz, noWarn: true, valign: "top", forceBullet: true };
+  // Cells of the same shape (tall column, half cell, bottom cell) use one paragraph spacing. Cell heights come from the layout, so grouping different shapes leaves tall columns looking empty
+  const shapeOf = (d) => (d.bottom != null ? "bottom" : d.half == null ? "tall" : "half");
+  const cgap = Object.fromEntries(["tall", "half", "bottom"].map((sh) => [sh, H.groupGap(BMC.map((d, i) => (shapeOf(d) === sh ? bodies[i] : null)), BMC.map(itemsFor), copt)]));
   const own = k.labels || {}, titles = LB.labels("canvas", "labels"); // block titles (changed through labels with the block keys)
   BMC.forEach((d, i) => {
     const r = rectOf(d);
@@ -1294,7 +1332,7 @@ BLOCKS.canvas = (ctx, H, slide, box, k) => {
     if (k.numbered) A.text(slide, { x: r.x + r.w - 0.4, y: r.y + 0.04, w: 0.3, h: BMC_TITLE_H - 0.04 }, String(d.order), { sz: T.SIZE.body, bold: true, color: T.COLOR.textMuted, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
     hline(ctx, slide, r.x + 0.1, r.y + BMC_TITLE_H, Math.min(r.w - 0.2, 0.9));
     const its = itemsFor(d);
-    if (its.length) H.bulletsBlock(ctx, slide, { x: r.x, y: r.y + BMC_TITLE_H + 0.04, w: r.w, h: bodies[i].h }, its, { sz, noWarn: true, valign: "top", forceBullet: true });
+    if (its.length) H.bulletsBlock(ctx, slide, { x: r.x, y: r.y + BMC_TITLE_H + 0.04, w: r.w, h: bodies[i].h }, its, { ...copt, groupGapPt: cgap[shapeOf(d)] });
   });
 };
 
@@ -1333,6 +1371,7 @@ BLOCKS.market = (ctx, H, slide, box, k) => {
   const cwMax = box.w - fixedW;
   const sz = commonSize(rows.map((r) => ({ w: cwMax, h: r.h })), lv.map((m) => m.items || []));
   const cw = Math.max(...lv.map((m) => fitItemsW(m.items, sz, cwMax)));
+  const cgap = commonGap(H, rows.map((r) => ({ w: cw, h: r.h })), lv.map((m) => m.items || []), sz); // description cells use one paragraph spacing
   const x0 = box.x + (box.w - fixedW - cw) / 2, cx = x0 + D / 2;
   const fills = [T.COLOR.navyPastel2, T.COLOR.navyPastel, T.COLOR.navy];
   const dia = MKT_RATIO[lv.length].map((r) => D * r);
@@ -1356,7 +1395,7 @@ BLOCKS.market = (ctx, H, slide, box, k) => {
     H.label(ctx, slide, { x: rx, y: r.y, w: MKT_CHIP_W, h: r.h }, `${m.name || ""}\n(${m.label || ""})`, { sz: T.SIZE.body, fill: fills[i], color: i === 0 ? T.COLOR.textDark : undefined });
     const cb = { x: rx + MKT_CHIP_W + 0.06, y: r.y, w: cw, h: r.h };
     H.frame(ctx, slide, cb);
-    writeItems(ctx, H, slide, cb, m.items || [], sz, { forceBullet: (m.items || []).length > 1 });
+    writeItems(ctx, H, slide, cb, m.items || [], sz, { forceBullet: (m.items || []).length > 1, groupGapPt: cgap });
     // Connector: a horizontal line from the dot inside the circle to the row's left edge (an elbow line if the abbreviation hit the band edge and the heights differ)
     const ink = { color: T.COLOR.textGray, width: 0.75 };
     const sy = tagY[i];
