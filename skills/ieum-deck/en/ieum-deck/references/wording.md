@@ -21,7 +21,7 @@
 | Evaluating body | 자체점검위원회, 상위점검 | 경영평가단 | 평가위원회, 내부 심의 |
 | Performance management | 성과관리·활용계획, 대표성과 소개서 | 우수사례 | 성과 관리 방안, 대표 성과 |
 | Ex-post analysis | 효과성 분석, 실태점검 | 지적사항 이행 | 성과 분석, 개선 방안 |
-| Program planning review | 사업기획점검(연구형), 사업추진심사와 설계적합성심사(구축형) | Not applicable | 비R&D 예비타당성조사(현행), 타당성 검토 |
+| Program planning review | 사업기획점검(연구형), 사업추진심사 및 설계적합성심사(구축형) | Not applicable | 비R&D 예비타당성조사(현행), 타당성 검토 |
 | Indicators | 성과목표, 성과지표, 지표 정의서 | 계량지표, 비계량지표 | 핵심성과지표(KPI), 측정 지표 |
 
 ## Column signals

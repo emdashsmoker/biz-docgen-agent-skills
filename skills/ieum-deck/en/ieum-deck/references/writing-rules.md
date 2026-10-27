@@ -16,7 +16,7 @@
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
 - Body style is noun-ending regardless of the headline style
 - Headlines and body text use no colloquial style
-- Colloquial markers are hedged and softened endings (-듯함, -인 셈, -로 보임), explanatory endings (-는데, -거든), spoken contractions (-하는 게, -할 거) and colloquial adverbs (일단, 좀, 그냥)
+- Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
