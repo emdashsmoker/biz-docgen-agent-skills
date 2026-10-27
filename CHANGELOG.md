@@ -30,18 +30,20 @@ Changelog rules
 ## 2026-10-27
 
 ### ieum-deck
-- Added a rule that strategy names end with an action noun (수립, 연계, 운영, 제시), with rewrite examples for names that end with an output, meeting body or methodology name (#50)
+- Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples for names that end with an output, meeting body or methodology name (#50, #52)
 - Changed the strategy headline to substitute the strategy names as written in the pillar titles (#50)
 - Changed the S07 strategy sample to pillar names that end with 정렬, 확보 and 설계 (#50)
+- Changed the S17 roadmap sample lane "환류 체계" to "환류 체계 운영" so that every lane name ends with an action noun (#52)
 
-* 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시) 종결 규칙 추가 (#50)
+* 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
 * S07 추진전략 견본을 정렬, 확보, 설계로 끝나는 기둥 이름으로 변경 (#50)
+* S17 추진 로드맵 견본의 "환류 체계" 레인명을 "환류 체계 운영"으로 변경 (#52)
 
 ### juja-builder
-- Added a rule that strategy names end with an action noun (수립, 연계, 운영, 제시), with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50)
+- Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
 
-* 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 실패 패턴과 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시) 종결 규칙 추가 (#50)
+* 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 실패 패턴과 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 
 ## 2026-10-26
 
