@@ -89,7 +89,7 @@
 - Two listed nouns are joined with "및" in labels, headlines and body text alike (e.g. 전략과제 및 세부과제)
     + (Exception) RFP original names (engagement names, output names, stage names, subject names) keep the original wording
     + (Exception) Established names in a field keep their customary wording (e.g. the BSC perspective name "학습과 성장")
-    + (Exception) "와" and "과" marking a relation between two nouns (사이, 간, 격차, 차이, 일치, 불일치) stay (e.g. 현행과 기준의 격차)
+    + (Exception) "와" and "과" marking a relation between two nouns (사이, 간, 격차, 차이, 일치, 불일치, 연계, 연동, 정렬, 비교, 구분, 분리, 협력) stay (e.g. 현행과 기준의 격차, 성과지표와 성과목표의 연계)
     + (Exception) "와" and "과" marking the partner of an action stay (e.g. 발주기관과 공유, 사유와 함께 관리, 지역 대학과 공동 운영)
 - Write section numbers as a number and a period (e.g. "1.")
 - The builder corrects the period of section numbers automatically
