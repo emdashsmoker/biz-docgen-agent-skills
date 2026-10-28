@@ -118,7 +118,7 @@
     + (Meeting body name ending) A name ending in "자문위원회" or "실무협의회" reads as an operating means on the organization slide
     + (Methodology name ending) A name ending in "로직모델" or "델파이" reads as a held asset on the features slide
 - Rewrite examples of strategy names
-    + "임무 연계형 지표 체계" becomes "임무 및 부서 지표 정렬"
+    + "임무 연계형 지표 체계" becomes "임무와 부서 지표 정렬"
     + "분야별 분과 위원회" becomes "기술 분야별 분과 구성"
     + "성과 로직모델" becomes "로직모델 적용 성과 경로 설계"
 - Write each pillar item to fit one line of the pillar width (about 16 Korean characters at 16:9)
