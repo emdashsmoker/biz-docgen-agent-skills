@@ -613,6 +613,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + The spacing distribution is based on the remaining height measured with PowerPoint line height (1.4 times the font size)
     + Sibling bullet areas of the same level share one spacing per group, the smallest of their per-area spacings (it follows the tightest area, so overflow does not grow)
     + Templates and blocks define the groups (strategy pillars, scope modules, grid cells, side-by-side panels, career areas of staff cards and so on)
+    + Vertically stacked sibling boxes (stack boxes, grid rows, vertical flow boxes) get the same height when their needed heights differ by one body line or less (grid rows with a set font size and title-only flow boxes are left out. No snapping when short height would leave any box below its needed height)
     + Areas with one paragraph or none and label boxes are left out of the group spacing. Single boxes and free layouts keep their own spacing
     + Fonts keep the level's reference size during filling
     + The target fill ratio is 70% or more

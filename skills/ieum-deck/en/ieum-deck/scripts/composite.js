@@ -88,6 +88,30 @@ function evenRows(hs, needs) {
   return Math.max(...needs) <= eq + 1e-6 ? hs.map(() => eq) : hs;
 }
 
+/** Snap the needed heights of sibling boxes. From the largest value down, values within one body line form one group and rise to the group maximum
+ *  Line-count estimates err at line boundaries, so boxes with similar amounts do not split into different sizes over one line. Boxes with eligible false stay as they are */
+function snapNeeds(needs, eligible) {
+  const tol = A.lineHeightIn(T.SIZE.body) + 1e-6;
+  const ok = (i) => !eligible || eligible[i];
+  const out = needs.slice();
+  let top = null;
+  needs.map((v, i) => i).filter(ok).sort((a, b) => needs[b] - needs[a]).forEach((i) => {
+    if (top === null || top - needs[i] > tol) top = needs[i];
+    out[i] = top;
+  });
+  return out;
+}
+
+/** Snap the body needed heights (raw) with snapNeeds and lay them out with spread. needsOf and natsOf turn a list of body heights into per-box needs and nats
+ *  If the snapped layout leaves any box below its original needed height, use the unsnapped layout
+ *  When height runs short, boxes raised by snapping take share from the largest box and commonSize shrinks the font of the whole group */
+function spreadSnapped(needsOf, natsOf, raw, eligible, avail, gap0, gapMax, minEach) {
+  const run = (body) => spread(needsOf(body), natsOf(body), avail, gap0, gapMax, minEach);
+  const sp = run(snapNeeds(raw, eligible));
+  const floor = needsOf(raw);
+  return sp.hs.every((h, i) => h + 1e-6 >= floor[i]) ? sp : run(raw);
+}
+
 /** Common font size for boxes at the same level (from body 12pt down to the 11pt floor) */
 function commonSize(boxes, lists) {
   for (let sz = T.SIZE.body; sz >= T.SIZE.BODY_MIN; sz--) {
@@ -174,9 +198,8 @@ BLOCKS.text = (ctx, H, slide, box, k) => {
 BLOCKS.stack = (ctx, H, slide, box, k) => {
   const list = k.items || [];
   if (!list.length) return;
-  const needs = list.map((x) => (x.head ? T.PANEL.HEAD_H : 0) + needH(itemsOf(x), box.w, T.SIZE.body, true));
-  const nats = list.map((x) => (x.head ? T.PANEL.HEAD_H : 0) + grow(needH(itemsOf(x), box.w, T.SIZE.body, true), 0.4));
-  const { hs, gap } = spread(needs, nats, box.h, GAP_ITEM, GAP_ITEM_MAX, 0.55);
+  const head = (i) => (list[i].head ? T.PANEL.HEAD_H : 0);
+  const { hs, gap } = spreadSnapped((b) => b.map((v, i) => head(i) + v), (b) => b.map((v, i) => head(i) + grow(v, 0.4)), list.map((x) => needH(itemsOf(x), box.w, T.SIZE.body, true)), list.map((x) => itemsOf(x).length > 0), box.h, GAP_ITEM, GAP_ITEM_MAX, 0.55);
   const bodies = hs.map((h, i) => ({ w: box.w, h: h - (list[i].head ? T.PANEL.HEAD_H : 0) }));
   const sz = commonSize(bodies, list.map(itemsOf));
   const cgap = commonGap(H, bodies, list.map(itemsOf), sz);
@@ -306,7 +329,7 @@ BLOCKS.grid = (ctx, H, slide, box, k) => {
   const { rows, hier, hasLabel, lw, lg, gx, cg, vg: vg0, cw, ncol, headH, rowPt, cellsOf, needs } = gridGeom(k, box);
   const rowMin = hier ? HIER_ROW_MIN : 0.34;
   // The gap under the head row grows along with the row gaps
-  const sp = spread(needs, needs.map((v) => grow(v, rowMin)), box.h - (k.head ? headH + vg0 : 0), vg0, hier ? HIER_GAP_Y_MAX : CELL_GAP_V_MAX, rowMin);
+  const sp = spreadSnapped((b) => b, (b) => b.map((v) => grow(v, rowMin)), needs, rows.map((r) => !r.sz), box.h - (k.head ? headH + vg0 : 0), vg0, hier ? HIER_GAP_Y_MAX : CELL_GAP_V_MAX, rowMin);
   const vg = sp.gap, hs = sp.hs;
   let y = box.y;
   if (k.head) {
@@ -395,7 +418,7 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
   if (!nodes.length) return;
   const vertical = k.dir === "v";
   const headOf = (n) => (n.title && itemsOf(n).length ? T.PANEL.HEAD_H : 0);
-  const sp = vertical ? spread(nodes.map((n) => headOf(n) + needH(itemsOf(n), box.w, T.SIZE.body, true)), nodes.map((n) => headOf(n) + grow(needH(n.title && !itemsOf(n).length ? [n.title] : itemsOf(n), box.w, T.SIZE.body, true), 0.4)), box.h, FLOW_GAP, FLOW_GAP_MAX, 0.4) : null;
+  const sp = vertical ? spreadSnapped((b) => b.map((v, i) => headOf(nodes[i]) + (itemsOf(nodes[i]).length ? v : 0)), (b) => b.map((v, i) => headOf(nodes[i]) + grow(v, 0.4)), nodes.map((n) => needH(n.title && !itemsOf(n).length ? [n.title] : itemsOf(n), box.w, T.SIZE.body, true)), nodes.map((n) => itemsOf(n).length > 0), box.h, FLOW_GAP, FLOW_GAP_MAX, 0.4) : null;
   const gap = vertical ? sp.gap : FLOW_GAP;
   const parts = vertical
     ? (() => { let y = box.y; return sp.hs.map((h) => { const r = { x: box.x, y, w: box.w, h }; y += h + gap; return r; }); })()
