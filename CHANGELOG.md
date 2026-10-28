@@ -32,9 +32,11 @@ Changelog rules
 ### ieum-deck
 - Changed two nouns that form a relation in the headline patterns and sample slides back to "와" and "과", such as "성과지표와 성과목표의 연계" (#73)
 - Added 연계, 연동, 정렬, 비교, 구분, 분리 and 협력 to the relation words that keep "와" and "과" (#73)
+- Fixed sibling boxes in stack, grid and vertical flow blocks that got different heights from a one-line error in the line count estimate (#75)
 
 * "성과지표와 성과목표의 연계"처럼 관계를 나타내는 헤드라인 문형 및 견본 슬라이드의 두 명사 연결을 "와", "과"로 변경 (#73)
 * "와", "과"를 유지하는 관계어에 연계, 연동, 정렬, 비교, 구분, 분리, 협력 추가 (#73)
+* 줄 수 추정의 한 줄 오차로 stack, grid, 세로 flow 블록의 형제 상자 높이가 달라지는 현상 수정 (#75)
 
 ### juja-builder
 - Added 연계, 연동, 정렬, 비교, 구분, 분리 and 협력 to the relation words that keep "와" and "과" (#73)
