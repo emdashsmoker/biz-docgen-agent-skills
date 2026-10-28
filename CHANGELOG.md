@@ -27,6 +27,20 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-28
+
+### ieum-deck
+- Changed two nouns that form a relation in the headline patterns and sample slides back to "와" and "과", such as "성과지표와 성과목표의 연계" (#73)
+- Added 연계, 연동, 정렬, 비교, 구분, 분리 and 협력 to the relation words that keep "와" and "과" (#73)
+
+* "성과지표와 성과목표의 연계"처럼 관계를 나타내는 헤드라인 문형 및 견본 슬라이드의 두 명사 연결을 "와", "과"로 변경 (#73)
+* "와", "과"를 유지하는 관계어에 연계, 연동, 정렬, 비교, 구분, 분리, 협력 추가 (#73)
+
+### juja-builder
+- Added 연계, 연동, 정렬, 비교, 구분, 분리 and 협력 to the relation words that keep "와" and "과" (#73)
+
+* "와", "과"를 유지하는 관계어에 연계, 연동, 정렬, 비교, 구분, 분리, 협력 추가 (#73)
+
 ## 2026-10-27
 
 ### ieum-deck
@@ -42,7 +56,7 @@ Changelog rules
 - Changed the "및" rule for two listed nouns from labels only to all text, including headlines and body text (#66)
 - Added exceptions that keep "와" and "과" in RFP original names, established names such as "학습과 성장", relations between two nouns and partners of an action (#66)
 - Changed two-noun lists in the headline patterns, reference examples and sample slides to "및" (#66, #68)
-- Added a rule that polite headlines end in 하십시오체, such as "수립합니다" (#70)
+- Added a rule that polite headlines end in 하십시오체, such as "수립합니다", "보유하고 있습니다" and "추진하겠습니다" (#70, #72)
 
 * 산출물명, 회의체명, 방법론명으로 끝나는 전략명의 재작성 예를 갖춘 동작 명사(수립, 연계, 운영, 제시 등) 종결 규칙 추가 (#50, #52)
 * 기둥 제목의 전략명을 그대로 쓰는 추진전략 헤드라인 치환 방식 변경 (#50)
@@ -56,7 +70,7 @@ Changelog rules
 * 두 명사 나열의 "및" 연결 적용 범위를 라벨 전용에서 텍스트 전체로 변경 (#66)
 * RFP 원문 명칭, 관용 명칭(학습과 성장 등), 두 명사 사이의 관계, 동작의 상대에 쓰인 "와", "과"를 유지하는 예외 추가 (#66)
 * 헤드라인 문형, 참조 문서 예시, 견본 슬라이드의 두 명사 나열을 "및" 연결로 변경 (#66, #68)
-* 존댓말 헤드라인의 하십시오체 종결 규칙 추가 (#70)
+* 예시(수립합니다, 보유하고 있습니다, 추진하겠습니다 등)를 갖춘 존댓말 헤드라인의 하십시오체 종결 규칙 추가 (#70, #72)
 
 ### juja-builder
 - Added a rule that strategy names end with an action noun such as 수립, 연계, 운영 or 제시, with rewrite examples in content-models.md and a failure pattern for names that end with an output, meeting body or methodology name (#50, #52)
