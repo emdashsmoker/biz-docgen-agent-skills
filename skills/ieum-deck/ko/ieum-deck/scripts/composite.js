@@ -88,6 +88,30 @@ function evenRows(hs, needs) {
   return Math.max(...needs) <= eq + 1e-6 ? hs.map(() => eq) : hs;
 }
 
+/** 형제 상자의 필요 높이 묶기. 큰 값부터 본문 한 줄 이내의 값을 한 묶음으로 보고 묶음 최댓값으로 올림
+ *  줄 수 추정은 한 줄 경계에서 오차가 나므로 분량이 비슷한 상자가 한 줄 차이로 크기가 갈리지 않게 함. eligible 이 false 인 상자는 그대로 둠 */
+function snapNeeds(needs, eligible) {
+  const tol = A.lineHeightIn(T.SIZE.body) + 1e-6;
+  const ok = (i) => !eligible || eligible[i];
+  const out = needs.slice();
+  let top = null;
+  needs.map((v, i) => i).filter(ok).sort((a, b) => needs[b] - needs[a]).forEach((i) => {
+    if (top === null || top - needs[i] > tol) top = needs[i];
+    out[i] = top;
+  });
+  return out;
+}
+
+/** 본문 필요 높이(raw)를 snapNeeds 로 묶어 spread 로 배분. needsOf, natsOf 는 본문 높이 목록을 상자 단위 needs, nats 로 바꾸는 함수
+ *  묶은 배분에서 원래 필요 높이보다 작아지는 상자가 있으면 묶지 않은 배분을 씀
+ *  가용 높이가 모자라면 묶음으로 커진 상자가 가장 큰 상자의 몫을 가져가고 commonSize 가 묶음 전체 글꼴을 줄이기 때문 */
+function spreadSnapped(needsOf, natsOf, raw, eligible, avail, gap0, gapMax, minEach) {
+  const run = (body) => spread(needsOf(body), natsOf(body), avail, gap0, gapMax, minEach);
+  const sp = run(snapNeeds(raw, eligible));
+  const floor = needsOf(raw);
+  return sp.hs.every((h, i) => h + 1e-6 >= floor[i]) ? sp : run(raw);
+}
+
 /** 같은 계층 상자들의 공통 글꼴 크기 (본문 12pt 에서 하한 11pt 까지) */
 function commonSize(boxes, lists) {
   for (let sz = T.SIZE.body; sz >= T.SIZE.BODY_MIN; sz--) {
@@ -174,9 +198,8 @@ BLOCKS.text = (ctx, H, slide, box, k) => {
 BLOCKS.stack = (ctx, H, slide, box, k) => {
   const list = k.items || [];
   if (!list.length) return;
-  const needs = list.map((x) => (x.head ? T.PANEL.HEAD_H : 0) + needH(itemsOf(x), box.w, T.SIZE.body, true));
-  const nats = list.map((x) => (x.head ? T.PANEL.HEAD_H : 0) + grow(needH(itemsOf(x), box.w, T.SIZE.body, true), 0.4));
-  const { hs, gap } = spread(needs, nats, box.h, GAP_ITEM, GAP_ITEM_MAX, 0.55);
+  const head = (i) => (list[i].head ? T.PANEL.HEAD_H : 0);
+  const { hs, gap } = spreadSnapped((b) => b.map((v, i) => head(i) + v), (b) => b.map((v, i) => head(i) + grow(v, 0.4)), list.map((x) => needH(itemsOf(x), box.w, T.SIZE.body, true)), list.map((x) => itemsOf(x).length > 0), box.h, GAP_ITEM, GAP_ITEM_MAX, 0.55);
   const bodies = hs.map((h, i) => ({ w: box.w, h: h - (list[i].head ? T.PANEL.HEAD_H : 0) }));
   const sz = commonSize(bodies, list.map(itemsOf));
   const cgap = commonGap(H, bodies, list.map(itemsOf), sz);
@@ -306,7 +329,7 @@ BLOCKS.grid = (ctx, H, slide, box, k) => {
   const { rows, hier, hasLabel, lw, lg, gx, cg, vg: vg0, cw, ncol, headH, rowPt, cellsOf, needs } = gridGeom(k, box);
   const rowMin = hier ? HIER_ROW_MIN : 0.34;
   // 머리 행 아래 간격도 행 사이 간격과 같이 늘림
-  const sp = spread(needs, needs.map((v) => grow(v, rowMin)), box.h - (k.head ? headH + vg0 : 0), vg0, hier ? HIER_GAP_Y_MAX : CELL_GAP_V_MAX, rowMin);
+  const sp = spreadSnapped((b) => b, (b) => b.map((v) => grow(v, rowMin)), needs, rows.map((r) => !r.sz), box.h - (k.head ? headH + vg0 : 0), vg0, hier ? HIER_GAP_Y_MAX : CELL_GAP_V_MAX, rowMin);
   const vg = sp.gap, hs = sp.hs;
   let y = box.y;
   if (k.head) {
@@ -395,7 +418,7 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
   if (!nodes.length) return;
   const vertical = k.dir === "v";
   const headOf = (n) => (n.title && itemsOf(n).length ? T.PANEL.HEAD_H : 0);
-  const sp = vertical ? spread(nodes.map((n) => headOf(n) + needH(itemsOf(n), box.w, T.SIZE.body, true)), nodes.map((n) => headOf(n) + grow(needH(n.title && !itemsOf(n).length ? [n.title] : itemsOf(n), box.w, T.SIZE.body, true), 0.4)), box.h, FLOW_GAP, FLOW_GAP_MAX, 0.4) : null;
+  const sp = vertical ? spreadSnapped((b) => b.map((v, i) => headOf(nodes[i]) + (itemsOf(nodes[i]).length ? v : 0)), (b) => b.map((v, i) => headOf(nodes[i]) + grow(v, 0.4)), nodes.map((n) => needH(n.title && !itemsOf(n).length ? [n.title] : itemsOf(n), box.w, T.SIZE.body, true)), nodes.map((n) => itemsOf(n).length > 0), box.h, FLOW_GAP, FLOW_GAP_MAX, 0.4) : null;
   const gap = vertical ? sp.gap : FLOW_GAP;
   const parts = vertical
     ? (() => { let y = box.y; return sp.hs.map((h) => { const r = { x: box.x, y, w: box.w, h }; y += h + gap; return r; }); })()
