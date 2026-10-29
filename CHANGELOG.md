@@ -27,6 +27,22 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-29
+
+### ieum-deck
+- Changed the default candidates of the large consulting firm type to large consulting firms with many public consulting contract wins, including organizations without "consulting" in their name (#76)
+- Fixed sibling boxes with the same amount of text, such as labeled and grid rows, that got different heights because the line count estimate counted text at 90-100% of the width as two lines (#77)
+- Fixed box text that dropped to 11pt because the line count estimate counted text at 90-100% of the width as two lines (#77)
+
+* 대형 컨설팅사 유형의 기본 후보를 기관명과 관계없이 공공 컨설팅 수주 실적이 많은 대형 컨설팅사로 변경 (#76)
+* 폭 90-100% 문구의 2줄 판정으로 labeled 행, grid 행 등 분량이 같은 형제 상자의 높이가 달라지는 현상 수정 (#77)
+* 폭 90-100% 문구의 2줄 판정으로 상자 글꼴이 11pt로 내려가는 현상 수정 (#77)
+
+### juja-builder
+- Changed the default candidates of the large consulting firm type to large consulting firms with many public consulting contract wins, including organizations without "consulting" in their name (#76)
+
+* 대형 컨설팅사 유형의 기본 후보를 기관명과 관계없이 공공 컨설팅 수주 실적이 많은 대형 컨설팅사로 변경 (#76)
+
 ## 2026-10-28
 
 ### ieum-deck
