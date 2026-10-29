@@ -276,10 +276,9 @@
 - With a request to turn filtering off, it applies to every call
 - Large consulting firms that do not advertise a public sector practice on their websites also win many public engagements
 - Leave out whether a firm advertises a public sector practice from the candidate selection criteria
-- The default candidate group is Big Four accounting firm consulting arms, large management consulting firms and large education association type organizations
-- (Large education association type organization) An association-type organization that fronts management education and certification businesses
-- Large education association type organizations win many public consulting engagements without calling themselves consulting firms
-- Search for large education association type organizations separately from the consulting firm search
+- The default candidates are large consulting firms with many public consulting contract wins
+- Organizations whose names do not contain "consulting" are also candidates when they have public consulting contract wins
+- Confirm the contract wins of these organizations separately through the award record path
 - Get organization names by searching industry articles and reports of public engagement awards
 - Search for evidence of work in the engagement field and write it in the selection basis column
 - If no evidence is found, write "공공 용역 다수 수주 기관군" (group winning many public engagements) in the selection basis column
