@@ -1446,6 +1446,8 @@ const TABLE_ROW_FIT = 0.38; // 표 행 높이 하한 (11pt 1줄과 셀 여백)
 const TABLE_EXPAND = 1.2; // 표 행 자연 높이 배수 (1줄 행 0.38 인치를 0.46 인치로 산정)
 // 최소 높이(내용 필요 높이) 측정 때는 확대 배수를 1 로 두어 같은 측정 함수를 재사용
 let growFactor = FILL_EXPAND;
+// 최소 높이 측정에서 종합 상자 항목을 재는 글꼴 크기. 기본은 하한(11pt), blockKeep 측정 동안만 본문(12pt)
+let sumMinSz = T.SIZE.BODY_MIN;
 const grow = (need, min) => Math.max(min, need * growFactor);
 const sumGap = (n, gap) => gap * Math.max(0, n - 1);
 const MEASURE = {
@@ -1453,8 +1455,8 @@ const MEASURE = {
   text: (k, w) => grow(needH([k.text || ""], w, T.SIZE.body, false), 0.46),
   stack: (k, w) => (k.items || []).reduce((a, x) => a + (x.head ? T.PANEL.HEAD_H : 0) + grow(needH(itemsOf(x), w, T.SIZE.body, true), 0.4), 0) + sumGap((k.items || []).length, GAP_ITEM),
   // 종합 상자는 이웃 분석 칸 높이를 따라가므로 자연 높이를 확대 없는 필요 높이로 둠
-  // 종합 상자는 칸이 모자라면 본문 하한(11pt)까지 줄여 담으므로 최소 높이 측정(growFactor 1)은 하한 크기로 산정
-  summary: (k, w) => sumLeadH(k, w) + (k.items || []).reduce((a, x) => a + Math.max(0.5, sumItemNeed(x, w, growFactor > 1 ? T.SIZE.body : T.SIZE.BODY_MIN)), 0),
+  // 종합 상자는 칸이 모자라면 본문 하한(11pt)까지 줄여 담으므로 최소 높이 측정(growFactor 1)은 하한 크기로 산정 (blockKeep 은 본문 크기로 산정)
+  summary: (k, w) => sumLeadH(k, w) + (k.items || []).reduce((a, x) => a + Math.max(0.5, sumItemNeed(x, w, growFactor > 1 ? T.SIZE.body : sumMinSz)), 0),
   labeled: (k, w) => {
     const lw = Math.min(k.labelW ? w * k.labelW : w * 0.28, 1.8), cw = w - lw - 0.06;
     return (k.rows || []).reduce((a, r) => a + grow(Math.max(needH([r.label || ""], lw + 0.06 - LABEL_GAP, T.SIZE.body, false), needH(itemsOf(r), cw, T.SIZE.body, true)), 0.34), 0) + sumGap((k.rows || []).length, CELL_GAP_V);
@@ -1567,16 +1569,22 @@ function blockMin(k, w, H) {
   growFactor = 1;
   try { return blockNeed(k, w, H); } finally { growFactor = FILL_EXPAND; }
 }
+/** 종합 상자 12pt 유지 높이. 종합 상자 항목만 본문 크기로 재고 나머지는 최소 높이와 같음
+ *  planRows 가 행을 줄일 때 종합 상자가 이웃 행 몫 때문에 11pt 로 내려가지 않게 하는 하한 */
+function blockKeep(k, w, H) {
+  sumMinSz = T.SIZE.body;
+  try { return blockMin(k, w, H); } finally { sumMinSz = T.SIZE.BODY_MIN; }
+}
 /** 칸 캡션: 굵은 좌측 정렬 한 줄. 캡션 아래 남는 상자를 반환 */
 function caption(slide, box, text) {
   A.text(slide, { x: box.x, y: box.y, w: box.w, h: CAPTION_H }, text, { sz: T.SIZE.body, bold: true, color: T.COLOR.textDark, align: "left", valign: "top", mg: [0, 0, 0, 0] });
   return { x: box.x, y: box.y + CAPTION_H, w: box.w, h: box.h - CAPTION_H };
 }
 /** 영역 높이 (제목, 주석, 블록 간격 포함). 블록 하나라도 측정 대상이 아니면 null
- *  mode 는 자연 높이(기본), 수용 높이("cap"), 최소 높이("min") */
+ *  mode 는 자연 높이(기본), 수용 높이("cap"), 최소 높이("min"), 종합 상자 12pt 유지 높이("keep") */
 function regionNeed(rg, w, H, mode) {
   const blocks = rg.blocks || (rg.block ? [rg.block] : []);
-  const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : blockNeed;
+  const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : mode === "keep" ? blockKeep : blockNeed;
   const needs = blocks.map((k) => measure(k, w, H));
   if (!blocks.length || needs.some((v) => v == null)) return null;
   return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.note || rg.noteBand ? NOTE_H + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
@@ -1599,6 +1607,7 @@ function rowWidths(r, areaW, colGap) {
 /** 행 높이 배분
  *  글 상자 행은 자연 높이(내용 필요 높이의 FILL_EXPAND 배), 도식 행은 지정 비율 높이를 목표로 삼음
  *  목표 합이 본문보다 크면 최소 높이(글 상자 행은 내용 필요 높이, 도식 행은 지정 높이의 70%)를 먼저 확보하고 나머지를 비례 배분
+ *  이때 본문이 종합 상자 12pt 유지 높이(keep) 합보다 크면 최소 높이 대신 keep 을 먼저 확보 (이웃 행 압축 몫으로 종합 상자가 11pt 로 내려가지 않게 함)
  *  목표 합이 본문보다 작으면 남는 높이를 도식 행, 행 사이 간격, 세로 가운데 여백 순으로 배분 */
 function planRows(spec, regions, area, rowGap, colGap, H) {
   const hSum = spec.reduce((a, r) => a + r.h, 0);
@@ -1610,21 +1619,27 @@ function planRows(spec, regions, area, rowGap, colGap, H) {
     const rgs = widths.map((w) => ({ rg: regions[idx++], w }));
     const needs = rgs.map(({ rg, w }) => (rg ? regionNeed(rg, w, H) : 0));
     const natural = needs.some((v) => v == null) ? null : Math.max(0, ...needs);
-    if (natural == null) return { elastic: true, assigned, target: assigned, min: assigned * ELASTIC_MIN, cap: assigned };
+    if (natural == null) { const elasticMin = assigned * ELASTIC_MIN; return { elastic: true, assigned, target: assigned, min: elasticMin, keep: elasticMin, cap: assigned }; }
     // 행 수용 높이: 칸들이 모두 채울 수 있는 높이(칸별 수용 높이의 최소)까지. 가장 큰 자연 높이보다 작아지지 않음
     const present = rgs.filter(({ rg }) => rg);
     const caps = present.map(({ rg, w }) => regionNeed(rg, w, H, "cap"));
     const cap = Math.max(natural, caps.length ? Math.min(...caps) : natural);
     // 최소 높이는 확대 없는 내용 필요 높이 (칸 제목, 캡션, 표 머리처럼 고정 높이 부분은 줄이지 않음)
     const min = Math.max(0, ...present.map(({ rg, w }) => regionNeed(rg, w, H, "min")));
-    return { elastic: false, assigned, target: natural, min, cap };
+    // 종합 상자를 12pt 로 담는 높이 (종합 상자가 없는 행은 min 과 같음)
+    const keep = Math.max(min, ...present.map(({ rg, w }) => regionNeed(rg, w, H, "keep")));
+    return { elastic: false, assigned, target: natural, min, keep, cap };
   });
   const tSum = plan.reduce((a, p) => a + p.target, 0);
   let freed = 0;
   if (tSum > availH) {
     const mSum = plan.reduce((a, p) => a + p.min, 0);
-    const k = availH > mSum ? (availH - mSum) / Math.max(0.01, tSum - mSum) : 0;
-    plan.forEach((p) => { p.h = availH > mSum ? p.min + (p.target - p.min) * k : (p.min * availH) / mSum; });
+    const kSum = plan.reduce((a, p) => a + p.keep, 0);
+    // 하한: keep 합이 본문 안에 들면 keep, 아니면 min (keep 을 지킬 수 없으면 기존 동작)
+    const floorOf = (p) => (availH > kSum ? p.keep : p.min);
+    const fSum = plan.reduce((a, p) => a + floorOf(p), 0);
+    const k = availH > fSum ? (availH - fSum) / Math.max(0.01, tSum - fSum) : 0;
+    plan.forEach((p) => { p.h = availH > fSum ? floorOf(p) + (p.target - floorOf(p)) * k : (p.min * availH) / mSum; });
   } else {
     plan.forEach((p) => { p.h = p.target; });
     freed = availH - tSum;

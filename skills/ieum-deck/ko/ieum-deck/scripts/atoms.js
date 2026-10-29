@@ -53,7 +53,7 @@ function textEm(s, bold) {
 /** widthIn 폭 상자에서 fontPt 로 차지하는 줄 수 */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
-  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_METRIC : T.METRIC.SAFETY);
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
   for (const para of String(str).split("\n")) {
     let cur = 0, n = 1;
@@ -68,7 +68,7 @@ function estimateLines(str, widthIn, fontPt, bold) {
   return lines;
 }
 const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 판정이 두 줄로 바뀌지 않게 두는 여유 (인치)
-/** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 판정하는 폭과 같은 기준 */
+/** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 판정하는 폭보다 더 보수적인 폭 기준 (SAFETY_METRIC. 이 폭이면 estimateLines 도 1줄로 판정) */
 function lineWidthIn(str, pt, bold) {
   return (textEm(str, bold) * pt) / 72 / (METRICS ? T.METRIC.SAFETY_METRIC : T.METRIC.SAFETY) + LINE_FIT_EPS;
 }

@@ -1446,6 +1446,8 @@ const TABLE_ROW_FIT = 0.38; // table row height floor (one 11pt line plus cell p
 const TABLE_EXPAND = 1.2; // table row natural height factor (a 0.38 inch one-line row counts as 0.46 inch)
 // When measuring minimum height (needed content height), set the growth factor to 1 to reuse the same measure functions
 let growFactor = FILL_EXPAND;
+// Font size for summary items in minimum height measurement. The floor (11pt) by default, the body size (12pt) only while blockKeep measures
+let sumMinSz = T.SIZE.BODY_MIN;
 const grow = (need, min) => Math.max(min, need * growFactor);
 const sumGap = (n, gap) => gap * Math.max(0, n - 1);
 const MEASURE = {
@@ -1453,8 +1455,8 @@ const MEASURE = {
   text: (k, w) => grow(needH([k.text || ""], w, T.SIZE.body, false), 0.46),
   stack: (k, w) => (k.items || []).reduce((a, x) => a + (x.head ? T.PANEL.HEAD_H : 0) + grow(needH(itemsOf(x), w, T.SIZE.body, true), 0.4), 0) + sumGap((k.items || []).length, GAP_ITEM),
   // The summary box follows the neighbor analysis cell's height, so its natural height is the needed height without growth
-  // The summary box shrinks down to the body floor (11pt) when the cell is short, so minimum height measurement (growFactor 1) uses the floor size
-  summary: (k, w) => sumLeadH(k, w) + (k.items || []).reduce((a, x) => a + Math.max(0.5, sumItemNeed(x, w, growFactor > 1 ? T.SIZE.body : T.SIZE.BODY_MIN)), 0),
+  // The summary box shrinks down to the body floor (11pt) when the cell is short, so minimum height measurement (growFactor 1) uses the floor size (blockKeep uses the body size)
+  summary: (k, w) => sumLeadH(k, w) + (k.items || []).reduce((a, x) => a + Math.max(0.5, sumItemNeed(x, w, growFactor > 1 ? T.SIZE.body : sumMinSz)), 0),
   labeled: (k, w) => {
     const lw = Math.min(k.labelW ? w * k.labelW : w * 0.28, 1.8), cw = w - lw - 0.06;
     return (k.rows || []).reduce((a, r) => a + grow(Math.max(needH([r.label || ""], lw + 0.06 - LABEL_GAP, T.SIZE.body, false), needH(itemsOf(r), cw, T.SIZE.body, true)), 0.34), 0) + sumGap((k.rows || []).length, CELL_GAP_V);
@@ -1567,16 +1569,22 @@ function blockMin(k, w, H) {
   growFactor = 1;
   try { return blockNeed(k, w, H); } finally { growFactor = FILL_EXPAND; }
 }
+/** Height that keeps the summary box at 12pt. Only summary items are measured at the body size; everything else equals the minimum height
+ *  Floor that stops planRows from pushing a summary box down to 11pt when it shrinks rows for a neighbor row */
+function blockKeep(k, w, H) {
+  sumMinSz = T.SIZE.body;
+  try { return blockMin(k, w, H); } finally { sumMinSz = T.SIZE.BODY_MIN; }
+}
 /** Cell caption: one bold left-aligned line. Returns the box left below the caption */
 function caption(slide, box, text) {
   A.text(slide, { x: box.x, y: box.y, w: box.w, h: CAPTION_H }, text, { sz: T.SIZE.body, bold: true, color: T.COLOR.textDark, align: "left", valign: "top", mg: [0, 0, 0, 0] });
   return { x: box.x, y: box.y + CAPTION_H, w: box.w, h: box.h - CAPTION_H };
 }
 /** Area height (title, note and block gaps included). null if any block is not measured
- *  mode is natural height (default), capacity height ("cap") or minimum height ("min") */
+ *  mode is natural height (default), capacity height ("cap"), minimum height ("min") or the height that keeps the summary box at 12pt ("keep") */
 function regionNeed(rg, w, H, mode) {
   const blocks = rg.blocks || (rg.block ? [rg.block] : []);
-  const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : blockNeed;
+  const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : mode === "keep" ? blockKeep : blockNeed;
   const needs = blocks.map((k) => measure(k, w, H));
   if (!blocks.length || needs.some((v) => v == null)) return null;
   return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.note || rg.noteBand ? NOTE_H + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
@@ -1599,6 +1607,7 @@ function rowWidths(r, areaW, colGap) {
 /** Row height distribution
  *  Text box rows target natural height (FILL_EXPAND times the needed content height); diagram rows target their set ratio height
  *  If the targets add up to more than the body, secure minimum heights first (needed content height for text box rows, 70% of the set height for diagram rows) and share the rest in proportion
+ *  In that case, if the body is taller than the sum of the heights that keep summary boxes at 12pt (keep), secure keep instead of the minimum height (so the share taken for a neighbor row does not push a summary box down to 11pt)
  *  If the targets add up to less than the body, share leftover height in this order: diagram rows, row gaps, vertical centering margin */
 function planRows(spec, regions, area, rowGap, colGap, H) {
   const hSum = spec.reduce((a, r) => a + r.h, 0);
@@ -1610,21 +1619,27 @@ function planRows(spec, regions, area, rowGap, colGap, H) {
     const rgs = widths.map((w) => ({ rg: regions[idx++], w }));
     const needs = rgs.map(({ rg, w }) => (rg ? regionNeed(rg, w, H) : 0));
     const natural = needs.some((v) => v == null) ? null : Math.max(0, ...needs);
-    if (natural == null) return { elastic: true, assigned, target: assigned, min: assigned * ELASTIC_MIN, cap: assigned };
+    if (natural == null) { const elasticMin = assigned * ELASTIC_MIN; return { elastic: true, assigned, target: assigned, min: elasticMin, keep: elasticMin, cap: assigned }; }
     // Row capacity height: up to the height every cell can fill (the minimum of per-cell capacity heights), never below the largest natural height
     const present = rgs.filter(({ rg }) => rg);
     const caps = present.map(({ rg, w }) => regionNeed(rg, w, H, "cap"));
     const cap = Math.max(natural, caps.length ? Math.min(...caps) : natural);
     // Minimum height is the needed content height without growth (fixed-height parts such as cell titles, captions and table heads do not shrink)
     const min = Math.max(0, ...present.map(({ rg, w }) => regionNeed(rg, w, H, "min")));
-    return { elastic: false, assigned, target: natural, min, cap };
+    // Height that fits summary boxes at 12pt (equals min for rows without a summary box)
+    const keep = Math.max(min, ...present.map(({ rg, w }) => regionNeed(rg, w, H, "keep")));
+    return { elastic: false, assigned, target: natural, min, keep, cap };
   });
   const tSum = plan.reduce((a, p) => a + p.target, 0);
   let freed = 0;
   if (tSum > availH) {
     const mSum = plan.reduce((a, p) => a + p.min, 0);
-    const k = availH > mSum ? (availH - mSum) / Math.max(0.01, tSum - mSum) : 0;
-    plan.forEach((p) => { p.h = availH > mSum ? p.min + (p.target - p.min) * k : (p.min * availH) / mSum; });
+    const kSum = plan.reduce((a, p) => a + p.keep, 0);
+    // Floor: keep when the keep sum fits in the body, otherwise min (previous behavior when keep cannot be held)
+    const floorOf = (p) => (availH > kSum ? p.keep : p.min);
+    const fSum = plan.reduce((a, p) => a + floorOf(p), 0);
+    const k = availH > fSum ? (availH - fSum) / Math.max(0.01, tSum - fSum) : 0;
+    plan.forEach((p) => { p.h = availH > fSum ? floorOf(p) + (p.target - floorOf(p)) * k : (p.min * availH) / mSum; });
   } else {
     plan.forEach((p) => { p.h = p.target; });
     freed = availH - tSum;
