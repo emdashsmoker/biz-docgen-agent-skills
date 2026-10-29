@@ -361,6 +361,7 @@ const METRIC = {
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
   SAFETY_METRIC: 0.9, // Margin for the renderer's automatic spacing around brackets and between Korean and Latin text
+  SAFETY_LINES: 0.94, // Margin for line count estimates (estimateLines). Text at 90-100% of the width mostly renders on one line in LibreOffice with NanumGothic. Width judgments (lineWidthIn, wordWidthIn) keep SAFETY_METRIC (0.94 everywhere wraps a shape label)
   DONUT_PLOT: 0.9, // Box size ratio against the donut chart plot diameter (for the center white circle)
   TABLE_LINE_HEIGHT: 1.35, // Line spacing judgment in table cells (measured NanumGothic spacing is higher than the body value)
 };

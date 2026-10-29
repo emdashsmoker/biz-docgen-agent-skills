@@ -53,7 +53,7 @@ function textEm(s, bold) {
 /** Number of lines at fontPt in a box of width widthIn */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
-  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_METRIC : T.METRIC.SAFETY);
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
   for (const para of String(str).split("\n")) {
     let cur = 0, n = 1;
@@ -68,7 +68,7 @@ function estimateLines(str, widthIn, fontPt, bold) {
   return lines;
 }
 const LINE_FIT_EPS = 0.01; // Margin so width rounding does not turn a one-line judgment into two lines (inches)
-/** Minimum width (inches) that fits the text on one line. Same criterion as the width estimateLines judges as 1 line */
+/** Minimum width (inches) that fits the text on one line. A more conservative width criterion than the width estimateLines judges as 1 line (SAFETY_METRIC. estimateLines also counts 1 line at this width) */
 function lineWidthIn(str, pt, bold) {
   return (textEm(str, bold) * pt) / 72 / (METRICS ? T.METRIC.SAFETY_METRIC : T.METRIC.SAFETY) + LINE_FIT_EPS;
 }

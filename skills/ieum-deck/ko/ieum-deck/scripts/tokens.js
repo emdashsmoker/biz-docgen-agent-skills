@@ -361,6 +361,7 @@ const METRIC = {
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
   SAFETY_METRIC: 0.9, // 렌더러의 괄호·한영 자동 간격 여유
+  SAFETY_LINES: 0.94, // 줄 수 추정(estimateLines) 여유. 폭 90-100% 문구는 LibreOffice 나눔고딕 렌더에서 대부분 1줄. 글 폭 판정(lineWidthIn, wordWidthIn)은 SAFETY_METRIC 유지 (전역 0.94 는 도형 라벨 줄바꿈 발생)
   DONUT_PLOT: 0.9, // 도넛 차트의 플롯 지름 대비 상자 크기 비율 (중앙 흰 원 계산)
   TABLE_LINE_HEIGHT: 1.35, // 표 셀 행간 판정 (나눔고딕 실측 행간이 본문 판정치보다 높음)
 };
