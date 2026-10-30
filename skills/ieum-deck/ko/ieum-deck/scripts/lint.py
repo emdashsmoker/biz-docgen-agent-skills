@@ -7,7 +7,7 @@
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
 - 글자 수: 헤드라인 1줄 상한 50자(초과 WARN)와 2줄 상한 100자(초과 FAIL), 마커 30, 잔존 슬롯 {{ }} 와 [확인]. 판형(--layout 또는 meta.layout)의 1줄 상한(limits.json HEADLINE_LINE_CHARS, 16:9 상한을 헤드라인 폭 비율로 환산)이 50자보다 작으면 1줄 상한은 그 값, 2줄 상한은 그 2배
-  글자 수는 나눔고딕 실측 폭을 한글 1자 폭으로 나눈 한글 환산 글자 수 (한글만 쓴 문구는 글자 수와 같고 영문과 공백은 폭만큼 적게 셈). 커스텀 슬라이드 슬롯 분량 비교도 같은 기준
+  글자 수는 빌드와 같은 폭 모델(text_metrics.py: 나눔고딕 실측 폭, 한글과 라틴 문자 사이 간격)로 잰 폭을 한글 1자 폭으로 나눈 한글 환산 글자 수 (한글만 쓴 문구는 글자 수와 같고 영문과 공백은 폭만큼 적게 셈). 커스텀 슬라이드 슬롯 분량 비교도 같은 기준
 - 문체: 헤드라인 문체(meta.headlineStyle: noun | polite), 본문 명사형(존댓말 종결 금지). 한글이 없는 헤드라인(영문 발표자료)은 문체 검사를 건너뜀
 - 문장 규범: em dash, 대비 구문, 숫자 선언, 의미 공백, 과장, 메타 서술, 내부 어휘, 연결어 (FAIL) / 비선호 어휘 (WARN)
   출처 문자열(source, factSource)은 문헌 제목을 인용하므로 em dash 를 뺀 문장 규범, 비선호 어휘, 문체, RFP 워딩, 제도 워딩 검사에서 제외
@@ -23,7 +23,7 @@
 - 섹션대장 일치: ledger.slides[].id 와 storyboard 슬라이드 id 의 목록과 순서 일치 (FAIL). 나머지 필드는 대조하지 않음
 - 제도 워딩: meta.track (rnd | mgmt | general) 과 다른 열의 용어 출현 WARN. 비R&D 에서 methods 예시 모듈명 문자 일치 WARN
 - 번호와 기호 중복: section 이 secNo 를 반복하거나 불릿 슬롯 항목이 기호로 시작하면 WARN
-- 커스텀 슬라이드 치환 분량: 치환 문구의 줄 수가 원문보다 늘고 상자 높이를 넘기면 WARN (meta.ownDeck 등록 시)
+- 커스텀 슬라이드 치환 분량: 치환 문구가 상자를 넘치면 WARN (meta.ownDeck 등록 시. 상자 여백, 아이콘 겹침, 판형 배율, 빌더가 줄인 문단 간격을 반영한 줄 수와 높이)
 - 배경과 목적 근거: 근거 항목에 줄바꿈이 있으면 WARN (근거는 note 슬롯으로 옮겨 ※ 를 붙임)
 - 배경과 목적 분량: 리드 4개 초과이거나 리드와 근거 합계 12개 초과면 WARN
 - 표 빈 셀: 앞쪽 분류 열에 빈 셀이 2개 이상이고 merged 지정이 없으면 WARN
@@ -47,6 +47,7 @@ import re
 from collections import Counter
 import sys
 from pathlib import Path
+from text_metrics import char_em, glyphs, span_em, wrap_lines  # 빌드와 같은 글 폭 모델 (같은 폴더의 공용 모듈)
 
 HERE = Path(__file__).resolve().parent
 LIMITS = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {"LIMIT": {}}
@@ -54,37 +55,45 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
-FM_PATH = HERE.parent / "assets" / "font-metrics.json"
-FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # 나눔고딕 실측 폭 (em). 없으면 추정 폭 사용
 HANGUL_RE = re.compile(r"[가-힣]")
+# 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn)와 tokens.js 의 값
+# Why: 견본 30장의 16:9 빌드에서 추출한 커스텀 슬라이드에 길이(원문의 0.6-3배)와 문자 구성(한글, 섞인 문구, 영문)이 다른 치환 문구를 넣어
+#      렌더한 2,052건(16:9, 4:3, 줄 간격 값을 지운 16:9)과 비교. 이전 판정(한글 1.0em, 그 외 0.55em, 상자 폭 - 0.5인치, 아이콘 장표 폭 x0.75,
+#      줄 높이 1.15em, 상자 높이 125% 초과, 판형 배율 없음)은 넘친 306건 중 91건을 놓치고 넘치지 않은 100건을 경고함 (치환 문단 3,415개 중 693개의 줄 수가 렌더와 다름)
+#      아래 값으로 재면 놓친 넘침 5건, 넘치지 않았는데 경고한 110건 (110건 모두 빌더가 글꼴을 줄여 상자에 넣은 경우), 줄 수가 렌더와 다른 문단 31개
+OWN_MG_DEFAULT_IN = (0.1, 0.05, 0.1, 0.05)  # 원문에 값이 없는 상자 여백 (좌, 상, 우, 하). atoms.js DEFAULT_MG_IN
+OWN_SMALL_BOX_W = 0.6  # 이 폭보다 좁은 상자는 여백 0 (tokens.js PANEL.SMALL_BOX_W)
+OWN_SHORT_CHEVRON = 1.6  # 폭이 높이의 이 배수보다 짧은 셰브론과 홈플레이트도 여백 0 (atoms.js shape)
+# 아이콘 겹침 (atoms.js playOwn): OWN_ICON_MAX 보다 작은 그림은 아이콘 도형으로 바뀜. 그림과 OWN_ICON_OVERLAP_IN 넘게 겹치고
+# 그림보다 OWN_ICON_LEFT_IN 넘게 왼쪽에서 시작하는 글 상자는 그림 왼쪽 OWN_ICON_GAP_IN 앞까지 좁아짐 (좁힌 폭이 원래 폭의 OWN_ICON_KEEP 이상일 때)
+# 위 렌더에서 아이콘에 겹친 상자의 치환 문단 90개는 이 폭으로 잰 줄 수가 모두 렌더와 같음 (장표 전체 폭 x0.75 로는 55개, 좁히지 않으면 63개)
+OWN_ICON_MAX, OWN_ICON_OVERLAP_IN, OWN_ICON_LEFT_IN, OWN_ICON_GAP_IN, OWN_ICON_KEEP = 0.95, 0.05, 0.2, 0.1, 0.5
+BULLET_INDENT_IN = 0.18  # 불릿 문단 들여쓰기 기본값 (tokens.js PARA.bulletIndentIn)
+OWN_BODY_PT = 12  # 글자 크기가 없는 문단의 크기 (tokens.js SIZE.body)
+# 빌더는 상자를 넘길 치환 문구의 문단 간격을 2pt 로, 줄 간격을 min(원문 줄 간격 또는 1.25, 1.05) 로 줄인 뒤 조판 (atoms.js playOwn)
+# 줄 간격 값을 지운 견본에서 넘친 70건은 모두 줄 간격 105% 로 조판됨
+OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC, OWN_UNSET_LN_SPC = 2, 1.05, 1.25
+# 줄 높이(em): LibreOffice 24.2 에서 나눔고딕 줄 간격 100% 의 줄 높이. 위 렌더의 여러 줄 문단 135개가 1.199-1.202em 이고 줄 간격 0.8-1.5배에 비례
+# 이전 값 1.15em 으로 재면 놓친 넘침이 5건에서 38건으로 늘어남
+LINE_PITCH_EM = 1.2
+# 글이 상자 가장자리를 이 폭(인치)보다 많이 벗어나면 넘침 (렌더 판정과 같은 기준)
+# 0.01 이면 놓친 넘침이 4건 줄고 경고가 13건 늘며 (글꼴 축소 없이 상자에 들어간 6건 포함), 0.03 이면 놓친 넘침이 33건 늘어남
+OWN_OVERFLOW_IN = 0.02
 # 템플릿과 블록의 고정 라벨 기본값 (build.js 의 labels.js 와 같은 표). meta.labels 의 키 검증에 사용
 LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
 LANG_TAG_RE = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")  # 언어 태그 (예: en-US, ko-KR)
 
 
-def char_em(ch, bold):
-    """한 글자의 폭(em). atoms.js charEm 과 같은 규칙 (실측 표, 한글과 한자와 전각 기호는 한글 폭, 그 외는 other)"""
-    c = ord(ch)
-    wide_symbol = 0x2190 <= c <= 0x21FF or 0x2500 <= c <= 0x27BF or c == 0x203B
-    hanja = 0x4E00 <= c <= 0x9FFF or 0x3400 <= c <= 0x4DBF or 0xF900 <= c <= 0xFAFF
-    if FM:
-        m = FM["bold" if bold else "regular"]
-        if ch in m: return m[ch]
-        if 0xAC00 <= c <= 0xD7A3 or hanja or wide_symbol: return m["hangul"]
-        if 0x3000 <= c <= 0x303F: return m["cjkpunct"]
-        if 0xFF00 <= c <= 0xFFEF: return m["fullwidth"]
-        if 0x2460 <= c <= 0x24FF: return m["enclosed"]
-        return m["other"]
-    if ch == " ": return 0.3
-    wide = 0xAC00 <= c <= 0xD7A3 or 0x3000 <= c <= 0x303F or 0xFF00 <= c <= 0xFFEF or 0x2460 <= c <= 0x24FF or 0x3130 <= c <= 0x318F or hanja or wide_symbol
-    return 1.0 if wide else 0.55
-
-
 def han_len(txt, bold=True):
-    """한글 환산 글자 수: 문구 폭을 한글 1자 폭으로 나눈 값. 한글만 쓴 문구는 글자 수와 같고 영문과 숫자와 공백은 폭만큼 적게 셈
-    글자 수 상한을 영문 발표자료에도 같은 폭 기준으로 적용하기 위함 (영문 글자와 공백은 한글보다 폭이 좁아 같은 폭에 더 많이 들어감)"""
-    unit = FM["bold" if bold else "regular"]["hangul"] if FM else 1.0
-    return sum(char_em(ch, bold) for ch in str(txt)) / unit
+    """한글 환산 글자 수: 문구 폭을 한글 1자 폭으로 나눈 값. 폭은 빌드와 같은 모델(text_metrics)로 재며 줄바꿈으로 나뉜 문구는 줄별 폭의 합
+    한글만 쓴 문구는 글자 수와 같고 영문과 숫자와 공백은 폭만큼 적게 셈
+    글자 수 상한을 영문 발표자료에도 같은 폭 기준으로 적용하기 위함 (영문 글자와 공백은 한글보다 폭이 좁아 같은 폭에 더 많이 들어감)
+    Why 계열 경계 간격 포함: LibreOffice 는 한글과 라틴 문자(영문, 숫자, 문장부호) 사이마다 0.227em 을 더함.
+        18pt 굵은 글씨의 섞인 문구 1줄 문단 213개의 렌더 폭과 비교하면 간격을 넣은 폭은 0.8% 안에서 맞고 간격을 뺀 폭은 최대 9% 좁음.
+        헤드라인 탐침 312개(4판형)가 2줄로 넘어가는 값은 간격을 넣으면 한글만 쓴 문구와 섞인 문구가 거의 같음 (16:9 53.3자와 53.6자, 헤드라인 폭 53.2자).
+        간격을 빼면 섞인 문구가 16:9 49.4자에서 2줄이 되어 1줄 상한 50자 안에서 넘침을 놓침"""
+    em = sum(span_em(glyphs([(line, 1, bold)], 1))[0] for line in str(txt).split("\n"))
+    return em / char_em("가", bold)
 # 인력 인식 직급 (자유 문장의 "성명 + 직급" 형식). 컨설팅사와 연구기관 직급의 한글 표기와 띄어쓰기 변형
 # 일반 기업 직급과 학위는 목록에서 제외 ("서울대 박사" 의 학교명처럼 앞말을 성명으로 잡는 오탐 발생)
 # 수행조직도의 인력 칸과 표의 성명 칸은 직급과 관계없이 앞의 성명을 읽음 (lint 의 lead_name)
@@ -208,6 +217,126 @@ def load_own(meta, story_path):
 def own_role(geo, role):
     """역할 이름에 대응하는 own 템플릿 이름 집합 (예: {'own:19'})"""
     return {f"own:{n}" for n in ((geo or {}).get("roles") or {}).get(role, [])}
+
+
+def norm_ws(v):
+    """공백을 모두 뺀 문구 (빌드 textKey 의 원문 비교 기준)"""
+    return re.sub(r"\s+", "", str(v))
+
+
+def atom_text(a):
+    """원자의 문구. 문단은 줄바꿈으로 이음 (빌드 playOwn 의 원문 값)"""
+    return "\n".join("".join(r["t"] for r in p["runs"]) for p in a["paras"])
+
+
+def own_text_atoms(own_slide):
+    """텍스트 슬롯 원자 [(슬롯 id, 원자)]. t{k} 는 종류가 shape 또는 graphic 이고 문단이 있는 원자의 출현 순서 (atoms.js playOwn, own_catalog.py 와 같은 번호)"""
+    atoms = [a for a in own_slide.get("atoms", []) if a.get("kind") in ("shape", "graphic") and a.get("paras") is not None]
+    return [(f"t{k}", a) for k, a in enumerate(atoms, 1)]
+
+
+def own_slot_value(slots, slot_id, text):
+    """원자에 들어갈 치환 문구. t{k} 키가 우선이고 없으면 공백을 뺀 원문이 키 문구로 시작하는 첫 원문 키 (atoms.js textKey). 치환이 없으면 None"""
+    if slots.get(slot_id) is not None:
+        return slots[slot_id]
+    cur = norm_ws(text)
+    if not cur:
+        return None
+    return next((v for k, v in slots.items() if k.startswith("~") and len(k) > 1 and cur.startswith(norm_ws(k[1:]))), None)
+
+
+def layout_scale(layout):
+    """판형의 가로와 세로 배율 (16:9 기준). 빌더는 커스텀 슬라이드 좌표에 이 배율을 곱해 재생"""
+    lays = LIMITS.get("LAYOUTS", {})
+    base, cur = lays.get(BASE_LAYOUT), lays.get(layout)
+    if not base or not cur:
+        return 1.0, 1.0
+    return cur["W"] / base["W"], cur["H"] / base["H"]
+
+
+def own_icon_width(atoms, a, slots):
+    """아이콘 겹침으로 좁아진 글 상자 폭 (원본 좌표). 겹친 아이콘이 없으면 원래 폭. 이미지 슬롯(img{k})을 채운 그림과 로고는 아이콘으로 바뀌지 않음"""
+    w = a["w"]
+    for k, im in enumerate((x for x in atoms if x.get("kind") == "image"), 1):
+        if im.get("identity") or slots.get(f"img{k}") or im["w"] >= OWN_ICON_MAX or im["h"] >= OWN_ICON_MAX:
+            continue
+        ox = min(a["x"] + a["w"], im["x"] + im["w"]) - max(a["x"], im["x"])
+        oy = min(a["y"] + a["h"], im["y"] + im["h"]) - max(a["y"], im["y"])
+        if ox <= OWN_ICON_OVERLAP_IN or oy <= OWN_ICON_OVERLAP_IN or a["x"] >= im["x"] - OWN_ICON_LEFT_IN:
+            continue
+        nw = im["x"] - OWN_ICON_GAP_IN - a["x"]
+        if nw >= a["w"] * OWN_ICON_KEEP:
+            w = min(w, nw)
+    return w
+
+
+def own_text_box(atoms, a, slots, sx, sy):
+    """치환 문구가 놓일 글 영역 (안쪽 폭, 상자 높이, 상 여백, 하 여백, 세로 정렬). atoms.js shape() 의 여백과 셰브론 꼭짓점 규칙"""
+    w, h = own_icon_width(atoms, a, slots) * sx, a["h"] * sy
+    mg = a.get("mg") if isinstance(a.get("mg"), list) and len(a["mg"]) == 4 else [None] * 4
+    mg = [OWN_MG_DEFAULT_IN[i] if v is None else v for i, v in enumerate(mg)]
+    chevron = a.get("preset") in ("chevron", "homePlate")
+    point = min(w, h) * (a["adj"] / 100000 if a.get("adj") is not None else 0.5) if chevron else 0
+    if w < OWN_SMALL_BOX_W or (chevron and w < OWN_SHORT_CHEVRON * h):
+        mg = [0, 0, 0, 0]
+    inner_w = w - mg[0] - mg[2] - (2 * point if a.get("preset") == "chevron" else point)
+    return inner_w, h, mg[1], mg[3], a.get("va") or "middle"
+
+
+def own_paras(src_paras, value):
+    """치환 문구의 문단 [(문구, 크기 pt, 굵게, 원문 문단)]. 줄바꿈마다 문단을 나누고 원문 문단 서식을 차례로 씀 (모자라면 마지막 서식 반복, atoms.js substitute)"""
+    out = []
+    for i, line in enumerate(str(value).split("\n")):
+        p = src_paras[min(i, len(src_paras) - 1)]
+        r0 = next((r for r in p.get("runs", []) if not r.get("br")), {})
+        out.append((line, r0.get("sz") or OWN_BODY_PT, bool(r0.get("b")), p))
+    return out
+
+
+def para_indent(p):
+    """문단 들여쓰기(인치). 불릿 문단은 내어쓰기 폭, 그 외는 왼쪽 여백 (atoms.js fitParas 와 같은 규칙)"""
+    if p.get("bullet"):
+        return abs(p["indent"]) if p.get("indent") is not None else BULLET_INDENT_IN
+    return p.get("marL") or 0
+
+
+def own_text_height(paras, inner_w):
+    """빌더가 간격을 줄여 조판한 문단 묶음의 높이(인치)와 줄 수. 줄 수는 text_metrics.wrap_lines (빌드 estimateLines 와 같은 어절 단위 줄바꿈)
+    문단 간격은 문단 사이에만 셈 (LibreOffice 는 첫 문단 앞 간격과 끝 문단 뒤 간격을 글 상자 안에 두지 않음. 렌더로 확인)"""
+    height, lines = 0.0, 0
+    for i, (line, pt, bold, p) in enumerate(paras):
+        n = wrap_lines([(line, pt, bold)], max(0.1, inner_w - para_indent(p)))[0]
+        ln_spc = min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)
+        gap = OWN_COMPACT_GAP_PT + (paras[i - 1][3].get("spcAft") or 0) if i else 0
+        height += n * pt * LINE_PITCH_EM * ln_spc / 72 + gap / 72
+        lines += n
+    return height, lines
+
+
+def overflow_in(need, h, top, bottom, va):
+    """글 묶음이 상자 가장자리를 벗어나는 폭(인치). 위 정렬은 아래로, 아래 정렬은 위로, 가운데 정렬은 위아래로 나뉘어 넘침"""
+    if va == "top":
+        return top + need - h
+    if va == "bottom":
+        return bottom + need - h
+    return (need - (h - top - bottom)) / 2 - min(top, bottom)
+
+
+def own_overflows(own_slide, slots, layout):
+    """치환 문구가 상자를 넘치는 원자 [(원문, 줄 수)]. 빌더와 같은 슬롯 대응, 상자 여백, 아이콘 겹침, 판형 배율로 잼 (세로 쓰기 상자는 제외)"""
+    sx, sy = layout_scale(layout)
+    atoms = own_slide.get("atoms", [])
+    out = []
+    for slot_id, a in own_text_atoms(own_slide):
+        text = atom_text(a)
+        value = own_slot_value(slots, slot_id, text)
+        if not isinstance(value, str) or not value or not a.get("paras") or a.get("vert") or "w" not in a:
+            continue
+        inner_w, h, top, bottom, va = own_text_box(atoms, a, slots, sx, sy)
+        need, lines = own_text_height(own_paras(a["paras"], value), inner_w)
+        if overflow_in(need, h, top, bottom, va) > OWN_OVERFLOW_IN:
+            out.append((text, lines))
+    return out
 
 
 def blocks_of(sl):
@@ -397,15 +526,15 @@ def lint(story, ledger=None, story_path=".", layout=None):
             warns.append(f"[{sid}] {tpl} 커스텀 슬라이드 헤드라인 원문 그대로 사용. headline 지정 권장")
         if hl:
             n_hl = han_len(hl)
-            if n_hl > hl2: fails.append(f"[{sid}] 헤드라인 {n_hl:.0f}자(한글 환산) > 2줄 상한 {hl2}자")
-            elif n_hl > hl1: warns.append(f"[{sid}] 헤드라인 {n_hl:.0f}자(한글 환산) > 1줄 상한 {hl1}자")
+            if n_hl > hl2: fails.append(f"[{sid}] 헤드라인 {n_hl:.1f}자(한글 환산) > 2줄 상한 {hl2}자")
+            elif n_hl > hl1: warns.append(f"[{sid}] 헤드라인 {n_hl:.1f}자(한글 환산) > 1줄 상한 {hl1}자")
             polite = bool(POLITE_END.search(hl))
             if style == "noun" and polite: fails.append(f"[{sid}] 헤드라인 존댓말 종결 (문체 설정 noun)")
             if style == "polite" and not polite and HANGUL_RE.search(hl): fails.append(f"[{sid}] 헤드라인 명사형 종결 (문체 설정 polite)")
             if re.fullmatch(r"[가-힣A-Za-z ]{2,12}", hl.strip()) and " " not in hl.strip():
                 warns.append(f"[{sid}] 헤드라인이 주제 라벨로 보임: {hl}")
         mk = s.get("marker")
-        if isinstance(mk, str) and han_len(mk) > L.get("markerTitle", 30): fails.append(f"[{sid}] 마커 {han_len(mk):.0f}자(한글 환산) > {L.get('markerTitle', 30)}")
+        if isinstance(mk, str) and han_len(mk) > L.get("markerTitle", 30): fails.append(f"[{sid}] 마커 {han_len(mk):.1f}자(한글 환산) > {L.get('markerTitle', 30)}")
         for key, tx in texts_of(s) + [("headline", hl)]:
             if not isinstance(tx, str): continue
             if "{{" in tx: fails.append(f"[{sid}] 잔존 슬롯: {tx[:30]}")
@@ -439,13 +568,11 @@ def lint(story, ledger=None, story_path=".", layout=None):
         if not geo: break
         n = int(tpl[4:])
         if n not in own_n: continue
-        atoms = own_n[n]["atoms"]
-        texts = ["\n".join("".join(r["t"] for r in p["runs"]) for p in a["paras"]) for a in atoms if a["kind"] not in ("image", "chart", "table") and a.get("paras")]
-        norm = lambda v: re.sub(r"\s+", "", str(v))
+        texts = [atom_text(a) for _, a in own_text_atoms(own_n[n])]
         for k, v in s["slots"].items():
             if not isinstance(v, str) or not v: continue
             orig = None
-            if k.startswith("~"): orig = next((t for t in texts if norm(t).startswith(norm(k[1:]))), None)
+            if k.startswith("~"): orig = next((t for t in texts if norm_ws(t).startswith(norm_ws(k[1:]))), None)
             elif re.fullmatch(r"t\d+", k) and int(k[1:]) <= len(texts): orig = texts[int(k[1:]) - 1]
             if orig is None:
                 if k.startswith("~"): warns.append(f"[{s.get('id')}] {tpl} 슬롯 키 '{k}' 에 맞는 원문 없음")
@@ -630,43 +757,14 @@ def lint(story, ledger=None, story_path=".", layout=None):
         elif len(leads) + subs > 12:
             warns.append(f"[{sl.get('id')}] 배경과 목적 항목 {len(leads) + subs}개 (리드와 근거 합계 12개 이하 권장)")
 
-    # 커스텀 슬라이드 슬롯 치환 분량: 원문보다 크게 길어지면 상자를 넘침
+    # 커스텀 슬라이드 슬롯 치환 분량: 치환 문구가 상자를 넘침 (원문보다 크게 길어진 경우가 대부분)
     if geo:
         for sl in slides:
             tpl = str(sl.get("template") or "")
-            if not tpl.startswith("own:"): continue
+            if not tpl.startswith("own:") or not isinstance(sl.get("slots"), dict): continue
             own = own_n.get(int(tpl.split(":")[1]))
             if not own: continue
-            atoms = {"".join(r["t"] for p in (a.get("paras") or []) for r in p["runs"]): a for a in own.get("atoms", [])}
-
-            # 아이콘이 있는 장표는 글자 영역이 좁아지므로 폭을 보수적으로 잡음
-            icon_slide = any(a.get("kind") == "image" for a in own.get("atoms", []))
-
-            def para_pt(a):
-                sizes = [r.get("sz") for p in (a.get("paras") or []) for r in p.get("runs", []) if r.get("sz")]
-                return max(sizes) if sizes else 12.0
-
-            def wrapped(txt, w_in, pt=12.0):
-                w_in = w_in * (0.75 if icon_slide else 1.0)
-                em = sum(1.0 if "\uac00" <= c <= "\ud7a3" or "\u4e00" <= c <= "\u9fff" or "\u3400" <= c <= "\u4dbf" or "\uf900" <= c <= "\ufaff" or "\u2190" <= c <= "\u21ff" or "\u2500" <= c <= "\u27bf" or c == "\u203b" else 0.55 for c in txt)
-                per = max(0.1, (w_in - 0.5)) / (pt / 72)
-                return max(1, int(em / per) + (1 if em % per > 0.1 else 0))
-
-            over = []
-            for k, v in (sl.get("slots") or {}).items():
-                if not isinstance(v, str) or not k.startswith("~"): continue
-                src = k[1:]
-                a = atoms.get(src) or next((x for t, x in atoms.items() if t.startswith(src)), None)
-                if not a: continue
-                pt = para_pt(a)
-                ln_src = sum(wrapped(x, a["w"], pt) for x in src.split("\n"))
-                ln_new = sum(wrapped(x, a["w"], pt) for x in v.split("\n"))
-                # 원문보다 줄이 늘고 상자 높이도 넘길 때만 보고
-                paras_n = len(v.split("\n"))
-                need = ln_new * (pt * 1.15 / 72) + paras_n * 0.04  # 줄 높이와 문단 간격을 합산
-                # 빌더의 간격 축소 여지를 고려하여 상자 높이의 125% 를 넘을 때만 보고
-                if ln_new > ln_src and need > a["h"] * 1.25:
-                    over.append(f"{src[:10]}→{ln_new}줄")
+            over = [f"{t.replace(chr(10), ' ')[:10]}→{n}줄" for t, n in own_overflows(own, sl["slots"], layout)]
             if over:
                 warns.append(f"[{sl.get('id')}] {tpl} 치환 문구가 상자 용량 초과 {over[:3]} (글자 수를 줄이거나 항목 수를 줄일 것. 글꼴 축소로 대응하지 않음)")
 
