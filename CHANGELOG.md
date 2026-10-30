@@ -27,6 +27,27 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-30
+
+### ieum-deck
+- Fixed table rows and text boxes whose height did not match the rendered text because the width estimate missed the gap LibreOffice adds between Hangul and Latin text and the real widths of symbols such as ×, … and “ ” (#78)
+- Fixed one-line table rows that rendered taller than their siblings when the text filled 99-100% of the column width (#78)
+- Added the tasks derived from the history to the history_timeline recipe sample (#78)
+- Changed check_layout and lint to measure text width and line breaks with the same rules as the build (#78)
+- Added a check_layout warning for line breaks inside a word at the line end, such as '60|분' and '가|정)' (#78)
+- Fixed custom slide text that overflowed its box because the line height estimate was 17% below the rendered height (#78)
+- Fixed words such as '60|분' split across lines in table cells of narrow page sizes (#78)
+- Added SKILL.md guidance on rewriting text to clear line break warnings inside words in narrow page sizes (#78)
+
+* 한글과 라틴 문자 사이 간격과 ×, …, “ ” 등 기호의 실제 폭을 빠뜨린 폭 추정으로 표 행과 글상자 높이가 렌더와 어긋나는 현상 수정 (#78)
+* 문구가 열 폭의 99-100% 에 놓인 1줄 표 행이 형제 행보다 높게 렌더되는 현상 수정 (#78)
+* history_timeline 레시피 견본에 경과에서 도출한 과제 추가 (#78)
+* check_layout 과 lint 의 글 폭과 줄바꿈 계산을 빌드와 같은 규칙으로 변경 (#78)
+* 줄 끝 어절 안 줄바꿈('60|분', '가|정)')의 check_layout 경고 추가 (#78)
+* 렌더보다 17% 낮은 줄 높이 추정으로 커스텀 슬라이드 글이 상자를 넘치는 현상 수정 (#78)
+* 좁은 판형 표 셀에서 '60|분' 등 어절이 줄 끝에서 나뉘는 현상 수정 (#78)
+* 좁은 판형의 어절 안 줄바꿈 경고를 해소하는 고쳐 쓰기 지침을 SKILL.md 에 추가 (#78)
+
 ## 2026-10-29
 
 ### ieum-deck
