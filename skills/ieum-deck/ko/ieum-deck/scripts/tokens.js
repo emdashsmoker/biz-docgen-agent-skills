@@ -360,10 +360,22 @@ const METRIC = {
   EM_SPACE: 0.3,
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
-  SAFETY_METRIC: 0.9, // 렌더러의 괄호·한영 자동 간격 여유
-  SAFETY_LINES: 0.94, // 줄 수 추정(estimateLines) 여유. 폭 90-100% 문구는 LibreOffice 나눔고딕 렌더에서 대부분 1줄. 글 폭 판정(lineWidthIn, wordWidthIn)은 SAFETY_METRIC 유지 (전역 0.94 는 도형 라벨 줄바꿈 발생)
+  SAFETY_METRIC: 0.9, // 글 폭 판정(lineWidthIn, wordWidthIn) 여유. 0.99 로 올리면 견본 2종(recipe-demos, proposal-templates) 빌드 경고 70개 발생 (상자 글 채움 경고)
+  // 줄 수 추정(estimateLines) 여유. 폭 계산에 계열 경계 간격(SCRIPT_GAP_EM)과 기호 실측 폭을 반영한 뒤 견본 2종의 LibreOffice 렌더와 대조하여 정함
+  // 0.995: 표 297행 추정 줄 수와 렌더 줄 수 일치, 겹치지 않는 표 밖 글 상자 약 1,740개 과다 추정 0, 과소 추정 0
+  // 0.99 는 문구 폭이 칸 폭의 99.0-99.5% 인 글 상자 4개에서 과다 추정(유령 줄). 1.0 미만 여유는 렌더 폭이 계산보다 넓은 경우를 흡수
+  // 렌더 폭 ÷ 계산 폭(1인치 이상 한 줄 문구): 12pt 최대 1.005, 11pt 중앙값 1.003 최대 1.0065. 11pt 문구 폭 99.4-99.5% 구간은 여유가 모자라므로 표는 경계 구간 회피(templates.js EDGE_FACTORS)로 막음
+  SAFETY_LINES: 0.995,
+  // 한글 계열과 라틴 계열 글자가 바뀌는 경계마다 LibreOffice 가 더하는 간격 (em). 나눔고딕 글자 높이(1.15em)의 1/5 근사
+  // 실측: 확인 문구 89개(기호 10개 연속, 한글과 번갈아 맞닿음, 공백 사이)를 표 셀에 넣어 LibreOffice 24.2 PDF 로 변환하고
+  //       pdftotext -bbox-layout 단어 좌표로 폭을 잼. 12pt 0.228em, 11pt 0.227em. 이 간격과 글자 폭으로 계산한 폭이 일반체 12pt, 11pt, 굵은체 12pt 267건 모두 렌더 폭과 일치
+  SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // 도넛 차트의 플롯 지름 대비 상자 크기 비율 (중앙 흰 원 계산)
-  TABLE_LINE_HEIGHT: 1.35, // 표 셀 행간 판정 (나눔고딕 실측 행간이 본문 판정치보다 높음)
+  // 표 셀 행 높이 판정용 줄 높이 (em). 실측 행간보다 크게 두어 행 팽창을 막는 여유값
+  // 실측: LibreOffice 24.2 표 셀 렌더 행간은 1.15em x 줄 간격 배수 (견본 2종 4판형의 셀 안 여러 줄 문단 290개, 배수 1.0-1.3 에서 1.148-1.157em). 글 상자는 1.2em
+  // 이 값은 실측보다 17% 커서 줄 간격 확대(templates.js LNSPC_MAX) 뒤에도 글이 행 안쪽 높이를 넘지 않음 (같은 렌더의 표 셀 4,596개 중 행간 때문에 넘친 셀 0개)
+  // PowerPoint 행간은 미확인이므로 여유를 유지
+  TABLE_LINE_HEIGHT: 1.35,
 };
 
 /** 판형에 맞춘 밴드 좌표. x 와 w 는 폭 비율, y 와 h 는 높이 비율로 환산 */
@@ -399,13 +411,14 @@ function scaled(layoutKey) {
   };
 }
 
-/** limits.json 기록 (lint.py 와 공유) */
+/** limits.json 기록 (lint.py, check_layout.py 와 공유) */
 function writeLimits(dir) {
   // 판형별 헤드라인 1줄 상한(한글 환산 글자 수): 렌더링으로 검증한 16:9 상한(LIMIT.headlineOneLine)을 판형의 헤드라인 폭 비율로 환산
   // lint 가 헤드라인 길이를 한글 1자 폭 단위로 재므로 같은 단위를 씀 (평균 글자 폭 기준 값은 좁은 판형에서 2줄 넘김을 놓침)
   const baseW = scaled("16:9").headline.w;
   const HEADLINE_LINE_CHARS = Object.fromEntries(Object.keys(LAYOUTS).map((k) => [k, Math.floor((LIMIT.headlineOneLine * scaled(k).headline.w) / baseW)]));
-  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT } }, null, 1));
+  // METRIC: check_layout 이 빌드(atoms.js)와 같은 폭 모델(글자 폭 근사, 계열 경계 간격, 줄 수 여유)로 넘침과 어절 폭을 판정하도록 공유
+  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
 module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };

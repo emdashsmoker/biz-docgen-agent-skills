@@ -8,7 +8,7 @@ Checks
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
 - Character counts: headline 1-line limit 50 (WARN above) and 2-line limit 100 (FAIL above), marker 30, leftover slots {{ }} and [확인]. If the 1-line limit of the page size (--layout or meta.layout, limits.json HEADLINE_LINE_CHARS, the 16:9 limit scaled by the headline width ratio) is below 50, the 1-line limit is that value and the 2-line limit is double it
-  Characters are Hangul-equivalent characters: the measured NanumGothic width divided by the width of one Hangul syllable (text written only in Hangul counts as its character count; Latin letters and spaces count less, by their width). The custom slide slot volume comparison uses the same measure
+  Characters are Hangul-equivalent characters: the width measured with the build's width model (text_metrics.py: measured NanumGothic widths and the gap between Hangul and Latin characters) divided by the width of one Hangul syllable (text written only in Hangul counts as its character count; Latin letters and spaces count less, by their width). The custom slide slot volume comparison uses the same measure
 - Style: headline style (meta.headlineStyle: noun | polite), noun-ending body text (no polite endings). Headlines without Hangul (English decks) skip the style check
 - Sentence norms: em dash, contrast constructions, number declarations, empty filler, exaggeration, meta narration, internal vocabulary, connectives (FAIL) / discouraged vocabulary (WARN)
   Source strings (source, factSource) quote document titles, so they skip sentence norms other than em dash, discouraged vocabulary, style, RFP wording and institutional wording checks
@@ -24,7 +24,7 @@ Checks
 - Section ledger match: ledger.slides[].id matches the list and order of storyboard slide ids (FAIL). Other fields are not compared
 - Institutional wording: terms from a column other than meta.track (rnd | mgmt | general) WARN. Outside R&D, a literal match with a methods sample module name WARNs
 - Duplicate numbers and symbols: WARN if section repeats secNo or a bullet slot item starts with a symbol
-- Custom slide substitution volume: WARN if substituted text has more lines than the original and exceeds the box height (when meta.ownDeck is registered)
+- Custom slide substitution volume: WARN if substituted text still overflows its box after the builder shrinks the font to the body minimum (11pt) and adjusts spacing (when meta.ownDeck is registered. Line counts and height reflect the box insets, icon overlap and page size scale)
 - Background and purpose evidence: WARN if an evidence item has a line break (move evidence to the note slot to get ※)
 - Background and purpose volume: WARN over 4 leads or over 12 leads and evidence items combined
 - Empty table cells: WARN if a leading category column has 2 or more empty cells without merged
@@ -46,8 +46,11 @@ import json
 import os
 import re
 from collections import Counter
+from decimal import ROUND_HALF_UP, Decimal
+import math
 import sys
 from pathlib import Path
+from text_metrics import char_em, glyphs, span_em, wrap_lines  # Same text width model as the build (shared module in this folder)
 
 HERE = Path(__file__).resolve().parent
 LIMITS = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {"LIMIT": {}}
@@ -55,37 +58,62 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
-FM_PATH = HERE.parent / "assets" / "font-metrics.json"
-FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # measured NanumGothic widths (em). Estimated widths are used without it
 HANGUL_RE = re.compile(r"[가-힣]")
+# Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
+# Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
+# Why: compared with 2,052 renders (16:9, 4:3, and 16:9 with line spacing values removed) of custom slides extracted from a 16:9 build of the 30 sample slides,
+#      with substituted text of varied length (0.6-3 times the original) and script mix (Hangul, mixed, English). The previous check (Hangul 1.0em, others 0.55em,
+#      box width - 0.5 in, width x0.75 on slides with icons, line height 1.15em, above 125% of the box height, no page size scale) missed 91 of 306 overflows
+#      and warned on 100 boxes that did not overflow (693 of 3,415 substituted paragraphs had a line count different from the render)
+#      Against the 199 overflows in renders from the builder with the line height fix (paraLineIn, insetSlackIn in atoms.js), a check at the original font size misses 1 overflow
+#      and warns on 213 boxes that did not overflow (in all 213 the builder shrank the font to fit). Computing the builder's spacing adjustment and font shrinking as well gives 8 missed overflows, 3 warnings,
+#      and 27 of 3,446 paragraphs with a line count different from the render. Of the 8 missed, 4 are borderline (0.021 inch rendered overflow measured as 0.016 inch) and 4 differ in line count
+#      In the same sample with every paragraph at 1.3 line spacing (684 cases): 2 missed overflows and 1 warning (64 warnings without the spacing adjustment)
+OWN_MG_DEFAULT_IN = (0.1, 0.05, 0.1, 0.05)  # Box insets when the original has none (left, top, right, bottom). atoms.js DEFAULT_MG_IN
+OWN_SMALL_BOX_W = 0.6  # Boxes narrower than this get zero insets (tokens.js PANEL.SMALL_BOX_W)
+OWN_SHORT_CHEVRON = 1.6  # Chevrons and home plates shorter than this multiple of their height also get zero insets (atoms.js shape)
+# Icon overlap (atoms.js playOwn): pictures smaller than OWN_ICON_MAX become icon shapes. A text box that overlaps the picture by more than OWN_ICON_OVERLAP_IN
+# and starts more than OWN_ICON_LEFT_IN left of it narrows to OWN_ICON_GAP_IN before the picture's left edge (when the narrowed width is at least OWN_ICON_KEEP of the original)
+# In the renders above, all 90 substituted paragraphs in boxes overlapping an icon have the render's line count at this width (55 with the whole-slide width x0.75, 63 without narrowing)
+OWN_ICON_MAX, OWN_ICON_OVERLAP_IN, OWN_ICON_LEFT_IN, OWN_ICON_GAP_IN, OWN_ICON_KEEP = 0.95, 0.05, 0.2, 0.1, 0.5
+BULLET_INDENT_IN = 0.18  # Default indent of bullet paragraphs (tokens.js PARA.bulletIndentIn)
+OWN_BODY_PT = 12  # Size of paragraphs without a font size (tokens.js SIZE.body)
+OWN_UNSET_LN_SPC = 1  # Line spacing multiple of a paragraph with no line spacing in the source (OOXML default 100%, atoms.js OWN_LN_SPC_UNSET)
+# Builder spacing adjustment (atoms.js playOwn): counts the substituted paragraph lines, without bold, at the original box width (before the page size scale; up to OWN_ICON_GAP_IN before an overlapping icon,
+# at least OWN_ROUGH_MIN_W) minus OWN_ROUGH_PAD_IN and the bullet indent, and adds OWN_ROUGH_GAP_IN between paragraphs for a rough height estimate
+# Below box height x OWN_SPREAD_FILL, paragraph spacing from the second paragraph widens to (box height - OWN_SPREAD_PAD_IN - estimate) / gaps x OWN_SPREAD_SHARE (within OWN_SPREAD_PT)
+# Above box height - OWN_COMPACT_IN, paragraph spacing from the second paragraph becomes OWN_COMPACT_GAP_PT and line spacing is capped at OWN_COMPACT_LN_SPC
+OWN_ROUGH_PAD_IN, OWN_ROUGH_GAP_IN, OWN_ROUGH_MIN_W = 0.3, 0.075, 1
+OWN_SPREAD_FILL, OWN_SPREAD_PAD_IN, OWN_SPREAD_SHARE, OWN_SPREAD_PT = 0.8, 0.12, 0.8, (2.5, 10)
+OWN_COMPACT_IN, OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC = 0.08, 2, 1
+# Builder font shrinking (atoms.js shape, fitParas): when substituted text exceeds the inner box height plus the inset tolerance (insetSlackIn), all paragraph fonts take one scale
+# lowered by OWN_FIT_STEP (down to OWN_FIT_MIN_SCALE, font minimum OWN_BODY_MIN). Still overflowing at the minimum, paragraph spacing from the second paragraph is multiplied by OWN_FIT_GAP_CUTS in turn
+# Up to OWN_FIT_KEEP_PARAS paragraphs without line breaks are not shrunk. Substituted text with a source size below the minimum grows to the minimum when it overflows at that size
+# The shared sibling ratio (atoms.js shrinkRatio) only shrinks fonts further with the same minimum, so the overflow check leaves it out
+# Against the build XML of the renders above: paragraph and line spacing match in all 1,845 substituted boxes; font sizes are smaller in 147 (sibling ratio) and 0.1pt larger in 3 (rounding order)
+OWN_BODY_MIN = LIMITS.get("SIZE", {}).get("BODY_MIN", 11)  # Font minimum of substituted text (tokens.js SIZE.BODY_MIN)
+OWN_FIT_STEP, OWN_FIT_MIN_SCALE, OWN_FIT_GAP_CUTS, OWN_FIT_KEEP_PARAS, OWN_FIT_MIN_W = 0.04, 0.6, (0.6, 0.3, 0), 3, 0.05
+# Line height (em): NanumGothic line height at 100% line spacing in LibreOffice 24.2. 135 multi-line paragraphs in the renders above measure 1.199-1.202em, proportional to line spacing 0.8-1.5
+# This value misses 8 overflows, 1.15em misses 32. Same value as the builder's line height (tokens.js METRIC.LINE_HEIGHT)
+LINE_PITCH_EM = 1.2
+# Text that leaves the box edge by more than this width (inches) overflows (same criterion as the render check)
+# 0.01 misses 4 fewer overflows and adds 5 warnings; 0.03 misses 20 more overflows
+OWN_OVERFLOW_IN = 0.02
 # Defaults of the fixed template and block labels (the same table as labels.js of build.js). Used to validate the keys of meta.labels
 LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
 LANG_TAG_RE = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")  # language tag (e.g. en-US, ko-KR)
 
 
-def char_em(ch, bold):
-    """Width of one character (em). Same rules as atoms.js charEm (measured table; Hangul, Hanja and full-width symbols take the Hangul width; the rest take other)"""
-    c = ord(ch)
-    wide_symbol = 0x2190 <= c <= 0x21FF or 0x2500 <= c <= 0x27BF or c == 0x203B
-    hanja = 0x4E00 <= c <= 0x9FFF or 0x3400 <= c <= 0x4DBF or 0xF900 <= c <= 0xFAFF
-    if FM:
-        m = FM["bold" if bold else "regular"]
-        if ch in m: return m[ch]
-        if 0xAC00 <= c <= 0xD7A3 or hanja or wide_symbol: return m["hangul"]
-        if 0x3000 <= c <= 0x303F: return m["cjkpunct"]
-        if 0xFF00 <= c <= 0xFFEF: return m["fullwidth"]
-        if 0x2460 <= c <= 0x24FF: return m["enclosed"]
-        return m["other"]
-    if ch == " ": return 0.3
-    wide = 0xAC00 <= c <= 0xD7A3 or 0x3000 <= c <= 0x303F or 0xFF00 <= c <= 0xFFEF or 0x2460 <= c <= 0x24FF or 0x3130 <= c <= 0x318F or hanja or wide_symbol
-    return 1.0 if wide else 0.55
-
-
 def han_len(txt, bold=True):
-    """Hangul-equivalent character count: text width divided by the width of one Hangul syllable. Text written only in Hangul equals its character count; Latin letters, digits and spaces count less, by their width
-    Applies the character limits to English decks on the same width basis (Latin letters and spaces are narrower than Hangul, so more of them fit in the same width)"""
-    unit = FM["bold" if bold else "regular"]["hangul"] if FM else 1.0
-    return sum(char_em(ch, bold) for ch in str(txt)) / unit
+    """Hangul-equivalent character count: text width divided by the width of one Hangul syllable. The width uses the build's model (text_metrics); text split by line breaks sums the width of each line
+    Text written only in Hangul equals its character count; Latin letters, digits and spaces count less, by their width
+    Applies the character limits to English decks on the same width basis (Latin letters and spaces are narrower than Hangul, so more of them fit in the same width)
+    Why the script gap is included: LibreOffice adds 0.227em at every boundary between Hangul and Latin characters (letters, digits, punctuation).
+        Against the rendered width of 213 single-line paragraphs of mixed text in 18pt bold, the width with the gap matches within 0.8% and the width without it is up to 9% narrower.
+        For 312 headline probes (4 page sizes), the value where a headline turns into 2 lines is almost the same for Hangul-only and mixed text with the gap (16:9 53.3 and 53.6, headline width 53.2).
+        Without the gap, mixed text turns into 2 lines at 49.4 in 16:9, so overflow within the 1-line limit 50 goes unreported"""
+    em = sum(span_em(glyphs([(line, 1, bold)], 1))[0] for line in str(txt).split("\n"))
+    return em / char_em("가", bold)
 # Job titles for recognizing staff ("name + title" in free text). Korean spellings and spacing variants of consulting firm and research institute titles
 # General corporate titles and degrees are left out (they cause false hits that take the preceding word as a name, like the school name in "서울대 박사")
 # Staff cells of the organization chart and name cells of tables read the preceding name regardless of title (lead_name in lint)
@@ -209,6 +237,187 @@ def load_own(meta, story_path):
 def own_role(geo, role):
     """Set of own template names matching a role name (e.g. {'own:19'})"""
     return {f"own:{n}" for n in ((geo or {}).get("roles") or {}).get(role, [])}
+
+
+def norm_ws(v):
+    """Text with all whitespace removed (the original text comparison basis of the build's textKey)"""
+    return re.sub(r"\s+", "", str(v))
+
+
+def atom_text(a):
+    """Text of an atom. Paragraphs joined by line breaks (the original text value in the build's playOwn)"""
+    return "\n".join("".join(r["t"] for r in p["runs"]) for p in a["paras"])
+
+
+def own_text_atoms(own_slide):
+    """Text slot atoms [(slot id, atom)]. t{k} is the order of atoms whose kind is shape or graphic and that have paragraphs (same numbering as atoms.js playOwn and own_catalog.py)"""
+    atoms = [a for a in own_slide.get("atoms", []) if a.get("kind") in ("shape", "graphic") and a.get("paras") is not None]
+    return [(f"t{k}", a) for k, a in enumerate(atoms, 1)]
+
+
+def own_slot_value(slots, slot_id, text):
+    """Substituted text for an atom. A t{k} key comes first; otherwise the first original text key whose text starts the whitespace-free original (atoms.js textKey). None without substitution"""
+    if slots.get(slot_id) is not None:
+        return slots[slot_id]
+    cur = norm_ws(text)
+    if not cur:
+        return None
+    return next((v for k, v in slots.items() if k.startswith("~") and len(k) > 1 and cur.startswith(norm_ws(k[1:]))), None)
+
+
+def layout_scale(layout):
+    """Horizontal and vertical scale of the page size (relative to 16:9). The builder multiplies custom slide coordinates by this scale"""
+    lays = LIMITS.get("LAYOUTS", {})
+    base, cur = lays.get(BASE_LAYOUT), lays.get(layout)
+    if not base or not cur:
+        return 1.0, 1.0
+    return cur["W"] / base["W"], cur["H"] / base["H"]
+
+
+def own_icon_width(atoms, a, slots):
+    """Text box width after narrowing for icon overlap (original coordinates). The original width without an overlapping icon. Pictures filled by an image slot (img{k}) and logos do not become icons"""
+    w = a["w"]
+    for k, im in enumerate((x for x in atoms if x.get("kind") == "image"), 1):
+        if im.get("identity") or slots.get(f"img{k}") or im["w"] >= OWN_ICON_MAX or im["h"] >= OWN_ICON_MAX:
+            continue
+        ox = min(a["x"] + a["w"], im["x"] + im["w"]) - max(a["x"], im["x"])
+        oy = min(a["y"] + a["h"], im["y"] + im["h"]) - max(a["y"], im["y"])
+        if ox <= OWN_ICON_OVERLAP_IN or oy <= OWN_ICON_OVERLAP_IN or a["x"] >= im["x"] - OWN_ICON_LEFT_IN:
+            continue
+        nw = im["x"] - OWN_ICON_GAP_IN - a["x"]
+        if nw >= a["w"] * OWN_ICON_KEEP:
+            w = min(w, nw)
+    return w
+
+
+def js_fixed1(x):
+    """JavaScript Number.toFixed(1) value (rounds the exact binary value, halfway goes up). The builder records font sizes and insets with it"""
+    return float(Decimal(x).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
+
+def own_text_box(a, w, h):
+    """Text area of the substituted text (inner width, top inset, bottom inset). w, h are the box size times the page size scale. Inset (recorded in 0.1pt steps) and chevron point rules of atoms.js shape()"""
+    mg = a.get("mg") if isinstance(a.get("mg"), list) and len(a["mg"]) == 4 else [None] * 4
+    mg = [js_fixed1((OWN_MG_DEFAULT_IN[i] if v is None else v) * 72) / 72 for i, v in enumerate(mg)]
+    chevron = a.get("preset") in ("chevron", "homePlate")
+    point = min(w, h) * (a["adj"] / 100000 if a.get("adj") is not None else 0.5) if chevron else 0
+    if w < OWN_SMALL_BOX_W or (chevron and w < OWN_SHORT_CHEVRON * h):
+        mg = [0, 0, 0, 0]
+    inner_w = w - mg[0] - mg[2] - (2 * point if a.get("preset") == "chevron" else point)
+    return inner_w, mg[1], mg[3]
+
+
+def own_paras(src_paras, value):
+    """Paragraphs of the substituted text: the original paragraph properties (indent, spacing, line spacing) plus text t, size sz (pt) and bold b
+    Each line break starts a paragraph that takes the next original paragraph format (the last one repeats, atoms.js substitute)"""
+    out = []
+    for i, line in enumerate(str(value).split("\n")):
+        p = src_paras[min(i, len(src_paras) - 1)]
+        r0 = next((r for r in p.get("runs", []) if not r.get("br")), {})
+        out.append({**{k: v for k, v in p.items() if k != "runs"}, "t": line, "sz": r0.get("sz") or OWN_BODY_PT, "b": bool(r0.get("b"))})
+    return out
+
+
+def own_spacing(atoms, a, w, paras):
+    """Paragraphs with the builder's paragraph and line spacing adjustment (atoms.js playOwn). w is the original width narrowed by icon overlap"""
+    icon = next((im for im in atoms if im.get("kind") == "image" and "x" in im and im["x"] < a["x"] + w and im["x"] + im["w"] > a["x"]
+                 and im["y"] < a["y"] + a["h"] and im["y"] + im["h"] > a["y"]), None)
+    eff_w = max(OWN_ROUGH_MIN_W, icon["x"] - a["x"] - OWN_ICON_GAP_IN) if icon else w
+    wrap_w = eff_w - OWN_ROUGH_PAD_IN - BULLET_INDENT_IN
+    need = sum(max(1, wrap_lines([(p["t"], p["sz"], False)], wrap_w)[0]) * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 for p in paras)
+    need += (len(paras) - 1) * OWN_ROUGH_GAP_IN
+    if len(paras) > 1 and need < a["h"] * OWN_SPREAD_FILL:
+        slack = (a["h"] - OWN_SPREAD_PAD_IN - need) / (len(paras) - 1) * 72
+        gap = js_fixed1(max(OWN_SPREAD_PT[0], min(OWN_SPREAD_PT[1], slack * OWN_SPREAD_SHARE)))
+        paras = [p if i == 0 else {**p, "spcBef": gap} for i, p in enumerate(paras)]
+    if need > a["h"] - OWN_COMPACT_IN:
+        paras = [{**p, "spcBef": p.get("spcBef") if i == 0 else OWN_COMPACT_GAP_PT, "lnSpc": min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)}
+                 for i, p in enumerate(paras)]
+    return paras
+
+
+def inset_slack(top, bottom, va):
+    """Height (inches) text can spill into the insets without leaving the box. Bottom inset when top-aligned, top inset when bottom-aligned, twice the smaller inset when middle-aligned (atoms.js insetSlackIn)"""
+    if va == "top":
+        return bottom
+    if va == "bottom":
+        return top
+    return 2 * min(top, bottom)
+
+
+def own_fit(paras, inner_w, inner_h, tol):
+    """Paragraphs as the builder fits them to the box (atoms.js fitParas, minimum OWN_BODY_MIN). Line height is 1.2em x the line spacing multiple; paragraph spacing adds the before and after values of every paragraph"""
+    if inner_w <= OWN_FIT_MIN_W:
+        return paras
+
+    def lines(p, pt):
+        return wrap_lines([(p["t"], pt, p["b"])], inner_w - para_indent(p))[0]
+
+    def height(ps, scale, floor):
+        h = 0.0
+        for p in ps:
+            pt = max(floor, p["sz"] * scale)
+            h += max(1, lines(p, pt)) * pt * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + ((p.get("spcBef") or 0) + (p.get("spcAft") or 0)) / 72
+        return h
+
+    if len(paras) <= OWN_FIT_KEEP_PARAS and not any(lines(p, p["sz"]) > 1 for p in paras):
+        return paras
+    scale = 1.0
+    while scale > OWN_FIT_MIN_SCALE and height(paras, scale, OWN_BODY_MIN) > inner_h + tol:
+        scale -= OWN_FIT_STEP
+    out = paras if scale >= 0.999 else [{**p, "sz": max(OWN_BODY_MIN, js_fixed1(p["sz"] * scale))} for p in paras]
+    for cut in OWN_FIT_GAP_CUTS:
+        if height(out, 1.0, 0) <= inner_h + tol:
+            break
+        out = [p if i == 0 else {**p, "spcBef": math.floor((p.get("spcBef") or 0) * cut * 10 + 0.5) / 10} for i, p in enumerate(out)]
+    return out
+
+
+def para_indent(p):
+    """Paragraph indent (inches). The hanging width for bullet paragraphs, the left margin otherwise (same rule as atoms.js fitParas)"""
+    if p.get("bullet"):
+        return abs(p["indent"]) if p.get("indent") is not None else BULLET_INDENT_IN
+    return p.get("marL") or 0
+
+
+def own_text_height(paras, inner_w):
+    """Rendered height (inches) and line count of the paragraphs as the builder sets them. Line counts from text_metrics.wrap_lines (word wrapping like the build's estimateLines)
+    Paragraph spacing counts only between paragraphs (LibreOffice keeps no space before the first or after the last paragraph inside a text box. Checked by rendering)"""
+    height, lines = 0.0, 0
+    for i, p in enumerate(paras):
+        n = wrap_lines([(p["t"], p["sz"], p["b"])], max(0.1, inner_w - para_indent(p)))[0]
+        gap = (p.get("spcBef") or 0) + (paras[i - 1].get("spcAft") or 0) if i else 0
+        height += n * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + gap / 72
+        lines += n
+    return height, lines
+
+
+def overflow_in(need, h, top, bottom, va):
+    """Width (inches) by which the text leaves the box edge. Top-aligned text overflows downward, bottom-aligned upward, middle-aligned both ways in halves"""
+    if va == "top":
+        return top + need - h
+    if va == "bottom":
+        return bottom + need - h
+    return (need - (h - top - bottom)) / 2 - min(top, bottom)
+
+
+def own_overflows(own_slide, slots, layout):
+    """Atoms whose substituted text overflows the box [(original text, line count)]. Uses the builder's slot matching, box insets, icon overlap, page size scale, spacing adjustment and font shrinking (vertical text boxes are skipped)"""
+    sx, sy = layout_scale(layout)
+    atoms = own_slide.get("atoms", [])
+    out = []
+    for slot_id, a in own_text_atoms(own_slide):
+        text = atom_text(a)
+        value = own_slot_value(slots, slot_id, text)
+        if not isinstance(value, str) or not value or not a.get("paras") or a.get("vert") or "w" not in a:
+            continue
+        w, h, va = own_icon_width(atoms, a, slots), a["h"] * sy, a.get("va") or "middle"
+        inner_w, top, bottom = own_text_box(a, w * sx, h)
+        paras = own_spacing(atoms, a, w, own_paras(a["paras"], value))
+        need, lines = own_text_height(own_fit(paras, inner_w, h - top - bottom, inset_slack(top, bottom, va)), inner_w)
+        if overflow_in(need, h, top, bottom, va) > OWN_OVERFLOW_IN:
+            out.append((text, lines))
+    return out
 
 
 def blocks_of(sl):
@@ -398,15 +607,15 @@ def lint(story, ledger=None, story_path=".", layout=None):
             warns.append(f"[{sid}] {tpl} uses the custom slide's original headline as is. Setting headline is recommended")
         if hl:
             n_hl = han_len(hl)
-            if n_hl > hl2: fails.append(f"[{sid}] headline {n_hl:.0f} chars (Hangul equivalent) > 2-line limit {hl2}")
-            elif n_hl > hl1: warns.append(f"[{sid}] headline {n_hl:.0f} chars (Hangul equivalent) > 1-line limit {hl1}")
+            if n_hl > hl2: fails.append(f"[{sid}] headline {n_hl:.1f} chars (Hangul equivalent) > 2-line limit {hl2}")
+            elif n_hl > hl1: warns.append(f"[{sid}] headline {n_hl:.1f} chars (Hangul equivalent) > 1-line limit {hl1}")
             polite = bool(POLITE_END.search(hl))
             if style == "noun" and polite: fails.append(f"[{sid}] headline has a polite ending (style setting noun)")
             if style == "polite" and not polite and HANGUL_RE.search(hl): fails.append(f"[{sid}] headline has a noun ending (style setting polite)")
             if re.fullmatch(r"[가-힣A-Za-z ]{2,12}", hl.strip()) and " " not in hl.strip():
                 warns.append(f"[{sid}] headline looks like a topic label: {hl}")
         mk = s.get("marker")
-        if isinstance(mk, str) and han_len(mk) > L.get("markerTitle", 30): fails.append(f"[{sid}] marker {han_len(mk):.0f} chars (Hangul equivalent) > {L.get('markerTitle', 30)}")
+        if isinstance(mk, str) and han_len(mk) > L.get("markerTitle", 30): fails.append(f"[{sid}] marker {han_len(mk):.1f} chars (Hangul equivalent) > {L.get('markerTitle', 30)}")
         for key, tx in texts_of(s) + [("headline", hl)]:
             if not isinstance(tx, str): continue
             if "{{" in tx: fails.append(f"[{sid}] leftover slot: {tx[:30]}")
@@ -440,13 +649,11 @@ def lint(story, ledger=None, story_path=".", layout=None):
         if not geo: break
         n = int(tpl[4:])
         if n not in own_n: continue
-        atoms = own_n[n]["atoms"]
-        texts = ["\n".join("".join(r["t"] for r in p["runs"]) for p in a["paras"]) for a in atoms if a["kind"] not in ("image", "chart", "table") and a.get("paras")]
-        norm = lambda v: re.sub(r"\s+", "", str(v))
+        texts = [atom_text(a) for _, a in own_text_atoms(own_n[n])]
         for k, v in s["slots"].items():
             if not isinstance(v, str) or not v: continue
             orig = None
-            if k.startswith("~"): orig = next((t for t in texts if norm(t).startswith(norm(k[1:]))), None)
+            if k.startswith("~"): orig = next((t for t in texts if norm_ws(t).startswith(norm_ws(k[1:]))), None)
             elif re.fullmatch(r"t\d+", k) and int(k[1:]) <= len(texts): orig = texts[int(k[1:]) - 1]
             if orig is None:
                 if k.startswith("~"): warns.append(f"[{s.get('id')}] {tpl} no original text matches slot key '{k}'")
@@ -631,43 +838,14 @@ def lint(story, ledger=None, story_path=".", layout=None):
         elif len(leads) + subs > 12:
             warns.append(f"[{sl.get('id')}] background and purpose has {len(leads) + subs} items (12 or fewer leads and evidence combined recommended)")
 
-    # Custom slide slot substitution volume: text much longer than the original overflows the box
+    # Custom slide slot substitution volume: substituted text overflows the box (mostly text much longer than the original)
     if geo:
         for sl in slides:
             tpl = str(sl.get("template") or "")
-            if not tpl.startswith("own:"): continue
+            if not tpl.startswith("own:") or not isinstance(sl.get("slots"), dict): continue
             own = own_n.get(int(tpl.split(":")[1]))
             if not own: continue
-            atoms = {"".join(r["t"] for p in (a.get("paras") or []) for r in p["runs"]): a for a in own.get("atoms", [])}
-
-            # Slides with icons have a narrower text area, so the width is taken conservatively
-            icon_slide = any(a.get("kind") == "image" for a in own.get("atoms", []))
-
-            def para_pt(a):
-                sizes = [r.get("sz") for p in (a.get("paras") or []) for r in p.get("runs", []) if r.get("sz")]
-                return max(sizes) if sizes else 12.0
-
-            def wrapped(txt, w_in, pt=12.0):
-                w_in = w_in * (0.75 if icon_slide else 1.0)
-                em = sum(1.0 if "\uac00" <= c <= "\ud7a3" or "\u4e00" <= c <= "\u9fff" or "\u3400" <= c <= "\u4dbf" or "\uf900" <= c <= "\ufaff" or "\u2190" <= c <= "\u21ff" or "\u2500" <= c <= "\u27bf" or c == "\u203b" else 0.55 for c in txt)
-                per = max(0.1, (w_in - 0.5)) / (pt / 72)
-                return max(1, int(em / per) + (1 if em % per > 0.1 else 0))
-
-            over = []
-            for k, v in (sl.get("slots") or {}).items():
-                if not isinstance(v, str) or not k.startswith("~"): continue
-                src = k[1:]
-                a = atoms.get(src) or next((x for t, x in atoms.items() if t.startswith(src)), None)
-                if not a: continue
-                pt = para_pt(a)
-                ln_src = sum(wrapped(x, a["w"], pt) for x in src.split("\n"))
-                ln_new = sum(wrapped(x, a["w"], pt) for x in v.split("\n"))
-                # Report only when the text has more lines than the original and also exceeds the box height
-                paras_n = len(v.split("\n"))
-                need = ln_new * (pt * 1.15 / 72) + paras_n * 0.04  # Sum of line heights and paragraph spacing
-                # Considering the builder's room to cut spacing, report only above 125% of the box height
-                if ln_new > ln_src and need > a["h"] * 1.25:
-                    over.append(f"{src[:10]}→{ln_new} lines")
+            over = [f"{t.replace(chr(10), ' ')[:10]}→{n} lines" for t, n in own_overflows(own, sl["slots"], layout)]
             if over:
                 warns.append(f"[{sl.get('id')}] {tpl} substituted text exceeds box capacity {over[:3]} (cut characters or items. Font shrinking is not used)")
 

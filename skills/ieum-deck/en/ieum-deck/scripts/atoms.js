@@ -10,6 +10,8 @@ const path = require("path");
 // Measured NanumGothic widths (em). Without them, tokens.METRIC approximations are used
 // Reproduction: ASCII glyph widths are the hmtx advance widths of NanumGothic.ttf and NanumGothicBold.ttf divided by head.unitsPerEm (checked with fontTools)
 //       Category keys (hangul, cjkpunct, fullwidth, enclosed, other) hold a representative width per category
+//       Symbol keys (× ÷ ± · 〉 … “ ” ‘ ’) are hmtx values too. Kept separately because they differ widely from the category width (× 0.592 vs category 0.509, … 0.94 vs category 0.509, etc.)
+//       They match the LibreOffice rendered width of a run of 10 identical symbols within 0.001em (same values in regular and bold)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -28,6 +30,10 @@ function face(bold) {
 const isHanja = (c) => (c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0xf900 && c <= 0xfaff);
 /** Full-width symbols: arrows, box drawing, shapes (○ ● ◐ □ ■), misc symbols, ※. 0.94em in NanumGothic, same as Hangul */
 const isWideSymbol = (c) => (c >= 0x2190 && c <= 0x21ff) || (c >= 0x2500 && c <= 0x27bf) || c === 0x203b;
+/** Hangul compatibility jamo (ㄱ, ㅏ, ㆍ). 0.94em in NanumGothic, same as Hangul (checked with hmtx and rendered width) */
+const isHangulJamo = (c) => c >= 0x3130 && c <= 0x318f;
+/** Roman numerals (Ⅰ-Ⅹ, ⅰ-ⅹ). 0.94em in NanumGothic, same as Hangul (checked with hmtx and rendered width) */
+const isRomanNumeral = (c) => c >= 0x2160 && c <= 0x2179;
 function charEm(ch, bold) {
   const c = ch.codePointAt(0);
   if (METRICS) {
@@ -38,34 +44,168 @@ function charEm(ch, bold) {
     if (c >= 0xff00 && c <= 0xffef) return m.fullwidth;
     if (c >= 0x2460 && c <= 0x24ff) return m.enclosed;
     if (isHanja(c)) return m.hangul; // Hanja (unified, extension A, compatibility) is full width in NanumGothic, same as Hangul
-    if (isWideSymbol(c)) return m.hangul;
+    if (isWideSymbol(c) || isHangulJamo(c) || isRomanNumeral(c)) return m.hangul;
     return m.other;
   }
   if (ch === " ") return T.METRIC.EM_SPACE;
-  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || (c >= 0x3130 && c <= 0x318f) || isWideSymbol(c);
+  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || isHangulJamo(c) || isWideSymbol(c);
   return wide ? T.METRIC.EM_HANGUL : T.METRIC.EM_LATIN;
 }
+// Script class. LibreOffice adds a gap (METRIC.SCRIPT_GAP_EM) at every boundary where the script changes between Latin and Asian
+// Weak characters (WEAK) take the script of the preceding character and count as Latin at the start of a paragraph
+// Measured (LibreOffice 24.2, English locale): Latin is ASCII (letters, digits, punctuation, straight quotes) and Latin-1 symbols (× ÷ ± ·)
+//   Asian is Hangul syllables, Hangul compatibility jamo (ㄱ ㆍ), CJK punctuation (〉) and Hanja. Weak is space, ○ ● ◐ ①-⑤ ※ Ⅰ-Ⅵ … “ ” ‘ ’ →
+//   Full-width forms (U+FF00-FFEF) are not measured. Placed in Asian as the same East Asian category
+//   Treating a weak character at the start of a paragraph as Latin is confirmed only in the English locale
+const SCRIPT = { WEAK: 0, LATIN: 1, ASIAN: 2 };
+function scriptOf(c) {
+  if (c <= 0x20 || c === 0xa0) return SCRIPT.WEAK; // space, control characters such as line breaks, no-break space
+  if (c <= 0xff) return SCRIPT.LATIN;
+  if ((c >= 0xac00 && c <= 0xd7a3) || isHangulJamo(c) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c)) return SCRIPT.ASIAN;
+  return SCRIPT.WEAK;
+}
+/** Text width (em) and the scripts at both ends. prev is the script of the character right before the text (for weak characters, WEAK at the start of a paragraph)
+ *  Gaps are added only between characters inside the text. The caller judges the gap between the preceding character and the first character with first */
+function spanEm(s, bold, prev) {
+  let em = 0, cur = prev || SCRIPT.WEAK, first = SCRIPT.WEAK;
+  for (const ch of String(s)) {
+    const sc = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN;
+    if (first && sc !== cur) em += scriptGapEm();
+    em += charEm(ch, bold);
+    if (!first) first = sc;
+    cur = sc;
+  }
+  return { em, first, last: cur };
+}
+/** Script boundary gap (em). A measured NanumGothic value, so it applies only with the measured width file (the SAFETY factor absorbs the gap for approximate widths) */
+function scriptGapEm() {
+  return METRICS ? T.METRIC.SCRIPT_GAP_EM : 0;
+}
+/** Width (em) of one-line text. Treated as text running from the start of a paragraph, including script boundary gaps */
 function textEm(s, bold) {
-  let n = 0;
-  for (const ch of String(s)) n += charEm(ch, bold);
-  return n;
+  return spanEm(s, bold, SCRIPT.WEAK).em;
+}
+// Breaks inside a word (follows LibreOffice 24.2 editeng ImpBreakLine and i18npool BreakIterator_CJK, BreakIterator_Unicode)
+// Besides spaces, the break point is chosen from the first character that passes the line width (m), and the script of the character right before m picks the rule
+//   Asian script (ko-KR): a hanging character moves the break one character on and hangs past the margin at the paragraph end. The break is then pulled back
+//                         over no-line-start and no-line-end characters. Without a pull-back, a Hangul m breaks at the first character of its Hangul run. Otherwise it breaks at m
+//   Latin (en-US): the last position at or before m where a line may break (latinBreakOk). Never right after a slash
+// LibreOffice does not read the eaLnBrk="0" that finalize writes (the attribute is commented out in the oox import), so the forbidden character rules always apply
+// Why: rendering the two sample decks in A4, 10.83 and 4:3 gives 128 breaks inside words ('60|분', '○|○억원', '가|정)', '3-|5개'). 16:9 gives none.
+//      A simulation of these rules (Latin rule taken verbatim from LibreOffice line.txt) reproduces 123 of the 128 at the same position (the other 5 are edge cases at 99.8% of the line width or more).
+//      On 490 probe text boxes (115 words with the line end placed at every character position) it matches 484 (the other 6 come from the probe layout and the widths of ₩ and ↑).
+//      This calculation matches the simulation in 98,710 of 98,720 line counts (3,448 sample paragraphs at 40 widths each) and places 112 of the 117 rendered breaks inside words narrower than the line at the same position
+// Limits: when a word starts with a no-line-start character (a formula symbol such as ' / '), LibreOffice breaks inside the previous word. This calculation breaks between the words.
+//         Asian script characters in runs tagged with a language other than ko-KR follow the default East Asian locale of the environment (zh-CN) (finalize tags every run that contains Hangul ko-KR)
+/** No-line-start characters (LibreOffice ko_KR locale data ForbiddenLineBeginCharacters as is, including the space) */
+const NO_LINE_START = new Set("!%),.:;?]}¢￠'\"′″℃>〉＞》」』】〕！％），．：；？］｝｡｣､･ ﾞﾟ、。’”°");
+/** No-line-end characters (ko_KR ForbiddenLineEndCharacters) */
+const NO_LINE_END = new Set("$(¥£[\\{￡￥'\"<＜《「『【〔＄（［｛₩￦｢‘“〈");
+/** Hanging characters (ko_KR LineBreakHangingCharacters). finalize writes hangingPunct="1" on every paragraph */
+const HANGING = new Set("!,.:;?、。！，．：；？");
+/** Character classes of the Latin rule (the UAX #14 classes used by LibreOffice line.txt that appear in business documents). Characters not listed are AL (letters, ○ ① · and so on) */
+const LB_CLASS = Object.fromEntries([
+  ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
+/** Hangul range LibreOffice uses to keep Hangul words whole: syllables, jamo, compatibility jamo, extended jamo */
+const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
+/** Character class of the Latin rule. Hangul is H, Hanja is ID */
+const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
+/** Whether the Latin rule allows a line break between characters a and b. Summary of the LibreOffice line.txt pair rules
+ *  (never before closing marks and commas, after opening marks and quotes, or between letters and digits. Allowed between a digit and Hangul, after a hyphen and between Hangul syllables) */
+function latinBreakOk(a, b) {
+  const x = lbClass(a), y = lbClass(b);
+  if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
+  if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
+  if (y === "PR") return !["AL", "NU"].includes(x);
+  if (y === "PO") return !["NU", "H", "ID", "IS", "PO", "SY"].includes(x);
+  if (y === "IN") return !["AL", "NU", "H", "ID", "IN", "EX"].includes(x);
+  if ((x === "AL" || x === "NU") && ["AL", "NU", "OP"].includes(y)) return false;
+  if (["CP", "IS", "PO"].includes(x) && (y === "AL" || y === "NU")) return false;
+  return true;
+}
+/** Break position of the Asian script rule (characters of the word kept on the line). 0 moves the whole word to the next line. The word length means a punctuation mark at the paragraph end hangs past the margin */
+function koBreak(chars, m, paraEnd) {
+  let s = m;
+  if (HANGING.has(chars[m])) {
+    if (paraEnd && m === chars.length - 1) return chars.length;
+    s = m + 1;
+  }
+  // The character after the word is a space, and the space is a no-line-start character too (when the comma of '기준, 끝' overflows: '기|준,')
+  while (s > 0 && (s === chars.length || NO_LINE_START.has(chars[s]) || NO_LINE_END.has(chars[s - 1]))) s -= 1;
+  if (s === m && isHangul(chars[m])) while (s > 0 && isHangul(chars[s - 1])) s -= 1;
+  return s;
+}
+/** Break position of the Latin rule (characters of the word kept on the line). 0 moves the whole word to the next line */
+function latinBreak(chars, m) {
+  let s = chars[m - 1] === "/" ? m - 1 : m;
+  while (s > 0 && !latinBreakOk(chars[s - 1], chars[s])) s -= 1;
+  return s > 0 && chars[s - 1] === "/" ? 0 : s;
+}
+/** Script of each character of the word. A weak character takes the script of the character before it (prev is the script of the character before the word. WEAK at the paragraph start, judged Latin) */
+function wordScripts(chars, prev) {
+  let cur = prev;
+  return chars.map((ch) => (cur = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN));
+}
+/** Position of the first character that passes the line width (cap) in a word starting at x (em). Adds the gap before a character that changes the script. The word length when no character passes */
+function overflowAt(chars, scripts, prev, x, cap, bold) {
+  for (let i = 0; i < chars.length; i++) {
+    const p = i ? scripts[i - 1] : prev;
+    if (p && p !== scripts[i]) x += scriptGapEm();
+    x += charEm(chars[i], bold);
+    if (x > cap) return i;
+  }
+  return chars.length;
+}
+/** Position where LibreOffice breaks a word caught at the line end (characters of the word kept on the line), and the script of each character. 0 moves the whole word to the next line */
+function breakInWord(chars, prev, x, cap, bold, paraEnd) {
+  const scripts = wordScripts(chars, prev);
+  const m = overflowAt(chars, scripts, prev, x, cap, bold);
+  if (m === 0 || m === chars.length) return { cut: 0, scripts };
+  return { cut: scripts[m - 1] === SCRIPT.ASIAN ? koBreak(chars, m, paraEnd) : latinBreak(chars, m), scripts };
+}
+/** Line count and breaks inside words [{ word, cut }] of one paragraph (cut: characters kept on the upper line. Words wider than the line are left out). Same calculation as text_metrics.py wrap_paragraph
+ *  Lines break at spaces, and a word caught at the line end is split by the LibreOffice rule (breakInWord). A word wider than the line breaks in the middle
+ *  The space and the script boundary gap count only when the word joins the previous word on the same line (a trailing space and gap at a line break take no line width) */
+function wrapParagraph(para, cap, bold) {
+  // The script of weak characters carries on from the start of the paragraph (last: script of the last character of the previous word)
+  let cur = 0, n = 1, last = SCRIPT.WEAK;
+  const splits = [];
+  const words = para.split(" ");
+  for (let i = 0; i < words.length; i++) {
+    const s = spanEm(words[i], bold, last);
+    const space = charEm(" ", bold);
+    const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+    const need = s.em + (cur > 0 ? space + gap : 0);
+    if (cur > 0 && cur + need > cap) {
+      const chars = Array.from(words[i]);
+      const { cut, scripts } = breakInWord(chars, last, cur + space, cap, bold, i === words.length - 1);
+      if (cut === chars.length) { cur += need; last = s.last; continue; } // A punctuation mark at the paragraph end hangs past the margin, so no line is added
+      n += 1;
+      if (cut) {
+        if (s.em <= cap) splits.push({ word: words[i], cut });
+        cur = spanEm(chars.slice(cut).join(""), bold, scripts[cut - 1]).em; // The script boundary gap at the split stays at the end of the upper line
+      } else cur = s.em;
+    } else cur += need;
+    if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+    last = s.last;
+  }
+  return { lines: n, splits };
 }
 /** Number of lines at fontPt in a box of width widthIn */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
-  for (const para of String(str).split("\n")) {
-    let cur = 0, n = 1;
-    for (const w of para.split(" ")) {
-      const we = textEm(w, bold);
-      const need = we + (cur > 0 ? charEm(" ", bold) : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = we; } else cur += need;
-      if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
-    }
-    lines += n;
-  }
+  for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
+}
+/** Places where LibreOffice splits a word caught at the line end in a box of width widthIn [{ word, cut }]. Same line breaking as estimateLines (words wider than the line are excluded) */
+function wordSplits(str, widthIn, fontPt, bold) {
+  if (!str) return [];
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
+  return String(str).split("\n").flatMap((para) => wrapParagraph(para, cap, bold).splits);
 }
 const LINE_FIT_EPS = 0.01; // Margin so width rounding does not turn a one-line judgment into two lines (inches)
 /** Minimum width (inches) that fits the text on one line. A more conservative width criterion than the width estimateLines judges as 1 line (SAFETY_METRIC. estimateLines also counts 1 line at this width) */
@@ -80,15 +220,36 @@ function wordWidthIn(texts, pt, bold) {
 function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
+/** Height of one paragraph line (inches): font line height (LINE_HEIGHT) x the paragraph line spacing multiple (lnSpc, pptxgenjs lineSpacingMultiple; 1 when absent)
+ *  With lineRatio, that value is used as the line height ratio in place of the paragraph line spacing (table cells use TABLE_LINE_HEIGHT for row height judgments)
+ *  Why: LibreOffice 24.2 sets NanumGothic lines at 1.2em x the line spacing multiple (135 multi-line paragraphs in custom slide renders measure 1.199-1.202em, proportional to spacing 0.8-1.5).
+ *       Using lnSpc as the line height ratio measures a 100% spaced paragraph at 1.0em, 17% below the render.
+ *       In renders of the sample custom slides with 684 substitutions at 100% spacing, this fix cuts overflow from 76 to 62 (16:9) and from 160 to 133 (4:3) */
+function paraLineIn(pt, p, lineRatio) {
+  return lineRatio ? lineHeightIn(pt, lineRatio) : lineHeightIn(pt) * ((p && p.lnSpc) || 1);
+}
+
+const FIT_TOL_IN = 0.1; // Default height (inches) that fitParas still counts as fitting beyond the inner height (generated templates). PowerPoint tolerates overflow into the insets, so allow 0.1 inch
+/** Height (inches) text can spill into the insets without leaving the box. The fitParas tolerance for custom slide boxes. mg is [left, top, right, bottom] (inches)
+ *  Top-aligned text spills downward, bottom-aligned upward, and middle-aligned splits both ways, so twice the smaller inset
+ *  Why: in renders of the sample custom slides with 684 substitutions, the fixed 0.1 inch tolerance left 16 (16:9) and 30 (4:3) boxes above 11pt that spill 0.024-0.057 inch
+ *       past the box (14pt two-line text in boxes with 0.019 inch insets, among others). With this tolerance overflow falls from 62 to 47 and from 133 to 105, all remaining at 11pt */
+function insetSlackIn(mg, va) {
+  if (va === "top") return mg[3];
+  if (va === "bottom") return mg[1];
+  return 2 * Math.min(mg[1], mg[3]);
+}
 
 /**
  * Shrinks font sizes uniformly so a paragraph group fits the box (inner w,h). When NanumGothic is wider than the source slide font,
  * this absorbs the extra line breaks at the same size inside the box. The minimum is minPt (body 11pt).
+ * Line height comes from paraLineIn(lineRatio). tolIn is the height (inches) still counted as fitting beyond the inner height; FIT_TOL_IN when absent
  * Returns: new paras (the original is unchanged)
  */
-function fitParas(paras, innerW, innerH, minPt, lineRatio) {
+function fitParas(paras, innerW, innerH, minPt, lineRatio, tolIn) {
   if (!paras || !paras.length || innerW <= 0.05) return paras;
   const floor = minPt || T.SIZE.BODY_MIN;
+  const tol = tolIn == null ? FIT_TOL_IN : tolIn;
   const need = (scale) => {
     let h = 0;
     for (const p of paras) {
@@ -98,7 +259,7 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
       const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
       const lines = Math.max(1, estimateLines(txt, innerW - indent, sz, r0.b));
       const gap = ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
-      h += lines * lineHeightIn(sz, lineRatio || p.lnSpc) + gap;
+      h += lines * paraLineIn(sz, p, lineRatio) + gap;
     }
     return h;
   };
@@ -111,17 +272,17 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
   });
   if (!wraps && paras.length <= 3) return paras;
   let scale = 1.0;
-  while (scale > 0.6 && need(scale) > innerH + 0.1) scale -= 0.04; // PowerPoint tolerates overflow into the insets, so allow 0.1 inch
+  while (scale > 0.6 && need(scale) > innerH + tol) scale -= 0.04;
   let out = scale >= 0.999 ? paras : paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(floor, +(((r.sz || T.SIZE.body) * scale)).toFixed(1)) })) }));
   // If it still overflows at the font minimum, cut the space between paragraphs to fit the box
   const heightOf = (ps) => ps.reduce((h, p) => {
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * lineHeightIn(r0.sz || T.SIZE.body, lineRatio || p.lnSpc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * paraLineIn(r0.sz || T.SIZE.body, p, lineRatio) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   for (const cut of [0.6, 0.3, 0]) {
-    if (heightOf(out) <= innerH + 0.1) break;
+    if (heightOf(out) <= innerH + tol) break;
     out = out.map((p, i) => (i === 0 ? p : { ...p, spcBef: Math.round((p.spcBef || 0) * cut * 10) / 10 }));
   }
   return out;
@@ -268,12 +429,13 @@ function shape(pres, slide, atom, override) {
     const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 2 * pointW : pointW);
     if (ov.scale != null && ov.scale < 1) paras = paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(ov.minPt || T.SIZE.BODY_MIN, +((r.sz || T.SIZE.body) * ov.scale).toFixed(1)) })) }));
     if (ov.fillText) { paras = growParas(paras, innerW, atom.h - mg[1] - mg[3], 1.0); atom = { ...atom, va: "middle" }; } // Boxes that absorbed empty area fill it by widening spacing only, keeping the tier font size
-    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt);
+    const va = ov.fillText ? "middle" : (ov.va || atom.va || "middle");
+    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt, undefined, insetSlackIn(mg, va));
     // Text judged as 1 paragraph on 1 line turns wrapping off to prevent unexpected breaks from renderer spacing errors
     const oneLine = paras.length === 1 && !paras[0].runs.some((r) => r.br) && estimateLines(paras[0].runs.map((r) => r.t).join(""), innerW, paras[0].runs[0].sz || T.SIZE.body, paras[0].runs[0].b) <= 1;
     slide.addText(runsOf(paras, { color: ov.textColor }), {
       ...base, shape: st, isTextBox: true,
-      valign: ov.fillText ? "middle" : (ov.va || atom.va || "middle"),
+      valign: va,
       margin: boxMargin(mgArr.map((v) => v / 72)),
       wrap: !(small || oneLine) || narrowChevron, // Short chevrons always wrap (their text rectangle is narrow and overflows)
       vert: atom.vert || undefined,
@@ -322,7 +484,7 @@ function growParas(paras, innerW, innerH, maxScale) {
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * lineHeightIn((r0.sz || T.SIZE.body) * sc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * paraLineIn((r0.sz || T.SIZE.body) * sc, p) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   let sc = 1;
   while (sc < maxScale && need(sc + 0.05) <= innerH * 0.75) sc += 0.05;
@@ -338,7 +500,7 @@ function shrinkRatio(atom, paras, minPt) {
   const mg = (small ? [0, 0, 0, 0] : mgPt(atom.mg)).map((v) => v / 72);
   const pointW = atom.preset === "chevron" || atom.preset === "homePlate" ? Math.min(atom.w, atom.h) * (atom.adj != null ? atom.adj / 100000 : 0.5) : 0;
   const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 1.0 * pointW : 0.5 * pointW);
-  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt);
+  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt, undefined, insetSlackIn(mg, atom.va || "middle"));
   const before = paras[0].runs[0].sz || T.SIZE.body;
   const after = fitted[0].runs[0].sz || before;
   return after / before;
@@ -729,6 +891,12 @@ function pageNo(slide, S, n) {
 }
 
 // ---------------------------------------------------------------- Custom slide playback
+// Line spacing multiples for substituted custom slide text (playOwn). Rendered line height is 1.2em x the multiple (paraLineIn)
+const OWN_LN_SPC_UNSET = 1; // Line spacing multiple of a paragraph with no line spacing in the source (OOXML default 100%)
+// Line spacing cap for substituted text expected to overflow its box. NanumGothic's default line height (1.2em); tighter source spacing is kept
+// Why: the earlier values (1.25 when unset, cap 1.05) read the multiple as a line height ratio, so paragraphs without line spacing were widened to 105%
+//      (all 70 overflows in a render of the sample with line spacing removed and 684 substitutions were at 105%). With every paragraph at 1.3 spacing, cap 1.05 leaves 51 overflows and 1 leaves 47
+const OWN_COMPACT_LN_SPC = 1;
 /**
  * Typesets own-deck slide atoms in order. slots replace text, table cells and images
  * slots keys: t{k} (k-th text atom), tb{k}.r{i}c{j}, img{k}, ch{k} (chart spec)
@@ -909,7 +1077,9 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
     const v0 = sl["t" + pk] != null ? sl["t" + pk] : textKey(sl, cur0);
     if (v0 === "") { skippedBoxes.push(raw); continue; }
     const paras = v0 != null ? substitute(a.paras, v0) : a.paras;
-    const r = shrinkRatio(a, paras, T.SIZE.OWN_MIN);
+    // Substituted text is measured with the same minimum as shape() (body 11pt). With the 9pt minimum the substituted text stays at 11pt while only its same-size siblings shrink to 9pt
+    // (with the line height fix and 684 substitutions in the sample custom slides, the 9pt minimum newly takes 37 (16:9) and 51 (4:3) unsubstituted boxes below 11pt; this minimum takes none)
+    const r = shrinkRatio(a, paras, v0 != null ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN);
     const key = sizeKey(a, paras);
     ratioBySize[key] = Math.min(ratioBySize[key] == null ? 1 : ratioBySize[key], r);
   }
@@ -1096,7 +1266,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
       }
       // Original text only needs to absorb the font width difference, so its minimum is lower. Substituted text keeps the body minimum so fonts do not drift
       ov.minPt = ov.paras ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN;
-      // When substituted text has more lines than the original, top-align it so it does not cover the elements above
+      // Substituted text gets its paragraph and line spacing adjusted from a rough box height estimate (need)
       if (ov.paras && raw.paras) {
         // Account for the text area narrowed by an icon placed on the box
         const icon = ownSlide.atoms.find((im) => im.kind === "image" && im.x < raw.x + raw.w && im.x + im.w > raw.x && im.y < raw.y + raw.h && im.y + im.h > raw.y);
@@ -1107,20 +1277,17 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
           const sz = (p.runs[0] && p.runs[0].sz) || T.SIZE.body;
           return a + t.split("\n").reduce((b, seg) => b + Math.max(1, estimateLines(seg, wrapW - T.PARA.bulletIndentIn, sz)), 0);
         }, 0);
-        const avgSz = ov.paras.reduce((a, p) => a + ((p.runs[0] && p.runs[0].sz) || T.SIZE.body), 0) / Math.max(ov.paras.length, 1);
-        const need = count(ov.paras) * lineHeightIn(avgSz) + (ov.paras.length - 1) * 0.075;
-        // Top-align when the line count grew or the box is 70% full or more (prevents upward overflow from renderer wrapping differences)
+        const need = ov.paras.reduce((a, p) => a + count([p]) * paraLineIn((p.runs[0] && p.runs[0].sz) || T.SIZE.body, p), 0) + (ov.paras.length - 1) * 0.075;
         // With room to spare, widen paragraph spacing to fill the box evenly (up to 10pt)
         if (ov.paras.length > 1 && need < raw.h * 0.8) {
           const slack = (raw.h - 0.12 - need) / (ov.paras.length - 1) * 72;
           const gap = Math.max(2.5, Math.min(10, slack * 0.8));
           ov.paras = ov.paras.map((p, i) => (i === 0 ? p : { ...p, spcBef: +gap.toFixed(1) }));
         }
-        // If it looks likely to overflow the box, cut paragraph spacing first and keep the font
+        // If it looks likely to overflow the box, set paragraph spacing to 2pt and cap line spacing at OWN_COMPACT_LN_SPC
+        // If it still overflows, fitParas in shape() shrinks the font to the body minimum (11pt) and cuts paragraph spacing further at the minimum. Remaining overflow gets a lint warning that prompts shorter text
         if (need > raw.h - 0.08) {
-          // Shrink only paragraph and line spacing (the font stays)
-          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || 1.25, 1.05) }));
-          // If it still overflows after cutting spacing, keep the font and let a lint warning prompt shorter text
+          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || OWN_LN_SPC_UNSET, OWN_COMPACT_LN_SPC) }));
         }
       }
       if (atom.rot && atom.paras && /Illustrative|Sample|시안/i.test(atom.paras.map((p) => p.runs.map((r) => r.t).join("")).join(""))) {
@@ -1183,4 +1350,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

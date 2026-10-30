@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
-Checks: estimated text overflow (needed height from measured NanumGothic widths, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
-        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
+Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
+        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
 import json
@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from pptx import Presentation
 from pptx.util import Emu
+from text_metrics import FM, para_width_in, text_width_in, wrap_lines, wrap_paragraph  # Same text width model as the build (shared module in this folder)
 
 HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
@@ -24,7 +25,6 @@ TITLE_PT = 24
 PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2", "C9CDD8",
            "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D", "808080", "D9D9D9", "C0392B", "8B93A7",
            "EBEBEB", "F8F8F8", "939393"}
-FM = json.load(open(HERE.parent / "assets" / "font-metrics.json", encoding="utf-8")) if (HERE.parent / "assets" / "font-metrics.json").exists() else None
 
 def _build_record(pptx_path):
     """Build record (<file name>.build.json). Must be in the same folder as the pptx. Empty record if absent"""
@@ -56,24 +56,9 @@ def _own_small_boxes(record):
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 
-
-def is_hanja(ch):
-    """Hanja code ranges: unified ideographs, extension A, compatibility ideographs (the range Korean input methods use for homographs)"""
-    return "\u4e00" <= ch <= "\u9fff" or "\u3400" <= ch <= "\u4dbf" or "\uf900" <= ch <= "\ufaff"
-
-
-def text_width_in(txt, pt, bold):
-    """Estimates string width (inches) from measured NanumGothic widths. Unmeasured characters: Hangul, Hanja and full-width symbols (arrows, shapes, ※) 1.0em, others 0.55em"""
-    tbl = (FM or {}).get("bold" if bold else "regular", {})
-    em = 0.0
-    for ch in txt:
-        if ch in tbl:
-            em += tbl[ch]
-        elif "\uac00" <= ch <= "\ud7a3" or is_hanja(ch) or "\u2190" <= ch <= "\u21ff" or "\u2500" <= ch <= "\u27bf" or ch == "\u203b":
-            em += 1.0
-        else:
-            em += 0.55
-    return em * pt / 72
+def para_runs(p):
+    """Runs of a paragraph (text, size pt, bold). 18pt when the size is unset"""
+    return [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
 
 
 WORD_FIT_TOL = 0.02  # Tolerance for word width comparison (inches)
@@ -100,6 +85,25 @@ def too_wide_word(paras, inner):
     return None
 
 
+def bullet_indent(p):
+    """Indent (inches) of a bulleted paragraph. 0 without a bullet"""
+    pxml = p._p.xml
+    if "buChar" not in pxml and "buAutoNum" not in pxml: return 0.0
+    pr = p._p.find(NSA + "pPr")
+    return int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
+
+
+def token_splits(paras, inner):
+    """Places where LibreOffice is estimated to break inside a word at the inner width ['60|분', ...]. Same line breaking as the build (wrap_paragraph)
+    Words wider than the line are left out (too_wide_word reports them)"""
+    out = []
+    for p in paras:
+        runs = [r for r in para_runs(p) if r[0]]
+        if not runs: continue
+        out += [f"{w[:cut]}|{w[cut:]}" for w, cut in wrap_paragraph(runs, max(0.1, inner - bullet_indent(p)))[2]]
+    return out
+
+
 def overflow_estimate(sh):
     """Compares the estimated needed height of a text box with the box height. Returns (need_in, avail_in, wrap)"""
     tf = sh.text_frame
@@ -111,11 +115,10 @@ def overflow_estimate(sh):
     inner_w = max(0.1, w - l - r)
     need = 0.0
     for p in tf.paragraphs:
-        runs = [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
+        runs = para_runs(p)
         if not runs:
             continue
         pt = max(x[1] for x in runs)
-        width = sum(text_width_in(x[0], x[1], x[2]) for x in runs)
         # Bulleted paragraphs lose width by their indent
         pxml = p._p.xml
         indent = 0.0
@@ -123,17 +126,16 @@ def overflow_estimate(sh):
             pr = p._p.find(NSA + "pPr")
             indent = int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
         eff_w = max(0.1, inner_w - indent)
-        lines = max(1, int(width / eff_w) + (1 if width % eff_w > 0.02 else 0)) if wrap else 1
+        lines = wrap_lines(runs, eff_w)[0] if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
         need += lines * pt * 1.2 / 72 + (int(spc.get("val")) / 100 / 72 if spc is not None else 0)
     # PowerPoint shows short labels without line breaks centered and ignores box insets, so compare against the height with insets included
     lines_total = 0
     for p in tf.paragraphs:
-        runs = [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
+        runs = para_runs(p)
         if not runs:
             continue
-        width = sum(text_width_in(x[0], x[1], x[2]) for x in runs)
-        lines_total += max(1, int(width / inner_w) + (1 if width % inner_w > 0.02 else 0)) if wrap else 1
+        lines_total += wrap_lines(runs, inner_w)[0] if wrap else 1
     paras_n = sum(1 for p in tf.paragraphs if p.runs)
     if lines_total <= paras_n:
         return need, h, wrap
@@ -224,8 +226,8 @@ def main():
                     # Area actually covered by glyphs (for icon overlap)
                     ink_w = 0.0
                     for p in tf.paragraphs:
-                        runs = [(rr.text, rr.font.size.pt if rr.font.size else 18, bool(rr.font.bold)) for rr in p.runs]
-                        if runs: ink_w = max(ink_w, sum(text_width_in(x[0], x[1], x[2]) for x in runs))
+                        runs = para_runs(p)
+                        if runs: ink_w = max(ink_w, para_width_in(runs))
                     # Reflect the horizontal position of glyphs by alignment
                     # Left and right box insets hold no glyphs, so exclude them (covers slides that reserve number badge space as insets)
                     bp = tf._txBody.find(NSA + "bodyPr")
@@ -247,18 +249,17 @@ def main():
                     # Glyph area per line (one rectangle per line avoids misjudgments caused by one long line in multi-line boxes)
                     lines_box, cur = [], iy0
                     for p in tf.paragraphs:
-                        runs = [(rr.text, rr.font.size.pt if rr.font.size else 18, bool(rr.font.bold)) for rr in p.runs]
+                        runs = para_runs(p)
                         if not runs: continue
                         pt = max(v[1] for v in runs)
                         lh = pt * 1.2 / 72
                         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
                         cur += int(spc.get("val")) / 100 / 72 if spc is not None else 0
-                        width = sum(text_width_in(v[0], v[1], v[2]) for v in runs)
-                        nline = max(1, int(width / inner_w) + (1 if width % inner_w > 0.02 else 0))
+                        nline, last_w = wrap_lines(runs, inner_w)
                         pal = str(p.alignment) if p.alignment is not None else None
                         for k in range(nline):
-                            lw = min(inner_w, (width - k * inner_w) if nline > 1 else width) + 0.1
-                            lw = max(0.05, min(inner_w, lw))
+                            # Lines before the last line fill the line width
+                            lw = max(0.05, min(inner_w, (inner_w if k < nline - 1 else last_w) + 0.1))
                             if pal == "RIGHT (3)": lx = inner_x + inner_w - lw
                             elif pal == "CENTER (2)": lx = inner_x + (inner_w - lw) / 2
                             else: lx = inner_x
@@ -337,11 +338,14 @@ def main():
                     fails.append(f"[{n}] Element overlap {boxes[i][1]} / {boxes[j][1]} ({inter / small:.0%})")
 
         # Estimated mid-word line breaks: a word wider than the inner box width is cut in the middle by every renderer (text boxes and table cells)
+        # Estimated line breaks inside a word: LibreOffice splits a word caught at the line end like '60|분', '○|○억원', '가|정)', '3-|5개' (text_metrics.break_in_word)
+        # Why: in the A4, 10.83 and 4:3 renders of the two sample decks, 128 such breaks separate a unit from its number or push the character before a closing bracket to the next line. Comparing word widths does not find them.
+        #      This estimate finds 93 of the 96 text boxes and tables with a rendered break inside a word and warns 2 wrongly (no WARN in 16:9)
         for sh in (slide.shapes if word_break else []):
             if sh.width is None: continue
             y = sh.top / 914400 if sh.top else 0
             if y < RULE_Y * sy + 0.35: continue
-            hit = None
+            hit, splits = None, []
             if sh.has_table:
                 colw = [c.width / 914400 for c in sh.table.columns]
                 for r in sh.table.rows:
@@ -349,14 +353,19 @@ def main():
                         if c.is_spanned or not c.text.strip(): continue
                         inner = sum(colw[j:j + c.span_width]) - c.margin_left / 914400 - c.margin_right / 914400
                         hit = hit or too_wide_word(c.text_frame.paragraphs, inner)
+                        splits += token_splits(c.text_frame.paragraphs, inner)
             elif sh.has_text_frame and sh.text_frame.text.strip():
                 bp = sh.text_frame._txBody.find(NSA + "bodyPr")
                 if bp is not None and bp.get("wrap") == "none": continue
                 if bp is not None and bp.get("vert") not in (None, "horz"): continue  # Vertical text (matrix y-axis labels, etc.) does not wrap by horizontal width
                 ins = lambda k: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else 0.1
                 hit = too_wide_word(sh.text_frame.paragraphs, sh.width / 914400 - ins("lIns") - ins("rIns"))
+                splits = token_splits(sh.text_frame.paragraphs, sh.width / 914400 - ins("lIns") - ins("rIns"))
             if hit:
                 warns.append(f"[{n}] Estimated mid-word line break '{hit[0][:14]}' (word width {hit[1]:.2f}in > inner width {hit[2]:.2f}in)")
+            if splits:
+                more = f" and {len(splits) - 1} more" if len(splits) > 1 else ""
+                warns.append(f"[{n}] Estimated line break inside a word '{splits[0][:16]}'{more} (the renderer splits a word caught at the line end) → shorten the text, widen the box, or rewrite so the word does not fall at the line end")
 
         # Bordered boxes with little content and a large empty area
         for sh in slide.shapes:

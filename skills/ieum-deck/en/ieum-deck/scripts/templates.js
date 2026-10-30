@@ -204,7 +204,85 @@ const ROW_BREATH = 0.12; // Top and bottom room left after widening line spacing
 const QUESTION_END = /(는가|인가|은가|한가|던가|을까|할까|는지|\?)\s*$/; // Question sentence endings (diagnostic question columns are left-aligned)
 const DATA_CELL_MAX_CHARS = 2; // Columns holding only symbols of two characters or less, like role codes, are data columns (number and Harvey ball columns included)
 const LNSPC_MAX = 1.3; // Line spacing cap for multi-line cells (when row height remains)
+// Width factors for the edge zone check. When text sits at 99-100% of the cell width, rendering error (up to 0.65% wider than calculated at 11pt)
+// splits estimated and rendered line counts, causing ghost lines (only one-line rows grow taller) or row growth. Stable when line counts agree at -3% and +3% cell width
+const EDGE_FACTORS = [0.97, 1.03];
+const EDGE_STEP = 0.005; // Width unit moved between columns by edge avoidance (inches)
+const EDGE_PASSES = 3; // Maximum rechecks for other columns entering the edge zone after the width freed by a narrowed column is shared
 const sumOf = (a) => a.reduce((x, y) => x + y, 0);
+/** Text list per column [{t, b, pad}]. pad is the margin subtracted from the column width (TABLE_HEAD_PAD for head cells; side margins and bullet indent for body cells. Same basis as tableMetrics) */
+function colTexts(tb, ncol, listCols) {
+  const out = Array.from({ length: ncol }, () => []);
+  (tb.head || []).forEach((h, i) => { if (i < ncol) out[i].push({ t: String(h), b: true, pad: TABLE_HEAD_PAD }); });
+  tb.rows.forEach((r) => r.forEach((c, i) => {
+    if (i >= ncol || cellSpan(c) > 1) return;
+    const pad = 2 * TABLE_CELL_PAD + (listCols[i] ? T.PARA.bulletIndentIn : 0);
+    cellList(c).forEach((t) => out[i].push({ t, b: cellBold(c), pad }));
+  }));
+  return out;
+}
+const linesAt = (xs, w, f, sz) => xs.map((x) => A.estimateLines(x.t, Math.max(0.3, w - x.pad) * f, sz, x.b));
+const sameLines = (a, b) => a.every((n, k) => n === b[k]);
+/** Whether line counts differ between the two width factors (edge zone) */
+const isEdgeCol = (xs, w, sz) => !sameLines(linesAt(xs, w, EDGE_FACTORS[0], sz), linesAt(xs, w, EDGE_FACTORS[1], sz));
+// Avoiding line breaks inside a word. A column where the renderer splits a word caught at the line end, as in '○○|억원' or '(기|업)' (same computed width as the check_layout warning),
+// moves to a width where that word fits on the upper line or moves whole to the next line
+// Why: of 117 rendered breaks inside a word in the A4, 10.83 and 4:3 sample renders, 36 are in table cells. 9 remain after this avoidance, all at check_layout warning positions
+//      The rendered/computed width ratio is 0.990 at the 1st percentile and 1.007 at most over both samples and four page sizes, so a column that had a split moves to a width with no split at ±1% of the computed width
+//      Avoiding splits only at the computed width leaves 16 (15 without a warning) through rendering error; avoiding them at ±3% (edge zone factors) leaves 20 for lack of width to move. 16:9 samples have no splitting column, so their widths stay as they were
+const SPLIT_BAND = 0.01;
+// Growth cap (ratio) for the other columns that receive the freed width when a column narrows to avoid a break inside a word
+// Why: in the narrow sample page sizes, 13 of 14 such narrowings widen the other columns by 0.7-16%. The one that widens a short label column by 85% in a two-column table unbalances the table, so it does not narrow
+const SPLIT_GROW_MAX = 0.25;
+const hasSplit = (xs, w, sz, f) => xs.some((x) => A.wordSplits(x.t, Math.max(0.3, w - x.pad) * (f || 1), sz, x.b).length > 0);
+const hasNearSplit = (xs, w, sz) => [1, 1 - SPLIT_BAND, 1 + SPLIT_BAND].some((f) => hasSplit(xs, w, sz, f));
+/** Edge and in-word break avoidance. Such a column takes width in EDGE_STEP units from other columns whose line counts do not change and that gain no break inside a word
+ *  When not enough width can be taken, the column narrows until its line count is settled and no word is split, and the freed width goes to the other columns in proportion to their widths
+ *  When no width avoids the break inside a word, only the edge zone is avoided
+ *  Equal-width data column groups are not widened, and when giving width every column in the group gives the same amount (keeps equal widths within the group)
+ *  Modifies cw in place */
+function settleEdgeCols(cw, texts, sz, minW, grouped) {
+  const inGroup = new Set(grouped.flat());
+  const units = [...grouped, ...cw.map((_, j) => [j]).filter(([j]) => !inGroup.has(j))];
+  const wasSplit = new Set(); // Columns that had a break inside a word (kept free of splits at ±SPLIT_BAND of the computed width too)
+  const splitAt = (j, w) => (wasSplit.has(j) ? hasNearSplit(texts[j], w, sz) : hasSplit(texts[j], w, sz));
+  const unsettled = (j, w) => isEdgeCol(texts[j], w, sz) || splitAt(j, w);
+  const steady = (j, w) => EDGE_FACTORS.every((f) => sameLines(linesAt(texts[j], cw[j], f, sz), linesAt(texts[j], w, f, sz))) && !splitAt(j, w);
+  const canGive = (u) => u.every((j) => cw[j] - EDGE_STEP >= minW[j] && !unsettled(j, cw[j]) && steady(j, cw[j] - EDGE_STEP));
+  /** Moves column i to a width that is not bad. Returns false and leaves cw unchanged when it cannot */
+  const move = (i, bad, growMax) => {
+    const before = cw.slice();
+    while (bad(cw[i])) {
+      // Take from the widest column (group) that can give
+      const donors = units.filter((u) => !u.includes(i) && canGive(u));
+      if (!donors.length) break;
+      const widest = donors.reduce((a, b) => (Math.min(...b.map((j) => cw[j])) > Math.min(...a.map((j) => cw[j])) ? b : a));
+      widest.forEach((j) => { cw[j] -= EDGE_STEP; cw[i] += EDGE_STEP; });
+    }
+    if (!bad(cw[i])) return true;
+    before.forEach((v, j) => { cw[j] = v; });
+    const rest = sumOf(cw) - cw[i];
+    let w = cw[i];
+    while (w - EDGE_STEP >= minW[i] && bad(w) && (cw[i] - w + EDGE_STEP) / rest <= growMax) w -= EDGE_STEP;
+    if (bad(w)) return false; // Keep the original width if the counts still differ or a word is still split at the minimum
+    const freed = cw[i] - w;
+    cw.forEach((v, j) => { if (j !== i) cw[j] += (freed * v) / rest; });
+    cw[i] = w;
+    return true;
+  };
+  for (let pass = 0; pass < EDGE_PASSES; pass++) {
+    let changed = false;
+    for (let i = 0; i < cw.length; i++) {
+      if (inGroup.has(i) || !texts[i].length) continue;
+      if (hasSplit(texts[i], cw[i], sz)) wasSplit.add(i);
+      if (!unsettled(i, cw[i])) continue;
+      changed = true;
+      if (!wasSplit.has(i)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
+      else if (!move(i, (w) => unsettled(i, w), SPLIT_GROW_MAX)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
+    }
+    if (!changed) break;
+  }
+}
 /** Column widths (inches). Allocated from each column's one-line width (nat) and widest word (min)
  *  If all columns fit on one line, spare width is split in proportion to one-line widths. Otherwise word widths are guaranteed and the rest is split in proportion to the shortfall up to one-line width */
 function tableColW(tb, w, sz, listCols, dataCols) {
@@ -260,6 +338,7 @@ function tableColW(tb, w, sz, listCols, dataCols) {
       if (pool.length < 2) break;
     }
   });
+  settleEdgeCols(cw, colTexts(tb, ncol, listCols), sz, min, grouped);
   const out = cw.map((v) => +v.toFixed(3));
   out[ncol - 1] = +(w - sumOf(out.slice(0, -1))).toFixed(3);
   return { cw: out, fill: sN / w };

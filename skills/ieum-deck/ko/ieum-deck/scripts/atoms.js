@@ -10,6 +10,8 @@ const path = require("path");
 // 나눔고딕 실측 폭(em). 없으면 tokens.METRIC 근사값 사용
 // 재현: ASCII 글자 폭은 NanumGothic.ttf, NanumGothicBold.ttf 의 hmtx 전진폭을 head.unitsPerEm 으로 나눈 값(fontTools 로 확인)
 //       범주 키(hangul, cjkpunct, fullwidth, enclosed, other)는 범주별 대표 폭
+//       기호 키(× ÷ ± · 〉 … “ ” ‘ ’)도 hmtx 값. 범주 대표 폭과 차이가 커서 따로 둠 (× 0.592 와 범주 0.509, … 0.94 와 범주 0.509 등)
+//       같은 기호 10개를 이은 문구의 LibreOffice 렌더 폭과 0.001em 안에서 일치 (일반체, 굵은체 같은 값)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -28,6 +30,10 @@ function face(bold) {
 const isHanja = (c) => (c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0xf900 && c <= 0xfaff);
 /** 전각 폭 기호: 화살표, 괘선, 도형(○ ● ◐ □ ■), 기타 기호, ※. 나눔고딕에서 한글과 같은 0.94em */
 const isWideSymbol = (c) => (c >= 0x2190 && c <= 0x21ff) || (c >= 0x2500 && c <= 0x27bf) || c === 0x203b;
+/** 한글 호환 자모(ㄱ, ㅏ, ㆍ). 나눔고딕에서 한글과 같은 0.94em (hmtx 와 렌더 폭으로 확인) */
+const isHangulJamo = (c) => c >= 0x3130 && c <= 0x318f;
+/** 로마 숫자(Ⅰ-Ⅹ, ⅰ-ⅹ). 나눔고딕에서 한글과 같은 0.94em (hmtx 와 렌더 폭으로 확인) */
+const isRomanNumeral = (c) => c >= 0x2160 && c <= 0x2179;
 function charEm(ch, bold) {
   const c = ch.codePointAt(0);
   if (METRICS) {
@@ -38,34 +44,168 @@ function charEm(ch, bold) {
     if (c >= 0xff00 && c <= 0xffef) return m.fullwidth;
     if (c >= 0x2460 && c <= 0x24ff) return m.enclosed;
     if (isHanja(c)) return m.hangul; // 한자(통합, 확장 A, 호환)는 나눔고딕에서 한글과 같은 전각 폭
-    if (isWideSymbol(c)) return m.hangul;
+    if (isWideSymbol(c) || isHangulJamo(c) || isRomanNumeral(c)) return m.hangul;
     return m.other;
   }
   if (ch === " ") return T.METRIC.EM_SPACE;
-  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || (c >= 0x3130 && c <= 0x318f) || isWideSymbol(c);
+  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || isHangulJamo(c) || isWideSymbol(c);
   return wide ? T.METRIC.EM_HANGUL : T.METRIC.EM_LATIN;
 }
+// 글자 계열. LibreOffice 는 계열이 라틴과 한글 사이에서 바뀌는 경계마다 간격(METRIC.SCRIPT_GAP_EM)을 더함
+// 약한 문자(WEAK)는 바로 앞 글자의 계열을 따르고 문단 첫머리에서는 라틴으로 취급
+// 실측 확인(LibreOffice 24.2, 영어 로캘): 라틴은 ASCII(영문, 숫자, 문장부호, 곧은따옴표)와 라틴-1 기호(× ÷ ± ·)
+//   한글 계열은 한글 음절, 한글 호환 자모(ㄱ ㆍ), CJK 문장부호(〉), 한자. 약한 문자는 공백, ○ ● ◐ ①-⑤ ※ Ⅰ-Ⅵ … “ ” ‘ ’ →
+//   전각 문자(U+FF00-FFEF)는 미실측. 같은 동아시아 범주로 보아 한글 계열에 둠
+//   문단 첫머리 약한 문자를 라틴으로 보는 동작은 영어 로캘에서만 확인
+const SCRIPT = { WEAK: 0, LATIN: 1, ASIAN: 2 };
+function scriptOf(c) {
+  if (c <= 0x20 || c === 0xa0) return SCRIPT.WEAK; // 공백, 줄바꿈 등 제어 문자, 줄바꿈 없는 공백
+  if (c <= 0xff) return SCRIPT.LATIN;
+  if ((c >= 0xac00 && c <= 0xd7a3) || isHangulJamo(c) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c)) return SCRIPT.ASIAN;
+  return SCRIPT.WEAK;
+}
+/** 문구 폭(em)과 양 끝 글자의 계열. prev 는 문구 바로 앞 글자의 계열 (약한 문자 판정용, 문단 첫머리는 WEAK)
+ *  간격은 문구 안 글자 사이에만 더함. 앞 글자와 첫 글자 사이 간격은 호출부가 first 로 판정 */
+function spanEm(s, bold, prev) {
+  let em = 0, cur = prev || SCRIPT.WEAK, first = SCRIPT.WEAK;
+  for (const ch of String(s)) {
+    const sc = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN;
+    if (first && sc !== cur) em += scriptGapEm();
+    em += charEm(ch, bold);
+    if (!first) first = sc;
+    cur = sc;
+  }
+  return { em, first, last: cur };
+}
+/** 계열 경계 간격(em). 나눔고딕 실측 값이므로 실측 폭 파일이 있을 때만 적용 (근사 폭은 SAFETY 계수가 간격을 흡수) */
+function scriptGapEm() {
+  return METRICS ? T.METRIC.SCRIPT_GAP_EM : 0;
+}
+/** 한 줄 문구의 폭(em). 문단 첫머리부터 이어지는 문구로 보고 계열 경계 간격을 포함 */
 function textEm(s, bold) {
-  let n = 0;
-  for (const ch of String(s)) n += charEm(ch, bold);
-  return n;
+  return spanEm(s, bold, SCRIPT.WEAK).em;
+}
+// 어절 안 줄바꿈 (LibreOffice 24.2 editeng ImpBreakLine 과 i18npool BreakIterator_CJK, BreakIterator_Unicode 를 따름)
+// 공백 외에도 줄 폭을 처음 넘는 글자(m)에서 끊을 위치를 정하며, m 바로 앞 글자의 계열로 규칙이 갈림
+//   한글 계열(ko-KR): 걸침 문자는 한 글자 뒤로 옮겨 문단 끝이면 줄 밖에 걸치고, 줄 첫머리 금지 문자와 줄 끝 금지 문자를 피해 앞으로 당김.
+//                     당기지 않았고 m 이 한글이면 그 한글 묶음의 첫 글자에서 나눔. 그 밖에는 m 에서 나눔
+//   라틴(en-US): m 이하에서 줄을 바꿀 수 있는 마지막 글자 사이 (latinBreakOk). 빗금 바로 뒤는 제외
+// finalize 가 기록하는 eaLnBrk="0" 은 LibreOffice 가 읽지 않으므로 금지 문자 규칙은 늘 적용됨 (oox 가져오기에서 주석 처리된 속성)
+// Why: 견본 2종을 A4, 10.83, 4:3 으로 렌더하면 어절 안 줄바꿈 128건('60|분', '○|○억원', '가|정)', '3-|5개'). 16:9 는 0건.
+//      이 규칙의 모의 계산(라틴 규칙은 LibreOffice line.txt 그대로)이 128건 중 123건을 같은 위치에서 재현 (5건은 줄 폭의 99.8% 이상인 경계).
+//      확인 문안 490개(어절 115종의 글자 위치마다 줄 끝을 둔 글 상자)에서 484개 일치 (6개는 문안 배치와 ₩ ↑ 글자 폭 문제).
+//      이 계산은 모의 계산과 줄 수 98,710/98,720 일치 (견본 문단 3,448개를 40개 폭으로), 렌더 어절 안 줄바꿈 117건(줄 폭보다 좁은 어절) 중 112건을 같은 위치로 추정
+// 한계: 어절 첫 글자가 줄 첫머리 금지 문자인 경우(' / ' 같은 수식 기호) LibreOffice 는 앞 어절 안에서 나눔. 이 계산은 어절 사이에서 나눔.
+//       ko-KR 이외 언어로 기록된 run 의 한글 계열 글자는 실행 환경 기본 동아시아 로캘(zh-CN) 목록을 따름 (finalize 는 한글이 든 run 을 모두 ko-KR 로 기록)
+/** 줄 첫머리 금지 문자 (LibreOffice ko_KR 로캘 자료 ForbiddenLineBeginCharacters 그대로이며 공백 포함) */
+const NO_LINE_START = new Set("!%),.:;?]}¢￠'\"′″℃>〉＞》」』】〕！％），．：；？］｝｡｣､･ ﾞﾟ、。’”°");
+/** 줄 끝 금지 문자 (ko_KR ForbiddenLineEndCharacters) */
+const NO_LINE_END = new Set("$(¥£[\\{￡￥'\"<＜《「『【〔＄（［｛₩￦｢‘“〈");
+/** 걸침 문자 (ko_KR LineBreakHangingCharacters). finalize 가 모든 문단에 hangingPunct="1" 을 기록 */
+const HANGING = new Set("!,.:;?、。！，．：；？");
+/** 라틴 규칙의 글자 분류 (LibreOffice line.txt 가 쓰는 UAX #14 분류 중 업무 문서에 나오는 것). 목록에 없는 글자는 AL (영문자, ○ ① · 등) */
+const LB_CLASS = Object.fromEntries([
+  ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
+/** LibreOffice 가 한글 어절 보호에 쓰는 한글 범위: 음절, 자모, 호환 자모, 확장 자모 */
+const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
+/** 라틴 규칙의 글자 분류. 한글은 H, 한자는 ID */
+const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
+/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
+ *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
+function latinBreakOk(a, b) {
+  const x = lbClass(a), y = lbClass(b);
+  if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
+  if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
+  if (y === "PR") return !["AL", "NU"].includes(x);
+  if (y === "PO") return !["NU", "H", "ID", "IS", "PO", "SY"].includes(x);
+  if (y === "IN") return !["AL", "NU", "H", "ID", "IN", "EX"].includes(x);
+  if ((x === "AL" || x === "NU") && ["AL", "NU", "OP"].includes(y)) return false;
+  if (["CP", "IS", "PO"].includes(x) && (y === "AL" || y === "NU")) return false;
+  return true;
+}
+/** 한글 계열 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄, 어절 길이면 문단 끝 문장부호가 줄 밖에 걸침 */
+function koBreak(chars, m, paraEnd) {
+  let s = m;
+  if (HANGING.has(chars[m])) {
+    if (paraEnd && m === chars.length - 1) return chars.length;
+    s = m + 1;
+  }
+  // 어절 끝 다음 글자는 공백이며 공백도 줄 첫머리 금지 문자 ('기준, 끝' 의 쉼표가 넘치면 '기|준,')
+  while (s > 0 && (s === chars.length || NO_LINE_START.has(chars[s]) || NO_LINE_END.has(chars[s - 1]))) s -= 1;
+  if (s === m && isHangul(chars[m])) while (s > 0 && isHangul(chars[s - 1])) s -= 1;
+  return s;
+}
+/** 라틴 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄 */
+function latinBreak(chars, m) {
+  let s = chars[m - 1] === "/" ? m - 1 : m;
+  while (s > 0 && !latinBreakOk(chars[s - 1], chars[s])) s -= 1;
+  return s > 0 && chars[s - 1] === "/" ? 0 : s;
+}
+/** 어절 글자별 계열. 약한 문자는 앞 글자 계열 (prev 는 어절 앞 글자의 계열, 문단 첫머리는 WEAK 이며 라틴으로 판정) */
+function wordScripts(chars, prev) {
+  let cur = prev;
+  return chars.map((ch) => (cur = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN));
+}
+/** x(em)에서 시작하는 어절에서 줄 폭(cap)을 처음 넘는 글자 위치. 계열이 바뀌는 글자 앞에 간격을 더함. 넘는 글자가 없으면 어절 길이 */
+function overflowAt(chars, scripts, prev, x, cap, bold) {
+  for (let i = 0; i < chars.length; i++) {
+    const p = i ? scripts[i - 1] : prev;
+    if (p && p !== scripts[i]) x += scriptGapEm();
+    x += charEm(chars[i], bold);
+    if (x > cap) return i;
+  }
+  return chars.length;
+}
+/** 줄 끝에 걸린 어절을 LibreOffice 가 나누는 위치 (어절 안 글자 수)와 글자별 계열. 0 이면 어절 전체가 다음 줄 */
+function breakInWord(chars, prev, x, cap, bold, paraEnd) {
+  const scripts = wordScripts(chars, prev);
+  const m = overflowAt(chars, scripts, prev, x, cap, bold);
+  if (m === 0 || m === chars.length) return { cut: 0, scripts };
+  return { cut: scripts[m - 1] === SCRIPT.ASIAN ? koBreak(chars, m, paraEnd) : latinBreak(chars, m), scripts };
+}
+/** 문단 하나의 줄 수와 어절 안 줄바꿈 목록 [{ word, cut }] (cut: 윗줄에 남는 글자 수. 줄 폭보다 넓은 어절은 제외). text_metrics.py wrap_paragraph 와 같은 계산
+ *  공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(breakInWord)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔
+ *  앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄을 바꾸면 줄 끝 공백과 간격은 줄 폭에 들지 않음) */
+function wrapParagraph(para, cap, bold) {
+  // 약한 문자의 계열은 문단 첫머리부터 이어서 판정 (last: 직전 어절 끝 글자의 계열)
+  let cur = 0, n = 1, last = SCRIPT.WEAK;
+  const splits = [];
+  const words = para.split(" ");
+  for (let i = 0; i < words.length; i++) {
+    const s = spanEm(words[i], bold, last);
+    const space = charEm(" ", bold);
+    const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+    const need = s.em + (cur > 0 ? space + gap : 0);
+    if (cur > 0 && cur + need > cap) {
+      const chars = Array.from(words[i]);
+      const { cut, scripts } = breakInWord(chars, last, cur + space, cap, bold, i === words.length - 1);
+      if (cut === chars.length) { cur += need; last = s.last; continue; } // 문단 끝 문장부호가 줄 밖에 걸쳐 줄이 늘지 않음
+      n += 1;
+      if (cut) {
+        if (s.em <= cap) splits.push({ word: words[i], cut });
+        cur = spanEm(chars.slice(cut).join(""), bold, scripts[cut - 1]).em; // 나눈 자리의 계열 경계 간격은 윗줄 끝에 남음
+      } else cur = s.em;
+    } else cur += need;
+    if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+    last = s.last;
+  }
+  return { lines: n, splits };
 }
 /** widthIn 폭 상자에서 fontPt 로 차지하는 줄 수 */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
-  for (const para of String(str).split("\n")) {
-    let cur = 0, n = 1;
-    for (const w of para.split(" ")) {
-      const we = textEm(w, bold);
-      const need = we + (cur > 0 ? charEm(" ", bold) : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = we; } else cur += need;
-      if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
-    }
-    lines += n;
-  }
+  for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
+}
+/** widthIn 폭 상자에서 줄 끝에 걸린 어절을 LibreOffice 가 나누는 곳 [{ word, cut }]. estimateLines 와 같은 줄바꿈 계산 (줄 폭보다 넓은 어절은 제외) */
+function wordSplits(str, widthIn, fontPt, bold) {
+  if (!str) return [];
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
+  return String(str).split("\n").flatMap((para) => wrapParagraph(para, cap, bold).splits);
 }
 const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 판정이 두 줄로 바뀌지 않게 두는 여유 (인치)
 /** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 판정하는 폭보다 더 보수적인 폭 기준 (SAFETY_METRIC. 이 폭이면 estimateLines 도 1줄로 판정) */
@@ -80,15 +220,36 @@ function wordWidthIn(texts, pt, bold) {
 function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
+/** 문단 한 줄의 높이(인치): 글꼴 줄 높이(LINE_HEIGHT) x 문단 줄 간격 배수(lnSpc, pptxgenjs lineSpacingMultiple. 없으면 1)
+ *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 행 높이 판정용 TABLE_LINE_HEIGHT)
+ *  Why: LibreOffice 24.2 는 나눔고딕 줄을 1.2em x 줄 간격 배수로 조판 (커스텀 슬라이드 렌더의 여러 줄 문단 135개가 1.199-1.202em, 줄 간격 0.8-1.5배에 비례).
+ *       lnSpc 를 줄 높이 비율로 쓰면 줄 간격 100% 문단을 1.0em 으로 재어 렌더보다 17% 낮게 추정함.
+ *       줄 간격 100% 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 이 계산으로 고치면 넘침이 76건에서 62건(16:9), 160건에서 133건(4:3)으로 줄어듦 */
+function paraLineIn(pt, p, lineRatio) {
+  return lineRatio ? lineHeightIn(pt, lineRatio) : lineHeightIn(pt) * ((p && p.lnSpc) || 1);
+}
+
+const FIT_TOL_IN = 0.1; // fitParas 가 안쪽 높이를 넘어도 맞는 것으로 보는 높이(인치)의 기본값 (생성 템플릿). PowerPoint 는 여백 안 넘침을 허용하므로 0.1인치 허용
+/** 글이 상자 밖으로 나가지 않고 여백 안으로 넘칠 수 있는 높이(인치). 커스텀 슬라이드 상자의 fitParas 허용치. mg 는 [좌, 상, 우, 하](인치)
+ *  위 정렬은 아래로, 아래 정렬은 위로, 가운데 정렬은 위아래로 나뉘어 넘치므로 작은 여백의 2배
+ *  Why: 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 0.1인치 고정 허용은 글꼴이 11pt 보다 큰 채 상자 밖으로 0.024-0.057인치 넘친 상자를
+ *       16건(16:9), 30건(4:3) 남김 (여백 0.019인치 상자의 14pt 2줄 등). 이 허용치로 바꾸면 넘침이 62건에서 47건, 133건에서 105건으로 줄고 남은 넘침은 모두 11pt */
+function insetSlackIn(mg, va) {
+  if (va === "top") return mg[3];
+  if (va === "bottom") return mg[1];
+  return 2 * Math.min(mg[1], mg[3]);
+}
 
 /**
  * 문단 묶음이 상자(inner w,h)에 들어가도록 글꼴 크기를 균일 축소. 원본 장표의 서체보다 나눔고딕이 넓으면
  * 같은 크기에서 줄바꿈이 늘어나는 현상을 상자 안에서 흡수한다. 하한은 minPt (본문 11pt).
+ * 줄 높이는 paraLineIn(lineRatio). tolIn 은 안쪽 높이를 넘어도 맞는 것으로 보는 높이(인치)이며 없으면 FIT_TOL_IN
  * 반환: 새 paras (원본 불변)
  */
-function fitParas(paras, innerW, innerH, minPt, lineRatio) {
+function fitParas(paras, innerW, innerH, minPt, lineRatio, tolIn) {
   if (!paras || !paras.length || innerW <= 0.05) return paras;
   const floor = minPt || T.SIZE.BODY_MIN;
+  const tol = tolIn == null ? FIT_TOL_IN : tolIn;
   const need = (scale) => {
     let h = 0;
     for (const p of paras) {
@@ -98,7 +259,7 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
       const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
       const lines = Math.max(1, estimateLines(txt, innerW - indent, sz, r0.b));
       const gap = ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
-      h += lines * lineHeightIn(sz, lineRatio || p.lnSpc) + gap;
+      h += lines * paraLineIn(sz, p, lineRatio) + gap;
     }
     return h;
   };
@@ -111,17 +272,17 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
   });
   if (!wraps && paras.length <= 3) return paras;
   let scale = 1.0;
-  while (scale > 0.6 && need(scale) > innerH + 0.1) scale -= 0.04; // PowerPoint 는 여백 안 넘침을 허용하므로 0.1인치 허용
+  while (scale > 0.6 && need(scale) > innerH + tol) scale -= 0.04;
   let out = scale >= 0.999 ? paras : paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(floor, +(((r.sz || T.SIZE.body) * scale)).toFixed(1)) })) }));
   // 글꼴 하한에 걸려 여전히 넘치면 문단 사이 간격을 줄여 상자 안에 넣음
   const heightOf = (ps) => ps.reduce((h, p) => {
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * lineHeightIn(r0.sz || T.SIZE.body, lineRatio || p.lnSpc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * paraLineIn(r0.sz || T.SIZE.body, p, lineRatio) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   for (const cut of [0.6, 0.3, 0]) {
-    if (heightOf(out) <= innerH + 0.1) break;
+    if (heightOf(out) <= innerH + tol) break;
     out = out.map((p, i) => (i === 0 ? p : { ...p, spcBef: Math.round((p.spcBef || 0) * cut * 10) / 10 }));
   }
   return out;
@@ -268,12 +429,13 @@ function shape(pres, slide, atom, override) {
     const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 2 * pointW : pointW);
     if (ov.scale != null && ov.scale < 1) paras = paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(ov.minPt || T.SIZE.BODY_MIN, +((r.sz || T.SIZE.body) * ov.scale).toFixed(1)) })) }));
     if (ov.fillText) { paras = growParas(paras, innerW, atom.h - mg[1] - mg[3], 1.0); atom = { ...atom, va: "middle" }; } // 빈 면적을 흡수한 상자는 간격만 키워 채우고 글꼴은 계층 기준값을 유지
-    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt);
+    const va = ov.fillText ? "middle" : (ov.va || atom.va || "middle");
+    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt, undefined, insetSlackIn(mg, va));
     // 1문단 1줄로 판정된 텍스트는 줄바꿈을 끄고 렌더러의 자간 오차에 따른 예기치 않은 줄바꿈을 막음
     const oneLine = paras.length === 1 && !paras[0].runs.some((r) => r.br) && estimateLines(paras[0].runs.map((r) => r.t).join(""), innerW, paras[0].runs[0].sz || T.SIZE.body, paras[0].runs[0].b) <= 1;
     slide.addText(runsOf(paras, { color: ov.textColor }), {
       ...base, shape: st, isTextBox: true,
-      valign: ov.fillText ? "middle" : (ov.va || atom.va || "middle"),
+      valign: va,
       margin: boxMargin(mgArr.map((v) => v / 72)),
       wrap: !(small || oneLine) || narrowChevron, // 짧은 셰브론은 항상 줄바꿈 (텍스트 사각형이 좁아 넘침)
       vert: atom.vert || undefined,
@@ -322,7 +484,7 @@ function growParas(paras, innerW, innerH, maxScale) {
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * lineHeightIn((r0.sz || T.SIZE.body) * sc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * paraLineIn((r0.sz || T.SIZE.body) * sc, p) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   let sc = 1;
   while (sc < maxScale && need(sc + 0.05) <= innerH * 0.75) sc += 0.05;
@@ -338,7 +500,7 @@ function shrinkRatio(atom, paras, minPt) {
   const mg = (small ? [0, 0, 0, 0] : mgPt(atom.mg)).map((v) => v / 72);
   const pointW = atom.preset === "chevron" || atom.preset === "homePlate" ? Math.min(atom.w, atom.h) * (atom.adj != null ? atom.adj / 100000 : 0.5) : 0;
   const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 1.0 * pointW : 0.5 * pointW);
-  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt);
+  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt, undefined, insetSlackIn(mg, atom.va || "middle"));
   const before = paras[0].runs[0].sz || T.SIZE.body;
   const after = fitted[0].runs[0].sz || before;
   return after / before;
@@ -729,6 +891,12 @@ function pageNo(slide, S, n) {
 }
 
 // ---------------------------------------------------------------- 커스텀 슬라이드 재생
+// 커스텀 슬라이드 치환 문구의 줄 간격 배수 (playOwn). 렌더 줄 높이는 1.2em x 줄 간격 배수 (paraLineIn)
+const OWN_LN_SPC_UNSET = 1; // 원문에 줄 간격이 없는 문단의 줄 간격 배수 (OOXML 기본값 100%)
+// 상자를 넘길 것으로 보이는 치환 문구의 줄 간격 상한. 나눔고딕 기본 줄 높이(1.2em)이며 원문 줄 간격이 더 좁으면 그대로 둠
+// Why: 이전 값(줄 간격 없음 1.25, 상한 1.05)은 줄 간격 배수를 줄 높이 비율로 본 값이라 줄 간격 없는 문단을 105% 로 넓혀 조판함
+//      (줄 간격 값을 지운 견본에 치환 684건을 넣은 렌더의 넘침 70건이 모두 105%). 모든 문단 줄 간격을 1.3배로 바꾼 같은 견본에서 상한 1.05 는 넘침 51건, 1 은 47건
+const OWN_COMPACT_LN_SPC = 1;
 /**
  * own-deck 의 슬라이드 원자를 순서대로 조판. slots 로 텍스트와 표 셀과 이미지 치환
  * slots 키: t{k} (k번째 텍스트 원자), tb{k}.r{i}c{j}, img{k}, ch{k} (차트 spec)
@@ -909,7 +1077,9 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
     const v0 = sl["t" + pk] != null ? sl["t" + pk] : textKey(sl, cur0);
     if (v0 === "") { skippedBoxes.push(raw); continue; }
     const paras = v0 != null ? substitute(a.paras, v0) : a.paras;
-    const r = shrinkRatio(a, paras, T.SIZE.OWN_MIN);
+    // 치환 문구는 shape() 와 같은 하한(본문 11pt)으로 잼. 9pt 하한으로 재면 치환 문구는 11pt 에 머물고 같은 크기의 형제 상자만 9pt 까지 줄어듦
+    // (줄 높이를 고친 빌더로 견본 커스텀 슬라이드에 치환 684건을 넣으면 치환하지 않은 상자 37개(16:9), 51개(4:3)가 새로 11pt 미만이 되고 이 하한이면 0개)
+    const r = shrinkRatio(a, paras, v0 != null ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN);
     const key = sizeKey(a, paras);
     ratioBySize[key] = Math.min(ratioBySize[key] == null ? 1 : ratioBySize[key], r);
   }
@@ -1096,7 +1266,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
       }
       // 원문 그대로면 서체 폭 차이만 흡수하면 되므로 하한을 낮추고, 치환한 텍스트는 본문 하한을 지켜 글꼴이 따로 놀지 않게 함
       ov.minPt = ov.paras ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN;
-      // 치환 텍스트가 원문보다 줄 수가 늘면 위쪽 정렬로 두어 윗 요소를 덮지 않게 함
+      // 치환 텍스트는 상자 높이 대략 추정(need)으로 문단 간격과 줄 간격을 조정
       if (ov.paras && raw.paras) {
         // 상자 위에 놓인 아이콘만큼 글자 영역이 좁아지는 점을 반영
         const icon = ownSlide.atoms.find((im) => im.kind === "image" && im.x < raw.x + raw.w && im.x + im.w > raw.x && im.y < raw.y + raw.h && im.y + im.h > raw.y);
@@ -1107,20 +1277,17 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
           const sz = (p.runs[0] && p.runs[0].sz) || T.SIZE.body;
           return a + t.split("\n").reduce((b, seg) => b + Math.max(1, estimateLines(seg, wrapW - T.PARA.bulletIndentIn, sz)), 0);
         }, 0);
-        const avgSz = ov.paras.reduce((a, p) => a + ((p.runs[0] && p.runs[0].sz) || T.SIZE.body), 0) / Math.max(ov.paras.length, 1);
-        const need = count(ov.paras) * lineHeightIn(avgSz) + (ov.paras.length - 1) * 0.075;
-        // 줄 수가 늘었거나 상자를 70% 이상 채우면 위쪽 정렬 (렌더러 줄바꿈 차이로 위로 넘치는 것을 막음)
+        const need = ov.paras.reduce((a, p) => a + count([p]) * paraLineIn((p.runs[0] && p.runs[0].sz) || T.SIZE.body, p), 0) + (ov.paras.length - 1) * 0.075;
         // 여유가 남으면 문단 간격을 넓혀 상자를 고르게 채움 (최대 10pt)
         if (ov.paras.length > 1 && need < raw.h * 0.8) {
           const slack = (raw.h - 0.12 - need) / (ov.paras.length - 1) * 72;
           const gap = Math.max(2.5, Math.min(10, slack * 0.8));
           ov.paras = ov.paras.map((p, i) => (i === 0 ? p : { ...p, spcBef: +gap.toFixed(1) }));
         }
-        // 상자를 넘길 것으로 보이면 문단 간격부터 줄여 글꼴은 유지
+        // 상자를 넘길 것으로 보이면 문단 간격을 2pt 로, 줄 간격을 OWN_COMPACT_LN_SPC 이하로 줄임
+        // 그래도 넘치면 shape() 의 fitParas 가 글꼴을 본문 하한(11pt)까지 줄이고, 하한에서도 넘치면 문단 간격을 더 줄임. 남는 넘침은 lint 경고로 문구 축약을 유도
         if (need > raw.h - 0.08) {
-          // 문단 간격과 줄 간격만 축소 (글꼴은 유지)
-          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || 1.25, 1.05) }));
-          // 간격 축소로도 넘치면 글꼴을 줄이지 않고 lint 경고로 문구 축약을 유도
+          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || OWN_LN_SPC_UNSET, OWN_COMPACT_LN_SPC) }));
         }
       }
       if (atom.rot && atom.paras && /Illustrative|Sample|시안/i.test(atom.paras.map((p) => p.runs.map((r) => r.t).join("")).join(""))) {
@@ -1183,4 +1350,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

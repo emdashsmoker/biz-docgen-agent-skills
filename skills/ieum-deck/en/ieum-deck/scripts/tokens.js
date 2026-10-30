@@ -360,10 +360,22 @@ const METRIC = {
   EM_SPACE: 0.3,
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
-  SAFETY_METRIC: 0.9, // Margin for the renderer's automatic spacing around brackets and between Korean and Latin text
-  SAFETY_LINES: 0.94, // Margin for line count estimates (estimateLines). Text at 90-100% of the width mostly renders on one line in LibreOffice with NanumGothic. Width judgments (lineWidthIn, wordWidthIn) keep SAFETY_METRIC (0.94 everywhere wraps a shape label)
+  SAFETY_METRIC: 0.9, // Margin for width judgments (lineWidthIn, wordWidthIn). Raising it to 0.99 gives 70 build warnings on the two sample decks (recipe-demos, proposal-templates; box text fill warnings)
+  // Margin for line count estimates (estimateLines). Set against LibreOffice renders of the two sample decks after the width calculation took in the script boundary gap (SCRIPT_GAP_EM) and measured symbol widths
+  // 0.995: estimated and rendered line counts agree on all 297 table rows; about 1,740 non-overlapping text boxes outside tables show 0 overestimates and 0 underestimates
+  // 0.99 overestimates 4 text boxes whose text is 99.0-99.5% of the box width (ghost lines). The margin below 1.0 absorbs renders wider than the calculation
+  // Rendered width ÷ calculated width (one-line text of 1 inch or more): 12pt max 1.005, 11pt median 1.003 max 1.0065. 11pt text at 99.4-99.5% of the width lacks margin, so tables guard it with edge avoidance (templates.js EDGE_FACTORS)
+  SAFETY_LINES: 0.995,
+  // Gap (em) LibreOffice adds at every boundary where the script changes between Asian and Latin characters. About 1/5 of the NanumGothic text height (1.15em)
+  // Measured: 89 probe phrases (10 identical symbols in a row, alternating with Hangul, separated by a space) in table cells, converted to PDF with LibreOffice 24.2,
+  //       widths read from pdftotext -bbox-layout word coordinates. 12pt 0.228em, 11pt 0.227em. Widths calculated from this gap and the glyph widths match the render in all 267 cases (regular 12pt and 11pt, bold 12pt)
+  SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // Box size ratio against the donut chart plot diameter (for the center white circle)
-  TABLE_LINE_HEIGHT: 1.35, // Line spacing judgment in table cells (measured NanumGothic spacing is higher than the body value)
+  // Line height (em) for table cell row height judgments. Set above the measured line pitch as a margin against row growth
+  // Measured: LibreOffice 24.2 renders table cell lines at 1.15em x the line spacing multiple (290 multi-line cell paragraphs of the two sample decks in four layouts, multiples 1.0-1.3, 1.148-1.157em). Text boxes use 1.2em
+  // This value is 17% above the measurement, so text stays within the row inner height after line spacing expansion (templates.js LNSPC_MAX) (0 of 4,596 table cells in the same renders overflow because of line spacing)
+  // PowerPoint line pitch is unverified, so the margin stays
+  TABLE_LINE_HEIGHT: 1.35,
 };
 
 /** Band coordinates fitted to the page size. x and w scale by the width ratio, y and h by the height ratio */
@@ -399,13 +411,14 @@ function scaled(layoutKey) {
   };
 }
 
-/** Writes limits.json (shared with lint.py) */
+/** Writes limits.json (shared with lint.py and check_layout.py) */
 function writeLimits(dir) {
   // Headline 1-line limit per page size (Hangul-equivalent characters): the 16:9 limit verified by rendering (LIMIT.headlineOneLine) scaled by the page size's headline width ratio
   // lint measures headline length in units of one Hangul character width, so the same unit is used (a value based on the average character width misses wraps to 2 lines on narrow page sizes)
   const baseW = scaled("16:9").headline.w;
   const HEADLINE_LINE_CHARS = Object.fromEntries(Object.keys(LAYOUTS).map((k) => [k, Math.floor((LIMIT.headlineOneLine * scaled(k).headline.w) / baseW)]));
-  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT } }, null, 1));
+  // METRIC: shared so check_layout judges overflow and word width with the same width model as the build (atoms.js): approximate glyph widths, script boundary gap, line count margin
+  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
 module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };

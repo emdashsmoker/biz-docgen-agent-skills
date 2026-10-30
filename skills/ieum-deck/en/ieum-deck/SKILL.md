@@ -552,6 +552,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + For page sizes narrower than 16:9, shorten box text by the body width ratio (overflow is reported as a build warning and check_layout FAIL)
     + When typesetting several page sizes from one storyboard, write shortened text for narrow page sizes in `byLayout` of the slide (`references/storyboard-schema.md`)
     + Label columns and subject boxes are typeset at least as wide as the longest word fits on one line
+    + Resolve the line break inside a word warning (check_layout) by rewriting the text that holds the line-end word per page size in `byLayout`
+    + (Bracketed qualifiers) Remove them or move them to the front (for example '(연구개발) 핵심기술 개발')
+    + (Figures with units) Move the figure word to the front (for example '○○명 면담, ○○○명 설문')
+    + (Units in table cells) Move the unit to the header (for example header '규모 (억원)' and cell '연 ○○')
+    + (Comma lists) Join the items with a particle (for example '산출물명과 판 번호, 제출일 순서')
+    + (Long modifiers) Shorten them so the figure word stays on the upper line (for example 'AI 공급기업 ○○개사')
+    + (Not recommended) A space between figure and unit and forced line breaks (they cause a new break inside a word or a box text fill warning)
 - (Color) The color scheme is black and white
     + Choose the theme from navy (default), mono and a user-specified color (kickoff question 6)
     + Use the theme color (navy #1F3864, mono #2B2B2B, the user-specified base color) only for label cells, chevrons, conclusion bands, markers and emphasized figures
@@ -747,6 +754,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In a character-level deck, PowerPoint line ends may differ from the review images
 - A word wider than the inner width of a text box or table cell is cut in the middle by every renderer (check_layout WARN, skipped for character-level decks)
 - Resolve wide words by spacing them, shortening them or widening the box
+- LibreOffice may also split a word caught at the line end between a figure and its unit ('60|분'), inside brackets ('(|연구개발)', '가|정)') or before a comma ('협|약,') (check_layout WARN, skipped for character-level decks)
+    + A word made only of Hangul moves whole to the next line
+    + For tables without `colW`, the build avoids these breaks by moving width between columns
+    + Resolve the remaining warnings by rewriting the text (Page size item of the Design system section)
 - PowerPoint uses taller line heights than LibreOffice, so spacing distribution in bullet boxes is computed with PowerPoint line height (1.4 times the font size)
 
 ## Review system
@@ -757,7 +768,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Notation) Writing rules, RFP wording, subject term, section numbers, ※ notes, duplicated prefixes, text contrast on theme colors
     + (Typesetting) Layout variety, bullet overuse, empty table cells, volume of replaced text, remaining slot markers
 - (Structural check) Checks of `scripts/check_layout.py` (remaining WARNs are a failure)
-    + (Overflow) Estimated text overflow, estimated mid-word line breaks in text boxes and table cells, tables leaving the slide
+    + (Overflow) Estimated text overflow, estimated mid-word line breaks and line breaks inside a word in text boxes and table cells, tables leaving the slide
     + (Overlap) Overlap between text boxes (over 20% WARN, over 30% or over a picture FAIL), overlap among tables, charts, pictures and filled boxes (over 15% FAIL, over 25% between filled boxes FAIL), overlap of icons and text (FAIL)
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
@@ -906,6 +917,7 @@ ieum-deck/
 │   ├── validate.py          Package structure validation (content types, XML syntax, relationship targets, slide ids, shape ids, python-pptx opening; schema validation when OOXML_PML_XSD is set)
 │   ├── lint.py              storyboard checks
 │   ├── check_layout.py      Checks of the typeset result
+│   ├── text_metrics.py      Text width and line count estimates (shared by lint.py and check_layout.py; same rules as the build's atoms.js)
 │   ├── render.sh, topdf.sh  PNG rendering, PDF conversion
 │   ├── sheet.py             PNG contact sheets
 │   ├── parse_input.py       hwpx, hwp, pdf, docx, pptx, xlsx, html, csv, json, xml, epub, md, txt → md (--pdf converts hwpx to PDF)
