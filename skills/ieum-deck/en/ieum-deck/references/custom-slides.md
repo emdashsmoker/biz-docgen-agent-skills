@@ -105,7 +105,7 @@
 - Text kept as in the original absorbs the width difference between the source font and NanumGothic by shrinking based on measured width (minimum 9pt)
 - Sibling boxes with the same original font size use the same shrink ratio
 - Replaced text keeps the 11pt body minimum
-- When replaced text overflows, only paragraph spacing shrinks (the font size stays)
+- When replaced text overflows, paragraph and line spacing shrink first, then the font shrinks down to the 11pt body minimum
 - Slides that went through shrinking are excluded from the 11pt minimum check of check_layout
 - The exclusion uses the registration info in `<file name>.build.json` left by the build
 - `<file name>.build.json` sits in the same folder as the pptx

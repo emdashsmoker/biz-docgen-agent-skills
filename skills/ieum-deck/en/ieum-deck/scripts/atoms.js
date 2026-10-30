@@ -221,7 +221,7 @@ function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
 /** Height of one paragraph line (inches): font line height (LINE_HEIGHT) x the paragraph line spacing multiple (lnSpc, pptxgenjs lineSpacingMultiple; 1 when absent)
- *  With lineRatio, that value is used as the line height ratio in place of the paragraph line spacing (table cells use the measured TABLE_LINE_HEIGHT)
+ *  With lineRatio, that value is used as the line height ratio in place of the paragraph line spacing (table cells use TABLE_LINE_HEIGHT for row height judgments)
  *  Why: LibreOffice 24.2 sets NanumGothic lines at 1.2em x the line spacing multiple (135 multi-line paragraphs in custom slide renders measure 1.199-1.202em, proportional to spacing 0.8-1.5).
  *       Using lnSpc as the line height ratio measures a 100% spaced paragraph at 1.0em, 17% below the render.
  *       In renders of the sample custom slides with 684 substitutions at 100% spacing, this fix cuts overflow from 76 to 62 (16:9) and from 160 to 133 (4:3) */

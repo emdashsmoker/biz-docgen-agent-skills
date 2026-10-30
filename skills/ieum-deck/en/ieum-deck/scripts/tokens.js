@@ -371,7 +371,11 @@ const METRIC = {
   //       widths read from pdftotext -bbox-layout word coordinates. 12pt 0.228em, 11pt 0.227em. Widths calculated from this gap and the glyph widths match the render in all 267 cases (regular 12pt and 11pt, bold 12pt)
   SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // Box size ratio against the donut chart plot diameter (for the center white circle)
-  TABLE_LINE_HEIGHT: 1.35, // Line spacing judgment in table cells (measured NanumGothic spacing is higher than the body value)
+  // Line height (em) for table cell row height judgments. Set above the measured line pitch as a margin against row growth
+  // Measured: LibreOffice 24.2 renders table cell lines at 1.15em x the line spacing multiple (290 multi-line cell paragraphs of the two sample decks in four layouts, multiples 1.0-1.3, 1.148-1.157em). Text boxes use 1.2em
+  // This value is 17% above the measurement, so text stays within the row inner height after line spacing expansion (templates.js LNSPC_MAX) (0 of 4,596 table cells in the same renders overflow because of line spacing)
+  // PowerPoint line pitch is unverified, so the margin stays
+  TABLE_LINE_HEIGHT: 1.35,
 };
 
 /** Band coordinates fitted to the page size. x and w scale by the width ratio, y and h by the height ratio */

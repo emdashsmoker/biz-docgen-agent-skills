@@ -221,7 +221,7 @@ function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
 /** 문단 한 줄의 높이(인치): 글꼴 줄 높이(LINE_HEIGHT) x 문단 줄 간격 배수(lnSpc, pptxgenjs lineSpacingMultiple. 없으면 1)
- *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 실측 행간 TABLE_LINE_HEIGHT)
+ *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 행 높이 판정용 TABLE_LINE_HEIGHT)
  *  Why: LibreOffice 24.2 는 나눔고딕 줄을 1.2em x 줄 간격 배수로 조판 (커스텀 슬라이드 렌더의 여러 줄 문단 135개가 1.199-1.202em, 줄 간격 0.8-1.5배에 비례).
  *       lnSpc 를 줄 높이 비율로 쓰면 줄 간격 100% 문단을 1.0em 으로 재어 렌더보다 17% 낮게 추정함.
  *       줄 간격 100% 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 이 계산으로 고치면 넘침이 76건에서 62건(16:9), 160건에서 133건(4:3)으로 줄어듦 */
