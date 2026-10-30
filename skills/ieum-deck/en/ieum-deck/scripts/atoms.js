@@ -10,6 +10,8 @@ const path = require("path");
 // Measured NanumGothic widths (em). Without them, tokens.METRIC approximations are used
 // Reproduction: ASCII glyph widths are the hmtx advance widths of NanumGothic.ttf and NanumGothicBold.ttf divided by head.unitsPerEm (checked with fontTools)
 //       Category keys (hangul, cjkpunct, fullwidth, enclosed, other) hold a representative width per category
+//       Symbol keys (× ÷ ± · 〉 … “ ” ‘ ’) are hmtx values too. Kept separately because they differ widely from the category width (× 0.592 vs category 0.509, … 0.94 vs category 0.509, etc.)
+//       They match the LibreOffice rendered width of a run of 10 identical symbols within 0.001em (same values in regular and bold)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -28,6 +30,10 @@ function face(bold) {
 const isHanja = (c) => (c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0xf900 && c <= 0xfaff);
 /** Full-width symbols: arrows, box drawing, shapes (○ ● ◐ □ ■), misc symbols, ※. 0.94em in NanumGothic, same as Hangul */
 const isWideSymbol = (c) => (c >= 0x2190 && c <= 0x21ff) || (c >= 0x2500 && c <= 0x27bf) || c === 0x203b;
+/** Hangul compatibility jamo (ㄱ, ㅏ, ㆍ). 0.94em in NanumGothic, same as Hangul (checked with hmtx and rendered width) */
+const isHangulJamo = (c) => c >= 0x3130 && c <= 0x318f;
+/** Roman numerals (Ⅰ-Ⅹ, ⅰ-ⅹ). 0.94em in NanumGothic, same as Hangul (checked with hmtx and rendered width) */
+const isRomanNumeral = (c) => c >= 0x2160 && c <= 0x2179;
 function charEm(ch, bold) {
   const c = ch.codePointAt(0);
   if (METRICS) {
@@ -38,17 +44,46 @@ function charEm(ch, bold) {
     if (c >= 0xff00 && c <= 0xffef) return m.fullwidth;
     if (c >= 0x2460 && c <= 0x24ff) return m.enclosed;
     if (isHanja(c)) return m.hangul; // Hanja (unified, extension A, compatibility) is full width in NanumGothic, same as Hangul
-    if (isWideSymbol(c)) return m.hangul;
+    if (isWideSymbol(c) || isHangulJamo(c) || isRomanNumeral(c)) return m.hangul;
     return m.other;
   }
   if (ch === " ") return T.METRIC.EM_SPACE;
-  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || (c >= 0x3130 && c <= 0x318f) || isWideSymbol(c);
+  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || isHangulJamo(c) || isWideSymbol(c);
   return wide ? T.METRIC.EM_HANGUL : T.METRIC.EM_LATIN;
 }
+// Script class. LibreOffice adds a gap (METRIC.SCRIPT_GAP_EM) at every boundary where the script changes between Latin and Asian
+// Weak characters (WEAK) take the script of the preceding character and count as Latin at the start of a paragraph
+// Measured (LibreOffice 24.2, English locale): Latin is ASCII (letters, digits, punctuation, straight quotes) and Latin-1 symbols (× ÷ ± ·)
+//   Asian is Hangul syllables, Hangul compatibility jamo (ㄱ ㆍ), CJK punctuation (〉) and Hanja. Weak is space, ○ ● ◐ ①-⑤ ※ Ⅰ-Ⅵ … “ ” ‘ ’ →
+//   Full-width forms (U+FF00-FFEF) are not measured. Placed in Asian as the same East Asian category
+//   Treating a weak character at the start of a paragraph as Latin is confirmed only in the English locale
+const SCRIPT = { WEAK: 0, LATIN: 1, ASIAN: 2 };
+function scriptOf(c) {
+  if (c <= 0x20 || c === 0xa0) return SCRIPT.WEAK; // space, control characters such as line breaks, no-break space
+  if (c <= 0xff) return SCRIPT.LATIN;
+  if ((c >= 0xac00 && c <= 0xd7a3) || isHangulJamo(c) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c)) return SCRIPT.ASIAN;
+  return SCRIPT.WEAK;
+}
+/** Text width (em) and the scripts at both ends. prev is the script of the character right before the text (for weak characters, WEAK at the start of a paragraph)
+ *  Gaps are added only between characters inside the text. The caller judges the gap between the preceding character and the first character with first */
+function spanEm(s, bold, prev) {
+  let em = 0, cur = prev || SCRIPT.WEAK, first = SCRIPT.WEAK;
+  for (const ch of String(s)) {
+    const sc = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN;
+    if (first && sc !== cur) em += scriptGapEm();
+    em += charEm(ch, bold);
+    if (!first) first = sc;
+    cur = sc;
+  }
+  return { em, first, last: cur };
+}
+/** Script boundary gap (em). A measured NanumGothic value, so it applies only with the measured width file (the SAFETY factor absorbs the gap for approximate widths) */
+function scriptGapEm() {
+  return METRICS ? T.METRIC.SCRIPT_GAP_EM : 0;
+}
+/** Width (em) of one-line text. Treated as text running from the start of a paragraph, including script boundary gaps */
 function textEm(s, bold) {
-  let n = 0;
-  for (const ch of String(s)) n += charEm(ch, bold);
-  return n;
+  return spanEm(s, bold, SCRIPT.WEAK).em;
 }
 /** Number of lines at fontPt in a box of width widthIn */
 function estimateLines(str, widthIn, fontPt, bold) {
@@ -56,12 +91,16 @@ function estimateLines(str, widthIn, fontPt, bold) {
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
   for (const para of String(str).split("\n")) {
-    let cur = 0, n = 1;
+    // The script of weak characters carries on from the start of the paragraph (last: script of the last character of the previous word)
+    let cur = 0, n = 1, last = SCRIPT.WEAK;
     for (const w of para.split(" ")) {
-      const we = textEm(w, bold);
-      const need = we + (cur > 0 ? charEm(" ", bold) : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = we; } else cur += need;
+      const s = spanEm(w, bold, last);
+      // The space and the script boundary gap count only when the word joins the previous word on the same line (a trailing space and gap at a line break take no line width)
+      const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+      const need = s.em + (cur > 0 ? charEm(" ", bold) + gap : 0);
+      if (cur > 0 && cur + need > cap) { n += 1; cur = s.em; } else cur += need;
       if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+      last = s.last;
     }
     lines += n;
   }

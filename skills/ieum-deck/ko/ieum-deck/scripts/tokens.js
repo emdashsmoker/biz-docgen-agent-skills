@@ -360,8 +360,16 @@ const METRIC = {
   EM_SPACE: 0.3,
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
-  SAFETY_METRIC: 0.9, // 렌더러의 괄호·한영 자동 간격 여유
-  SAFETY_LINES: 0.94, // 줄 수 추정(estimateLines) 여유. 폭 90-100% 문구는 LibreOffice 나눔고딕 렌더에서 대부분 1줄. 글 폭 판정(lineWidthIn, wordWidthIn)은 SAFETY_METRIC 유지 (전역 0.94 는 도형 라벨 줄바꿈 발생)
+  SAFETY_METRIC: 0.9, // 글 폭 판정(lineWidthIn, wordWidthIn) 여유. 0.99 로 올리면 견본 2종(recipe-demos, proposal-templates) 빌드 경고 70개 발생 (상자 글 채움 경고)
+  // 줄 수 추정(estimateLines) 여유. 폭 계산에 계열 경계 간격(SCRIPT_GAP_EM)과 기호 실측 폭을 반영한 뒤 견본 2종의 LibreOffice 렌더와 대조하여 정함
+  // 0.995: 표 297행 추정 줄 수와 렌더 줄 수 일치, 겹치지 않는 표 밖 글 상자 약 1,740개 과다 추정 0, 과소 추정 0
+  // 0.99 는 문구 폭이 칸 폭의 99.0-99.5% 인 글 상자 4개에서 과다 추정(유령 줄). 1.0 미만 여유는 렌더 폭이 계산보다 넓은 경우를 흡수
+  // 렌더 폭 ÷ 계산 폭(1인치 이상 한 줄 문구): 12pt 최대 1.005, 11pt 중앙값 1.003 최대 1.0065. 11pt 문구 폭 99.4-99.5% 구간은 여유가 모자라므로 표는 경계 구간 회피(templates.js EDGE_FACTORS)로 막음
+  SAFETY_LINES: 0.995,
+  // 한글 계열과 라틴 계열 글자가 바뀌는 경계마다 LibreOffice 가 더하는 간격 (em). 나눔고딕 글자 높이(1.15em)의 1/5 근사
+  // 실측: 확인 문구 89개(기호 10개 연속, 한글과 번갈아 맞닿음, 공백 사이)를 표 셀에 넣어 LibreOffice 24.2 PDF 로 변환하고
+  //       pdftotext -bbox-layout 단어 좌표로 폭을 잼. 12pt 0.228em, 11pt 0.227em. 이 간격과 글자 폭으로 계산한 폭이 일반체 12pt, 11pt, 굵은체 12pt 267건 모두 렌더 폭과 일치
+  SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // 도넛 차트의 플롯 지름 대비 상자 크기 비율 (중앙 흰 원 계산)
   TABLE_LINE_HEIGHT: 1.35, // 표 셀 행간 판정 (나눔고딕 실측 행간이 본문 판정치보다 높음)
 };

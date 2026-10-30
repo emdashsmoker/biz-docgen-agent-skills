@@ -10,6 +10,8 @@ const path = require("path");
 // 나눔고딕 실측 폭(em). 없으면 tokens.METRIC 근사값 사용
 // 재현: ASCII 글자 폭은 NanumGothic.ttf, NanumGothicBold.ttf 의 hmtx 전진폭을 head.unitsPerEm 으로 나눈 값(fontTools 로 확인)
 //       범주 키(hangul, cjkpunct, fullwidth, enclosed, other)는 범주별 대표 폭
+//       기호 키(× ÷ ± · 〉 … “ ” ‘ ’)도 hmtx 값. 범주 대표 폭과 차이가 커서 따로 둠 (× 0.592 와 범주 0.509, … 0.94 와 범주 0.509 등)
+//       같은 기호 10개를 이은 문구의 LibreOffice 렌더 폭과 0.001em 안에서 일치 (일반체, 굵은체 같은 값)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -28,6 +30,10 @@ function face(bold) {
 const isHanja = (c) => (c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0xf900 && c <= 0xfaff);
 /** 전각 폭 기호: 화살표, 괘선, 도형(○ ● ◐ □ ■), 기타 기호, ※. 나눔고딕에서 한글과 같은 0.94em */
 const isWideSymbol = (c) => (c >= 0x2190 && c <= 0x21ff) || (c >= 0x2500 && c <= 0x27bf) || c === 0x203b;
+/** 한글 호환 자모(ㄱ, ㅏ, ㆍ). 나눔고딕에서 한글과 같은 0.94em (hmtx 와 렌더 폭으로 확인) */
+const isHangulJamo = (c) => c >= 0x3130 && c <= 0x318f;
+/** 로마 숫자(Ⅰ-Ⅹ, ⅰ-ⅹ). 나눔고딕에서 한글과 같은 0.94em (hmtx 와 렌더 폭으로 확인) */
+const isRomanNumeral = (c) => c >= 0x2160 && c <= 0x2179;
 function charEm(ch, bold) {
   const c = ch.codePointAt(0);
   if (METRICS) {
@@ -38,17 +44,46 @@ function charEm(ch, bold) {
     if (c >= 0xff00 && c <= 0xffef) return m.fullwidth;
     if (c >= 0x2460 && c <= 0x24ff) return m.enclosed;
     if (isHanja(c)) return m.hangul; // 한자(통합, 확장 A, 호환)는 나눔고딕에서 한글과 같은 전각 폭
-    if (isWideSymbol(c)) return m.hangul;
+    if (isWideSymbol(c) || isHangulJamo(c) || isRomanNumeral(c)) return m.hangul;
     return m.other;
   }
   if (ch === " ") return T.METRIC.EM_SPACE;
-  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || (c >= 0x3130 && c <= 0x318f) || isWideSymbol(c);
+  const wide = (c >= 0xac00 && c <= 0xd7a3) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c) || (c >= 0x2460 && c <= 0x24ff) || isHangulJamo(c) || isWideSymbol(c);
   return wide ? T.METRIC.EM_HANGUL : T.METRIC.EM_LATIN;
 }
+// 글자 계열. LibreOffice 는 계열이 라틴과 한글 사이에서 바뀌는 경계마다 간격(METRIC.SCRIPT_GAP_EM)을 더함
+// 약한 문자(WEAK)는 바로 앞 글자의 계열을 따르고 문단 첫머리에서는 라틴으로 취급
+// 실측 확인(LibreOffice 24.2, 영어 로캘): 라틴은 ASCII(영문, 숫자, 문장부호, 곧은따옴표)와 라틴-1 기호(× ÷ ± ·)
+//   한글 계열은 한글 음절, 한글 호환 자모(ㄱ ㆍ), CJK 문장부호(〉), 한자. 약한 문자는 공백, ○ ● ◐ ①-⑤ ※ Ⅰ-Ⅵ … “ ” ‘ ’ →
+//   전각 문자(U+FF00-FFEF)는 미실측. 같은 동아시아 범주로 보아 한글 계열에 둠
+//   문단 첫머리 약한 문자를 라틴으로 보는 동작은 영어 로캘에서만 확인
+const SCRIPT = { WEAK: 0, LATIN: 1, ASIAN: 2 };
+function scriptOf(c) {
+  if (c <= 0x20 || c === 0xa0) return SCRIPT.WEAK; // 공백, 줄바꿈 등 제어 문자, 줄바꿈 없는 공백
+  if (c <= 0xff) return SCRIPT.LATIN;
+  if ((c >= 0xac00 && c <= 0xd7a3) || isHangulJamo(c) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c)) return SCRIPT.ASIAN;
+  return SCRIPT.WEAK;
+}
+/** 문구 폭(em)과 양 끝 글자의 계열. prev 는 문구 바로 앞 글자의 계열 (약한 문자 판정용, 문단 첫머리는 WEAK)
+ *  간격은 문구 안 글자 사이에만 더함. 앞 글자와 첫 글자 사이 간격은 호출부가 first 로 판정 */
+function spanEm(s, bold, prev) {
+  let em = 0, cur = prev || SCRIPT.WEAK, first = SCRIPT.WEAK;
+  for (const ch of String(s)) {
+    const sc = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN;
+    if (first && sc !== cur) em += scriptGapEm();
+    em += charEm(ch, bold);
+    if (!first) first = sc;
+    cur = sc;
+  }
+  return { em, first, last: cur };
+}
+/** 계열 경계 간격(em). 나눔고딕 실측 값이므로 실측 폭 파일이 있을 때만 적용 (근사 폭은 SAFETY 계수가 간격을 흡수) */
+function scriptGapEm() {
+  return METRICS ? T.METRIC.SCRIPT_GAP_EM : 0;
+}
+/** 한 줄 문구의 폭(em). 문단 첫머리부터 이어지는 문구로 보고 계열 경계 간격을 포함 */
 function textEm(s, bold) {
-  let n = 0;
-  for (const ch of String(s)) n += charEm(ch, bold);
-  return n;
+  return spanEm(s, bold, SCRIPT.WEAK).em;
 }
 /** widthIn 폭 상자에서 fontPt 로 차지하는 줄 수 */
 function estimateLines(str, widthIn, fontPt, bold) {
@@ -56,12 +91,16 @@ function estimateLines(str, widthIn, fontPt, bold) {
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
   for (const para of String(str).split("\n")) {
-    let cur = 0, n = 1;
+    // 약한 문자의 계열은 문단 첫머리부터 이어서 판정 (last: 직전 어절 끝 글자의 계열)
+    let cur = 0, n = 1, last = SCRIPT.WEAK;
     for (const w of para.split(" ")) {
-      const we = textEm(w, bold);
-      const need = we + (cur > 0 ? charEm(" ", bold) : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = we; } else cur += need;
+      const s = spanEm(w, bold, last);
+      // 앞 어절과 같은 줄에 이어 붙일 때만 공백과 계열 경계 간격을 더함 (줄을 바꾸면 줄 끝 공백과 간격은 줄 폭에 들지 않음)
+      const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+      const need = s.em + (cur > 0 ? charEm(" ", bold) + gap : 0);
+      if (cur > 0 && cur + need > cap) { n += 1; cur = s.em; } else cur += need;
       if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+      last = s.last;
     }
     lines += n;
   }

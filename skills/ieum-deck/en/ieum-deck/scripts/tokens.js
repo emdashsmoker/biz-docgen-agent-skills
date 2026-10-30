@@ -360,8 +360,16 @@ const METRIC = {
   EM_SPACE: 0.3,
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
-  SAFETY_METRIC: 0.9, // Margin for the renderer's automatic spacing around brackets and between Korean and Latin text
-  SAFETY_LINES: 0.94, // Margin for line count estimates (estimateLines). Text at 90-100% of the width mostly renders on one line in LibreOffice with NanumGothic. Width judgments (lineWidthIn, wordWidthIn) keep SAFETY_METRIC (0.94 everywhere wraps a shape label)
+  SAFETY_METRIC: 0.9, // Margin for width judgments (lineWidthIn, wordWidthIn). Raising it to 0.99 gives 70 build warnings on the two sample decks (recipe-demos, proposal-templates; box text fill warnings)
+  // Margin for line count estimates (estimateLines). Set against LibreOffice renders of the two sample decks after the width calculation took in the script boundary gap (SCRIPT_GAP_EM) and measured symbol widths
+  // 0.995: estimated and rendered line counts agree on all 297 table rows; about 1,740 non-overlapping text boxes outside tables show 0 overestimates and 0 underestimates
+  // 0.99 overestimates 4 text boxes whose text is 99.0-99.5% of the box width (ghost lines). The margin below 1.0 absorbs renders wider than the calculation
+  // Rendered width ÷ calculated width (one-line text of 1 inch or more): 12pt max 1.005, 11pt median 1.003 max 1.0065. 11pt text at 99.4-99.5% of the width lacks margin, so tables guard it with edge avoidance (templates.js EDGE_FACTORS)
+  SAFETY_LINES: 0.995,
+  // Gap (em) LibreOffice adds at every boundary where the script changes between Asian and Latin characters. About 1/5 of the NanumGothic text height (1.15em)
+  // Measured: 89 probe phrases (10 identical symbols in a row, alternating with Hangul, separated by a space) in table cells, converted to PDF with LibreOffice 24.2,
+  //       widths read from pdftotext -bbox-layout word coordinates. 12pt 0.228em, 11pt 0.227em. Widths calculated from this gap and the glyph widths match the render in all 267 cases (regular 12pt and 11pt, bold 12pt)
+  SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // Box size ratio against the donut chart plot diameter (for the center white circle)
   TABLE_LINE_HEIGHT: 1.35, // Line spacing judgment in table cells (measured NanumGothic spacing is higher than the body value)
 };
