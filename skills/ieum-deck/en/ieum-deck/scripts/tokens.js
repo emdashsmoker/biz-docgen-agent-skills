@@ -407,13 +407,14 @@ function scaled(layoutKey) {
   };
 }
 
-/** Writes limits.json (shared with lint.py) */
+/** Writes limits.json (shared with lint.py and check_layout.py) */
 function writeLimits(dir) {
   // Headline 1-line limit per page size (Hangul-equivalent characters): the 16:9 limit verified by rendering (LIMIT.headlineOneLine) scaled by the page size's headline width ratio
   // lint measures headline length in units of one Hangul character width, so the same unit is used (a value based on the average character width misses wraps to 2 lines on narrow page sizes)
   const baseW = scaled("16:9").headline.w;
   const HEADLINE_LINE_CHARS = Object.fromEntries(Object.keys(LAYOUTS).map((k) => [k, Math.floor((LIMIT.headlineOneLine * scaled(k).headline.w) / baseW)]));
-  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT } }, null, 1));
+  // METRIC: shared so check_layout judges overflow and word width with the same width model as the build (atoms.js): approximate glyph widths, script boundary gap, line count margin
+  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
 module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };

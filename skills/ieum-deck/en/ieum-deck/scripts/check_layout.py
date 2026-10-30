@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
-Checks: estimated text overflow (needed height from measured NanumGothic widths, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
+Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
         text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -56,24 +57,131 @@ def _own_small_boxes(record):
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 
+# Text width model: same rules as the build (charEm, scriptOf, spanEm, textEm, estimateLines in atoms.js). Constants are tokens.js METRIC, which the build writes to limits.json
+# Why: a check that measures widths differently from the build reports overflow for boxes the build sized correctly. The previous approximation (Hangul 1.0em, unmeasured characters 0.55em, no script boundary gap)
+#      counted lines differently from the render for 319 of 7,337 text box paragraphs of the two sample decks rendered in 4 page sizes (16:9, A4, 10.83, 4:3),
+#      and in 43 of 46 overflow FAILs the rendered text stayed within 0.02 inch of the box.
+#      With this model 41 paragraphs differ, and 7 of the 10 overflow FAILs do not overflow in the render (all 7 match the rendered line count; the gap comes from the box inset and line height calculation)
+METRIC = LIM.get("METRIC", {})
+# The script boundary gap (em) is a measured NanumGothic value, so it applies only with the measured width file (the SAFETY factor absorbs the gap for approximate widths)
+GAP_EM = METRIC.get("SCRIPT_GAP_EM", 0.227) if FM else 0.0
+LINE_SAFETY = METRIC.get("SAFETY_LINES", 0.995) if FM else METRIC.get("SAFETY", 0.92)  # Margin for line count estimates
+# Approximate widths (em) without the measured width file: Hangul class and full-width symbols, other characters, space
+EM_HANGUL, EM_LATIN, EM_SPACE = METRIC.get("EM_HANGUL", 1.0), METRIC.get("EM_LATIN", 0.55), METRIC.get("EM_SPACE", 0.3)
+WEAK, LATIN, ASIAN = 0, 1, 2  # Character script classes
 
-def is_hanja(ch):
+
+def is_hanja(c):
     """Hanja code ranges: unified ideographs, extension A, compatibility ideographs (the range Korean input methods use for homographs)"""
-    return "\u4e00" <= ch <= "\u9fff" or "\u3400" <= ch <= "\u4dbf" or "\uf900" <= ch <= "\ufaff"
+    return 0x4E00 <= c <= 0x9FFF or 0x3400 <= c <= 0x4DBF or 0xF900 <= c <= 0xFAFF
+
+
+def is_wide_symbol(c):
+    """Full-width symbols: arrows, box drawing, shapes (○ ● ◐ □ ■), misc symbols, ※"""
+    return 0x2190 <= c <= 0x21FF or 0x2500 <= c <= 0x27BF or c == 0x203B
+
+
+def is_hangul_jamo(c):
+    """Hangul compatibility jamo (ㄱ, ㅏ, ㆍ)"""
+    return 0x3130 <= c <= 0x318F
+
+
+def char_em(ch, bold):
+    """Character width (em). Looks up measured keys (ASCII and × ÷ ± · 〉 … “ ” ‘ ’), then the Hangul syllable, CJK punctuation, full-width and enclosed classes
+    Hanja, full-width symbols, Hangul compatibility jamo and Roman numerals (Ⅰ-Ⅹ, ⅰ-ⅹ) take the Hangul width, everything else other. Without the measured width file, the tokens.js approximate widths"""
+    c = ord(ch)
+    if FM:
+        m = FM["bold" if bold else "regular"]
+        if ch in m: return m[ch]
+        if 0xAC00 <= c <= 0xD7A3: return m["hangul"]
+        if 0x3000 <= c <= 0x303F: return m["cjkpunct"]
+        if 0xFF00 <= c <= 0xFFEF: return m["fullwidth"]
+        if 0x2460 <= c <= 0x24FF: return m["enclosed"]
+        if is_hanja(c) or is_wide_symbol(c) or is_hangul_jamo(c) or 0x2160 <= c <= 0x2179: return m["hangul"]
+        return m["other"]
+    if ch == " ": return EM_SPACE
+    wide = 0xAC00 <= c <= 0xD7A3 or 0x3000 <= c <= 0x303F or 0xFF00 <= c <= 0xFFEF or is_hanja(c) or 0x2460 <= c <= 0x24FF or is_hangul_jamo(c) or is_wide_symbol(c)
+    return EM_HANGUL if wide else EM_LATIN
+
+
+def script_of(c):
+    """Character script class. Spaces and control characters are weak, up to Latin-1 is Latin, Hangul syllables, compatibility jamo, CJK punctuation, full-width forms and Hanja are Asian, other symbols are weak"""
+    if c <= 0x20 or c == 0xA0: return WEAK
+    if c <= 0xFF: return LATIN
+    if 0xAC00 <= c <= 0xD7A3 or is_hangul_jamo(c) or 0x3000 <= c <= 0x303F or 0xFF00 <= c <= 0xFFEF or is_hanja(c): return ASIAN
+    return WEAK
+
+
+def glyphs(runs, ref_pt):
+    """Expands runs (text, size pt, bold) into per-character (character, width em) pairs. Runs of another size convert to em of ref_pt (the same size gives a factor of 1, so the values equal the build calculation)"""
+    return [(ch, char_em(ch, bold) * (pt / ref_pt)) for txt, pt, bold in runs for ch in txt]
+
+
+def span_em(gl, prev=WEAK):
+    """Width (em) of a character list and the scripts of its first and last characters. prev is the script of the character right before it (WEAK at the start of a paragraph)
+    A weak character takes the script of the previous character, Latin at the start of a paragraph. A gap is added between characters wherever the script changes (the caller judges the gap between the preceding character and the first character)"""
+    em, cur, first = 0.0, prev, WEAK
+    for ch, w in gl:
+        sc = script_of(ord(ch)) or cur or LATIN
+        if first and sc != cur: em += GAP_EM
+        em += w
+        if not first: first = sc
+        cur = sc
+    return em, first, cur
 
 
 def text_width_in(txt, pt, bold):
-    """Estimates string width (inches) from measured NanumGothic widths. Unmeasured characters: Hangul, Hanja and full-width symbols (arrows, shapes, ※) 1.0em, others 0.55em"""
-    tbl = (FM or {}).get("bold" if bold else "regular", {})
-    em = 0.0
-    for ch in txt:
-        if ch in tbl:
-            em += tbl[ch]
-        elif "\uac00" <= ch <= "\ud7a3" or is_hanja(ch) or "\u2190" <= ch <= "\u21ff" or "\u2500" <= ch <= "\u27bf" or ch == "\u203b":
-            em += 1.0
+    """Width (inches) of one-line text. Equals the build's textEm × pt / 72 (text running from the start of a paragraph, including script boundary gaps)"""
+    return span_em(glyphs([(txt, pt, bold)], pt))[0] * pt / 72
+
+
+def para_runs(p):
+    """Runs of a paragraph (text, size pt, bold). 18pt when the size is unset"""
+    return [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
+
+
+def para_width_in(runs):
+    """Width (inches) of a paragraph set on one line. Scripts carry across run boundaries (includes the gap between '36' and '억원', which finalize splits for the accent color)"""
+    ref = max(pt for _, pt, _ in runs)
+    return span_em(glyphs(runs, ref))[0] * ref / 72
+
+
+def words_of(gl):
+    """Splits a character list into space-delimited words. List of (word characters, width em of the preceding space); consecutive spaces give empty words (same as the build's split(" "))"""
+    out, word, space = [], [], 0.0
+    for ch, w in gl:
+        if ch == " ":
+            out.append((word, space))
+            word, space = [], w
         else:
-            em += 0.55
-    return em * pt / 72
+            word.append((ch, w))
+    out.append((word, space))
+    return out
+
+
+# Why word wrapping: ceil(width ÷ line width) ignores the space left at line ends, so it counts too few lines (the direction that misses overflow)
+#     Paragraphs whose line count differs from the render among the 7,337 text box paragraphs above: ceil 122 (all under), word wrapping 41
+#     (the 41 are 18 inner text areas of diamonds, chevrons and ellipses and 23 edge cases with text at 99.5% of the line width or more, the same differences as the build estimate)
+def wrap_lines(runs, width_in):
+    """Number of lines a paragraph takes at width_in and the width (inches) of its last line. Same word wrapping as the build's estimateLines
+    Lines break at spaces and a word wider than the line breaks in the middle. The space and the script boundary gap are added only when a word joins the previous word on the same line (a trailing space and gap do not count toward the line width)"""
+    ref = max(pt for _, pt, _ in runs)
+    cap = width_in * 72 / ref * LINE_SAFETY
+    cur, n, last = 0.0, 1, WEAK
+    for word, space in words_of(glyphs(runs, ref)):
+        em, first, end = span_em(word, last)
+        gap = GAP_EM if first and last and first != last else 0
+        need = em + (space + gap if cur > 0 else 0)
+        if cur > 0 and cur + need > cap:
+            n += 1
+            cur = em
+        else:
+            cur += need
+        if cur > cap:
+            n += math.floor(cur / cap)
+            cur = cur % cap
+        last = end
+    return n, cur * ref / 72
 
 
 WORD_FIT_TOL = 0.02  # Tolerance for word width comparison (inches)
@@ -111,11 +219,10 @@ def overflow_estimate(sh):
     inner_w = max(0.1, w - l - r)
     need = 0.0
     for p in tf.paragraphs:
-        runs = [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
+        runs = para_runs(p)
         if not runs:
             continue
         pt = max(x[1] for x in runs)
-        width = sum(text_width_in(x[0], x[1], x[2]) for x in runs)
         # Bulleted paragraphs lose width by their indent
         pxml = p._p.xml
         indent = 0.0
@@ -123,17 +230,16 @@ def overflow_estimate(sh):
             pr = p._p.find(NSA + "pPr")
             indent = int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
         eff_w = max(0.1, inner_w - indent)
-        lines = max(1, int(width / eff_w) + (1 if width % eff_w > 0.02 else 0)) if wrap else 1
+        lines = wrap_lines(runs, eff_w)[0] if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
         need += lines * pt * 1.2 / 72 + (int(spc.get("val")) / 100 / 72 if spc is not None else 0)
     # PowerPoint shows short labels without line breaks centered and ignores box insets, so compare against the height with insets included
     lines_total = 0
     for p in tf.paragraphs:
-        runs = [(r.text, r.font.size.pt if r.font.size else 18, bool(r.font.bold)) for r in p.runs]
+        runs = para_runs(p)
         if not runs:
             continue
-        width = sum(text_width_in(x[0], x[1], x[2]) for x in runs)
-        lines_total += max(1, int(width / inner_w) + (1 if width % inner_w > 0.02 else 0)) if wrap else 1
+        lines_total += wrap_lines(runs, inner_w)[0] if wrap else 1
     paras_n = sum(1 for p in tf.paragraphs if p.runs)
     if lines_total <= paras_n:
         return need, h, wrap
@@ -224,8 +330,8 @@ def main():
                     # Area actually covered by glyphs (for icon overlap)
                     ink_w = 0.0
                     for p in tf.paragraphs:
-                        runs = [(rr.text, rr.font.size.pt if rr.font.size else 18, bool(rr.font.bold)) for rr in p.runs]
-                        if runs: ink_w = max(ink_w, sum(text_width_in(x[0], x[1], x[2]) for x in runs))
+                        runs = para_runs(p)
+                        if runs: ink_w = max(ink_w, para_width_in(runs))
                     # Reflect the horizontal position of glyphs by alignment
                     # Left and right box insets hold no glyphs, so exclude them (covers slides that reserve number badge space as insets)
                     bp = tf._txBody.find(NSA + "bodyPr")
@@ -247,18 +353,17 @@ def main():
                     # Glyph area per line (one rectangle per line avoids misjudgments caused by one long line in multi-line boxes)
                     lines_box, cur = [], iy0
                     for p in tf.paragraphs:
-                        runs = [(rr.text, rr.font.size.pt if rr.font.size else 18, bool(rr.font.bold)) for rr in p.runs]
+                        runs = para_runs(p)
                         if not runs: continue
                         pt = max(v[1] for v in runs)
                         lh = pt * 1.2 / 72
                         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
                         cur += int(spc.get("val")) / 100 / 72 if spc is not None else 0
-                        width = sum(text_width_in(v[0], v[1], v[2]) for v in runs)
-                        nline = max(1, int(width / inner_w) + (1 if width % inner_w > 0.02 else 0))
+                        nline, last_w = wrap_lines(runs, inner_w)
                         pal = str(p.alignment) if p.alignment is not None else None
                         for k in range(nline):
-                            lw = min(inner_w, (width - k * inner_w) if nline > 1 else width) + 0.1
-                            lw = max(0.05, min(inner_w, lw))
+                            # Lines before the last line fill the line width
+                            lw = max(0.05, min(inner_w, (inner_w if k < nline - 1 else last_w) + 0.1))
                             if pal == "RIGHT (3)": lx = inner_x + inner_w - lw
                             elif pal == "CENTER (2)": lx = inner_x + (inner_w - lw) / 2
                             else: lx = inner_x

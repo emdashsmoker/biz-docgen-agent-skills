@@ -137,5 +137,17 @@
   ],
   "HINT": "밝은 색은 본문 글자를 얹는 키(navyPastel2, navyRamp 3-4번째, 틴트)에, 짙은 색은 흰 글자를 얹는 키(navy, navyDeep, navyPastel, textMuted)에 지정",
   "TEXT_DARK": "333333"
+ },
+ "METRIC": {
+  "EM_HANGUL": 1,
+  "EM_LATIN": 0.55,
+  "EM_SPACE": 0.3,
+  "LINE_HEIGHT": 1.2,
+  "SAFETY": 0.92,
+  "SAFETY_METRIC": 0.9,
+  "SAFETY_LINES": 0.995,
+  "SCRIPT_GAP_EM": 0.227,
+  "DONUT_PLOT": 0.9,
+  "TABLE_LINE_HEIGHT": 1.35
  }
 }

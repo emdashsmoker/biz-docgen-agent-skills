@@ -407,13 +407,14 @@ function scaled(layoutKey) {
   };
 }
 
-/** limits.json 기록 (lint.py 와 공유) */
+/** limits.json 기록 (lint.py, check_layout.py 와 공유) */
 function writeLimits(dir) {
   // 판형별 헤드라인 1줄 상한(한글 환산 글자 수): 렌더링으로 검증한 16:9 상한(LIMIT.headlineOneLine)을 판형의 헤드라인 폭 비율로 환산
   // lint 가 헤드라인 길이를 한글 1자 폭 단위로 재므로 같은 단위를 씀 (평균 글자 폭 기준 값은 좁은 판형에서 2줄 넘김을 놓침)
   const baseW = scaled("16:9").headline.w;
   const HEADLINE_LINE_CHARS = Object.fromEntries(Object.keys(LAYOUTS).map((k) => [k, Math.floor((LIMIT.headlineOneLine * scaled(k).headline.w) / baseW)]));
-  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT } }, null, 1));
+  // METRIC: check_layout 이 빌드(atoms.js)와 같은 폭 모델(글자 폭 근사, 계열 경계 간격, 줄 수 여유)로 넘침과 어절 폭을 판정하도록 공유
+  fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
 module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };
