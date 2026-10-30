@@ -225,36 +225,59 @@ const linesAt = (xs, w, f, sz) => xs.map((x) => A.estimateLines(x.t, Math.max(0.
 const sameLines = (a, b) => a.every((n, k) => n === b[k]);
 /** 두 폭 계수에서 줄 수가 갈리는 열인지 (경계 구간) */
 const isEdgeCol = (xs, w, sz) => !sameLines(linesAt(xs, w, EDGE_FACTORS[0], sz), linesAt(xs, w, EDGE_FACTORS[1], sz));
-/** 경계 구간 회피. 경계 구간 열은 다른 열에서 줄 수가 바뀌지 않는 폭을 EDGE_STEP 씩 가져와 넓힘
- *  가져올 폭이 모자라면 줄 수가 하나로 정해질 때까지 그 열을 좁히고 남는 폭은 다른 열에 폭 비례로 나눔
+// 어절 안 줄바꿈 회피. 줄 끝에 걸린 어절을 렌더러가 '○○|억원', '(기|업)' 처럼 나누는 열(check_layout 경고와 같은 계산 폭)은 그 어절이 윗줄에 들어가거나 통째로 다음 줄로 가는 폭으로 옮김
+// Why: A4, 10.83, 4:3 견본 렌더의 어절 안 줄바꿈 117건 중 36건이 표 셀. 이 회피 뒤 9건이 남고 9건 모두 check_layout 경고 위치와 같음
+//      렌더 폭/계산 폭 비율은 견본 2종 4개 판형에서 1% 분위수 0.990, 최대 1.007 이므로 나뉘던 열은 계산 폭 ±1% 에서도 나뉘지 않는 폭으로 옮김
+//      계산 폭에서만 피하면 렌더 폭 오차로 16건(15건은 경고 없음), ±3%(경계 구간 계수)로 피하면 옮길 폭이 모자라 20건이 남음. 16:9 견본은 나뉘는 열이 없어 열 폭 그대로
+const SPLIT_BAND = 0.01;
+// 어절 안 줄바꿈을 피하려고 열을 좁힐 때 남는 폭을 받는 다른 열의 폭 증가 상한 (비율)
+// Why: 견본 좁은 판형에서 이 좁힘 14건 중 13건은 다른 열이 0.7-16% 넓어짐. 2열 표에서 짧은 라벨 열이 85% 넓어지는 1건은 표 균형이 깨져 좁히지 않음
+const SPLIT_GROW_MAX = 0.25;
+const hasSplit = (xs, w, sz, f) => xs.some((x) => A.wordSplits(x.t, Math.max(0.3, w - x.pad) * (f || 1), sz, x.b).length > 0);
+const hasNearSplit = (xs, w, sz) => [1, 1 - SPLIT_BAND, 1 + SPLIT_BAND].some((f) => hasSplit(xs, w, sz, f));
+/** 경계 구간과 어절 안 줄바꿈 회피. 해당 열은 다른 열에서 줄 수가 바뀌지 않고 어절 안 줄바꿈이 생기지 않는 폭을 EDGE_STEP 씩 가져와 넓힘
+ *  가져올 폭이 모자라면 줄 수가 하나로 정해지고 어절 안 줄바꿈이 없어질 때까지 그 열을 좁히고 남는 폭은 다른 열에 폭 비례로 나눔
+ *  어절 안 줄바꿈을 피할 폭이 없으면 경계 구간만 피함
  *  같은 폭으로 맞춘 자료 열 묶음은 넓히는 대상에서 빼고, 폭을 내줄 때는 묶음의 모든 열이 같은 폭씩 내줌 (묶음 안 같은 폭 유지)
  *  cw 를 직접 고침 */
 function settleEdgeCols(cw, texts, sz, minW, grouped) {
   const inGroup = new Set(grouped.flat());
   const units = [...grouped, ...cw.map((_, j) => [j]).filter(([j]) => !inGroup.has(j))];
-  const steady = (j, w) => EDGE_FACTORS.every((f) => sameLines(linesAt(texts[j], cw[j], f, sz), linesAt(texts[j], w, f, sz)));
-  const canGive = (u) => u.every((j) => cw[j] - EDGE_STEP >= minW[j] && !isEdgeCol(texts[j], cw[j], sz) && steady(j, cw[j] - EDGE_STEP));
+  const wasSplit = new Set(); // 어절 안 줄바꿈이 있던 열 (계산 폭 ±SPLIT_BAND 에서도 나뉘지 않게 둠)
+  const splitAt = (j, w) => (wasSplit.has(j) ? hasNearSplit(texts[j], w, sz) : hasSplit(texts[j], w, sz));
+  const unsettled = (j, w) => isEdgeCol(texts[j], w, sz) || splitAt(j, w);
+  const steady = (j, w) => EDGE_FACTORS.every((f) => sameLines(linesAt(texts[j], cw[j], f, sz), linesAt(texts[j], w, f, sz))) && !splitAt(j, w);
+  const canGive = (u) => u.every((j) => cw[j] - EDGE_STEP >= minW[j] && !unsettled(j, cw[j]) && steady(j, cw[j] - EDGE_STEP));
+  /** 열 i 를 bad 가 아닌 폭으로 옮김. 옮기지 못하면 cw 그대로 두고 false */
+  const move = (i, bad, growMax) => {
+    const before = cw.slice();
+    while (bad(cw[i])) {
+      // 내줄 수 있는 열(묶음) 가운데 가장 넓은 쪽에서 가져옴
+      const donors = units.filter((u) => !u.includes(i) && canGive(u));
+      if (!donors.length) break;
+      const widest = donors.reduce((a, b) => (Math.min(...b.map((j) => cw[j])) > Math.min(...a.map((j) => cw[j])) ? b : a));
+      widest.forEach((j) => { cw[j] -= EDGE_STEP; cw[i] += EDGE_STEP; });
+    }
+    if (!bad(cw[i])) return true;
+    before.forEach((v, j) => { cw[j] = v; });
+    const rest = sumOf(cw) - cw[i];
+    let w = cw[i];
+    while (w - EDGE_STEP >= minW[i] && bad(w) && (cw[i] - w + EDGE_STEP) / rest <= growMax) w -= EDGE_STEP;
+    if (bad(w)) return false; // 하한까지 좁혀도 갈리거나 나뉘면 원래 폭 유지
+    const freed = cw[i] - w;
+    cw.forEach((v, j) => { if (j !== i) cw[j] += (freed * v) / rest; });
+    cw[i] = w;
+    return true;
+  };
   for (let pass = 0; pass < EDGE_PASSES; pass++) {
     let changed = false;
     for (let i = 0; i < cw.length; i++) {
-      if (inGroup.has(i) || !texts[i].length || !isEdgeCol(texts[i], cw[i], sz)) continue;
+      if (inGroup.has(i) || !texts[i].length) continue;
+      if (hasSplit(texts[i], cw[i], sz)) wasSplit.add(i);
+      if (!unsettled(i, cw[i])) continue;
       changed = true;
-      const before = cw.slice();
-      while (isEdgeCol(texts[i], cw[i], sz)) {
-        // 내줄 수 있는 열(묶음) 가운데 가장 넓은 쪽에서 가져옴
-        const donors = units.filter((u) => !u.includes(i) && canGive(u));
-        if (!donors.length) break;
-        const widest = donors.reduce((a, b) => (Math.min(...b.map((j) => cw[j])) > Math.min(...a.map((j) => cw[j])) ? b : a));
-        widest.forEach((j) => { cw[j] -= EDGE_STEP; cw[i] += EDGE_STEP; });
-      }
-      if (!isEdgeCol(texts[i], cw[i], sz)) continue;
-      before.forEach((v, j) => { cw[j] = v; });
-      let w = cw[i];
-      while (w - EDGE_STEP >= minW[i] && isEdgeCol(texts[i], w, sz)) w -= EDGE_STEP;
-      if (isEdgeCol(texts[i], w, sz)) continue; // 하한까지 좁혀도 갈리면 원래 폭 유지
-      const freed = cw[i] - w, rest = sumOf(cw) - cw[i];
-      cw.forEach((v, j) => { if (j !== i) cw[j] += (freed * v) / rest; });
-      cw[i] = w;
+      if (!wasSplit.has(i)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
+      else if (!move(i, (w) => unsettled(i, w), SPLIT_GROW_MAX)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
     }
     if (!changed) break;
   }

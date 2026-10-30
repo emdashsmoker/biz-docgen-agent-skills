@@ -201,6 +201,12 @@ function estimateLines(str, widthIn, fontPt, bold) {
   for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
 }
+/** widthIn 폭 상자에서 줄 끝에 걸린 어절을 LibreOffice 가 나누는 곳 [{ word, cut }]. estimateLines 와 같은 줄바꿈 계산 (줄 폭보다 넓은 어절은 제외) */
+function wordSplits(str, widthIn, fontPt, bold) {
+  if (!str) return [];
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
+  return String(str).split("\n").flatMap((para) => wrapParagraph(para, cap, bold).splits);
+}
 const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 판정이 두 줄로 바뀌지 않게 두는 여유 (인치)
 /** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 판정하는 폭보다 더 보수적인 폭 기준 (SAFETY_METRIC. 이 폭이면 estimateLines 도 1줄로 판정) */
 function lineWidthIn(str, pt, bold) {
@@ -1344,4 +1350,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

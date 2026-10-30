@@ -201,6 +201,12 @@ function estimateLines(str, widthIn, fontPt, bold) {
   for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
 }
+/** Places where LibreOffice splits a word caught at the line end in a box of width widthIn [{ word, cut }]. Same line breaking as estimateLines (words wider than the line are excluded) */
+function wordSplits(str, widthIn, fontPt, bold) {
+  if (!str) return [];
+  const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
+  return String(str).split("\n").flatMap((para) => wrapParagraph(para, cap, bold).splits);
+}
 const LINE_FIT_EPS = 0.01; // Margin so width rounding does not turn a one-line judgment into two lines (inches)
 /** Minimum width (inches) that fits the text on one line. A more conservative width criterion than the width estimateLines judges as 1 line (SAFETY_METRIC. estimateLines also counts 1 line at this width) */
 function lineWidthIn(str, pt, bold) {
@@ -1344,4 +1350,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

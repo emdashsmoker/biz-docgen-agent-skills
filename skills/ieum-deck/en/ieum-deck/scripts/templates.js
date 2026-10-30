@@ -225,36 +225,60 @@ const linesAt = (xs, w, f, sz) => xs.map((x) => A.estimateLines(x.t, Math.max(0.
 const sameLines = (a, b) => a.every((n, k) => n === b[k]);
 /** Whether line counts differ between the two width factors (edge zone) */
 const isEdgeCol = (xs, w, sz) => !sameLines(linesAt(xs, w, EDGE_FACTORS[0], sz), linesAt(xs, w, EDGE_FACTORS[1], sz));
-/** Edge avoidance. An edge zone column takes width in EDGE_STEP units from other columns whose line counts do not change
- *  When not enough width can be taken, the column narrows until its line count is settled and the freed width goes to the other columns in proportion to their widths
+// Avoiding line breaks inside a word. A column where the renderer splits a word caught at the line end, as in '○○|억원' or '(기|업)' (same computed width as the check_layout warning),
+// moves to a width where that word fits on the upper line or moves whole to the next line
+// Why: of 117 rendered breaks inside a word in the A4, 10.83 and 4:3 sample renders, 36 are in table cells. 9 remain after this avoidance, all at check_layout warning positions
+//      The rendered/computed width ratio is 0.990 at the 1st percentile and 1.007 at most over both samples and four page sizes, so a column that had a split moves to a width with no split at ±1% of the computed width
+//      Avoiding splits only at the computed width leaves 16 (15 without a warning) through rendering error; avoiding them at ±3% (edge zone factors) leaves 20 for lack of width to move. 16:9 samples have no splitting column, so their widths stay as they were
+const SPLIT_BAND = 0.01;
+// Growth cap (ratio) for the other columns that receive the freed width when a column narrows to avoid a break inside a word
+// Why: in the narrow sample page sizes, 13 of 14 such narrowings widen the other columns by 0.7-16%. The one that widens a short label column by 85% in a two-column table unbalances the table, so it does not narrow
+const SPLIT_GROW_MAX = 0.25;
+const hasSplit = (xs, w, sz, f) => xs.some((x) => A.wordSplits(x.t, Math.max(0.3, w - x.pad) * (f || 1), sz, x.b).length > 0);
+const hasNearSplit = (xs, w, sz) => [1, 1 - SPLIT_BAND, 1 + SPLIT_BAND].some((f) => hasSplit(xs, w, sz, f));
+/** Edge and in-word break avoidance. Such a column takes width in EDGE_STEP units from other columns whose line counts do not change and that gain no break inside a word
+ *  When not enough width can be taken, the column narrows until its line count is settled and no word is split, and the freed width goes to the other columns in proportion to their widths
+ *  When no width avoids the break inside a word, only the edge zone is avoided
  *  Equal-width data column groups are not widened, and when giving width every column in the group gives the same amount (keeps equal widths within the group)
  *  Modifies cw in place */
 function settleEdgeCols(cw, texts, sz, minW, grouped) {
   const inGroup = new Set(grouped.flat());
   const units = [...grouped, ...cw.map((_, j) => [j]).filter(([j]) => !inGroup.has(j))];
-  const steady = (j, w) => EDGE_FACTORS.every((f) => sameLines(linesAt(texts[j], cw[j], f, sz), linesAt(texts[j], w, f, sz)));
-  const canGive = (u) => u.every((j) => cw[j] - EDGE_STEP >= minW[j] && !isEdgeCol(texts[j], cw[j], sz) && steady(j, cw[j] - EDGE_STEP));
+  const wasSplit = new Set(); // Columns that had a break inside a word (kept free of splits at ±SPLIT_BAND of the computed width too)
+  const splitAt = (j, w) => (wasSplit.has(j) ? hasNearSplit(texts[j], w, sz) : hasSplit(texts[j], w, sz));
+  const unsettled = (j, w) => isEdgeCol(texts[j], w, sz) || splitAt(j, w);
+  const steady = (j, w) => EDGE_FACTORS.every((f) => sameLines(linesAt(texts[j], cw[j], f, sz), linesAt(texts[j], w, f, sz))) && !splitAt(j, w);
+  const canGive = (u) => u.every((j) => cw[j] - EDGE_STEP >= minW[j] && !unsettled(j, cw[j]) && steady(j, cw[j] - EDGE_STEP));
+  /** Moves column i to a width that is not bad. Returns false and leaves cw unchanged when it cannot */
+  const move = (i, bad, growMax) => {
+    const before = cw.slice();
+    while (bad(cw[i])) {
+      // Take from the widest column (group) that can give
+      const donors = units.filter((u) => !u.includes(i) && canGive(u));
+      if (!donors.length) break;
+      const widest = donors.reduce((a, b) => (Math.min(...b.map((j) => cw[j])) > Math.min(...a.map((j) => cw[j])) ? b : a));
+      widest.forEach((j) => { cw[j] -= EDGE_STEP; cw[i] += EDGE_STEP; });
+    }
+    if (!bad(cw[i])) return true;
+    before.forEach((v, j) => { cw[j] = v; });
+    const rest = sumOf(cw) - cw[i];
+    let w = cw[i];
+    while (w - EDGE_STEP >= minW[i] && bad(w) && (cw[i] - w + EDGE_STEP) / rest <= growMax) w -= EDGE_STEP;
+    if (bad(w)) return false; // Keep the original width if the counts still differ or a word is still split at the minimum
+    const freed = cw[i] - w;
+    cw.forEach((v, j) => { if (j !== i) cw[j] += (freed * v) / rest; });
+    cw[i] = w;
+    return true;
+  };
   for (let pass = 0; pass < EDGE_PASSES; pass++) {
     let changed = false;
     for (let i = 0; i < cw.length; i++) {
-      if (inGroup.has(i) || !texts[i].length || !isEdgeCol(texts[i], cw[i], sz)) continue;
+      if (inGroup.has(i) || !texts[i].length) continue;
+      if (hasSplit(texts[i], cw[i], sz)) wasSplit.add(i);
+      if (!unsettled(i, cw[i])) continue;
       changed = true;
-      const before = cw.slice();
-      while (isEdgeCol(texts[i], cw[i], sz)) {
-        // Take from the widest column (group) that can give
-        const donors = units.filter((u) => !u.includes(i) && canGive(u));
-        if (!donors.length) break;
-        const widest = donors.reduce((a, b) => (Math.min(...b.map((j) => cw[j])) > Math.min(...a.map((j) => cw[j])) ? b : a));
-        widest.forEach((j) => { cw[j] -= EDGE_STEP; cw[i] += EDGE_STEP; });
-      }
-      if (!isEdgeCol(texts[i], cw[i], sz)) continue;
-      before.forEach((v, j) => { cw[j] = v; });
-      let w = cw[i];
-      while (w - EDGE_STEP >= minW[i] && isEdgeCol(texts[i], w, sz)) w -= EDGE_STEP;
-      if (isEdgeCol(texts[i], w, sz)) continue; // Keep the original width if the counts still differ at the minimum
-      const freed = cw[i] - w, rest = sumOf(cw) - cw[i];
-      cw.forEach((v, j) => { if (j !== i) cw[j] += (freed * v) / rest; });
-      cw[i] = w;
+      if (!wasSplit.has(i)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
+      else if (!move(i, (w) => unsettled(i, w), SPLIT_GROW_MAX)) move(i, (w) => isEdgeCol(texts[i], w, sz), Infinity);
     }
     if (!changed) break;
   }
