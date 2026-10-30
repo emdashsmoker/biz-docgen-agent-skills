@@ -23,7 +23,7 @@
 - 섹션대장 일치: ledger.slides[].id 와 storyboard 슬라이드 id 의 목록과 순서 일치 (FAIL). 나머지 필드는 대조하지 않음
 - 제도 워딩: meta.track (rnd | mgmt | general) 과 다른 열의 용어 출현 WARN. 비R&D 에서 methods 예시 모듈명 문자 일치 WARN
 - 번호와 기호 중복: section 이 secNo 를 반복하거나 불릿 슬롯 항목이 기호로 시작하면 WARN
-- 커스텀 슬라이드 치환 분량: 치환 문구가 상자를 넘치면 WARN (meta.ownDeck 등록 시. 상자 여백, 아이콘 겹침, 판형 배율, 빌더가 줄인 문단 간격을 반영한 줄 수와 높이)
+- 커스텀 슬라이드 치환 분량: 빌더가 글꼴을 본문 하한(11pt)까지 줄이고 간격을 조정한 뒤에도 치환 문구가 상자를 넘치면 WARN (meta.ownDeck 등록 시. 상자 여백, 아이콘 겹침, 판형 배율을 반영한 줄 수와 높이)
 - 배경과 목적 근거: 근거 항목에 줄바꿈이 있으면 WARN (근거는 note 슬롯으로 옮겨 ※ 를 붙임)
 - 배경과 목적 분량: 리드 4개 초과이거나 리드와 근거 합계 12개 초과면 WARN
 - 표 빈 셀: 앞쪽 분류 열에 빈 셀이 2개 이상이고 merged 지정이 없으면 WARN
@@ -45,6 +45,8 @@ import json
 import os
 import re
 from collections import Counter
+from decimal import ROUND_HALF_UP, Decimal
+import math
 import sys
 from pathlib import Path
 from text_metrics import char_em, glyphs, span_em, wrap_lines  # 빌드와 같은 글 폭 모델 (같은 폴더의 공용 모듈)
@@ -56,11 +58,15 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
 HANGUL_RE = re.compile(r"[가-힣]")
-# 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn)와 tokens.js 의 값
+# 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 빌더(atoms.js 의 playOwn, shape, fitParas)가 정할 문단 간격과 글꼴 크기를 같은 규칙으로 계산한 뒤 렌더 높이로 잼
+# 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn, fitParas)와 tokens.js 의 값
 # Why: 견본 30장의 16:9 빌드에서 추출한 커스텀 슬라이드에 길이(원문의 0.6-3배)와 문자 구성(한글, 섞인 문구, 영문)이 다른 치환 문구를 넣어
 #      렌더한 2,052건(16:9, 4:3, 줄 간격 값을 지운 16:9)과 비교. 이전 판정(한글 1.0em, 그 외 0.55em, 상자 폭 - 0.5인치, 아이콘 장표 폭 x0.75,
 #      줄 높이 1.15em, 상자 높이 125% 초과, 판형 배율 없음)은 넘친 306건 중 91건을 놓치고 넘치지 않은 100건을 경고함 (치환 문단 3,415개 중 693개의 줄 수가 렌더와 다름)
-#      아래 값으로 재면 놓친 넘침 5건, 넘치지 않았는데 경고한 110건 (110건 모두 빌더가 글꼴을 줄여 상자에 넣은 경우), 줄 수가 렌더와 다른 문단 31개
+#      줄 높이를 고친 빌더(atoms.js paraLineIn, insetSlackIn)의 렌더에서 넘친 199건과 비교하면, 원문 글꼴 크기로 재는 판정은 놓친 넘침 1건,
+#      넘치지 않았는데 경고한 213건 (213건 모두 빌더가 글꼴을 줄여 상자에 넣은 경우). 빌더의 간격 조정과 글꼴 축소까지 계산하면 놓친 넘침 8건, 경고 3건,
+#      줄 수가 렌더와 다른 문단 3,446개 중 27개. 놓친 8건 중 4건은 렌더 넘침 0.021인치를 0.016인치로 잰 경계, 4건은 줄 수 차이
+#      모든 문단의 줄 간격을 1.3배로 바꾼 같은 견본(684건)에서는 놓친 넘침 2건, 경고 1건 (간격 조정을 빼고 재면 경고 64건)
 OWN_MG_DEFAULT_IN = (0.1, 0.05, 0.1, 0.05)  # 원문에 값이 없는 상자 여백 (좌, 상, 우, 하). atoms.js DEFAULT_MG_IN
 OWN_SMALL_BOX_W = 0.6  # 이 폭보다 좁은 상자는 여백 0 (tokens.js PANEL.SMALL_BOX_W)
 OWN_SHORT_CHEVRON = 1.6  # 폭이 높이의 이 배수보다 짧은 셰브론과 홈플레이트도 여백 0 (atoms.js shape)
@@ -70,14 +76,26 @@ OWN_SHORT_CHEVRON = 1.6  # 폭이 높이의 이 배수보다 짧은 셰브론과
 OWN_ICON_MAX, OWN_ICON_OVERLAP_IN, OWN_ICON_LEFT_IN, OWN_ICON_GAP_IN, OWN_ICON_KEEP = 0.95, 0.05, 0.2, 0.1, 0.5
 BULLET_INDENT_IN = 0.18  # 불릿 문단 들여쓰기 기본값 (tokens.js PARA.bulletIndentIn)
 OWN_BODY_PT = 12  # 글자 크기가 없는 문단의 크기 (tokens.js SIZE.body)
-# 빌더는 상자를 넘길 치환 문구의 문단 간격을 2pt 로, 줄 간격을 min(원문 줄 간격 또는 1.25, 1.05) 로 줄인 뒤 조판 (atoms.js playOwn)
-# 줄 간격 값을 지운 견본에서 넘친 70건은 모두 줄 간격 105% 로 조판됨
-OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC, OWN_UNSET_LN_SPC = 2, 1.05, 1.25
+OWN_UNSET_LN_SPC = 1  # 원문에 줄 간격이 없는 문단의 줄 간격 배수 (OOXML 기본값 100%, atoms.js OWN_LN_SPC_UNSET)
+# 빌더의 간격 조정 (atoms.js playOwn): 치환 문단의 줄 수를 원본 상자 폭(판형 배율 전, 아이콘과 겹치면 아이콘 앞 OWN_ICON_GAP_IN 까지이며 최소 OWN_ROUGH_MIN_W)에서
+# OWN_ROUGH_PAD_IN 과 불릿 들여쓰기를 뺀 폭, 굵기 없이 세고 문단 사이마다 OWN_ROUGH_GAP_IN 을 더해 높이를 대략 추정
+# 추정 높이가 상자 높이 x OWN_SPREAD_FILL 미만이면 둘째 문단부터 문단 간격을 (상자 높이 - OWN_SPREAD_PAD_IN - 추정 높이) / 문단 사이 수 x OWN_SPREAD_SHARE 로 넓힘 (OWN_SPREAD_PT 범위)
+# 상자 높이 - OWN_COMPACT_IN 을 넘으면 둘째 문단부터 문단 간격을 OWN_COMPACT_GAP_PT 로, 줄 간격을 OWN_COMPACT_LN_SPC 이하로 줄임
+OWN_ROUGH_PAD_IN, OWN_ROUGH_GAP_IN, OWN_ROUGH_MIN_W = 0.3, 0.075, 1
+OWN_SPREAD_FILL, OWN_SPREAD_PAD_IN, OWN_SPREAD_SHARE, OWN_SPREAD_PT = 0.8, 0.12, 0.8, (2.5, 10)
+OWN_COMPACT_IN, OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC = 0.08, 2, 1
+# 빌더의 글꼴 축소 (atoms.js shape, fitParas): 치환 문구가 상자 안쪽 높이와 여백 허용치(insetSlackIn)를 넘으면 모든 문단 글꼴에 같은 배율을 곱해
+# OWN_FIT_STEP 씩 낮추며 (OWN_FIT_MIN_SCALE 까지, 글꼴 하한 OWN_BODY_MIN) 하한에서도 넘치면 둘째 문단부터 문단 간격에 OWN_FIT_GAP_CUTS 를 차례로 곱함
+# 줄바꿈 없는 문단 OWN_FIT_KEEP_PARAS 개 이하는 줄이지 않음. 원문 크기가 하한보다 작은 치환 문구는 하한 크기로 넘칠 때 하한 크기로 커짐
+# 형제 상자 공통 축소율(atoms.js shrinkRatio)은 글꼴을 더 줄일 뿐 하한이 같으므로 넘침 판정에서 생략
+# 위 렌더의 빌드 XML 과 대조: 치환 상자 1,845개의 문단 간격과 줄 간격이 모두 같고, 글꼴 크기는 147개가 형제 축소율로 더 작고 3개가 0.1pt 큼 (반올림 순서)
+OWN_BODY_MIN = LIMITS.get("SIZE", {}).get("BODY_MIN", 11)  # 치환 문구의 글꼴 하한 (tokens.js SIZE.BODY_MIN)
+OWN_FIT_STEP, OWN_FIT_MIN_SCALE, OWN_FIT_GAP_CUTS, OWN_FIT_KEEP_PARAS, OWN_FIT_MIN_W = 0.04, 0.6, (0.6, 0.3, 0), 3, 0.05
 # 줄 높이(em): LibreOffice 24.2 에서 나눔고딕 줄 간격 100% 의 줄 높이. 위 렌더의 여러 줄 문단 135개가 1.199-1.202em 이고 줄 간격 0.8-1.5배에 비례
-# 이전 값 1.15em 으로 재면 놓친 넘침이 5건에서 38건으로 늘어남
+# 이 값으로 재면 놓친 넘침이 8건, 1.15em 으로 재면 32건. 빌더의 줄 높이(tokens.js METRIC.LINE_HEIGHT)와 같은 값
 LINE_PITCH_EM = 1.2
 # 글이 상자 가장자리를 이 폭(인치)보다 많이 벗어나면 넘침 (렌더 판정과 같은 기준)
-# 0.01 이면 놓친 넘침이 4건 줄고 경고가 13건 늘며 (글꼴 축소 없이 상자에 들어간 6건 포함), 0.03 이면 놓친 넘침이 33건 늘어남
+# 0.01 이면 놓친 넘침이 4건 줄고 경고가 5건 늘며, 0.03 이면 놓친 넘침이 20건 늘어남
 OWN_OVERFLOW_IN = 0.02
 # 템플릿과 블록의 고정 라벨 기본값 (build.js 의 labels.js 와 같은 표). meta.labels 의 키 검증에 사용
 LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
@@ -270,26 +288,86 @@ def own_icon_width(atoms, a, slots):
     return w
 
 
-def own_text_box(atoms, a, slots, sx, sy):
-    """치환 문구가 놓일 글 영역 (안쪽 폭, 상자 높이, 상 여백, 하 여백, 세로 정렬). atoms.js shape() 의 여백과 셰브론 꼭짓점 규칙"""
-    w, h = own_icon_width(atoms, a, slots) * sx, a["h"] * sy
+def js_fixed1(x):
+    """자바스크립트 Number.toFixed(1) 값 (이진 값 그대로 반올림하며 한가운데면 큰 쪽). 빌더가 글꼴 크기와 여백을 이 값으로 기록"""
+    return float(Decimal(x).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
+
+def own_text_box(a, w, h):
+    """치환 문구가 놓일 글 영역 (안쪽 폭, 상 여백, 하 여백). w, h 는 판형 배율을 곱한 상자 크기. atoms.js shape() 의 여백(0.1pt 단위로 기록)과 셰브론 꼭짓점 규칙"""
     mg = a.get("mg") if isinstance(a.get("mg"), list) and len(a["mg"]) == 4 else [None] * 4
-    mg = [OWN_MG_DEFAULT_IN[i] if v is None else v for i, v in enumerate(mg)]
+    mg = [js_fixed1((OWN_MG_DEFAULT_IN[i] if v is None else v) * 72) / 72 for i, v in enumerate(mg)]
     chevron = a.get("preset") in ("chevron", "homePlate")
     point = min(w, h) * (a["adj"] / 100000 if a.get("adj") is not None else 0.5) if chevron else 0
     if w < OWN_SMALL_BOX_W or (chevron and w < OWN_SHORT_CHEVRON * h):
         mg = [0, 0, 0, 0]
     inner_w = w - mg[0] - mg[2] - (2 * point if a.get("preset") == "chevron" else point)
-    return inner_w, h, mg[1], mg[3], a.get("va") or "middle"
+    return inner_w, mg[1], mg[3]
 
 
 def own_paras(src_paras, value):
-    """치환 문구의 문단 [(문구, 크기 pt, 굵게, 원문 문단)]. 줄바꿈마다 문단을 나누고 원문 문단 서식을 차례로 씀 (모자라면 마지막 서식 반복, atoms.js substitute)"""
+    """치환 문구의 문단. 원문 문단 속성(들여쓰기, 간격, 줄 간격)에 문구 t, 크기 sz(pt), 굵기 b 를 더한 사전
+    줄바꿈마다 문단을 나누고 원문 문단 서식을 차례로 씀 (모자라면 마지막 서식 반복, atoms.js substitute)"""
     out = []
     for i, line in enumerate(str(value).split("\n")):
         p = src_paras[min(i, len(src_paras) - 1)]
         r0 = next((r for r in p.get("runs", []) if not r.get("br")), {})
-        out.append((line, r0.get("sz") or OWN_BODY_PT, bool(r0.get("b")), p))
+        out.append({**{k: v for k, v in p.items() if k != "runs"}, "t": line, "sz": r0.get("sz") or OWN_BODY_PT, "b": bool(r0.get("b"))})
+    return out
+
+
+def own_spacing(atoms, a, w, paras):
+    """빌더가 문단 간격과 줄 간격을 조정한 문단 (atoms.js playOwn). w 는 아이콘 겹침으로 좁아진 원본 폭"""
+    icon = next((im for im in atoms if im.get("kind") == "image" and "x" in im and im["x"] < a["x"] + w and im["x"] + im["w"] > a["x"]
+                 and im["y"] < a["y"] + a["h"] and im["y"] + im["h"] > a["y"]), None)
+    eff_w = max(OWN_ROUGH_MIN_W, icon["x"] - a["x"] - OWN_ICON_GAP_IN) if icon else w
+    wrap_w = eff_w - OWN_ROUGH_PAD_IN - BULLET_INDENT_IN
+    need = sum(max(1, wrap_lines([(p["t"], p["sz"], False)], wrap_w)[0]) * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 for p in paras)
+    need += (len(paras) - 1) * OWN_ROUGH_GAP_IN
+    if len(paras) > 1 and need < a["h"] * OWN_SPREAD_FILL:
+        slack = (a["h"] - OWN_SPREAD_PAD_IN - need) / (len(paras) - 1) * 72
+        gap = js_fixed1(max(OWN_SPREAD_PT[0], min(OWN_SPREAD_PT[1], slack * OWN_SPREAD_SHARE)))
+        paras = [p if i == 0 else {**p, "spcBef": gap} for i, p in enumerate(paras)]
+    if need > a["h"] - OWN_COMPACT_IN:
+        paras = [{**p, "spcBef": p.get("spcBef") if i == 0 else OWN_COMPACT_GAP_PT, "lnSpc": min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)}
+                 for i, p in enumerate(paras)]
+    return paras
+
+
+def inset_slack(top, bottom, va):
+    """글이 상자 밖으로 나가지 않고 여백 안으로 넘칠 수 있는 높이(인치). 위 정렬은 아래 여백, 아래 정렬은 위 여백, 가운데 정렬은 작은 여백의 2배 (atoms.js insetSlackIn)"""
+    if va == "top":
+        return bottom
+    if va == "bottom":
+        return top
+    return 2 * min(top, bottom)
+
+
+def own_fit(paras, inner_w, inner_h, tol):
+    """빌더가 상자에 맞춘 문단 (atoms.js fitParas, 하한 OWN_BODY_MIN). 줄 높이는 1.2em x 줄 간격 배수이고 문단 간격은 모든 문단의 앞뒤 값을 더함"""
+    if inner_w <= OWN_FIT_MIN_W:
+        return paras
+
+    def lines(p, pt):
+        return wrap_lines([(p["t"], pt, p["b"])], inner_w - para_indent(p))[0]
+
+    def height(ps, scale, floor):
+        h = 0.0
+        for p in ps:
+            pt = max(floor, p["sz"] * scale)
+            h += max(1, lines(p, pt)) * pt * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + ((p.get("spcBef") or 0) + (p.get("spcAft") or 0)) / 72
+        return h
+
+    if len(paras) <= OWN_FIT_KEEP_PARAS and not any(lines(p, p["sz"]) > 1 for p in paras):
+        return paras
+    scale = 1.0
+    while scale > OWN_FIT_MIN_SCALE and height(paras, scale, OWN_BODY_MIN) > inner_h + tol:
+        scale -= OWN_FIT_STEP
+    out = paras if scale >= 0.999 else [{**p, "sz": max(OWN_BODY_MIN, js_fixed1(p["sz"] * scale))} for p in paras]
+    for cut in OWN_FIT_GAP_CUTS:
+        if height(out, 1.0, 0) <= inner_h + tol:
+            break
+        out = [p if i == 0 else {**p, "spcBef": math.floor((p.get("spcBef") or 0) * cut * 10 + 0.5) / 10} for i, p in enumerate(out)]
     return out
 
 
@@ -301,14 +379,13 @@ def para_indent(p):
 
 
 def own_text_height(paras, inner_w):
-    """빌더가 간격을 줄여 조판한 문단 묶음의 높이(인치)와 줄 수. 줄 수는 text_metrics.wrap_lines (빌드 estimateLines 와 같은 어절 단위 줄바꿈)
+    """빌더가 조판한 문단 묶음의 렌더 높이(인치)와 줄 수. 줄 수는 text_metrics.wrap_lines (빌드 estimateLines 와 같은 어절 단위 줄바꿈)
     문단 간격은 문단 사이에만 셈 (LibreOffice 는 첫 문단 앞 간격과 끝 문단 뒤 간격을 글 상자 안에 두지 않음. 렌더로 확인)"""
     height, lines = 0.0, 0
-    for i, (line, pt, bold, p) in enumerate(paras):
-        n = wrap_lines([(line, pt, bold)], max(0.1, inner_w - para_indent(p)))[0]
-        ln_spc = min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)
-        gap = OWN_COMPACT_GAP_PT + (paras[i - 1][3].get("spcAft") or 0) if i else 0
-        height += n * pt * LINE_PITCH_EM * ln_spc / 72 + gap / 72
+    for i, p in enumerate(paras):
+        n = wrap_lines([(p["t"], p["sz"], p["b"])], max(0.1, inner_w - para_indent(p)))[0]
+        gap = (p.get("spcBef") or 0) + (paras[i - 1].get("spcAft") or 0) if i else 0
+        height += n * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + gap / 72
         lines += n
     return height, lines
 
@@ -323,7 +400,7 @@ def overflow_in(need, h, top, bottom, va):
 
 
 def own_overflows(own_slide, slots, layout):
-    """치환 문구가 상자를 넘치는 원자 [(원문, 줄 수)]. 빌더와 같은 슬롯 대응, 상자 여백, 아이콘 겹침, 판형 배율로 잼 (세로 쓰기 상자는 제외)"""
+    """치환 문구가 상자를 넘치는 원자 [(원문, 줄 수)]. 빌더와 같은 슬롯 대응, 상자 여백, 아이콘 겹침, 판형 배율, 간격 조정, 글꼴 축소로 잼 (세로 쓰기 상자는 제외)"""
     sx, sy = layout_scale(layout)
     atoms = own_slide.get("atoms", [])
     out = []
@@ -332,8 +409,10 @@ def own_overflows(own_slide, slots, layout):
         value = own_slot_value(slots, slot_id, text)
         if not isinstance(value, str) or not value or not a.get("paras") or a.get("vert") or "w" not in a:
             continue
-        inner_w, h, top, bottom, va = own_text_box(atoms, a, slots, sx, sy)
-        need, lines = own_text_height(own_paras(a["paras"], value), inner_w)
+        w, h, va = own_icon_width(atoms, a, slots), a["h"] * sy, a.get("va") or "middle"
+        inner_w, top, bottom = own_text_box(a, w * sx, h)
+        paras = own_spacing(atoms, a, w, own_paras(a["paras"], value))
+        need, lines = own_text_height(own_fit(paras, inner_w, h - top - bottom, inset_slack(top, bottom, va)), inner_w)
         if overflow_in(need, h, top, bottom, va) > OWN_OVERFLOW_IN:
             out.append((text, lines))
     return out

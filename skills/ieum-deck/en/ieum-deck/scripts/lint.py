@@ -24,7 +24,7 @@ Checks
 - Section ledger match: ledger.slides[].id matches the list and order of storyboard slide ids (FAIL). Other fields are not compared
 - Institutional wording: terms from a column other than meta.track (rnd | mgmt | general) WARN. Outside R&D, a literal match with a methods sample module name WARNs
 - Duplicate numbers and symbols: WARN if section repeats secNo or a bullet slot item starts with a symbol
-- Custom slide substitution volume: WARN if substituted text overflows its box (when meta.ownDeck is registered. Line counts and height reflect the box insets, icon overlap, page size scale and the paragraph spacing the builder reduces)
+- Custom slide substitution volume: WARN if substituted text still overflows its box after the builder shrinks the font to the body minimum (11pt) and adjusts spacing (when meta.ownDeck is registered. Line counts and height reflect the box insets, icon overlap and page size scale)
 - Background and purpose evidence: WARN if an evidence item has a line break (move evidence to the note slot to get ※)
 - Background and purpose volume: WARN over 4 leads or over 12 leads and evidence items combined
 - Empty table cells: WARN if a leading category column has 2 or more empty cells without merged
@@ -46,6 +46,8 @@ import json
 import os
 import re
 from collections import Counter
+from decimal import ROUND_HALF_UP, Decimal
+import math
 import sys
 from pathlib import Path
 from text_metrics import char_em, glyphs, span_em, wrap_lines  # Same text width model as the build (shared module in this folder)
@@ -57,12 +59,16 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
 HANGUL_RE = re.compile(r"[가-힣]")
-# Overflow check for substituted custom slide text. Box typesetting values are those of the build (shape, mgPt, playOwn in atoms.js) and tokens.js
+# Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
+# Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
 # Why: compared with 2,052 renders (16:9, 4:3, and 16:9 with line spacing values removed) of custom slides extracted from a 16:9 build of the 30 sample slides,
 #      with substituted text of varied length (0.6-3 times the original) and script mix (Hangul, mixed, English). The previous check (Hangul 1.0em, others 0.55em,
 #      box width - 0.5 in, width x0.75 on slides with icons, line height 1.15em, above 125% of the box height, no page size scale) missed 91 of 306 overflows
 #      and warned on 100 boxes that did not overflow (693 of 3,415 substituted paragraphs had a line count different from the render)
-#      With the values below: 5 missed overflows, 110 warnings without overflow (in all 110 the builder shrank the font to fit the box), 31 paragraphs with a different line count
+#      Against the 199 overflows in renders from the builder with the line height fix (paraLineIn, insetSlackIn in atoms.js), a check at the original font size misses 1 overflow
+#      and warns on 213 boxes that did not overflow (in all 213 the builder shrank the font to fit). Computing the builder's spacing adjustment and font shrinking as well gives 8 missed overflows, 3 warnings,
+#      and 27 of 3,446 paragraphs with a line count different from the render. Of the 8 missed, 4 are borderline (0.021 inch rendered overflow measured as 0.016 inch) and 4 differ in line count
+#      In the same sample with every paragraph at 1.3 line spacing (684 cases): 2 missed overflows and 1 warning (64 warnings without the spacing adjustment)
 OWN_MG_DEFAULT_IN = (0.1, 0.05, 0.1, 0.05)  # Box insets when the original has none (left, top, right, bottom). atoms.js DEFAULT_MG_IN
 OWN_SMALL_BOX_W = 0.6  # Boxes narrower than this get zero insets (tokens.js PANEL.SMALL_BOX_W)
 OWN_SHORT_CHEVRON = 1.6  # Chevrons and home plates shorter than this multiple of their height also get zero insets (atoms.js shape)
@@ -72,14 +78,26 @@ OWN_SHORT_CHEVRON = 1.6  # Chevrons and home plates shorter than this multiple o
 OWN_ICON_MAX, OWN_ICON_OVERLAP_IN, OWN_ICON_LEFT_IN, OWN_ICON_GAP_IN, OWN_ICON_KEEP = 0.95, 0.05, 0.2, 0.1, 0.5
 BULLET_INDENT_IN = 0.18  # Default indent of bullet paragraphs (tokens.js PARA.bulletIndentIn)
 OWN_BODY_PT = 12  # Size of paragraphs without a font size (tokens.js SIZE.body)
-# For substituted text that would overflow, the builder sets paragraph spacing to 2pt and line spacing to min(original line spacing or 1.25, 1.05) before typesetting (atoms.js playOwn)
-# In the sample with line spacing values removed, all 70 overflowing boxes were typeset at 105% line spacing
-OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC, OWN_UNSET_LN_SPC = 2, 1.05, 1.25
+OWN_UNSET_LN_SPC = 1  # Line spacing multiple of a paragraph with no line spacing in the source (OOXML default 100%, atoms.js OWN_LN_SPC_UNSET)
+# Builder spacing adjustment (atoms.js playOwn): counts the substituted paragraph lines, without bold, at the original box width (before the page size scale; up to OWN_ICON_GAP_IN before an overlapping icon,
+# at least OWN_ROUGH_MIN_W) minus OWN_ROUGH_PAD_IN and the bullet indent, and adds OWN_ROUGH_GAP_IN between paragraphs for a rough height estimate
+# Below box height x OWN_SPREAD_FILL, paragraph spacing from the second paragraph widens to (box height - OWN_SPREAD_PAD_IN - estimate) / gaps x OWN_SPREAD_SHARE (within OWN_SPREAD_PT)
+# Above box height - OWN_COMPACT_IN, paragraph spacing from the second paragraph becomes OWN_COMPACT_GAP_PT and line spacing is capped at OWN_COMPACT_LN_SPC
+OWN_ROUGH_PAD_IN, OWN_ROUGH_GAP_IN, OWN_ROUGH_MIN_W = 0.3, 0.075, 1
+OWN_SPREAD_FILL, OWN_SPREAD_PAD_IN, OWN_SPREAD_SHARE, OWN_SPREAD_PT = 0.8, 0.12, 0.8, (2.5, 10)
+OWN_COMPACT_IN, OWN_COMPACT_GAP_PT, OWN_COMPACT_LN_SPC = 0.08, 2, 1
+# Builder font shrinking (atoms.js shape, fitParas): when substituted text exceeds the inner box height plus the inset tolerance (insetSlackIn), all paragraph fonts take one scale
+# lowered by OWN_FIT_STEP (down to OWN_FIT_MIN_SCALE, font minimum OWN_BODY_MIN). Still overflowing at the minimum, paragraph spacing from the second paragraph is multiplied by OWN_FIT_GAP_CUTS in turn
+# Up to OWN_FIT_KEEP_PARAS paragraphs without line breaks are not shrunk. Substituted text with a source size below the minimum grows to the minimum when it overflows at that size
+# The shared sibling ratio (atoms.js shrinkRatio) only shrinks fonts further with the same minimum, so the overflow check leaves it out
+# Against the build XML of the renders above: paragraph and line spacing match in all 1,845 substituted boxes; font sizes are smaller in 147 (sibling ratio) and 0.1pt larger in 3 (rounding order)
+OWN_BODY_MIN = LIMITS.get("SIZE", {}).get("BODY_MIN", 11)  # Font minimum of substituted text (tokens.js SIZE.BODY_MIN)
+OWN_FIT_STEP, OWN_FIT_MIN_SCALE, OWN_FIT_GAP_CUTS, OWN_FIT_KEEP_PARAS, OWN_FIT_MIN_W = 0.04, 0.6, (0.6, 0.3, 0), 3, 0.05
 # Line height (em): NanumGothic line height at 100% line spacing in LibreOffice 24.2. 135 multi-line paragraphs in the renders above measure 1.199-1.202em, proportional to line spacing 0.8-1.5
-# The previous value 1.15em raises the missed overflows from 5 to 38
+# This value misses 8 overflows, 1.15em misses 32. Same value as the builder's line height (tokens.js METRIC.LINE_HEIGHT)
 LINE_PITCH_EM = 1.2
 # Text that leaves the box edge by more than this width (inches) overflows (same criterion as the render check)
-# 0.01 misses 4 fewer overflows and adds 13 warnings (including 6 boxes that fit without font shrinking); 0.03 misses 33 more overflows
+# 0.01 misses 4 fewer overflows and adds 5 warnings; 0.03 misses 20 more overflows
 OWN_OVERFLOW_IN = 0.02
 # Defaults of the fixed template and block labels (the same table as labels.js of build.js). Used to validate the keys of meta.labels
 LABEL_DEFAULTS = json.load(open(HERE.parent / "assets" / "labels.json", encoding="utf-8"))
@@ -272,26 +290,86 @@ def own_icon_width(atoms, a, slots):
     return w
 
 
-def own_text_box(atoms, a, slots, sx, sy):
-    """Text area of the substituted text (inner width, box height, top inset, bottom inset, vertical alignment). Inset and chevron point rules of atoms.js shape()"""
-    w, h = own_icon_width(atoms, a, slots) * sx, a["h"] * sy
+def js_fixed1(x):
+    """JavaScript Number.toFixed(1) value (rounds the exact binary value, halfway goes up). The builder records font sizes and insets with it"""
+    return float(Decimal(x).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
+
+def own_text_box(a, w, h):
+    """Text area of the substituted text (inner width, top inset, bottom inset). w, h are the box size times the page size scale. Inset (recorded in 0.1pt steps) and chevron point rules of atoms.js shape()"""
     mg = a.get("mg") if isinstance(a.get("mg"), list) and len(a["mg"]) == 4 else [None] * 4
-    mg = [OWN_MG_DEFAULT_IN[i] if v is None else v for i, v in enumerate(mg)]
+    mg = [js_fixed1((OWN_MG_DEFAULT_IN[i] if v is None else v) * 72) / 72 for i, v in enumerate(mg)]
     chevron = a.get("preset") in ("chevron", "homePlate")
     point = min(w, h) * (a["adj"] / 100000 if a.get("adj") is not None else 0.5) if chevron else 0
     if w < OWN_SMALL_BOX_W or (chevron and w < OWN_SHORT_CHEVRON * h):
         mg = [0, 0, 0, 0]
     inner_w = w - mg[0] - mg[2] - (2 * point if a.get("preset") == "chevron" else point)
-    return inner_w, h, mg[1], mg[3], a.get("va") or "middle"
+    return inner_w, mg[1], mg[3]
 
 
 def own_paras(src_paras, value):
-    """Paragraphs of the substituted text [(text, size pt, bold, original paragraph)]. Each line break starts a paragraph that takes the next original paragraph format (the last one repeats, atoms.js substitute)"""
+    """Paragraphs of the substituted text: the original paragraph properties (indent, spacing, line spacing) plus text t, size sz (pt) and bold b
+    Each line break starts a paragraph that takes the next original paragraph format (the last one repeats, atoms.js substitute)"""
     out = []
     for i, line in enumerate(str(value).split("\n")):
         p = src_paras[min(i, len(src_paras) - 1)]
         r0 = next((r for r in p.get("runs", []) if not r.get("br")), {})
-        out.append((line, r0.get("sz") or OWN_BODY_PT, bool(r0.get("b")), p))
+        out.append({**{k: v for k, v in p.items() if k != "runs"}, "t": line, "sz": r0.get("sz") or OWN_BODY_PT, "b": bool(r0.get("b"))})
+    return out
+
+
+def own_spacing(atoms, a, w, paras):
+    """Paragraphs with the builder's paragraph and line spacing adjustment (atoms.js playOwn). w is the original width narrowed by icon overlap"""
+    icon = next((im for im in atoms if im.get("kind") == "image" and "x" in im and im["x"] < a["x"] + w and im["x"] + im["w"] > a["x"]
+                 and im["y"] < a["y"] + a["h"] and im["y"] + im["h"] > a["y"]), None)
+    eff_w = max(OWN_ROUGH_MIN_W, icon["x"] - a["x"] - OWN_ICON_GAP_IN) if icon else w
+    wrap_w = eff_w - OWN_ROUGH_PAD_IN - BULLET_INDENT_IN
+    need = sum(max(1, wrap_lines([(p["t"], p["sz"], False)], wrap_w)[0]) * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 for p in paras)
+    need += (len(paras) - 1) * OWN_ROUGH_GAP_IN
+    if len(paras) > 1 and need < a["h"] * OWN_SPREAD_FILL:
+        slack = (a["h"] - OWN_SPREAD_PAD_IN - need) / (len(paras) - 1) * 72
+        gap = js_fixed1(max(OWN_SPREAD_PT[0], min(OWN_SPREAD_PT[1], slack * OWN_SPREAD_SHARE)))
+        paras = [p if i == 0 else {**p, "spcBef": gap} for i, p in enumerate(paras)]
+    if need > a["h"] - OWN_COMPACT_IN:
+        paras = [{**p, "spcBef": p.get("spcBef") if i == 0 else OWN_COMPACT_GAP_PT, "lnSpc": min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)}
+                 for i, p in enumerate(paras)]
+    return paras
+
+
+def inset_slack(top, bottom, va):
+    """Height (inches) text can spill into the insets without leaving the box. Bottom inset when top-aligned, top inset when bottom-aligned, twice the smaller inset when middle-aligned (atoms.js insetSlackIn)"""
+    if va == "top":
+        return bottom
+    if va == "bottom":
+        return top
+    return 2 * min(top, bottom)
+
+
+def own_fit(paras, inner_w, inner_h, tol):
+    """Paragraphs as the builder fits them to the box (atoms.js fitParas, minimum OWN_BODY_MIN). Line height is 1.2em x the line spacing multiple; paragraph spacing adds the before and after values of every paragraph"""
+    if inner_w <= OWN_FIT_MIN_W:
+        return paras
+
+    def lines(p, pt):
+        return wrap_lines([(p["t"], pt, p["b"])], inner_w - para_indent(p))[0]
+
+    def height(ps, scale, floor):
+        h = 0.0
+        for p in ps:
+            pt = max(floor, p["sz"] * scale)
+            h += max(1, lines(p, pt)) * pt * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + ((p.get("spcBef") or 0) + (p.get("spcAft") or 0)) / 72
+        return h
+
+    if len(paras) <= OWN_FIT_KEEP_PARAS and not any(lines(p, p["sz"]) > 1 for p in paras):
+        return paras
+    scale = 1.0
+    while scale > OWN_FIT_MIN_SCALE and height(paras, scale, OWN_BODY_MIN) > inner_h + tol:
+        scale -= OWN_FIT_STEP
+    out = paras if scale >= 0.999 else [{**p, "sz": max(OWN_BODY_MIN, js_fixed1(p["sz"] * scale))} for p in paras]
+    for cut in OWN_FIT_GAP_CUTS:
+        if height(out, 1.0, 0) <= inner_h + tol:
+            break
+        out = [p if i == 0 else {**p, "spcBef": math.floor((p.get("spcBef") or 0) * cut * 10 + 0.5) / 10} for i, p in enumerate(out)]
     return out
 
 
@@ -303,14 +381,13 @@ def para_indent(p):
 
 
 def own_text_height(paras, inner_w):
-    """Height (inches) and line count of the paragraphs typeset with the builder's reduced spacing. Line counts from text_metrics.wrap_lines (word wrapping like the build's estimateLines)
+    """Rendered height (inches) and line count of the paragraphs as the builder sets them. Line counts from text_metrics.wrap_lines (word wrapping like the build's estimateLines)
     Paragraph spacing counts only between paragraphs (LibreOffice keeps no space before the first or after the last paragraph inside a text box. Checked by rendering)"""
     height, lines = 0.0, 0
-    for i, (line, pt, bold, p) in enumerate(paras):
-        n = wrap_lines([(line, pt, bold)], max(0.1, inner_w - para_indent(p)))[0]
-        ln_spc = min(p.get("lnSpc") or OWN_UNSET_LN_SPC, OWN_COMPACT_LN_SPC)
-        gap = OWN_COMPACT_GAP_PT + (paras[i - 1][3].get("spcAft") or 0) if i else 0
-        height += n * pt * LINE_PITCH_EM * ln_spc / 72 + gap / 72
+    for i, p in enumerate(paras):
+        n = wrap_lines([(p["t"], p["sz"], p["b"])], max(0.1, inner_w - para_indent(p)))[0]
+        gap = (p.get("spcBef") or 0) + (paras[i - 1].get("spcAft") or 0) if i else 0
+        height += n * p["sz"] * LINE_PITCH_EM * (p.get("lnSpc") or OWN_UNSET_LN_SPC) / 72 + gap / 72
         lines += n
     return height, lines
 
@@ -325,7 +402,7 @@ def overflow_in(need, h, top, bottom, va):
 
 
 def own_overflows(own_slide, slots, layout):
-    """Atoms whose substituted text overflows the box [(original text, line count)]. Uses the builder's slot matching, box insets, icon overlap and page size scale (vertical text boxes are skipped)"""
+    """Atoms whose substituted text overflows the box [(original text, line count)]. Uses the builder's slot matching, box insets, icon overlap, page size scale, spacing adjustment and font shrinking (vertical text boxes are skipped)"""
     sx, sy = layout_scale(layout)
     atoms = own_slide.get("atoms", [])
     out = []
@@ -334,8 +411,10 @@ def own_overflows(own_slide, slots, layout):
         value = own_slot_value(slots, slot_id, text)
         if not isinstance(value, str) or not value or not a.get("paras") or a.get("vert") or "w" not in a:
             continue
-        inner_w, h, top, bottom, va = own_text_box(atoms, a, slots, sx, sy)
-        need, lines = own_text_height(own_paras(a["paras"], value), inner_w)
+        w, h, va = own_icon_width(atoms, a, slots), a["h"] * sy, a.get("va") or "middle"
+        inner_w, top, bottom = own_text_box(a, w * sx, h)
+        paras = own_spacing(atoms, a, w, own_paras(a["paras"], value))
+        need, lines = own_text_height(own_fit(paras, inner_w, h - top - bottom, inset_slack(top, bottom, va)), inner_w)
         if overflow_in(need, h, top, bottom, va) > OWN_OVERFLOW_IN:
             out.append((text, lines))
     return out

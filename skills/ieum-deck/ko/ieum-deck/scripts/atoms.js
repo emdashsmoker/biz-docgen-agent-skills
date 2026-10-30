@@ -214,15 +214,36 @@ function wordWidthIn(texts, pt, bold) {
 function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
+/** 문단 한 줄의 높이(인치): 글꼴 줄 높이(LINE_HEIGHT) x 문단 줄 간격 배수(lnSpc, pptxgenjs lineSpacingMultiple. 없으면 1)
+ *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 실측 행간 TABLE_LINE_HEIGHT)
+ *  Why: LibreOffice 24.2 는 나눔고딕 줄을 1.2em x 줄 간격 배수로 조판 (커스텀 슬라이드 렌더의 여러 줄 문단 135개가 1.199-1.202em, 줄 간격 0.8-1.5배에 비례).
+ *       lnSpc 를 줄 높이 비율로 쓰면 줄 간격 100% 문단을 1.0em 으로 재어 렌더보다 17% 낮게 추정함.
+ *       줄 간격 100% 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 이 계산으로 고치면 넘침이 76건에서 62건(16:9), 160건에서 133건(4:3)으로 줄어듦 */
+function paraLineIn(pt, p, lineRatio) {
+  return lineRatio ? lineHeightIn(pt, lineRatio) : lineHeightIn(pt) * ((p && p.lnSpc) || 1);
+}
+
+const FIT_TOL_IN = 0.1; // fitParas 가 안쪽 높이를 넘어도 맞는 것으로 보는 높이(인치)의 기본값 (생성 템플릿). PowerPoint 는 여백 안 넘침을 허용하므로 0.1인치 허용
+/** 글이 상자 밖으로 나가지 않고 여백 안으로 넘칠 수 있는 높이(인치). 커스텀 슬라이드 상자의 fitParas 허용치. mg 는 [좌, 상, 우, 하](인치)
+ *  위 정렬은 아래로, 아래 정렬은 위로, 가운데 정렬은 위아래로 나뉘어 넘치므로 작은 여백의 2배
+ *  Why: 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 0.1인치 고정 허용은 글꼴이 11pt 보다 큰 채 상자 밖으로 0.024-0.057인치 넘친 상자를
+ *       16건(16:9), 30건(4:3) 남김 (여백 0.019인치 상자의 14pt 2줄 등). 이 허용치로 바꾸면 넘침이 62건에서 47건, 133건에서 105건으로 줄고 남은 넘침은 모두 11pt */
+function insetSlackIn(mg, va) {
+  if (va === "top") return mg[3];
+  if (va === "bottom") return mg[1];
+  return 2 * Math.min(mg[1], mg[3]);
+}
 
 /**
  * 문단 묶음이 상자(inner w,h)에 들어가도록 글꼴 크기를 균일 축소. 원본 장표의 서체보다 나눔고딕이 넓으면
  * 같은 크기에서 줄바꿈이 늘어나는 현상을 상자 안에서 흡수한다. 하한은 minPt (본문 11pt).
+ * 줄 높이는 paraLineIn(lineRatio). tolIn 은 안쪽 높이를 넘어도 맞는 것으로 보는 높이(인치)이며 없으면 FIT_TOL_IN
  * 반환: 새 paras (원본 불변)
  */
-function fitParas(paras, innerW, innerH, minPt, lineRatio) {
+function fitParas(paras, innerW, innerH, minPt, lineRatio, tolIn) {
   if (!paras || !paras.length || innerW <= 0.05) return paras;
   const floor = minPt || T.SIZE.BODY_MIN;
+  const tol = tolIn == null ? FIT_TOL_IN : tolIn;
   const need = (scale) => {
     let h = 0;
     for (const p of paras) {
@@ -232,7 +253,7 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
       const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
       const lines = Math.max(1, estimateLines(txt, innerW - indent, sz, r0.b));
       const gap = ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
-      h += lines * lineHeightIn(sz, lineRatio || p.lnSpc) + gap;
+      h += lines * paraLineIn(sz, p, lineRatio) + gap;
     }
     return h;
   };
@@ -245,17 +266,17 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
   });
   if (!wraps && paras.length <= 3) return paras;
   let scale = 1.0;
-  while (scale > 0.6 && need(scale) > innerH + 0.1) scale -= 0.04; // PowerPoint 는 여백 안 넘침을 허용하므로 0.1인치 허용
+  while (scale > 0.6 && need(scale) > innerH + tol) scale -= 0.04;
   let out = scale >= 0.999 ? paras : paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(floor, +(((r.sz || T.SIZE.body) * scale)).toFixed(1)) })) }));
   // 글꼴 하한에 걸려 여전히 넘치면 문단 사이 간격을 줄여 상자 안에 넣음
   const heightOf = (ps) => ps.reduce((h, p) => {
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * lineHeightIn(r0.sz || T.SIZE.body, lineRatio || p.lnSpc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * paraLineIn(r0.sz || T.SIZE.body, p, lineRatio) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   for (const cut of [0.6, 0.3, 0]) {
-    if (heightOf(out) <= innerH + 0.1) break;
+    if (heightOf(out) <= innerH + tol) break;
     out = out.map((p, i) => (i === 0 ? p : { ...p, spcBef: Math.round((p.spcBef || 0) * cut * 10) / 10 }));
   }
   return out;
@@ -402,12 +423,13 @@ function shape(pres, slide, atom, override) {
     const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 2 * pointW : pointW);
     if (ov.scale != null && ov.scale < 1) paras = paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(ov.minPt || T.SIZE.BODY_MIN, +((r.sz || T.SIZE.body) * ov.scale).toFixed(1)) })) }));
     if (ov.fillText) { paras = growParas(paras, innerW, atom.h - mg[1] - mg[3], 1.0); atom = { ...atom, va: "middle" }; } // 빈 면적을 흡수한 상자는 간격만 키워 채우고 글꼴은 계층 기준값을 유지
-    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt);
+    const va = ov.fillText ? "middle" : (ov.va || atom.va || "middle");
+    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt, undefined, insetSlackIn(mg, va));
     // 1문단 1줄로 판정된 텍스트는 줄바꿈을 끄고 렌더러의 자간 오차에 따른 예기치 않은 줄바꿈을 막음
     const oneLine = paras.length === 1 && !paras[0].runs.some((r) => r.br) && estimateLines(paras[0].runs.map((r) => r.t).join(""), innerW, paras[0].runs[0].sz || T.SIZE.body, paras[0].runs[0].b) <= 1;
     slide.addText(runsOf(paras, { color: ov.textColor }), {
       ...base, shape: st, isTextBox: true,
-      valign: ov.fillText ? "middle" : (ov.va || atom.va || "middle"),
+      valign: va,
       margin: boxMargin(mgArr.map((v) => v / 72)),
       wrap: !(small || oneLine) || narrowChevron, // 짧은 셰브론은 항상 줄바꿈 (텍스트 사각형이 좁아 넘침)
       vert: atom.vert || undefined,
@@ -456,7 +478,7 @@ function growParas(paras, innerW, innerH, maxScale) {
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * lineHeightIn((r0.sz || T.SIZE.body) * sc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * paraLineIn((r0.sz || T.SIZE.body) * sc, p) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   let sc = 1;
   while (sc < maxScale && need(sc + 0.05) <= innerH * 0.75) sc += 0.05;
@@ -472,7 +494,7 @@ function shrinkRatio(atom, paras, minPt) {
   const mg = (small ? [0, 0, 0, 0] : mgPt(atom.mg)).map((v) => v / 72);
   const pointW = atom.preset === "chevron" || atom.preset === "homePlate" ? Math.min(atom.w, atom.h) * (atom.adj != null ? atom.adj / 100000 : 0.5) : 0;
   const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 1.0 * pointW : 0.5 * pointW);
-  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt);
+  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt, undefined, insetSlackIn(mg, atom.va || "middle"));
   const before = paras[0].runs[0].sz || T.SIZE.body;
   const after = fitted[0].runs[0].sz || before;
   return after / before;
@@ -863,6 +885,12 @@ function pageNo(slide, S, n) {
 }
 
 // ---------------------------------------------------------------- 커스텀 슬라이드 재생
+// 커스텀 슬라이드 치환 문구의 줄 간격 배수 (playOwn). 렌더 줄 높이는 1.2em x 줄 간격 배수 (paraLineIn)
+const OWN_LN_SPC_UNSET = 1; // 원문에 줄 간격이 없는 문단의 줄 간격 배수 (OOXML 기본값 100%)
+// 상자를 넘길 것으로 보이는 치환 문구의 줄 간격 상한. 나눔고딕 기본 줄 높이(1.2em)이며 원문 줄 간격이 더 좁으면 그대로 둠
+// Why: 이전 값(줄 간격 없음 1.25, 상한 1.05)은 줄 간격 배수를 줄 높이 비율로 본 값이라 줄 간격 없는 문단을 105% 로 넓혀 조판함
+//      (줄 간격 값을 지운 견본에 치환 684건을 넣은 렌더의 넘침 70건이 모두 105%). 모든 문단 줄 간격을 1.3배로 바꾼 같은 견본에서 상한 1.05 는 넘침 51건, 1 은 47건
+const OWN_COMPACT_LN_SPC = 1;
 /**
  * own-deck 의 슬라이드 원자를 순서대로 조판. slots 로 텍스트와 표 셀과 이미지 치환
  * slots 키: t{k} (k번째 텍스트 원자), tb{k}.r{i}c{j}, img{k}, ch{k} (차트 spec)
@@ -1043,7 +1071,9 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
     const v0 = sl["t" + pk] != null ? sl["t" + pk] : textKey(sl, cur0);
     if (v0 === "") { skippedBoxes.push(raw); continue; }
     const paras = v0 != null ? substitute(a.paras, v0) : a.paras;
-    const r = shrinkRatio(a, paras, T.SIZE.OWN_MIN);
+    // 치환 문구는 shape() 와 같은 하한(본문 11pt)으로 잼. 9pt 하한으로 재면 치환 문구는 11pt 에 머물고 같은 크기의 형제 상자만 9pt 까지 줄어듦
+    // (줄 높이를 고친 빌더로 견본 커스텀 슬라이드에 치환 684건을 넣으면 치환하지 않은 상자 37개(16:9), 51개(4:3)가 새로 11pt 미만이 되고 이 하한이면 0개)
+    const r = shrinkRatio(a, paras, v0 != null ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN);
     const key = sizeKey(a, paras);
     ratioBySize[key] = Math.min(ratioBySize[key] == null ? 1 : ratioBySize[key], r);
   }
@@ -1230,7 +1260,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
       }
       // 원문 그대로면 서체 폭 차이만 흡수하면 되므로 하한을 낮추고, 치환한 텍스트는 본문 하한을 지켜 글꼴이 따로 놀지 않게 함
       ov.minPt = ov.paras ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN;
-      // 치환 텍스트가 원문보다 줄 수가 늘면 위쪽 정렬로 두어 윗 요소를 덮지 않게 함
+      // 치환 텍스트는 상자 높이 대략 추정(need)으로 문단 간격과 줄 간격을 조정
       if (ov.paras && raw.paras) {
         // 상자 위에 놓인 아이콘만큼 글자 영역이 좁아지는 점을 반영
         const icon = ownSlide.atoms.find((im) => im.kind === "image" && im.x < raw.x + raw.w && im.x + im.w > raw.x && im.y < raw.y + raw.h && im.y + im.h > raw.y);
@@ -1241,20 +1271,17 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
           const sz = (p.runs[0] && p.runs[0].sz) || T.SIZE.body;
           return a + t.split("\n").reduce((b, seg) => b + Math.max(1, estimateLines(seg, wrapW - T.PARA.bulletIndentIn, sz)), 0);
         }, 0);
-        const avgSz = ov.paras.reduce((a, p) => a + ((p.runs[0] && p.runs[0].sz) || T.SIZE.body), 0) / Math.max(ov.paras.length, 1);
-        const need = count(ov.paras) * lineHeightIn(avgSz) + (ov.paras.length - 1) * 0.075;
-        // 줄 수가 늘었거나 상자를 70% 이상 채우면 위쪽 정렬 (렌더러 줄바꿈 차이로 위로 넘치는 것을 막음)
+        const need = ov.paras.reduce((a, p) => a + count([p]) * paraLineIn((p.runs[0] && p.runs[0].sz) || T.SIZE.body, p), 0) + (ov.paras.length - 1) * 0.075;
         // 여유가 남으면 문단 간격을 넓혀 상자를 고르게 채움 (최대 10pt)
         if (ov.paras.length > 1 && need < raw.h * 0.8) {
           const slack = (raw.h - 0.12 - need) / (ov.paras.length - 1) * 72;
           const gap = Math.max(2.5, Math.min(10, slack * 0.8));
           ov.paras = ov.paras.map((p, i) => (i === 0 ? p : { ...p, spcBef: +gap.toFixed(1) }));
         }
-        // 상자를 넘길 것으로 보이면 문단 간격부터 줄여 글꼴은 유지
+        // 상자를 넘길 것으로 보이면 문단 간격을 2pt 로, 줄 간격을 OWN_COMPACT_LN_SPC 이하로 줄임
+        // 그래도 넘치면 shape() 의 fitParas 가 글꼴을 본문 하한(11pt)까지 줄이고, 하한에서도 넘치면 문단 간격을 더 줄임. 남는 넘침은 lint 경고로 문구 축약을 유도
         if (need > raw.h - 0.08) {
-          // 문단 간격과 줄 간격만 축소 (글꼴은 유지)
-          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || 1.25, 1.05) }));
-          // 간격 축소로도 넘치면 글꼴을 줄이지 않고 lint 경고로 문구 축약을 유도
+          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || OWN_LN_SPC_UNSET, OWN_COMPACT_LN_SPC) }));
         }
       }
       if (atom.rot && atom.paras && /Illustrative|Sample|시안/i.test(atom.paras.map((p) => p.runs.map((r) => r.t).join("")).join(""))) {

@@ -214,15 +214,36 @@ function wordWidthIn(texts, pt, bold) {
 function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
+/** Height of one paragraph line (inches): font line height (LINE_HEIGHT) x the paragraph line spacing multiple (lnSpc, pptxgenjs lineSpacingMultiple; 1 when absent)
+ *  With lineRatio, that value is used as the line height ratio in place of the paragraph line spacing (table cells use the measured TABLE_LINE_HEIGHT)
+ *  Why: LibreOffice 24.2 sets NanumGothic lines at 1.2em x the line spacing multiple (135 multi-line paragraphs in custom slide renders measure 1.199-1.202em, proportional to spacing 0.8-1.5).
+ *       Using lnSpc as the line height ratio measures a 100% spaced paragraph at 1.0em, 17% below the render.
+ *       In renders of the sample custom slides with 684 substitutions at 100% spacing, this fix cuts overflow from 76 to 62 (16:9) and from 160 to 133 (4:3) */
+function paraLineIn(pt, p, lineRatio) {
+  return lineRatio ? lineHeightIn(pt, lineRatio) : lineHeightIn(pt) * ((p && p.lnSpc) || 1);
+}
+
+const FIT_TOL_IN = 0.1; // Default height (inches) that fitParas still counts as fitting beyond the inner height (generated templates). PowerPoint tolerates overflow into the insets, so allow 0.1 inch
+/** Height (inches) text can spill into the insets without leaving the box. The fitParas tolerance for custom slide boxes. mg is [left, top, right, bottom] (inches)
+ *  Top-aligned text spills downward, bottom-aligned upward, and middle-aligned splits both ways, so twice the smaller inset
+ *  Why: in renders of the sample custom slides with 684 substitutions, the fixed 0.1 inch tolerance left 16 (16:9) and 30 (4:3) boxes above 11pt that spill 0.024-0.057 inch
+ *       past the box (14pt two-line text in boxes with 0.019 inch insets, among others). With this tolerance overflow falls from 62 to 47 and from 133 to 105, all remaining at 11pt */
+function insetSlackIn(mg, va) {
+  if (va === "top") return mg[3];
+  if (va === "bottom") return mg[1];
+  return 2 * Math.min(mg[1], mg[3]);
+}
 
 /**
  * Shrinks font sizes uniformly so a paragraph group fits the box (inner w,h). When NanumGothic is wider than the source slide font,
  * this absorbs the extra line breaks at the same size inside the box. The minimum is minPt (body 11pt).
+ * Line height comes from paraLineIn(lineRatio). tolIn is the height (inches) still counted as fitting beyond the inner height; FIT_TOL_IN when absent
  * Returns: new paras (the original is unchanged)
  */
-function fitParas(paras, innerW, innerH, minPt, lineRatio) {
+function fitParas(paras, innerW, innerH, minPt, lineRatio, tolIn) {
   if (!paras || !paras.length || innerW <= 0.05) return paras;
   const floor = minPt || T.SIZE.BODY_MIN;
+  const tol = tolIn == null ? FIT_TOL_IN : tolIn;
   const need = (scale) => {
     let h = 0;
     for (const p of paras) {
@@ -232,7 +253,7 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
       const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
       const lines = Math.max(1, estimateLines(txt, innerW - indent, sz, r0.b));
       const gap = ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
-      h += lines * lineHeightIn(sz, lineRatio || p.lnSpc) + gap;
+      h += lines * paraLineIn(sz, p, lineRatio) + gap;
     }
     return h;
   };
@@ -245,17 +266,17 @@ function fitParas(paras, innerW, innerH, minPt, lineRatio) {
   });
   if (!wraps && paras.length <= 3) return paras;
   let scale = 1.0;
-  while (scale > 0.6 && need(scale) > innerH + 0.1) scale -= 0.04; // PowerPoint tolerates overflow into the insets, so allow 0.1 inch
+  while (scale > 0.6 && need(scale) > innerH + tol) scale -= 0.04;
   let out = scale >= 0.999 ? paras : paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(floor, +(((r.sz || T.SIZE.body) * scale)).toFixed(1)) })) }));
   // If it still overflows at the font minimum, cut the space between paragraphs to fit the box
   const heightOf = (ps) => ps.reduce((h, p) => {
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * lineHeightIn(r0.sz || T.SIZE.body, lineRatio || p.lnSpc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + Math.max(1, estimateLines(txt, innerW - indent, r0.sz || T.SIZE.body, r0.b)) * paraLineIn(r0.sz || T.SIZE.body, p, lineRatio) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   for (const cut of [0.6, 0.3, 0]) {
-    if (heightOf(out) <= innerH + 0.1) break;
+    if (heightOf(out) <= innerH + tol) break;
     out = out.map((p, i) => (i === 0 ? p : { ...p, spcBef: Math.round((p.spcBef || 0) * cut * 10) / 10 }));
   }
   return out;
@@ -402,12 +423,13 @@ function shape(pres, slide, atom, override) {
     const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 2 * pointW : pointW);
     if (ov.scale != null && ov.scale < 1) paras = paras.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, sz: Math.max(ov.minPt || T.SIZE.BODY_MIN, +((r.sz || T.SIZE.body) * ov.scale).toFixed(1)) })) }));
     if (ov.fillText) { paras = growParas(paras, innerW, atom.h - mg[1] - mg[3], 1.0); atom = { ...atom, va: "middle" }; } // Boxes that absorbed empty area fill it by widening spacing only, keeping the tier font size
-    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt);
+    const va = ov.fillText ? "middle" : (ov.va || atom.va || "middle");
+    paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt, undefined, insetSlackIn(mg, va));
     // Text judged as 1 paragraph on 1 line turns wrapping off to prevent unexpected breaks from renderer spacing errors
     const oneLine = paras.length === 1 && !paras[0].runs.some((r) => r.br) && estimateLines(paras[0].runs.map((r) => r.t).join(""), innerW, paras[0].runs[0].sz || T.SIZE.body, paras[0].runs[0].b) <= 1;
     slide.addText(runsOf(paras, { color: ov.textColor }), {
       ...base, shape: st, isTextBox: true,
-      valign: ov.fillText ? "middle" : (ov.va || atom.va || "middle"),
+      valign: va,
       margin: boxMargin(mgArr.map((v) => v / 72)),
       wrap: !(small || oneLine) || narrowChevron, // Short chevrons always wrap (their text rectangle is narrow and overflows)
       vert: atom.vert || undefined,
@@ -456,7 +478,7 @@ function growParas(paras, innerW, innerH, maxScale) {
     const r0 = p.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     const txt = p.runs.filter((r) => !r.br).map((r) => r.t).join("");
     const indent = p.bullet ? (p.indent != null ? Math.abs(p.indent) : T.PARA.bulletIndentIn) : (p.marL || 0);
-    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * lineHeightIn((r0.sz || T.SIZE.body) * sc) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
+    return h + estimateLines(txt, innerW - indent, (r0.sz || T.SIZE.body) * sc, r0.b) * paraLineIn((r0.sz || T.SIZE.body) * sc, p) + ((p.spcBef || 0) + (p.spcAft || 0)) / 72;
   }, 0);
   let sc = 1;
   while (sc < maxScale && need(sc + 0.05) <= innerH * 0.75) sc += 0.05;
@@ -472,7 +494,7 @@ function shrinkRatio(atom, paras, minPt) {
   const mg = (small ? [0, 0, 0, 0] : mgPt(atom.mg)).map((v) => v / 72);
   const pointW = atom.preset === "chevron" || atom.preset === "homePlate" ? Math.min(atom.w, atom.h) * (atom.adj != null ? atom.adj / 100000 : 0.5) : 0;
   const innerW = atom.w - mg[0] - mg[2] - (atom.preset === "chevron" ? 1.0 * pointW : 0.5 * pointW);
-  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt);
+  const fitted = fitParas(paras, innerW, atom.h - mg[1] - mg[3], minPt, undefined, insetSlackIn(mg, atom.va || "middle"));
   const before = paras[0].runs[0].sz || T.SIZE.body;
   const after = fitted[0].runs[0].sz || before;
   return after / before;
@@ -863,6 +885,12 @@ function pageNo(slide, S, n) {
 }
 
 // ---------------------------------------------------------------- Custom slide playback
+// Line spacing multiples for substituted custom slide text (playOwn). Rendered line height is 1.2em x the multiple (paraLineIn)
+const OWN_LN_SPC_UNSET = 1; // Line spacing multiple of a paragraph with no line spacing in the source (OOXML default 100%)
+// Line spacing cap for substituted text expected to overflow its box. NanumGothic's default line height (1.2em); tighter source spacing is kept
+// Why: the earlier values (1.25 when unset, cap 1.05) read the multiple as a line height ratio, so paragraphs without line spacing were widened to 105%
+//      (all 70 overflows in a render of the sample with line spacing removed and 684 substitutions were at 105%). With every paragraph at 1.3 spacing, cap 1.05 leaves 51 overflows and 1 leaves 47
+const OWN_COMPACT_LN_SPC = 1;
 /**
  * Typesets own-deck slide atoms in order. slots replace text, table cells and images
  * slots keys: t{k} (k-th text atom), tb{k}.r{i}c{j}, img{k}, ch{k} (chart spec)
@@ -1043,7 +1071,9 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
     const v0 = sl["t" + pk] != null ? sl["t" + pk] : textKey(sl, cur0);
     if (v0 === "") { skippedBoxes.push(raw); continue; }
     const paras = v0 != null ? substitute(a.paras, v0) : a.paras;
-    const r = shrinkRatio(a, paras, T.SIZE.OWN_MIN);
+    // Substituted text is measured with the same minimum as shape() (body 11pt). With the 9pt minimum the substituted text stays at 11pt while only its same-size siblings shrink to 9pt
+    // (with the line height fix and 684 substitutions in the sample custom slides, the 9pt minimum newly takes 37 (16:9) and 51 (4:3) unsubstituted boxes below 11pt; this minimum takes none)
+    const r = shrinkRatio(a, paras, v0 != null ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN);
     const key = sizeKey(a, paras);
     ratioBySize[key] = Math.min(ratioBySize[key] == null ? 1 : ratioBySize[key], r);
   }
@@ -1230,7 +1260,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
       }
       // Original text only needs to absorb the font width difference, so its minimum is lower. Substituted text keeps the body minimum so fonts do not drift
       ov.minPt = ov.paras ? T.SIZE.BODY_MIN : T.SIZE.OWN_MIN;
-      // When substituted text has more lines than the original, top-align it so it does not cover the elements above
+      // Substituted text gets its paragraph and line spacing adjusted from a rough box height estimate (need)
       if (ov.paras && raw.paras) {
         // Account for the text area narrowed by an icon placed on the box
         const icon = ownSlide.atoms.find((im) => im.kind === "image" && im.x < raw.x + raw.w && im.x + im.w > raw.x && im.y < raw.y + raw.h && im.y + im.h > raw.y);
@@ -1241,20 +1271,17 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
           const sz = (p.runs[0] && p.runs[0].sz) || T.SIZE.body;
           return a + t.split("\n").reduce((b, seg) => b + Math.max(1, estimateLines(seg, wrapW - T.PARA.bulletIndentIn, sz)), 0);
         }, 0);
-        const avgSz = ov.paras.reduce((a, p) => a + ((p.runs[0] && p.runs[0].sz) || T.SIZE.body), 0) / Math.max(ov.paras.length, 1);
-        const need = count(ov.paras) * lineHeightIn(avgSz) + (ov.paras.length - 1) * 0.075;
-        // Top-align when the line count grew or the box is 70% full or more (prevents upward overflow from renderer wrapping differences)
+        const need = ov.paras.reduce((a, p) => a + count([p]) * paraLineIn((p.runs[0] && p.runs[0].sz) || T.SIZE.body, p), 0) + (ov.paras.length - 1) * 0.075;
         // With room to spare, widen paragraph spacing to fill the box evenly (up to 10pt)
         if (ov.paras.length > 1 && need < raw.h * 0.8) {
           const slack = (raw.h - 0.12 - need) / (ov.paras.length - 1) * 72;
           const gap = Math.max(2.5, Math.min(10, slack * 0.8));
           ov.paras = ov.paras.map((p, i) => (i === 0 ? p : { ...p, spcBef: +gap.toFixed(1) }));
         }
-        // If it looks likely to overflow the box, cut paragraph spacing first and keep the font
+        // If it looks likely to overflow the box, set paragraph spacing to 2pt and cap line spacing at OWN_COMPACT_LN_SPC
+        // If it still overflows, fitParas in shape() shrinks the font to the body minimum (11pt) and cuts paragraph spacing further at the minimum. Remaining overflow gets a lint warning that prompts shorter text
         if (need > raw.h - 0.08) {
-          // Shrink only paragraph and line spacing (the font stays)
-          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || 1.25, 1.05) }));
-          // If it still overflows after cutting spacing, keep the font and let a lint warning prompt shorter text
+          ov.paras = ov.paras.map((p, i) => ({ ...p, spcBef: i === 0 ? p.spcBef : 2, lnSpc: Math.min(p.lnSpc || OWN_LN_SPC_UNSET, OWN_COMPACT_LN_SPC) }));
         }
       }
       if (atom.rot && atom.paras && /Illustrative|Sample|시안/i.test(atom.paras.map((p) => p.runs.map((r) => r.t).join("")).join(""))) {
