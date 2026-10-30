@@ -85,25 +85,120 @@ function scriptGapEm() {
 function textEm(s, bold) {
   return spanEm(s, bold, SCRIPT.WEAK).em;
 }
+// 어절 안 줄바꿈 (LibreOffice 24.2 editeng ImpBreakLine 과 i18npool BreakIterator_CJK, BreakIterator_Unicode 를 따름)
+// 공백 외에도 줄 폭을 처음 넘는 글자(m)에서 끊을 위치를 정하며, m 바로 앞 글자의 계열로 규칙이 갈림
+//   한글 계열(ko-KR): 걸침 문자는 한 글자 뒤로 옮겨 문단 끝이면 줄 밖에 걸치고, 줄 첫머리 금지 문자와 줄 끝 금지 문자를 피해 앞으로 당김.
+//                     당기지 않았고 m 이 한글이면 그 한글 묶음의 첫 글자에서 나눔. 그 밖에는 m 에서 나눔
+//   라틴(en-US): m 이하에서 줄을 바꿀 수 있는 마지막 글자 사이 (latinBreakOk). 빗금 바로 뒤는 제외
+// finalize 가 기록하는 eaLnBrk="0" 은 LibreOffice 가 읽지 않으므로 금지 문자 규칙은 늘 적용됨 (oox 가져오기에서 주석 처리된 속성)
+// Why: 견본 2종을 A4, 10.83, 4:3 으로 렌더하면 어절 안 줄바꿈 128건('60|분', '○|○억원', '가|정)', '3-|5개'). 16:9 는 0건.
+//      이 규칙의 모의 계산(라틴 규칙은 LibreOffice line.txt 그대로)이 128건 중 123건을 같은 위치에서 재현 (5건은 줄 폭의 99.8% 이상인 경계).
+//      확인 문안 490개(어절 115종의 글자 위치마다 줄 끝을 둔 글 상자)에서 484개 일치 (6개는 문안 배치와 ₩ ↑ 글자 폭 문제).
+//      이 계산은 모의 계산과 줄 수 98,710/98,720 일치 (견본 문단 3,448개를 40개 폭으로), 렌더 어절 안 줄바꿈 117건(줄 폭보다 좁은 어절) 중 112건을 같은 위치로 추정
+// 한계: 어절 첫 글자가 줄 첫머리 금지 문자인 경우(' / ' 같은 수식 기호) LibreOffice 는 앞 어절 안에서 나눔. 이 계산은 어절 사이에서 나눔.
+//       ko-KR 이외 언어로 기록된 run 의 한글 계열 글자는 실행 환경 기본 동아시아 로캘(zh-CN) 목록을 따름 (finalize 는 한글이 든 run 을 모두 ko-KR 로 기록)
+/** 줄 첫머리 금지 문자 (LibreOffice ko_KR 로캘 자료 ForbiddenLineBeginCharacters 그대로이며 공백 포함) */
+const NO_LINE_START = new Set("!%),.:;?]}¢￠'\"′″℃>〉＞》」』】〕！％），．：；？］｝｡｣､･ ﾞﾟ、。’”°");
+/** 줄 끝 금지 문자 (ko_KR ForbiddenLineEndCharacters) */
+const NO_LINE_END = new Set("$(¥£[\\{￡￥'\"<＜《「『【〔＄（［｛₩￦｢‘“〈");
+/** 걸침 문자 (ko_KR LineBreakHangingCharacters). finalize 가 모든 문단에 hangingPunct="1" 을 기록 */
+const HANGING = new Set("!,.:;?、。！，．：；？");
+/** 라틴 규칙의 글자 분류 (LibreOffice line.txt 가 쓰는 UAX #14 분류 중 업무 문서에 나오는 것). 목록에 없는 글자는 AL (영문자, ○ ① · 등) */
+const LB_CLASS = Object.fromEntries([
+  ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
+/** LibreOffice 가 한글 어절 보호에 쓰는 한글 범위: 음절, 자모, 호환 자모, 확장 자모 */
+const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
+/** 라틴 규칙의 글자 분류. 한글은 H, 한자는 ID */
+const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
+/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
+ *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
+function latinBreakOk(a, b) {
+  const x = lbClass(a), y = lbClass(b);
+  if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
+  if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
+  if (y === "PR") return !["AL", "NU"].includes(x);
+  if (y === "PO") return !["NU", "H", "ID", "IS", "PO", "SY"].includes(x);
+  if (y === "IN") return !["AL", "NU", "H", "ID", "IN", "EX"].includes(x);
+  if ((x === "AL" || x === "NU") && ["AL", "NU", "OP"].includes(y)) return false;
+  if (["CP", "IS", "PO"].includes(x) && (y === "AL" || y === "NU")) return false;
+  return true;
+}
+/** 한글 계열 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄, 어절 길이면 문단 끝 문장부호가 줄 밖에 걸침 */
+function koBreak(chars, m, paraEnd) {
+  let s = m;
+  if (HANGING.has(chars[m])) {
+    if (paraEnd && m === chars.length - 1) return chars.length;
+    s = m + 1;
+  }
+  // 어절 끝 다음 글자는 공백이며 공백도 줄 첫머리 금지 문자 ('기준, 끝' 의 쉼표가 넘치면 '기|준,')
+  while (s > 0 && (s === chars.length || NO_LINE_START.has(chars[s]) || NO_LINE_END.has(chars[s - 1]))) s -= 1;
+  if (s === m && isHangul(chars[m])) while (s > 0 && isHangul(chars[s - 1])) s -= 1;
+  return s;
+}
+/** 라틴 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄 */
+function latinBreak(chars, m) {
+  let s = chars[m - 1] === "/" ? m - 1 : m;
+  while (s > 0 && !latinBreakOk(chars[s - 1], chars[s])) s -= 1;
+  return s > 0 && chars[s - 1] === "/" ? 0 : s;
+}
+/** 어절 글자별 계열. 약한 문자는 앞 글자 계열 (prev 는 어절 앞 글자의 계열, 문단 첫머리는 WEAK 이며 라틴으로 판정) */
+function wordScripts(chars, prev) {
+  let cur = prev;
+  return chars.map((ch) => (cur = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN));
+}
+/** x(em)에서 시작하는 어절에서 줄 폭(cap)을 처음 넘는 글자 위치. 계열이 바뀌는 글자 앞에 간격을 더함. 넘는 글자가 없으면 어절 길이 */
+function overflowAt(chars, scripts, prev, x, cap, bold) {
+  for (let i = 0; i < chars.length; i++) {
+    const p = i ? scripts[i - 1] : prev;
+    if (p && p !== scripts[i]) x += scriptGapEm();
+    x += charEm(chars[i], bold);
+    if (x > cap) return i;
+  }
+  return chars.length;
+}
+/** 줄 끝에 걸린 어절을 LibreOffice 가 나누는 위치 (어절 안 글자 수)와 글자별 계열. 0 이면 어절 전체가 다음 줄 */
+function breakInWord(chars, prev, x, cap, bold, paraEnd) {
+  const scripts = wordScripts(chars, prev);
+  const m = overflowAt(chars, scripts, prev, x, cap, bold);
+  if (m === 0 || m === chars.length) return { cut: 0, scripts };
+  return { cut: scripts[m - 1] === SCRIPT.ASIAN ? koBreak(chars, m, paraEnd) : latinBreak(chars, m), scripts };
+}
+/** 문단 하나의 줄 수와 어절 안 줄바꿈 목록 [{ word, cut }] (cut: 윗줄에 남는 글자 수. 줄 폭보다 넓은 어절은 제외). text_metrics.py wrap_paragraph 와 같은 계산
+ *  공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(breakInWord)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔
+ *  앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄을 바꾸면 줄 끝 공백과 간격은 줄 폭에 들지 않음) */
+function wrapParagraph(para, cap, bold) {
+  // 약한 문자의 계열은 문단 첫머리부터 이어서 판정 (last: 직전 어절 끝 글자의 계열)
+  let cur = 0, n = 1, last = SCRIPT.WEAK;
+  const splits = [];
+  const words = para.split(" ");
+  for (let i = 0; i < words.length; i++) {
+    const s = spanEm(words[i], bold, last);
+    const space = charEm(" ", bold);
+    const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+    const need = s.em + (cur > 0 ? space + gap : 0);
+    if (cur > 0 && cur + need > cap) {
+      const chars = Array.from(words[i]);
+      const { cut, scripts } = breakInWord(chars, last, cur + space, cap, bold, i === words.length - 1);
+      if (cut === chars.length) { cur += need; last = s.last; continue; } // 문단 끝 문장부호가 줄 밖에 걸쳐 줄이 늘지 않음
+      n += 1;
+      if (cut) {
+        if (s.em <= cap) splits.push({ word: words[i], cut });
+        cur = spanEm(chars.slice(cut).join(""), bold, scripts[cut - 1]).em; // 나눈 자리의 계열 경계 간격은 윗줄 끝에 남음
+      } else cur = s.em;
+    } else cur += need;
+    if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+    last = s.last;
+  }
+  return { lines: n, splits };
+}
 /** widthIn 폭 상자에서 fontPt 로 차지하는 줄 수 */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
-  for (const para of String(str).split("\n")) {
-    // 약한 문자의 계열은 문단 첫머리부터 이어서 판정 (last: 직전 어절 끝 글자의 계열)
-    let cur = 0, n = 1, last = SCRIPT.WEAK;
-    for (const w of para.split(" ")) {
-      const s = spanEm(w, bold, last);
-      // 앞 어절과 같은 줄에 이어 붙일 때만 공백과 계열 경계 간격을 더함 (줄을 바꾸면 줄 끝 공백과 간격은 줄 폭에 들지 않음)
-      const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
-      const need = s.em + (cur > 0 ? charEm(" ", bold) + gap : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = s.em; } else cur += need;
-      if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
-      last = s.last;
-    }
-    lines += n;
-  }
+  for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
 }
 const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 판정이 두 줄로 바뀌지 않게 두는 여유 (인치)

@@ -85,25 +85,120 @@ function scriptGapEm() {
 function textEm(s, bold) {
   return spanEm(s, bold, SCRIPT.WEAK).em;
 }
+// Breaks inside a word (follows LibreOffice 24.2 editeng ImpBreakLine and i18npool BreakIterator_CJK, BreakIterator_Unicode)
+// Besides spaces, the break point is chosen from the first character that passes the line width (m), and the script of the character right before m picks the rule
+//   Asian script (ko-KR): a hanging character moves the break one character on and hangs past the margin at the paragraph end. The break is then pulled back
+//                         over no-line-start and no-line-end characters. Without a pull-back, a Hangul m breaks at the first character of its Hangul run. Otherwise it breaks at m
+//   Latin (en-US): the last position at or before m where a line may break (latinBreakOk). Never right after a slash
+// LibreOffice does not read the eaLnBrk="0" that finalize writes (the attribute is commented out in the oox import), so the forbidden character rules always apply
+// Why: rendering the two sample decks in A4, 10.83 and 4:3 gives 128 breaks inside words ('60|분', '○|○억원', '가|정)', '3-|5개'). 16:9 gives none.
+//      A simulation of these rules (Latin rule taken verbatim from LibreOffice line.txt) reproduces 123 of the 128 at the same position (the other 5 are edge cases at 99.8% of the line width or more).
+//      On 490 probe text boxes (115 words with the line end placed at every character position) it matches 484 (the other 6 come from the probe layout and the widths of ₩ and ↑).
+//      This calculation matches the simulation in 98,710 of 98,720 line counts (3,448 sample paragraphs at 40 widths each) and places 112 of the 117 rendered breaks inside words narrower than the line at the same position
+// Limits: when a word starts with a no-line-start character (a formula symbol such as ' / '), LibreOffice breaks inside the previous word. This calculation breaks between the words.
+//         Asian script characters in runs tagged with a language other than ko-KR follow the default East Asian locale of the environment (zh-CN) (finalize tags every run that contains Hangul ko-KR)
+/** No-line-start characters (LibreOffice ko_KR locale data ForbiddenLineBeginCharacters as is, including the space) */
+const NO_LINE_START = new Set("!%),.:;?]}¢￠'\"′″℃>〉＞》」』】〕！％），．：；？］｝｡｣､･ ﾞﾟ、。’”°");
+/** No-line-end characters (ko_KR ForbiddenLineEndCharacters) */
+const NO_LINE_END = new Set("$(¥£[\\{￡￥'\"<＜《「『【〔＄（［｛₩￦｢‘“〈");
+/** Hanging characters (ko_KR LineBreakHangingCharacters). finalize writes hangingPunct="1" on every paragraph */
+const HANGING = new Set("!,.:;?、。！，．：；？");
+/** Character classes of the Latin rule (the UAX #14 classes used by LibreOffice line.txt that appear in business documents). Characters not listed are AL (letters, ○ ① · and so on) */
+const LB_CLASS = Object.fromEntries([
+  ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
+/** Hangul range LibreOffice uses to keep Hangul words whole: syllables, jamo, compatibility jamo, extended jamo */
+const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
+/** Character class of the Latin rule. Hangul is H, Hanja is ID */
+const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
+/** Whether the Latin rule allows a line break between characters a and b. Summary of the LibreOffice line.txt pair rules
+ *  (never before closing marks and commas, after opening marks and quotes, or between letters and digits. Allowed between a digit and Hangul, after a hyphen and between Hangul syllables) */
+function latinBreakOk(a, b) {
+  const x = lbClass(a), y = lbClass(b);
+  if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
+  if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
+  if (y === "PR") return !["AL", "NU"].includes(x);
+  if (y === "PO") return !["NU", "H", "ID", "IS", "PO", "SY"].includes(x);
+  if (y === "IN") return !["AL", "NU", "H", "ID", "IN", "EX"].includes(x);
+  if ((x === "AL" || x === "NU") && ["AL", "NU", "OP"].includes(y)) return false;
+  if (["CP", "IS", "PO"].includes(x) && (y === "AL" || y === "NU")) return false;
+  return true;
+}
+/** Break position of the Asian script rule (characters of the word kept on the line). 0 moves the whole word to the next line. The word length means a punctuation mark at the paragraph end hangs past the margin */
+function koBreak(chars, m, paraEnd) {
+  let s = m;
+  if (HANGING.has(chars[m])) {
+    if (paraEnd && m === chars.length - 1) return chars.length;
+    s = m + 1;
+  }
+  // The character after the word is a space, and the space is a no-line-start character too (when the comma of '기준, 끝' overflows: '기|준,')
+  while (s > 0 && (s === chars.length || NO_LINE_START.has(chars[s]) || NO_LINE_END.has(chars[s - 1]))) s -= 1;
+  if (s === m && isHangul(chars[m])) while (s > 0 && isHangul(chars[s - 1])) s -= 1;
+  return s;
+}
+/** Break position of the Latin rule (characters of the word kept on the line). 0 moves the whole word to the next line */
+function latinBreak(chars, m) {
+  let s = chars[m - 1] === "/" ? m - 1 : m;
+  while (s > 0 && !latinBreakOk(chars[s - 1], chars[s])) s -= 1;
+  return s > 0 && chars[s - 1] === "/" ? 0 : s;
+}
+/** Script of each character of the word. A weak character takes the script of the character before it (prev is the script of the character before the word. WEAK at the paragraph start, judged Latin) */
+function wordScripts(chars, prev) {
+  let cur = prev;
+  return chars.map((ch) => (cur = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN));
+}
+/** Position of the first character that passes the line width (cap) in a word starting at x (em). Adds the gap before a character that changes the script. The word length when no character passes */
+function overflowAt(chars, scripts, prev, x, cap, bold) {
+  for (let i = 0; i < chars.length; i++) {
+    const p = i ? scripts[i - 1] : prev;
+    if (p && p !== scripts[i]) x += scriptGapEm();
+    x += charEm(chars[i], bold);
+    if (x > cap) return i;
+  }
+  return chars.length;
+}
+/** Position where LibreOffice breaks a word caught at the line end (characters of the word kept on the line), and the script of each character. 0 moves the whole word to the next line */
+function breakInWord(chars, prev, x, cap, bold, paraEnd) {
+  const scripts = wordScripts(chars, prev);
+  const m = overflowAt(chars, scripts, prev, x, cap, bold);
+  if (m === 0 || m === chars.length) return { cut: 0, scripts };
+  return { cut: scripts[m - 1] === SCRIPT.ASIAN ? koBreak(chars, m, paraEnd) : latinBreak(chars, m), scripts };
+}
+/** Line count and breaks inside words [{ word, cut }] of one paragraph (cut: characters kept on the upper line. Words wider than the line are left out). Same calculation as text_metrics.py wrap_paragraph
+ *  Lines break at spaces, and a word caught at the line end is split by the LibreOffice rule (breakInWord). A word wider than the line breaks in the middle
+ *  The space and the script boundary gap count only when the word joins the previous word on the same line (a trailing space and gap at a line break take no line width) */
+function wrapParagraph(para, cap, bold) {
+  // The script of weak characters carries on from the start of the paragraph (last: script of the last character of the previous word)
+  let cur = 0, n = 1, last = SCRIPT.WEAK;
+  const splits = [];
+  const words = para.split(" ");
+  for (let i = 0; i < words.length; i++) {
+    const s = spanEm(words[i], bold, last);
+    const space = charEm(" ", bold);
+    const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
+    const need = s.em + (cur > 0 ? space + gap : 0);
+    if (cur > 0 && cur + need > cap) {
+      const chars = Array.from(words[i]);
+      const { cut, scripts } = breakInWord(chars, last, cur + space, cap, bold, i === words.length - 1);
+      if (cut === chars.length) { cur += need; last = s.last; continue; } // A punctuation mark at the paragraph end hangs past the margin, so no line is added
+      n += 1;
+      if (cut) {
+        if (s.em <= cap) splits.push({ word: words[i], cut });
+        cur = spanEm(chars.slice(cut).join(""), bold, scripts[cut - 1]).em; // The script boundary gap at the split stays at the end of the upper line
+      } else cur = s.em;
+    } else cur += need;
+    if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
+    last = s.last;
+  }
+  return { lines: n, splits };
+}
 /** Number of lines at fontPt in a box of width widthIn */
 function estimateLines(str, widthIn, fontPt, bold) {
   if (!str) return 0;
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   let lines = 0;
-  for (const para of String(str).split("\n")) {
-    // The script of weak characters carries on from the start of the paragraph (last: script of the last character of the previous word)
-    let cur = 0, n = 1, last = SCRIPT.WEAK;
-    for (const w of para.split(" ")) {
-      const s = spanEm(w, bold, last);
-      // The space and the script boundary gap count only when the word joins the previous word on the same line (a trailing space and gap at a line break take no line width)
-      const gap = s.first && last && s.first !== last ? scriptGapEm() : 0;
-      const need = s.em + (cur > 0 ? charEm(" ", bold) + gap : 0);
-      if (cur > 0 && cur + need > cap) { n += 1; cur = s.em; } else cur += need;
-      if (cur > cap) { n += Math.floor(cur / cap); cur = cur % cap; }
-      last = s.last;
-    }
-    lines += n;
-  }
+  for (const para of String(str).split("\n")) lines += wrapParagraph(para, cap, bold).lines;
   return lines;
 }
 const LINE_FIT_EPS = 0.01; // Margin so width rounding does not turn a one-line judgment into two lines (inches)

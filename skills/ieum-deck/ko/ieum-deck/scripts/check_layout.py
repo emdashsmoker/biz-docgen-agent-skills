@@ -2,7 +2,7 @@
 """check_layout.py: 빌드된 pptx 의 구조 검수 (python-pptx 는 검수에만 사용).
 사용: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 검사: 텍스트 넘침 추정(빌드와 같은 나눔고딕 실측 폭과 어절 단위 줄바꿈으로 소요 높이 산정, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
-      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
+      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(줄 끝에 걸린 어절을 LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 곳. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
 결과: FAIL 과 WARN 목록. 종료 코드 1 이면 FAIL 존재
 """
 import json
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from pptx import Presentation
 from pptx.util import Emu
-from text_metrics import FM, para_width_in, text_width_in, wrap_lines  # 빌드와 같은 글 폭 모델 (같은 폴더의 공용 모듈)
+from text_metrics import FM, para_width_in, text_width_in, wrap_lines, wrap_paragraph  # 빌드와 같은 글 폭 모델 (같은 폴더의 공용 모듈)
 
 HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
@@ -83,6 +83,25 @@ def too_wide_word(paras, inner):
             tw = text_width_in(tok, pt, bold)
             if tw > eff + WORD_FIT_TOL: return tok, tw, eff
     return None
+
+
+def bullet_indent(p):
+    """불릿 문단의 들여쓰기(인치). 불릿이 없으면 0"""
+    pxml = p._p.xml
+    if "buChar" not in pxml and "buAutoNum" not in pxml: return 0.0
+    pr = p._p.find(NSA + "pPr")
+    return int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
+
+
+def token_splits(paras, inner):
+    """안쪽 폭에서 LibreOffice 가 어절 안에서 줄을 바꿀 것으로 추정되는 곳 ['60|분', ...]. 빌드와 같은 줄바꿈 계산(wrap_paragraph)
+    줄 폭보다 넓은 어절은 제외 (too_wide_word 가 보고)"""
+    out = []
+    for p in paras:
+        runs = [r for r in para_runs(p) if r[0]]
+        if not runs: continue
+        out += [f"{w[:cut]}|{w[cut:]}" for w, cut in wrap_paragraph(runs, max(0.1, inner - bullet_indent(p)))[2]]
+    return out
 
 
 def overflow_estimate(sh):
@@ -319,11 +338,14 @@ def main():
                     fails.append(f"[{n}] 요소 겹침 {boxes[i][1]} / {boxes[j][1]} ({inter / small:.0%})")
 
         # 어절 중간 줄바꿈 추정: 상자 안쪽 폭보다 넓은 어절은 모든 렌더러에서 중간이 잘림 (글 상자와 표 셀)
+        # 어절 안 줄바꿈 추정: 줄 끝에 걸린 어절을 LibreOffice 가 '60|분', '○|○억원', '가|정)', '3-|5개' 처럼 나눔 (text_metrics.break_in_word)
+        # Why: 견본 2종의 A4, 10.83, 4:3 렌더에서 128건이 단위와 숫자를 떼거나 닫는 괄호 앞 글자를 다음 줄로 넘김. 어절 폭 비교로는 찾지 못함.
+        #      이 추정은 렌더에서 어절 안 줄바꿈이 있는 글 상자와 표 96개 중 93개를 찾고 2개를 잘못 경고 (16:9 경고 0)
         for sh in (slide.shapes if word_break else []):
             if sh.width is None: continue
             y = sh.top / 914400 if sh.top else 0
             if y < RULE_Y * sy + 0.35: continue
-            hit = None
+            hit, splits = None, []
             if sh.has_table:
                 colw = [c.width / 914400 for c in sh.table.columns]
                 for r in sh.table.rows:
@@ -331,14 +353,19 @@ def main():
                         if c.is_spanned or not c.text.strip(): continue
                         inner = sum(colw[j:j + c.span_width]) - c.margin_left / 914400 - c.margin_right / 914400
                         hit = hit or too_wide_word(c.text_frame.paragraphs, inner)
+                        splits += token_splits(c.text_frame.paragraphs, inner)
             elif sh.has_text_frame and sh.text_frame.text.strip():
                 bp = sh.text_frame._txBody.find(NSA + "bodyPr")
                 if bp is not None and bp.get("wrap") == "none": continue
                 if bp is not None and bp.get("vert") not in (None, "horz"): continue  # 세로쓰기(matrix 세로축 라벨 등)는 가로 폭으로 줄바꿈하지 않음
                 ins = lambda k: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else 0.1
                 hit = too_wide_word(sh.text_frame.paragraphs, sh.width / 914400 - ins("lIns") - ins("rIns"))
+                splits = token_splits(sh.text_frame.paragraphs, sh.width / 914400 - ins("lIns") - ins("rIns"))
             if hit:
                 warns.append(f"[{n}] 어절 중간 줄바꿈 추정 '{hit[0][:14]}' (어절 폭 {hit[1]:.2f}in > 안쪽 폭 {hit[2]:.2f}in)")
+            if splits:
+                more = f" 외 {len(splits) - 1}곳" if len(splits) > 1 else ""
+                warns.append(f"[{n}] 어절 안 줄바꿈 추정 '{splits[0][:16]}'{more} (줄 끝에 걸린 어절을 렌더러가 나눔) → 문구를 줄이거나 상자를 넓히거나 어절이 줄 끝에 걸리지 않게 고쳐 쓰기")
 
         # 테두리 상자 안 내용이 적어 빈 면적이 큰 경우
         for sh in slide.shapes:

@@ -109,26 +109,142 @@ def words_of(gl):
     return out
 
 
+# 어절 안 줄바꿈 (LibreOffice 24.2 editeng ImpBreakLine 과 i18npool BreakIterator_CJK, BreakIterator_Unicode 를 따름)
+# 공백 외에도 줄 폭을 처음 넘는 글자(m)에서 끊을 위치를 정하며, m 바로 앞 글자의 계열로 규칙이 갈림
+#   한글 계열(ko-KR): 걸침 문자는 한 글자 뒤로 옮겨 문단 끝이면 줄 밖에 걸치고, 줄 첫머리 금지 문자와 줄 끝 금지 문자를 피해 앞으로 당김.
+#                     당기지 않았고 m 이 한글이면 그 한글 묶음의 첫 글자에서 나눔. 그 밖에는 m 에서 나눔
+#   라틴(en-US): m 이하에서 줄을 바꿀 수 있는 마지막 글자 사이 (latin_break_ok). 빗금 바로 뒤는 제외
+# finalize 가 기록하는 eaLnBrk="0" 은 LibreOffice 가 읽지 않으므로 금지 문자 규칙은 늘 적용됨 (oox 가져오기에서 주석 처리된 속성)
+# Why: 견본 2종을 A4, 10.83, 4:3 으로 렌더하면 어절 안 줄바꿈 128건('60|분', '○|○억원', '가|정)', '3-|5개'). 16:9 는 0건.
+#      이 규칙의 모의 계산(라틴 규칙은 LibreOffice line.txt 그대로)이 128건 중 123건을 같은 위치에서 재현 (5건은 줄 폭의 99.8% 이상인 경계).
+#      확인 문안 490개(어절 115종의 글자 위치마다 줄 끝을 둔 글 상자)에서 484개 일치 (6개는 문안 배치와 ₩ ↑ 글자 폭 문제).
+#      이 계산은 모의 계산과 줄 수 98,710/98,720 일치 (견본 문단 3,448개를 40개 폭으로), 렌더 어절 안 줄바꿈 117건(줄 폭보다 좁은 어절) 중 112건을 같은 위치로 추정
+# 한계: 어절 첫 글자가 줄 첫머리 금지 문자인 경우(' / ' 같은 수식 기호) LibreOffice 는 앞 어절 안에서 나눔. 이 계산은 어절 사이에서 나눔.
+#       ko-KR 이외 언어로 기록된 run 의 한글 계열 글자는 실행 환경 기본 동아시아 로캘(zh-CN) 목록을 따름 (finalize 는 한글이 든 run 을 모두 ko-KR 로 기록)
+# 줄 첫머리 금지 문자 (LibreOffice ko_KR 로캘 자료 ForbiddenLineBeginCharacters 그대로이며 공백 포함)
+NO_LINE_START = frozenset("!%),.:;?]}¢￠'\"′″℃>〉＞》」』】〕！％），．：；？］｝｡｣､･ ﾞﾟ、。’”°")
+# 줄 끝 금지 문자 (ko_KR ForbiddenLineEndCharacters)
+NO_LINE_END = frozenset("$(¥£[\\{￡￥'\"<＜《「『【〔＄（［｛₩￦｢‘“〈")
+# 걸침 문자 (ko_KR LineBreakHangingCharacters). finalize 가 모든 문단에 hangingPunct="1" 을 기록
+HANGING = frozenset("!,.:;?、。！，．：；？")
+# 라틴 규칙의 글자 분류 (LibreOffice line.txt 가 쓰는 UAX #14 분류 중 업무 문서에 나오는 것). 목록에 없는 글자는 AL (영문자, ○ ① · 등)
+LB_CLASS = {**dict.fromkeys("([{〈《「『【〔（［｛", "OP"), **dict.fromkeys(")]}", "CP"), **dict.fromkeys("〉》」』】〕）］｝，．：；、。", "CL"),
+            **dict.fromkeys("'\"“”‘’", "QU"), **dict.fromkeys(",.:;", "IS"), **dict.fromkeys("!?！？", "EX"), "/": "SY", "-": "HY",
+            **dict.fromkeys("|–", "BA"), **dict.fromkeys("%℃°‰′″％", "PO"), **dict.fromkeys("$₩+±£¥＄￦", "PR"), "…": "IN",
+            **dict.fromkeys("0123456789", "NU")}
+
+
+def is_hangul(ch):
+    """LibreOffice 가 한글 어절 보호에 쓰는 한글 범위: 음절, 자모, 호환 자모, 확장 자모"""
+    c = ord(ch)
+    return 0xAC00 <= c <= 0xD7AF or 0x1100 <= c <= 0x11FF or 0xA960 <= c <= 0xA97F or 0xD7B0 <= c <= 0xD7FF or 0x3130 <= c <= 0x318F
+
+
+def lb_class(ch):
+    """라틴 규칙의 글자 분류. 한글은 H, 한자는 ID"""
+    if is_hangul(ch): return "H"
+    if is_hanja(ord(ch)): return "ID"
+    return LB_CLASS.get(ch, "AL")
+
+
+def latin_break_ok(a, b):
+    """라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
+    (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능)"""
+    x, y = lb_class(a), lb_class(b)
+    if y in ("CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA") or x in ("OP", "QU"): return False
+    if x == "PR": return y not in ("NU", "AL", "H", "ID")
+    if y == "PR": return x not in ("AL", "NU")
+    if y == "PO": return x not in ("NU", "H", "ID", "IS", "PO", "SY")
+    if y == "IN": return x not in ("AL", "NU", "H", "ID", "IN", "EX")
+    if x in ("AL", "NU") and y in ("AL", "NU", "OP"): return False
+    if x in ("CP", "IS", "PO") and y in ("AL", "NU"): return False
+    return True
+
+
+def ko_break(text, m, para_end):
+    """한글 계열 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄, 어절 길이면 문단 끝 문장부호가 줄 밖에 걸침"""
+    s = m
+    if text[m] in HANGING:
+        if para_end and m == len(text) - 1: return len(text)
+        s = m + 1
+    # 어절 끝 다음 글자는 공백이며 공백도 줄 첫머리 금지 문자 ('기준, 끝' 의 쉼표가 넘치면 '기|준,')
+    while s > 0 and (s == len(text) or text[s] in NO_LINE_START or text[s - 1] in NO_LINE_END): s -= 1
+    if s == m and is_hangul(text[m]):
+        while s > 0 and is_hangul(text[s - 1]): s -= 1
+    return s
+
+
+def latin_break(text, m):
+    """라틴 규칙의 나눔 위치 (어절 안 글자 수). 0 이면 어절 전체가 다음 줄"""
+    s = m - 1 if text[m - 1] == "/" else m
+    while s > 0 and not latin_break_ok(text[s - 1], text[s]): s -= 1
+    return 0 if s > 0 and text[s - 1] == "/" else s
+
+
+def word_scripts(word, prev):
+    """어절 글자별 계열. 약한 문자는 앞 글자 계열 (prev 는 어절 앞 글자의 계열, 문단 첫머리는 WEAK 이며 라틴으로 판정)"""
+    out, cur = [], prev
+    for ch, _ in word:
+        cur = script_of(ord(ch)) or cur or LATIN
+        out.append(cur)
+    return out
+
+
+def overflow_at(word, scripts, prev, x, cap):
+    """x(em)에서 시작하는 어절에서 줄 폭(cap)을 처음 넘는 글자 위치. 계열이 바뀌는 글자 앞에 간격을 더함. 넘는 글자가 없으면 어절 길이"""
+    for i, (_, w) in enumerate(word):
+        if (scripts[i - 1] if i else prev) not in (WEAK, scripts[i]): x += GAP_EM
+        x += w
+        if x > cap: return i
+    return len(word)
+
+
+def break_in_word(word, prev, x, cap, para_end):
+    """줄 끝에 걸린 어절을 LibreOffice 가 나누는 위치 (어절 안 글자 수)와 글자별 계열. 0 이면 어절 전체가 다음 줄"""
+    scripts = word_scripts(word, prev)
+    m = overflow_at(word, scripts, prev, x, cap)
+    if m in (0, len(word)): return 0, scripts
+    text = "".join(ch for ch, _ in word)
+    return (ko_break(text, m, para_end) if scripts[m - 1] == ASIAN else latin_break(text, m)), scripts
+
+
 # Why 어절 단위 줄바꿈: 폭 ÷ 줄 폭 올림은 줄 끝에 남는 빈 공간을 세지 않아 줄 수를 적게 셈 (넘침을 놓치는 방향)
 #     위 렌더의 글 상자 문단 7,337개에서 렌더와 줄 수가 다른 문단: 올림 122개(모두 과소), 어절 단위 41개
 #     (41개는 마름모, 셰브론, 타원의 안쪽 글 영역 18개와 문구 폭이 줄 폭의 99.5% 이상인 경계 23개로 빌드 추정과 같은 차이)
-def wrap_lines(runs, width_in):
-    """width_in 폭에서 문단이 차지하는 줄 수와 마지막 줄 폭(인치). 빌드의 estimateLines 와 같은 어절 단위 줄바꿈
-    공백에서 줄을 바꾸고 줄 폭보다 넓은 어절은 중간에서 나눔. 앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄 끝 공백과 간격은 줄 폭에 들지 않음)"""
+def wrap_paragraph(runs, width_in):
+    """width_in 폭에서 문단이 차지하는 줄 수, 마지막 줄 폭(인치), 어절 안 줄바꿈 목록 [(어절, 윗줄에 남는 글자 수)]. 빌드의 estimateLines 와 같은 계산
+    공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(break_in_word)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔 (이 어절은 목록에서 제외)
+    앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄 끝 공백과 간격은 줄 폭에 들지 않음)"""
     ref = max(pt for _, pt, _ in runs)
     cap = width_in * 72 / ref * LINE_SAFETY
-    cur, n, last = 0.0, 1, WEAK
-    for word, space in words_of(glyphs(runs, ref)):
+    cur, n, last, splits = 0.0, 1, WEAK, []
+    words = words_of(glyphs(runs, ref))
+    for i, (word, space) in enumerate(words):
         em, first, end = span_em(word, last)
         gap = GAP_EM if first and last and first != last else 0
         need = em + (space + gap if cur > 0 else 0)
         if cur > 0 and cur + need > cap:
+            cut, scripts = break_in_word(word, last, cur + space, cap, i == len(words) - 1)
+            if cut == len(word):  # 문단 끝 문장부호가 줄 밖에 걸쳐 줄이 늘지 않음
+                cur += need
+                last = end
+                continue
             n += 1
-            cur = em
+            if cut:
+                if em <= cap: splits.append(("".join(ch for ch, _ in word), cut))
+                cur = span_em(word[cut:], scripts[cut - 1])[0]  # 나눈 자리의 계열 경계 간격은 윗줄 끝에 남음
+            else:
+                cur = em
         else:
             cur += need
         if cur > cap:
             n += math.floor(cur / cap)
             cur = cur % cap
         last = end
-    return n, cur * ref / 72
+    return n, cur * ref / 72, splits
+
+
+def wrap_lines(runs, width_in):
+    """width_in 폭에서 문단이 차지하는 줄 수와 마지막 줄 폭(인치) (wrap_paragraph 참고)"""
+    n, last_w, _ = wrap_paragraph(runs, width_in)
+    return n, last_w
