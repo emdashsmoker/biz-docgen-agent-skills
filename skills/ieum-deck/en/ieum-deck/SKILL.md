@@ -906,6 +906,7 @@ ieum-deck/
 │   ├── validate.py          Package structure validation (content types, XML syntax, relationship targets, slide ids, shape ids, python-pptx opening; schema validation when OOXML_PML_XSD is set)
 │   ├── lint.py              storyboard checks
 │   ├── check_layout.py      Checks of the typeset result
+│   ├── text_metrics.py      Text width and line count estimates (shared by lint.py and check_layout.py; same rules as the build's atoms.js)
 │   ├── render.sh, topdf.sh  PNG rendering, PDF conversion
 │   ├── sheet.py             PNG contact sheets
 │   ├── parse_input.py       hwpx, hwp, pdf, docx, pptx, xlsx, html, csv, json, xml, epub, md, txt → md (--pdf converts hwpx to PDF)

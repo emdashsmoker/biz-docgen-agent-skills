@@ -891,6 +891,7 @@ ieum-deck/
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사
+│   ├── text_metrics.py      글 폭과 줄 수 추정 (lint.py, check_layout.py 공용. 빌드 atoms.js 와 같은 규칙)
 │   ├── render.sh, topdf.sh  PNG 렌더링, PDF 변환
 │   ├── sheet.py             PNG 열람 시트
 │   ├── parse_input.py       hwpx, hwp, pdf, docx, pptx, xlsx, html, csv, json, xml, epub, md, txt → md (--pdf 로 hwpx PDF 변환)
