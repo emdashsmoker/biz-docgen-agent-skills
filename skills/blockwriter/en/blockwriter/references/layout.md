@@ -55,8 +55,8 @@ Table width
 
 Cell formatting
 
-- Alignment is decided for each column. The order of priority is the manuscript alignment marker, left for columns that contain a cell starting with a bullet, containing a line break, or with a weighted length over 20, and center otherwise. Number columns without a marker are centered
-- Right alignment of quantity columns is set with the manuscript alignment marker (`---:`). The marker criteria are in the Tables section of references/manuscript.md
+- Alignment is decided for each column. The order of priority is the manuscript alignment marker, left for columns that contain a cell starting with a bullet, and center otherwise. Number columns and descriptive text columns without a marker are centered
+- Right alignment of quantity columns and left alignment of descriptive text columns are set with manuscript alignment markers (`---:`, `:---`). The marker criteria are in the Tables section of references/manuscript.md
 - Alignment is judged only on body cells, leaving out the header rows (including multi-row headers) and merge directive cells
 - Header rows use the center alignment of the table content style regardless of column alignment
 - Cell borders are 0.15mm black. The left border of the leftmost cells and the right border of the rightmost cells are left open (EDGE_OPEN_SIDES)
@@ -230,6 +230,10 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check that the level symbols are printed and that each level steps in by its indent. ※ is a note on the previous item, so it is left out of the indent step check
 - Cross-check the presence of statements under □ with the lint results
 - Check that tables are centered, column alignment is consistent, header shading and the unit and source row positions are right, and label column merges neither overlap nor leave gaps
+- Check whether horizontal alignment differs by cell within the same column
+- Check whether quantity columns of numbers and units (amounts, ratios, scores, etc.) are centered or left-aligned
+- Check whether expressions that mix numbers with words for a condition, a point in time or an order (○○ points or more, year 4, stage 3, etc.) or formula columns are right-aligned
+- Check whether columns of the same nature (periods, amounts, ratios, etc.) are aligned differently in different tables
 - If automatic merging looks odd, switch to `--merge explicit` and merge only where needed with `^` and `<`. Whether a merge fits differs from table to table, so judge it in the free review
 - A long-text cell wrapping to 2 lines is normal. Only a line break that cuts a word in the middle (for example `대한민` and `국` on different lines) counts as a defect
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
@@ -252,8 +256,9 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (NanumGothic and NanumBarunGothic) Chosen so that Hanja in reports with many Hanja do not print as blanks or in another font. The NAVER releases of both fonts have outlines for all 4,620 KS X 1001 Hanja and the 268 compatibility Hanja in every weight. NanumMyeongjo has no Hanja, and NanumSquare has the Hanja codes with empty glyphs, so neither is used. The flat headings use a different typeface to set them apart from the chapter headings
 - (Nanum fonts) They are free fonts under the SIL Open Font License 1.1, so they can be installed without license fees in any Hangul or Word environment and documents open with the same appearance. Both NanumGothic and NanumBarunGothic are offered as safe fonts (안심글꼴) on 공유마당 (Gongu Madang) of the Korea Copyright Commission
 - (Table width cap) Using the full available width makes the table's left side stick out past the text start line, so the cap is reduced by the level indent
-- (Alignment per column) Deciding per cell splits the alignment within a column among numbers, long text, and short cells, so alignment is decided per column
-- (Manuscript alignment markers) Quantities (amounts, counts) and identifiers (years, year-months, serial numbers) look the same as cell text, so text cannot tell them apart. The manuscript author, who knows what each column means, sets the alignment with markers
+- (Alignment per column) Deciding per cell splits the alignment within a column among number cells, descriptive cells, and short cells, so alignment is decided per column
+- (Manuscript alignment markers) Column alignment follows the role the column plays in the table. Cells with the same number shape, such as year 2005 and amount 2,005, can play different roles. The manuscript author, who sees the whole table, sets the alignment with markers
+- (Default alignment) A measurement of the tables in five Hangul reports and proposals written by people found that 20% of the 790 text columns other than bullet columns were left-aligned. Left columns were mostly descriptive text columns such as content and details. Text length cannot pick out these columns. Without a marker only bullet columns go left
 - (Caption objects and automatic numbers) When a table is moved in Hangul, the caption follows and the number updates. The DOCX number fields serve the same purpose
 - (Attached rows inside the table) The unit and source rows are transparent cells inside the table so that they move with the table during manual editing
 - (Outer table borders) The left and right outer borders are open to soften the boundary between the text and the table. If outer borders are needed, set EDGE_OPEN_SIDES to False

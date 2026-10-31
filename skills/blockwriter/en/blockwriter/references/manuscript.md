@@ -38,15 +38,22 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - If the row right below the header contains `^` and has no numeric cells, it is treated as a multi-row header
 - Inside a cell, lines starting with `○` (or `◦`, `ㅇ`, `ㆍ`, `·`, `•`) are printed as small-circle (◦) cell bullets, and lines starting with `- ` as - cell bullets. If a user form has no cell bullet styles, they are printed as table content with the symbol kept
 - The `- ` cell bullet is a sub-level that starts one step further in than the ◦ cell bullet. Use it for detail statements under a ○ line
-- Set column alignment with alignment markers in the table separator row. The basis is the meaning of the column (year 2005 goes center, amount 2,005 goes right)
-    - Quantity columns (amounts, counts, ratios, durations, scores) take `---:` (right) so that digits are easy to compare
-    - Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns take `:---:` (center)
-    - Columns with bullets, line breaks, or long text (cells longer than about 10 Korean characters) take `:---` (left)
-    - (Marker example) The separator row of the project record table `| No. | Project | Year | Cases | Amount |` is `|:---:|:---|:---:|---:|---:|`
+- Set column alignment with alignment markers in the table separator row (`---:` right, `:---:` center, `:---` left)
+- Horizontal alignment is set per column
+- Column alignment is judged from the whole table by the role the column plays in it (year 2005 goes center, amount 2,005 goes right)
+    - (Quantity columns) Columns of numbers and units (amounts, counts, ratios, scores, weights, etc.) take `---:` (right) so that digits are easy to compare
+    - (Columns read as one expression) Columns whose cells each read as one expression (categories, names, years, serial numbers, periods, formulas, short text, etc.) take `:---:` (center)
+    - (Columns read line by line) Bullet lists, diagnostic questions and descriptive text (content, details and main activities columns, etc.) take `:---` (left)
+    - (Marker example) The separator row of the project record table `| No. | Project | Year | Cases | Amount |` is `|:---:|:---:|:---:|---:|---:|`
+- A quantity with a share or change added in parentheses (212 (43.7%), etc.) makes a quantity column
+- An expression that mixes numbers with words for a condition, a point in time or an order (○○ points or more, ○○% (2030), year 4, stage 3, etc.) makes a column read as one expression even though it contains numbers
+- Columns of the same nature use the same alignment in every table of a document
+- A column that is hard to judge is centered
+- Header rows are centered regardless of column alignment
 - In a manuscript you write or rewrite, put an alignment marker on every column of every table
 - Keep the alignment markers in a manuscript the user provides
 - If a manuscript the user provides has tables without alignment markers, ask the user before typesetting whether to add markers
-- Columns without a marker take the default alignment (columns with bullets, line breaks, or long text go left, all other columns go center, number columns included)
+- Columns without a marker take the default alignment (columns with bullets go left, all other columns go center, number and descriptive text columns included)
 - For tables over 25 rows including the header rows (long tables), a build without `--long-table` reports them on a `HITL: [long table]` line
 
 ## Figures
