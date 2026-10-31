@@ -127,7 +127,7 @@
 - When each strategy gets its own slide (IT planning convention, high-score sub-items), promote the pillar items to the body
     + Place a supporting table that is a specimen of the method (step table, quality indicator table, subcommittee table, survey design table) as the Sample
     + Do not place a table that lists risks or values secured by strategy, such as the derivation table, as the Sample
-    + Write "참고용 예시 (미확정)" (illustrative example, not finalized) in the `footnotes` of the specimen table
+    + Write "참고용 예시" (illustrative example) in the `footnotes` of the specimen table
 
 ### Self-check before presenting
 
