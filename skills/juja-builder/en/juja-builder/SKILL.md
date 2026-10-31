@@ -636,7 +636,12 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). Columns with bullets are left-aligned at typesetting
-- The typesetter judges column alignment per column (number columns with thousands separators or decimal points go right, other number columns (serial numbers, years, counts) go center, columns with bullets or long text go left, everything else goes center). If an alignment other than the judgment is needed, set `:---:` (center), `:---` (left), or `---:` (right) in the separator row
+- Set column alignment per table with alignment markers in the separator row while writing the manuscript. The basis is the meaning of the column (year 2005 goes center, amount 2,005 goes right)
+    + Quantity columns (amounts, counts, ratios, durations, scores) take `---:` (right) so that digits are easy to compare
+    + Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns take `:---:` (center)
+    + Columns with bullets, line breaks, or long text (over 10 Korean or 20 half-width characters) take `:---` (left)
+    + (Marker example) The separator row of the track record table `| 연번 | 과업명 | 발주처 | 기간 | 금액(천원) |` is `|:---:|:---|:---:|:---:|---:|`
+- Columns without a marker take the default alignment (columns with bullets, line breaks, or long text go left, all other columns go center, number columns included). A table without quantity columns may omit markers because the default matches the criteria above
 
 ### Style of □ Headings
 
