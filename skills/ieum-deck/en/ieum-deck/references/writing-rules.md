@@ -103,7 +103,7 @@
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
 - Keep bullets when there are 2 or more items
-- A single item is written as a sentence without a bullet, even when it wraps onto several lines
+- A single item is written as a sentence without a bullet, even when it wraps onto several lines (the process, data used and deliverables boxes of module overview slides are an exception and take bullets)
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)

@@ -330,6 +330,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - 모듈마다 1장 배치 (없거나 2장 이상이면 lint FAIL)
 - 템플릿은 `module_overview` (열은 Task, 행은 추진과정, 활용자료, 산출물)
+- 추진과정, 활용자료, 산출물 상자는 항목이 1개여도 불릿 좌측 정렬로 조판 (Task 열 비교의 통일성을 위한 예외, 빌더가 자동 적용)
 - 모듈 개요용 커스텀 슬라이드는 등록 설정의 역할 module_overview 에 번호를 적어 사용 (`references/custom-slides.md`)
 - 해당 모듈의 Task 전건을 표기 (누락은 lint FAIL)
 - 모듈 개요 슬라이드는 Task 슬라이드 출현 집계에서 제외
@@ -595,7 +596,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 병합 지정은 storyboard 의 `merged` 필드
     + 빌더는 `merged` 지정대로만 병합
 - (정렬) 가로 정렬은 열 단위, 세로 정렬은 행 단위로 통일
-    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬 (표 열은 `references/writing-rules.md` 표 절)
+    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬 (표 열은 `references/writing-rules.md` 표 절, 모듈 개요 슬라이드는 예외)
     + 항목 2개 이상은 불릿 좌측 정렬과 세로 가운데 정렬
     + 같은 열의 셀은 같은 가로 정렬을 사용
     + 같은 행의 셀은 같은 세로 정렬을 사용

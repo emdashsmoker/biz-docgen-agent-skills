@@ -343,6 +343,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - Place one per module (none or two or more is lint FAIL)
 - The template is `module_overview` (columns are Tasks, rows are process, data used, deliverables)
+- The process, data used and deliverables boxes are typeset as left-aligned bullets even with a single item (an exception for consistency across Task columns, applied by the builder)
 - For a custom slide used as a module overview, write its number under the module_overview role of the registration settings (`references/custom-slides.md`)
 - Show every Task of the module (omissions are lint FAIL)
 - Module overview slides are excluded from the Task slide appearance count
@@ -608,7 +609,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Merging is specified with the `merged` field of the storyboard
     + The builder merges only as specified by `merged`
 - (Alignment) Horizontal alignment is uniform per column, vertical alignment is uniform per row
-    + A single item is centered without a bullet, even when it wraps into several lines (table columns follow the `references/writing-rules.md` tables section)
+    + A single item is centered without a bullet, even when it wraps into several lines (table columns follow the `references/writing-rules.md` tables section, module overview slides are an exception)
     + Two or more items use left-aligned bullets and vertical centering
     + Cells of the same column use the same horizontal alignment
     + Cells of the same row use the same vertical alignment

@@ -98,7 +98,7 @@
 | 제안 개요 | features | 질문 배너와 역량 타일 | question, tiles[{title, items[]}] | 타일 2-4, 타일별 항목 1-4 |
 | 제안 개요 | strategy | 지붕(목표), 전략 기둥, 기단(결론)의 집 모양 | goal, strategies[{title, items[], result}], conclusion | 전략 2-4, 전략별 항목 4-5 (기둥 안을 채우는 분량). 기둥은 같은 폭. 지붕과 기단은 기둥 묶음보다 양옆으로 0.2인치 넓음. 층 사이 간격은 0.16인치. 글자는 지붕 16pt(길면 14pt 까지 축소), 기둥 제목과 기단 14pt, 기둥 항목 12pt |
 | 제안 개요 | process | 모듈 셰브론과 Task 상자 | modules[{id, title, tasks[]}], idFormat, titleFormat | 모듈 2-7, 모듈별 Task 2-6. 모듈 번호는 id 에 기재 (title 은 모듈명만 기재). id 가 없으면 idFormat (기본값 "Module {n}"), 셰브론 문구는 titleFormat (기본값 "M{n}. {t}"). Task 상자는 마지막 상자 하단을 본문 하단에 맞춰 배분 (상자 간격은 균등 간격의 1.5배 상한). 모듈 사이는 ㄱ자 연결선. 모듈 6개 이상이면 모든 셰브론의 높이와 글꼴을 같은 값으로 자동 조정 |
-| 수행계획 | module_overview | 모듈 개요표 | tasks[{title, process[], data[], output[]}], rowLabels | Task 2-6. 산출물이 여럿이면 output 배열에 모두 기재 (여러 항목 불릿) |
+| 수행계획 | module_overview | 모듈 개요표 | tasks[{title, process[], data[], output[]}], rowLabels | Task 2-6. 산출물이 여럿이면 output 배열에 모두 기재. 세 행 모두 항목이 1개여도 불릿 좌측 정렬 (Task 열 비교의 통일성을 위한 예외) |
 | 수행계획 | task | Task 설계표와 실측 표본 | leftHead, head[], rows[[항목, 내용]], sample{head, table 또는 items 또는 image 또는 chart, tag}, point | 행 3-6. 설계표 열 제목은 head (기본값 "항목", "내용"). 표본 꼬리표는 sample.tag (기본값 Sample) |
 | 수행계획 | task_multi | Task 묶음 매트릭스 (분량 제한 시) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Task 2-4. items 는 "라벨 : 값" 형식 (행 정렬 조건). 이 형식이 아닌 항목을 모으는 행의 라벨은 freeLabel (기본값 "주요 내용"). id 가 없으면 idFormat (기본값 "Task {n}") |
 | 분석과 비교 | bullets | 패널 1-4열 | panels[{head, items 또는 text, headFill, fill}], point | 열 1-4 |

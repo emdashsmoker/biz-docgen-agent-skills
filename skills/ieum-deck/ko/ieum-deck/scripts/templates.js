@@ -857,7 +857,8 @@ function module_overview(ctx, slide, sb) {
     const t = tasks[i]; if (!t) return;
     [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
       const bx = { x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 };
-      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k] });
+      // Task 열을 나란히 비교하므로 항목이 1개인 상자도 불릿 좌측 정렬로 통일 (항목 1개 불릿 생략 규칙의 예외)
+      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k], forceBullet: true });
     });
   });
   source(ctx, slide, sb);
