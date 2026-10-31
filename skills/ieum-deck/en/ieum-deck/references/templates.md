@@ -42,14 +42,21 @@
     + When the one-line width sum is smaller than the table width and 3 or more same-kind data columns run in a row, the spare width goes only to that group (a group forming the table body, such as role codes, years or alternatives)
     + Without such a group, the spare width is split across all columns in proportion to their one-line widths
     + When the one-line width sum exceeds the table width, the longest columns shrink first to the same width (short columns stay on one line, and the word width is kept)
-- Alignment is set per column
-    + Columns with multi-item cells are left-aligned
-    + Diagnostic question columns (columns with a cell ending in a question form such as "는가", "인가", "는지") are left-aligned
-    + Number columns are right-aligned so digits compare easily
-    + Other columns with only single-item cells are centered, including Harvey ball columns
+- Column alignment is set for every table at the storyboard stage with `align` (an array of per-column horizontal alignments)
+    + Values are "right", "center" and "left"
+    + The deciding test is what the column means (year 2005 is centered, amount 2,005 is right-aligned)
+    + Quantity columns (amounts, counts, ratios, durations, scores) are "right" so digits compare easily
+    + Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns are "center"
+    + Columns with multi-item cells and diagnostic question columns (columns with a cell ending in a question form such as "는가", "인가", "는지") are "left"
+    + Example: `"head": ["연번", "과제명", "기간", "개월", "계약금액"], "align": ["center", "center", "center", "right", "right"]`
+- The `align` array has the same length as the column count (a different length gives a build warning)
+- Tables without `align` and columns missing from `align` use the default alignment
+    + Columns with multi-item cells and diagnostic question columns are left-aligned
+    + Other columns with only single-item cells are centered, including number columns and Harvey ball columns
+    + A table without quantity columns may leave out `align`, since the default alignment matches the rules above
 - The cells of a column are all single-item or all multi-item (a single-item cell in a multi-item column is left-aligned without a bullet)
 - Vertical alignment is centered for the whole table
-- Set `colW` (width ratios) and `align` (per-column alignment) only when a width or alignment unrelated to the text is needed, such as empty fill-in cells
+- Set `colW` (width ratios) only when a width unrelated to the text is needed, such as empty fill-in cells
 - If the table text fill (the per-column one-line width sum as a share of the table width) is below 60%, a build warning appears
     + Fix it in this order: enrich cell text (add subject, criterion, figures), add information columns (owner, cycle, criterion, output), shrink the cell width
     + Tables with placeholder cells (`[회사 확인]`, etc.) are excluded from the check
@@ -98,7 +105,7 @@
 | Execution plan | task | Task design table and measured sample | leftHead, head[], rows[[item, content]], sample{head, table or items or image or chart, tag}, point | Rows 3-6. The design table column titles are head (default "항목", "내용"). The sample tag is sample.tag (default Sample) |
 | Execution plan | task_multi | Task bundle matrix (for page limits) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Tasks 2-4. items use the "label : value" format (row alignment condition). The label of the row collecting items not in this format is freeLabel (default "주요 내용"). Without id, idFormat applies (default "Task {n}") |
 | Analysis and comparison | bullets | Panels in 1-4 columns | panels[{head, items or text, headFill, fill}], point | Columns 1-4 |
-| Analysis and comparison | table | Full-width table | title, legend, head[], rows[][], point | Rows 1-16 |
+| Analysis and comparison | table | Full-width table | title, legend, head[], rows[][], align[], point | Rows 1-16. Column alignment is align (table typesetting section) |
 | Analysis and comparison | chart_text | Chart with findings | chartTitle, chart{type, barDir, categories, series, numFmt}, findings[{head, items}] | Findings 1-3. The chart fields are the same as the chart block in `references/recipes.md` |
 | Analysis and comparison | chart_two | Two charts side by side | left{title, chart, items}, right{title, chart, items} | - |
 | Analysis and comparison | compare | AS-IS, TO-BE, gap | asis{head, items}, tobe{head, items}, gap[], gapHead | Items 2-4. Write each item as a title (text) of about 20 characters and add 1-2 evidence sub-items (sub). Write each gap as an improvement means of about 10 characters per item and match the item count (a one-sentence gap goes in a single gap entry typeset in the strip under the two panels) |
@@ -218,6 +225,6 @@
 ## free blocks
 
 - (Content boxes) panel{head, items}, bullets{items, fill, line}, text{text, sz, bold, align, fill, line}, label{text, fill}, box{text, fill, line}
-- (Data) table{head, rows}, chart{type, categories, series, numFmt}
+- (Data) table{head, rows, align}, chart{type, categories, series, numFmt}
 - (Flow) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right or down}, line{color, pt, arrow, dash}
 - (Other) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy or tint}]}

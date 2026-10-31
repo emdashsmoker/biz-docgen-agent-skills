@@ -93,6 +93,13 @@
 - 그 밖의 문구는 "[인력A]" 와 "성명 + 컨설팅사와 연구기관 직급"(예: 수석컨설턴트, 수석위원, 책임연구원, Senior Manager)을 인식
 - 영문 성명은 대문자로 시작하는 2-3어절("Jane Kim")로 인식하고, 자유 문장에서는 "Jane Kim, Senior Consultant" 처럼 쉼표 뒤에 직급이 붙은 경우만 인식
 
+### 표 필드
+
+- 표를 담는 칸은 head(머리 행 문구 배열), rows(행 배열), align(열별 가로 정렬 배열), colW(열 폭 비율 배열)를 사용
+- 해당 칸은 table 템플릿의 slots, illustrative 의 table, task 의 sample.table, free 와 composite 의 table 블록
+- align 은 표마다 "right", "center", "left" 로 작성 (배열 길이는 열 수와 같게 작성. 다르면 빌드 경고)
+- align 판정 기준(수량 열 우측, 식별값 열과 짧은 문구 열 가운데)과 생략 시 기본 정렬은 `references/templates.md` 표 조판
+
 ## 섹션대장 ledger.json
 
 - 구조는 {"slides": [{"id", "chapter", "section", "headline", "rfpTasks": [], "moduleTasks": [], "evalItems": [], "template", "status"}]}

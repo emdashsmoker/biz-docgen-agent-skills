@@ -126,9 +126,10 @@
 - The default is a comma list for short noun phrases and bullets for descriptive items
 - Decide whether a column uses one notation by comparing the nature of its cells
 - Horizontal alignment is set per column
-- Number columns are right-aligned so digits compare easily
+- Column alignment is set for every table at the storyboard stage with `align`, judged by what each column means (format and defaults in `references/templates.md` table typesetting)
+- Quantity columns (amounts, counts, ratios, durations, scores) are right-aligned so digits compare easily
+- Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns are centered
 - Columns with multi-item cells and diagnostic question columns are left-aligned
-- Other columns with only single-item cells are centered
 - The cells of a column are all single-item or all multi-item
 - Vertical alignment is centered for the whole table
 - Cell fills use only the theme color, tint, gray and white

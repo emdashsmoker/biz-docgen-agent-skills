@@ -42,14 +42,21 @@
     + 한 줄 폭 합이 표 폭보다 작고 같은 종류 자료 열이 3개 이상 이어지면 남는 폭을 그 묶음에만 나눔 (역할 부호, 연도, 대안처럼 표 본체를 이루는 묶음)
     + 그런 묶음이 없으면 남는 폭을 모든 열에 한 줄 폭 비례로 나눔
     + 한 줄 폭 합이 표 폭보다 크면 긴 열부터 같은 폭으로 축소 (짧은 열은 한 줄 유지, 어절 폭은 보장)
-- 열 정렬은 열 단위로 통일
-    + 여러 항목 셀이 있는 열은 좌측 정렬
-    + 진단 질문 열(문장 끝이 "는가", "인가", "는지" 같은 질문형인 셀이 있는 열)은 좌측 정렬
-    + 숫자 열은 자릿수 비교가 쉽도록 우측 정렬
-    + 그 외 한 항목 셀만 있는 열은 하베이 볼 열을 포함하여 가운데 정렬
+- 열 정렬은 storyboard 작성 단계에서 표마다 `align`(열별 가로 정렬 배열)으로 지정
+    + 지정값은 "right", "center", "left"
+    + 판정 기준은 열의 의미 (연도 2005 는 가운데, 금액 2,005 는 우측)
+    + 수량 열(금액, 개수, 비율, 기간 길이, 점수)은 자릿수 비교가 쉽도록 "right"
+    + 식별값 열(연도, 연월, 날짜, 연번, 번호, 기간 범위, 코드)과 짧은 문구 열은 "center"
+    + 여러 항목 셀이 있는 열과 진단 질문 열(문장 끝이 "는가", "인가", "는지" 같은 질문형인 셀이 있는 열)은 "left"
+    + 표기 예: `"head": ["연번", "과제명", "기간", "개월", "계약금액"], "align": ["center", "center", "center", "right", "right"]`
+- `align` 배열의 길이는 열 수와 같게 작성 (다르면 빌드 경고)
+- `align` 을 생략한 표와 `align` 에서 빠진 열은 기본 정렬을 적용
+    + 여러 항목 셀이 있는 열과 진단 질문 열은 좌측 정렬
+    + 그 외 한 항목 셀만 있는 열은 숫자 열과 하베이 볼 열을 포함하여 가운데 정렬
+    + 수량 열이 없는 표는 기본 정렬이 위 기준과 같으므로 `align` 생략 가능
 - 한 열의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성 (여러 항목 열의 한 항목 셀은 불릿 없이 좌측 정렬)
 - 셀의 세로 정렬은 표 전체를 가운데로 통일
-- `colW`(폭 비율)와 `align`(열별 정렬)은 빈 기입 칸처럼 문구와 무관한 폭이나 정렬이 필요할 때만 지정
+- `colW`(폭 비율)는 빈 기입 칸처럼 문구와 무관한 폭이 필요할 때만 지정
 - 표 글자 채움(열별 한 줄 폭 합이 표 폭에서 차지하는 비율)이 60% 미만이면 빌드 경고
     + 해소 순서는 셀 문구 보강(대상, 기준, 수치 병기), 정보 열 추가(담당, 주기, 기준, 산출물), 칸 폭 축소
     + 자리 표기(`[회사 확인]` 등) 셀이 있는 표는 검사 제외
@@ -98,7 +105,7 @@
 | 수행계획 | task | Task 설계표와 실측 표본 | leftHead, head[], rows[[항목, 내용]], sample{head, table 또는 items 또는 image 또는 chart, tag}, point | 행 3-6. 설계표 열 제목은 head (기본값 "항목", "내용"). 표본 꼬리표는 sample.tag (기본값 Sample) |
 | 수행계획 | task_multi | Task 묶음 매트릭스 (분량 제한 시) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Task 2-4. items 는 "라벨 : 값" 형식 (행 정렬 조건). 이 형식이 아닌 항목을 모으는 행의 라벨은 freeLabel (기본값 "주요 내용"). id 가 없으면 idFormat (기본값 "Task {n}") |
 | 분석과 비교 | bullets | 패널 1-4열 | panels[{head, items 또는 text, headFill, fill}], point | 열 1-4 |
-| 분석과 비교 | table | 전폭 표 | title, legend, head[], rows[][], point | 행 1-16 |
+| 분석과 비교 | table | 전폭 표 | title, legend, head[], rows[][], align[], point | 행 1-16. 열 정렬은 align (표 조판 절) |
 | 분석과 비교 | chart_text | 차트와 시사점 | chartTitle, chart{type, barDir, categories, series, numFmt}, findings[{head, items}] | 발견 1-3. chart 필드는 `references/recipes.md` 의 chart 블록과 같음 |
 | 분석과 비교 | chart_two | 2단 차트 | left{title, chart, items}, right{title, chart, items} | - |
 | 분석과 비교 | compare | AS-IS, TO-BE, 격차 | asis{head, items}, tobe{head, items}, gap[], gapHead | 항목 2-4. 항목은 20자 안팎의 제목(text)으로 작성하고 근거는 하위 항목(sub) 1-2개로 병기. 격차는 항목별 개선 수단을 10자 안팎으로 기재하여 항목 수와 맞춤 (격차가 한 문장이면 gap 1개로 두 패널 아래 띠에 조판) |
@@ -217,6 +224,6 @@
 ## free 블록
 
 - (내용 상자) panel{head, items}, bullets{items, fill, line}, text{text, sz, bold, align, fill, line}, label{text, fill}, box{text, fill, line}
-- (데이터) table{head, rows}, chart{type, categories, series, numFmt}
+- (데이터) table{head, rows, align}, chart{type, categories, series, numFmt}
 - (흐름) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right 또는 down}, line{color, pt, arrow, dash}
 - (기타) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy 또는 tint}]}

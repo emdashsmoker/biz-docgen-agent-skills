@@ -1875,6 +1875,12 @@
          "○○%",
          "단계 평가 후 연장 트랙"
         ]
+       ],
+       "align": [
+        "center",
+        "center",
+        "right",
+        "center"
        ]
       },
       "note": "언급 비율은 면담 및 설문 응답자 중 해당 의견 응답 비율"
@@ -2848,6 +2854,13 @@
           "단기 개선"
          ]
         ],
+        "align": [
+         "center",
+         "center",
+         "right",
+         "right",
+         "center"
+        ],
         "caption": "과제별 점수 (5점 척도, 기준선 2.5점)"
        }
       ]
@@ -3000,6 +3013,13 @@
          },
          "1.90"
         ]
+       ],
+       "align": [
+        "center",
+        "right",
+        "center",
+        "center",
+        "center"
        ]
       },
       "note": "● 3점, ◐ 2점, ○ 1점. 가중 합계는 기준별 점수에 가중치를 곱한 합"
@@ -3120,6 +3140,14 @@
           }
          ]
         ],
+        "align": [
+         "center",
+         "right",
+         "right",
+         "right",
+         "right",
+         "right"
+        ],
         "caption": "소요 예산 (백만원)"
        },
        {
@@ -3146,6 +3174,13 @@
           "6",
           "6"
          ]
+        ],
+        "align": [
+         "center",
+         "right",
+         "right",
+         "right",
+         "right"
         ],
         "caption": "성과지표"
        }
@@ -3354,6 +3389,13 @@
          "누적 ○○개사 (2030년)",
          "협약 실적"
         ]
+       ],
+       "align": [
+        "center",
+        "center",
+        "center",
+        "right",
+        "center"
        ],
        "caption": "성과지표"
       }
@@ -3748,6 +3790,14 @@
          "6,500",
          "100.0%"
         ]
+       ],
+       "align": [
+        "center",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right"
        ]
       }
      },
@@ -4022,6 +4072,12 @@
          "부문별 최종수요 × 취업유발계수 ÷ 10억원",
          "000명"
         ]
+       ],
+       "align": [
+        "center",
+        "center",
+        "center",
+        "right"
        ]
       }
      }
@@ -4237,6 +4293,12 @@
          "2,080",
          "92"
         ]
+       ],
+       "align": [
+        "center",
+        "right",
+        "right",
+        "right"
        ]
       }
      },
@@ -4273,6 +4335,13 @@
          "15",
          "16"
         ]
+       ],
+       "align": [
+        "center",
+        "right",
+        "right",
+        "right",
+        "right"
        ]
       }
      }
@@ -4687,6 +4756,12 @@
           "7년차",
           "○년"
          ]
+        ],
+        "align": [
+         "center",
+         "center",
+         "center",
+         "right"
         ]
        }
       ]
@@ -5773,6 +5848,15 @@
           "merged": true
          }
         ]
+       ],
+       "align": [
+        "center",
+        "center",
+        "center",
+        "right",
+        "right",
+        "center",
+        "center"
        ]
       }
      }
@@ -7525,6 +7609,15 @@
          },
          "100.0%"
         ]
+       ],
+       "align": [
+        "center",
+        "center",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right"
        ]
       }
      }
@@ -7974,6 +8067,12 @@
          "[회사 확인]",
          "[회사 확인]"
         ]
+       ],
+       "align": [
+        "center",
+        "right",
+        "right",
+        "right"
        ]
       }
      },

@@ -34,11 +34,25 @@ Changelog rules
 - Added a finalize.py failure with exit code 1 when slanted lines remain after processing (#79)
 - Added low and high end labels in vertical text on the y axis of the matrix block (y.low, y.high) (#79)
 - Added the low and high labels on the y axis of the priority_matrix recipe sample (#79)
+- Changed table column alignment to the per-table storyboard field (align), with quantity columns right and identifier and short text columns centered (#80)
+- Changed number-shaped table columns without align from right to center alignment (#80)
+- Added a build warning when the align length of a table differs from its column count (#80)
+- Changed the company common slide tables to set align by column order, with the months and contract amount of the track record and the yearly amounts of the finance table right-aligned (#80)
+- Changed the staff and share columns of the orgchart staff table to right alignment (#80)
+- Fixed md2storyboard.py reading Markdown separator rows with alignment colons (|:---:|) as data rows (#80)
+- Added align to the recipe and template sample tables that have quantity columns (#80)
 
 * soffice 재직렬화의 360 EMU 크기 기록으로 PowerPoint 의 가로선과 세로선이 0.01mm 기울어지는 현상 수정 (#79)
 * 처리 후 남은 기울어진 직선의 finalize.py 실패 판정(종료 코드 1) 추가 (#79)
 * matrix 블록 y 축 양끝의 세로 글자 표기(y.low, y.high) 추가 (#79)
 * priority_matrix 레시피 견본의 y 축 양끝 표기(낮음, 높음) 추가 (#79)
+* 표 열 정렬을 storyboard 의 표별 지정(align)으로 변경 (수량 열 우측, 식별값 열과 짧은 문구 열 가운데) (#80)
+* align 이 없는 표의 숫자 모양 열 정렬을 우측에서 가운데로 변경 (#80)
+* 표 align 개수와 열 수 불일치의 빌드 경고 추가 (#80)
+* 회사 공통 슬라이드 표의 정렬을 열 순서 기준 align 으로 변경 (수행 실적의 개월과 계약금액, 재무 현황의 연도별 금액 우측) (#80)
+* 조직도 인력 구성 표의 인원과 비중 열 정렬을 우측으로 변경 (#80)
+* 정렬 콜론이 있는 마크다운 구분 행(|:---:|)을 md2storyboard.py 가 데이터 행으로 읽는 현상 수정 (#80)
+* 수량 열이 있는 레시피와 템플릿 견본 표의 align 추가 (#80)
 
 ## 2026-10-30
 

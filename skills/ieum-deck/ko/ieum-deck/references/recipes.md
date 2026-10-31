@@ -87,7 +87,7 @@
 
 | kind | 용도 | 필드 |
 |---|---|---|
-| `table` | 행과 열 비교 | `head[]`, `rows[][]`. 셀 값은 문자열, 항목 배열, ● ◐ ○(하베이 볼). 열 폭과 정렬은 자동 산정 (`references/templates.md` 표 조판) |
+| `table` | 행과 열 비교 | `head[]`, `rows[][]`. 셀 값은 문자열, 항목 배열, ● ◐ ○(하베이 볼). 열 폭은 자동 산정. 열 정렬은 `align[]` 으로 지정 (`references/templates.md` 표 조판) |
 | `bullets` | 항목 나열 | `head`(선택), `items[]` |
 | `text` | 한 문장 메시지 | `text`, `style`(navy, tint, box, plain. 기본 box) |
 | `stack` | 제목 상자의 세로 적층 | `items[{head, items 또는 text, headFill, fill}]`. `headFill` 과 `fill` 의 값은 tint |

@@ -87,7 +87,7 @@
 
 | kind | Use | Fields |
 |---|---|---|
-| `table` | Row and column comparison | `head[]`, `rows[][]`. Cell values are strings, item arrays, or ● ◐ ○ (Harvey balls). Column widths and alignment are computed automatically (`references/templates.md` table typesetting) |
+| `table` | Row and column comparison | `head[]`, `rows[][]`. Cell values are strings, item arrays, or ● ◐ ○ (Harvey balls). Column widths are computed automatically. Column alignment is set with `align[]` (`references/templates.md` table typesetting) |
 | `bullets` | Item list | `head` (optional), `items[]` |
 | `text` | One-sentence message | `text`, `style` (navy, tint, box, plain. Default box) |
 | `stack` | Vertical stack of titled boxes | `items[{head, items or text, headFill, fill}]`. The value of `headFill` and `fill` is tint |
