@@ -130,7 +130,7 @@
     + (Quantity columns) Columns of numbers and units (amounts, counts, ratios, scores, weights, etc.) are right-aligned so digits compare easily
     + (Columns read as one expression) Columns whose cells each read as one expression (categories, names, years, serial numbers, periods, formulas, short text, etc.) are centered
     + (Columns read line by line) Bullet lists, diagnostic questions and descriptive text (content, details and main activities columns, etc.) are left-aligned
-- A quantity with a share or change added in parentheses (212 (43.7%), etc.) makes a quantity column
+- A quantity with a share or change added in parentheses (○○ cases (○○%), etc.) makes a quantity column
 - An expression that mixes numbers with words for a condition, a point in time or an order (○○ points or more, ○○% (2030), year 4, stage 3, etc.) makes a column read as one expression even though it contains numbers
 - Columns of the same nature use the same alignment in every table of a deck
 - A column that is hard to judge is centered
