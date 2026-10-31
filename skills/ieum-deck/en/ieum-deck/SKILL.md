@@ -593,10 +593,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Column widths are computed automatically from the one-line width of cell text
     + Groups of continuous data columns, such as role codes, yearly figures and evaluations per option, have the same width
     + Bullets apply only to cells with two or more items (text wrapped into several lines is one item)
-    + Column alignment is set for every table at the storyboard stage with `align`, judged by what each column means (`references/templates.md` table typesetting)
-    + Quantity columns (amounts, counts, ratios, durations, scores) are right-aligned for easy comparison of digits
-    + Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns are centered
-    + Columns with multi-item cells and diagnostic question columns (sentences ending in question forms such as "는가", "인가", "는지") are left-aligned
+    + Column alignment is set for every table at the storyboard stage with `align` (format in `references/templates.md` table typesetting)
+    + The rules for judging column alignment are in the `references/writing-rules.md` tables section
     + The vertical alignment of cells is centered for the whole table
     + The cells of one column are either all single-item or all multi-item
     + Table text fill below 60% is a build warning
@@ -821,8 +819,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 #### Alignment
 
-- Does horizontal alignment differ by cell within the same table column (right alignment mixed with other alignments in a quantity column)?
-- Are quantity columns right-aligned and identifier columns (years, serial numbers, period ranges) centered?
+- Does horizontal alignment differ by cell within the same table column?
+- Are expressions that mix numbers with words (○○ points or more, year 4, etc.) or formula columns right-aligned?
+- Do columns of the same nature (periods, amounts, ratios, etc.) use different alignments in different tables?
 - Does vertical alignment differ by row so text heights look uneven?
 - Is a table category column left empty without merging so the table looks broken?
 - Do boxes placed side by side use different alignments (centered on one, left on the next)?

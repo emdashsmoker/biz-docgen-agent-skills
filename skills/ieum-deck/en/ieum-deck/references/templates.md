@@ -44,16 +44,13 @@
     + When the one-line width sum exceeds the table width, the longest columns shrink first to the same width (short columns stay on one line, and the word width is kept)
 - Column alignment is set for every table at the storyboard stage with `align` (an array of per-column horizontal alignments)
     + Values are "right", "center" and "left"
-    + The deciding test is what the column means (year 2005 is centered, amount 2,005 is right-aligned)
-    + Quantity columns (amounts, counts, ratios, durations, scores) are "right" so digits compare easily
-    + Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns are "center"
-    + Columns with multi-item cells and diagnostic question columns (columns with a cell ending in a question form such as "는가", "인가", "는지") are "left"
+    + The rules for judging alignment are in the `references/writing-rules.md` tables section
     + Example: `"head": ["연번", "과제명", "기간", "개월", "계약금액"], "align": ["center", "center", "center", "right", "right"]`
 - The `align` array has the same length as the column count (a different length gives a build warning)
 - Tables without `align` and columns missing from `align` use the default alignment
     + Columns with multi-item cells and diagnostic question columns are left-aligned
     + Other columns with only single-item cells are centered, including number columns and Harvey ball columns
-    + A table without quantity columns may leave out `align`, since the default alignment matches the rules above
+    + A table whose judged alignment matches the default alignment may leave out `align`
 - The cells of a column are all single-item or all multi-item (a single-item cell in a multi-item column is left-aligned without a bullet)
 - Vertical alignment is centered for the whole table
 - Set `colW` (width ratios) only when a width unrelated to the text is needed, such as empty fill-in cells

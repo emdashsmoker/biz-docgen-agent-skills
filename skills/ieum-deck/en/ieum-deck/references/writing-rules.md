@@ -126,10 +126,13 @@
 - The default is a comma list for short noun phrases and bullets for descriptive items
 - Decide whether a column uses one notation by comparing the nature of its cells
 - Horizontal alignment is set per column
-- Column alignment is set for every table at the storyboard stage with `align`, judged by what each column means (format and defaults in `references/templates.md` table typesetting)
-- Quantity columns (amounts, counts, ratios, durations, scores) are right-aligned so digits compare easily
-- Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns are centered
-- Columns with multi-item cells and diagnostic question columns are left-aligned
+- Column alignment is judged from the whole table by the role the column plays in it
+    + (Quantity columns) Columns of numbers and units (amounts, counts, ratios, scores, weights, etc.) are right-aligned so digits compare easily
+    + (Columns read as one expression) Columns whose cells each read as one expression (categories, names, years, serial numbers, periods, formulas, short text, etc.) are centered
+    + (Columns read line by line) Bullet lists, diagnostic questions, descriptions running over several sentences, etc. are left-aligned
+- An expression that mixes numbers with words (○○% (2030), ○○ points or more, year 4, etc.) makes a column read as one expression even though it contains numbers
+- Columns of the same nature use the same alignment in every table of a deck
+- A column that is hard to judge is centered
 - The cells of a column are all single-item or all multi-item
 - Vertical alignment is centered for the whole table
 - Cell fills use only the theme color, tint, gray and white
