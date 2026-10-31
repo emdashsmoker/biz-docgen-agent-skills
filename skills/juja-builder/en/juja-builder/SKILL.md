@@ -635,7 +635,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Keep footnote labels unique within one manuscript file. build separates labels per file, so the same number in another file is allowed
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
-- When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). Columns with bullets are left-aligned at typesetting
+- When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). Columns with bullets are left-aligned at typesetting. The module overview table is an exception: cells with a single item also take `◦` (Task Description Standard section)
 - Set column alignment per table with alignment markers in the separator row while writing the manuscript (`---:` right, `:---:` center, `:---` left)
 - Horizontal alignment is set per column
 - Column alignment is judged from the whole table by the role the column plays in it (year 2005 goes center, amount 2,005 goes right)
@@ -720,7 +720,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (추진과정) Write 2-4 execution steps within the Task in order as cell bullets (`◦ step<br>◦ step`). A one-line summary such as "조사 및 분석" (survey and analysis) does not count as steps
     + (활용자료) Write material names and counts by their real names
     + (산출물) Write work product names
-    + In all three rows, list cell items as cell bullets when there are two or more. The criterion is the table cell rule in the Manuscript Hierarchy section
+    + In all three rows, write cell items as cell bullets (`◦ item`) even when there is only one. The module overview table compares Task columns side by side, so for consistency it is an exception to the table cell rule in the Manuscript Hierarchy section (two or more items)
     + The steps, materials, and work products of the overview table match the label descriptions in the Task body below
 - The references/methods.md Task Types section under Common Standards is the single source for Task types (analysis-centered, derivation-centered), label sets per type, the scope of the (산출물) label, and where to state submission timing
 - One Task consists of the basic description and a filled table. The filled table goes under the label that the table supports. Before the table, state its conclusion first in one hyphen under that label. Details are in the content-models.md Task Description section

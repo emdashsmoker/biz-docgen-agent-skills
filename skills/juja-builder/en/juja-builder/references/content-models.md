@@ -264,7 +264,7 @@
 |---|---|---|
 | 추진과정 | ◦ 시스템 목록 확정<br>◦ 기능과 데이터 항목 대조<br>◦ 현황표 작성 | ◦ 면담 대상 선정<br>◦ 질문지 설계<br>◦ 면담 실시와 정리 |
 | 활용자료 | ◦ 시스템 구축 완료보고서 6건<br>◦ 데이터베이스 스키마 | ◦ 부서별 업무분장표<br>◦ 면담 질문지 3영역 24문항 |
-| 산출물 | ◦ 시스템 현황표<br>◦ 데이터 항목 대응표 | 면담 결과 보고서 |
+| 산출물 | ◦ 시스템 현황표<br>◦ 데이터 항목 대응표 | ◦ 면담 결과 보고서<br>◦ 부서별 의견 목록 |
 ```
 
 - A Task places label ❍ lines directly under the band. Label sets are the per-type sets in the methods.md Common Standards section. The kinds of filled tables are in the SKILL.md Task Description Standard section

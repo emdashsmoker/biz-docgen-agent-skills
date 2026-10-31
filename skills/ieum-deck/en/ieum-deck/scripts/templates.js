@@ -858,7 +858,8 @@ function module_overview(ctx, slide, sb) {
     const t = tasks[i]; if (!t) return;
     [["process", 1], ["data", 2], ["output", 3]].forEach(([k, r]) => {
       const bx = { x: c.x, y: b.y + gy[r] + 0.1, w: c.w, h: gy[r + 1] - gy[r] - 0.1 };
-      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k] });
+      // Task columns are compared side by side, so single-item boxes also use left-aligned bullets (exception to the single-item no-bullet rule)
+      frame(ctx, slide, bx); bullets(ctx, slide, bx, t[k] || [], { noWarn: true, valign: "middle", sz: rowSz[k], groupGapPt: rowGap[k], forceBullet: true });
     });
   });
   source(ctx, slide, sb);
