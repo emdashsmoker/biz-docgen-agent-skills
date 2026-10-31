@@ -78,6 +78,7 @@ Changelog rules
 - Added a rule that quantities with a share or change in parentheses (○○건 (○○%), etc.) are quantity columns (#84)
 - Changed the number-and-word rule to cover expressions for a condition, a point in time or an order (○○점 이상, ○○% (2030년), 4년차, 3단계, etc.) (#84)
 - Changed the sample table note from "참고용 예시 (미확정)" to "참고용 예시" (#85)
+- Changed module overview slides to typeset process, data and output boxes with a single item as left-aligned bullets for consistency across Task columns (#86)
 
 * soffice 재직렬화의 360 EMU 크기 기록으로 PowerPoint 의 가로선과 세로선이 0.01mm 기울어지는 현상 수정 (#79)
 * 처리 후 남은 기울어진 직선의 finalize.py 실패 판정(종료 코드 1) 추가 (#79)
@@ -100,6 +101,7 @@ Changelog rules
 * 괄호 안에 비중이나 증감을 덧붙인 수량(○○건 (○○%) 등)의 수량 열 판정 규칙 추가 (#84)
 * 글자와 섞인 수치 표현 규칙의 대상을 조건, 시점, 순서 표현(○○점 이상, ○○% (2030년), 4년차, 3단계 등)으로 변경 (#84)
 * 견본 표 부기를 "참고용 예시 (미확정)"에서 "참고용 예시"로 변경 (#85)
+* 모듈 개요 슬라이드에서 항목이 1개인 추진과정, 활용자료, 산출물 상자의 표기를 불릿 좌측 정렬로 변경 (#86)
 
 ### juja-builder
 - Changed table column alignment to separator-row markers set per table in the manuscript, with quantity columns right and identifier and short text columns centered (#81)
@@ -115,6 +117,7 @@ Changelog rules
 - Added render review items for mixed alignment within a column, quantity columns that are not right-aligned, number-and-word or formula columns that are right-aligned, and same-nature columns aligned differently across tables (#84)
 - Changed the 과업명 column of the track record template and examples and the 산식 column of the data quality example to center alignment (#84)
 - Changed the sample table note from "참고용 예시 (미확정)" to "참고용 예시" (#85)
+- Changed the module overview table to bullet cells with a single item for consistency across Task columns (#86)
 
 * 표 열 정렬을 원고 구분 행의 표별 정렬 표기로 변경 (수량 열 우측, 식별값 열과 짧은 문구 열 가운데) (#81)
 * 정렬 표기가 없는 표의 천 단위 쉼표나 소수점이 있는 숫자 열 정렬을 우측에서 가운데로 변경 (#81)
@@ -129,6 +132,7 @@ Changelog rules
 * 같은 열 안 정렬 혼재, 수량 열의 우측 정렬 누락, 글자와 섞인 수치 표현 열과 산식 열의 우측 정렬, 표 간 정렬 불일치의 렌더링 검수 항목 추가 (#84)
 * 수행실적 서식과 예시 표의 과업명 열, 데이터 품질 예시 표의 산식 열 정렬을 가운데로 변경 (#84)
 * 견본 표 부기를 "참고용 예시 (미확정)"에서 "참고용 예시"로 변경 (#85)
+* 모듈 개요표에서 항목이 1개인 셀의 표기를 셀 글머리로 변경 (#86)
 
 ## 2026-10-30
 
