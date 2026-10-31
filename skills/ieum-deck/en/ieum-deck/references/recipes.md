@@ -106,7 +106,7 @@
 | `canvas` | Business model canvas with 9 blocks (fixed layout) | `partners`, `activities`, `resources`, `value`, `relationships`, `channels`, `segments`, `cost`, `revenue` (each a text array), `numbered` (filling order numbers), `labels` (changes block titles with the same keys, optional) |
 | `market` | Market size TAM, SAM, SOM (three nested circles and description rows) | `levels[{label, name, value, items[]}]` (from the outer circle to the inner circle) |
 | `flow` | Box flow joined by arrows | `nodes[{title, items or text, fill}]`, `dir` (h or v). The `fill` value is navy |
-| `matrix` | 2×2 matrix with placed items | `x{label, low, high}`, `y{label}` (the y axis is set as vertical text, so put the direction in the label. Example: "기대 효과 (위로 높음)"), `quadrants[top-left, top-right, bottom-left, bottom-right]`, `items[{label, x, y}]`, `focus` (index 0-3 of the emphasized quadrant), `legend`, `numbered` |
+| `matrix` | 2×2 matrix with placed items | `x{label, low, high}`, `y{label, low, high}` (the y axis name and end labels are set as vertical text. low at the bottom end, high at the top end), `quadrants[top-left, top-right, bottom-left, bottom-right]`, `items[{label, x, y}]`, `focus` (index 0-3 of the emphasized quadrant), `legend`, `numbered` |
 | `pyramid` | Tier pyramid | `levels[]` (from the top tier), `side[]` (per-tier descriptions, optional) |
 | `cycle` | Cyclic stages | `stages[{title, text}]`, `center` |
 | `tree` | Two-level tree | `root`, `children[{text, children[]}]`, `top` (a higher body above the root, optional), `sides[{side, text, dash}]` (bodies left and right of the root, optional). The `side` value is left or right. If `dash` is true, the line is dashed |

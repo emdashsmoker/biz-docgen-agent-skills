@@ -40,6 +40,7 @@ const ARROW_W = 0.28, ARROW_H = 0.34; // 영역 사이 화살표
 const CHART_MIN_H = 1.2, CHART_MIN_W = 2.4; // 4분면 배치까지 수용하는 차트 영역 하한 (그보다 작으면 레이블이 겹침)
 const PIE_ASPECT_MAX = 2.0; // 원형 차트 칸의 폭 상한 (높이 대비)
 const MATRIX_AXIS_PAD = 0.42; // 매트릭스 축 이름 자리
+const MATRIX_END_LABEL_LEN = 1.2; // 매트릭스 축 양끝 표기(low, high) 상자 길이. 가로축은 폭, 세로축은 높이
 const MATRIX_ASPECT_MAX = 1.25; // 매트릭스 평면 폭 상한 (높이 대비)
 const MARKER_D = 0.3, MARKER_D_WIDE = 0.38; // 매트릭스 번호 표식 지름 (한 자리 번호, 두 자리 번호가 있을 때 모든 표식)
 const CIRCLED = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
@@ -444,8 +445,8 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
   });
 };
 
-/** 2×2 매트릭스. {x:{label, low, high}, y:{label}, quadrants:[좌상, 우상, 좌하, 우하], items:[{label, x, y}], focus, legend}
- *  y 축 라벨은 세로 글자이므로 양끝 표기 칸을 두지 않고 방향 표기는 label 에 포함 */
+/** 2×2 매트릭스. {x:{label, low, high}, y:{label, low, high}, quadrants:[좌상, 우상, 좌하, 우하], items:[{label, x, y}], focus, legend}
+ *  y 축 이름과 양끝 표기는 축 이름 자리(MATRIX_AXIS_PAD) 폭에 들어가도록 세로 글자로 조판 (low 는 아래 끝, high 는 위 끝) */
 BLOCKS.matrix = (ctx, H, slide, box, k) => {
   const items = k.items || [];
   const legend = k.legend != null ? k.legend : items.length > 0;
@@ -472,9 +473,13 @@ BLOCKS.matrix = (ctx, H, slide, box, k) => {
   hline(ctx, slide, px, py + pH, pW + 0.05, { arrow: true });
   const xa = k.x || {}, ya = k.y || {};
   A.text(slide, { x: px, y: py + pH + 0.04, w: pW, h: 0.3 }, xa.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-  if (xa.low) A.text(slide, { x: px, y: py + pH + 0.04, w: 1.2, h: 0.3 }, xa.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", mg: [0, 0, 0, 0] });
-  if (xa.high) A.text(slide, { x: px + pW - 1.2, y: py + pH + 0.04, w: 1.2, h: 0.3 }, xa.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", mg: [0, 0, 0, 0] });
-  A.text(slide, { x: ox - 0.02, y: py, w: 0.34, h: pH }, ya.label || "", { sz: T.SIZE.body, bold: true, align: "center", vert: "vert270", mg: [0, 0, 0, 0] });
+  if (xa.low) A.text(slide, { x: px, y: py + pH + 0.04, w: MATRIX_END_LABEL_LEN, h: 0.3 }, xa.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", mg: [0, 0, 0, 0] });
+  if (xa.high) A.text(slide, { x: px + pW - MATRIX_END_LABEL_LEN, y: py + pH + 0.04, w: MATRIX_END_LABEL_LEN, h: 0.3 }, xa.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", mg: [0, 0, 0, 0] });
+  const yCol = { x: ox - 0.02, w: 0.34 };
+  A.text(slide, { ...yCol, y: py, h: pH }, ya.label || "", { sz: T.SIZE.body, bold: true, align: "center", vert: "vert270", mg: [0, 0, 0, 0] });
+  // vert270 글자는 아래에서 위로 읽으므로 왼쪽 정렬이 아래 끝, 오른쪽 정렬이 위 끝
+  if (ya.low) A.text(slide, { ...yCol, y: py + pH - MATRIX_END_LABEL_LEN, h: MATRIX_END_LABEL_LEN }, ya.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", vert: "vert270", mg: [0, 0, 0, 0] });
+  if (ya.high) A.text(slide, { ...yCol, y: py, h: MATRIX_END_LABEL_LEN }, ya.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", vert: "vert270", mg: [0, 0, 0, 0] });
   // 번호가 두 자리(10 이상)면 원 안에서 줄바꿈되지 않도록 모든 표식을 같은 크기로 키움
   const d = numbered && items.length >= 10 ? MARKER_D_WIDE : MARKER_D;
   items.forEach((it, i) => {

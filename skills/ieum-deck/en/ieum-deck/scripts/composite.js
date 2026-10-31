@@ -40,6 +40,7 @@ const ARROW_W = 0.28, ARROW_H = 0.34; // arrows between areas
 const CHART_MIN_H = 1.2, CHART_MIN_W = 2.4; // chart area floor that still fits a four-quadrant layout (smaller sizes overlap labels)
 const PIE_ASPECT_MAX = 2.0; // pie chart cell width cap (relative to height)
 const MATRIX_AXIS_PAD = 0.42; // room for matrix axis names
+const MATRIX_END_LABEL_LEN = 1.2; // length of the matrix axis end-label boxes (low, high). Width on the x axis, height on the y axis
 const MATRIX_ASPECT_MAX = 1.25; // matrix plane width cap (relative to height)
 const MARKER_D = 0.3, MARKER_D_WIDE = 0.38; // matrix number marker diameter (single digit; all markers when a two-digit number is present)
 const CIRCLED = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
@@ -444,8 +445,8 @@ BLOCKS.flow = (ctx, H, slide, box, k) => {
   });
 };
 
-/** 2×2 matrix. {x:{label, low, high}, y:{label}, quadrants:[top left, top right, bottom left, bottom right], items:[{label, x, y}], focus, legend}
- *  The y axis label is vertical text, so there are no end-label boxes and the direction goes in the label */
+/** 2×2 matrix. {x:{label, low, high}, y:{label, low, high}, quadrants:[top left, top right, bottom left, bottom right], items:[{label, x, y}], focus, legend}
+ *  The y axis name and end labels are set as vertical text so they fit the width of the axis name room (MATRIX_AXIS_PAD) (low at the bottom end, high at the top end) */
 BLOCKS.matrix = (ctx, H, slide, box, k) => {
   const items = k.items || [];
   const legend = k.legend != null ? k.legend : items.length > 0;
@@ -472,9 +473,13 @@ BLOCKS.matrix = (ctx, H, slide, box, k) => {
   hline(ctx, slide, px, py + pH, pW + 0.05, { arrow: true });
   const xa = k.x || {}, ya = k.y || {};
   A.text(slide, { x: px, y: py + pH + 0.04, w: pW, h: 0.3 }, xa.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-  if (xa.low) A.text(slide, { x: px, y: py + pH + 0.04, w: 1.2, h: 0.3 }, xa.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", mg: [0, 0, 0, 0] });
-  if (xa.high) A.text(slide, { x: px + pW - 1.2, y: py + pH + 0.04, w: 1.2, h: 0.3 }, xa.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", mg: [0, 0, 0, 0] });
-  A.text(slide, { x: ox - 0.02, y: py, w: 0.34, h: pH }, ya.label || "", { sz: T.SIZE.body, bold: true, align: "center", vert: "vert270", mg: [0, 0, 0, 0] });
+  if (xa.low) A.text(slide, { x: px, y: py + pH + 0.04, w: MATRIX_END_LABEL_LEN, h: 0.3 }, xa.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", mg: [0, 0, 0, 0] });
+  if (xa.high) A.text(slide, { x: px + pW - MATRIX_END_LABEL_LEN, y: py + pH + 0.04, w: MATRIX_END_LABEL_LEN, h: 0.3 }, xa.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", mg: [0, 0, 0, 0] });
+  const yCol = { x: ox - 0.02, w: 0.34 };
+  A.text(slide, { ...yCol, y: py, h: pH }, ya.label || "", { sz: T.SIZE.body, bold: true, align: "center", vert: "vert270", mg: [0, 0, 0, 0] });
+  // vert270 text reads from bottom to top, so left alignment is the bottom end and right alignment is the top end
+  if (ya.low) A.text(slide, { ...yCol, y: py + pH - MATRIX_END_LABEL_LEN, h: MATRIX_END_LABEL_LEN }, ya.low, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "left", vert: "vert270", mg: [0, 0, 0, 0] });
+  if (ya.high) A.text(slide, { ...yCol, y: py, h: MATRIX_END_LABEL_LEN }, ya.high, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "right", vert: "vert270", mg: [0, 0, 0, 0] });
   // With two-digit numbers (10 or more), enlarge every marker to the same size so numbers do not wrap inside the circle
   const d = numbered && items.length >= 10 ? MARKER_D_WIDE : MARKER_D;
   items.forEach((it, i) => {
