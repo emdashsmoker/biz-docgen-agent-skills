@@ -821,7 +821,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - Does horizontal alignment differ by cell within the same table column?
 - Are quantity columns of numbers and units (amounts, ratios, scores, etc.) centered or left-aligned?
-- Are expressions that mix numbers with words (○○ points or more, year 4, etc.) or formula columns right-aligned?
+- Are expressions that mix numbers with words for a condition, a point in time or an order (○○ points or more, year 4, stage 3, etc.) or formula columns right-aligned?
 - Do columns of the same nature (periods, amounts, ratios, etc.) use different alignments in different tables?
 - Does vertical alignment differ by row so text heights look uneven?
 - Is a table category column left empty without merging so the table looks broken?

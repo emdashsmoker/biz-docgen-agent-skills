@@ -57,7 +57,6 @@ TABLE_INDENT_MARGIN = 1500      # level indent subtracted from the body width (t
 TABLE_MIN_RATIO = 0.5           # table width floor (ratio of the cap). Prevents 2-3 column label tables from being too narrow
 COL_MIN_W = 3000                # minimum column width (about 10.6mm)
 COL_PAD_W = 1800                # per-column left/right padding plus allowance for glyph width error
-COL_ONE_LINE_UNITS = 20         # long-cell threshold for alignment (10 Hangul characters). Columns with a longer cell are left-aligned
 COL_ONE_LINE_W = 12000          # one-line width (about 42mm, 10 Hangul characters at 12pt). Columns whose longest line is wider are reduced assuming a 2-line wrap
 COL_WRAP_RATIO = 0.6            # narrowing ratio for columns assumed to wrap
 COL_WIDTH_PCT_MAX = 100         # basis of the manuscript column width line (table width cap = 100%). A sum above it would push the table outside the ○ level
