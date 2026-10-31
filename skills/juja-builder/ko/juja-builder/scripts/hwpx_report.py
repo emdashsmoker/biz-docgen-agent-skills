@@ -91,7 +91,6 @@ TABLE_MIN_RATIO = 0.5           # 표 폭 하한 (상한 대비). 라벨 2-3열 
 COL_MIN_W = 3000                # 열 최소 폭 (약 10.6mm)
 COL_UNIT_W = 500                # 가중 1단위(반각 1자) 폭, 표 글자 10pt 기준 (한글 1자 = 2단위)
 COL_PAD_W = 1800                # 열별 좌우 여백 + 글리프 오차 여유
-COL_ONE_LINE_UNITS = 20         # 이 단위를 넘는 셀이 있는 열은 장문 열로 보고 왼쪽 정렬 (한글 10자)
 COL_SEARCH_STEPS = 40           # 열 폭 기준선 이분 탐색 횟수 (HWPUNIT 1 미만까지 수렴)
 CELL_MARGIN = (510, 510, 141, 141)  # 셀 안쪽 여백 좌, 우, 위, 아래 (HWPUNIT)
 CELL_UNIT_W = 500               # 행 높이 추정용 가중 1단위 폭 (표 글자 10pt)
@@ -570,16 +569,16 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 
 def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
-    """정렬 결정 단위는 열. 명시 마커 > 글머리, 줄바꿈, 장문 포함 LEFT > CENTER.
-    Why: 수량(금액, 건수)과 식별값(연도, 연월, 연번)은 셀 글자의 숫자 모양이 같아 구분 불가. 수량 열의 RIGHT는 열의 의미를 아는 원고 작성자가 마커로 지정"""
+    """정렬 결정 단위는 열. 명시 마커 > 글머리 포함 LEFT > CENTER.
+    Why: 열 정렬은 표 안에서 열이 하는 역할로 정해짐. 셀 글자의 숫자 모양(연도 2005, 금액 2,005)과 글자 수로는 역할을 구분할 수 없음.
+    수량 열의 RIGHT와 서술형 설명 열의 LEFT는 표 전체를 보는 원고 작성자가 마커로 지정"""
     ncol = max(len(r) for r in rows)
     out = []
     for c in range(ncol):
         body = [r[c] for r in rows[1:] if c < len(r) and r[c].strip()]
         if c < len(explicit) and explicit[c]:
             out.append(explicit[c])
-        elif any(v.lstrip().startswith(BULLET_PREFIXES) or "\n" in v
-                 or _weighted_len(v) > COL_ONE_LINE_UNITS for v in body):
+        elif any(v.lstrip().startswith(BULLET_PREFIXES) for v in body):
             out.append("LEFT")
         else:
             out.append("CENTER")
@@ -672,7 +671,7 @@ def cell_lines(val: str, role_fn) -> tuple[str, list[str | None]]:
 
 
 def cell_role(align: str, is_head: bool) -> tuple[str, str | None]:
-    """셀 문단의 역할과 정렬 덮어쓰기. 장문 열은 왼쪽 스타일, 우측 마커 열(수량 열)은 오른쪽 정렬, 머리글은 가운데"""
+    """셀 문단의 역할과 정렬 덮어쓰기. 좌측 열(글머리 열, 좌측 마커 열)은 왼쪽 스타일, 우측 마커 열(수량 열)은 오른쪽 정렬, 머리글은 가운데"""
     role = "table_cell_left" if align == "LEFT" and not is_head else "table_cell"
     return role, ("RIGHT" if not is_head and align == "RIGHT" else None)
 

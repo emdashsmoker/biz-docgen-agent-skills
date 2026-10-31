@@ -636,12 +636,19 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). Columns with bullets are left-aligned at typesetting
-- Set column alignment per table with alignment markers in the separator row while writing the manuscript. The basis is the meaning of the column (year 2005 goes center, amount 2,005 goes right)
-    + Quantity columns (amounts, counts, ratios, durations, scores) take `---:` (right) so that digits are easy to compare
-    + Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns take `:---:` (center)
-    + Columns with bullets, line breaks, or long text (over 10 Korean or 20 half-width characters) take `:---` (left)
-    + (Marker example) The separator row of the track record table `| 연번 | 과업명 | 발주처 | 기간 | 금액(천원) |` is `|:---:|:---|:---:|:---:|---:|`
-- Columns without a marker take the default alignment (columns with bullets, line breaks, or long text go left, all other columns go center, number columns included). A table without quantity columns may omit markers because the default matches the criteria above
+- Set column alignment per table with alignment markers in the separator row while writing the manuscript (`---:` right, `:---:` center, `:---` left)
+- Horizontal alignment is set per column
+- Column alignment is judged from the whole table by the role the column plays in it (year 2005 goes center, amount 2,005 goes right)
+    + (Quantity columns) Columns of numbers and units (amounts, counts, ratios, scores, weights, etc.) take `---:` (right) so that digits are easy to compare
+    + (Columns read as one expression) Columns whose cells each read as one expression (categories, names, years, serial numbers, periods, formulas, short text, etc.) take `:---:` (center)
+    + (Columns read line by line) Bullet lists, diagnostic questions and descriptive text (content, details and main activities columns, etc.) take `:---` (left)
+    + (Marker example) The separator row of the track record table `| 연번 | 과업명 | 발주처 | 기간 | 금액(천원) |` is `|:---:|:---:|:---:|:---:|---:|`
+- A quantity with a share or change added in parentheses (212 (43.7%), etc.) makes a quantity column
+- An expression that mixes numbers with words for a condition, a point in time or an order (○○ points or more, ○○% (2030), year 4, stage 3, etc.) makes a column read as one expression even though it contains numbers
+- Columns of the same nature use the same alignment in every table of a document
+- A column that is hard to judge is centered
+- Header rows are centered regardless of column alignment
+- Columns without a marker take the default alignment (columns with bullets go left, all other columns go center, number and descriptive text columns included). A table whose judged alignment matches the default may omit markers
 
 ### Style of □ Headings
 
@@ -1011,6 +1018,10 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - After rendering, review the items below on every page PNG
     + Level symbols and indent steps, band positions, and spacing before and after bands
     + Centered tables, consistent column alignment, header background, caption position, unit row position, source row position, and appropriate merging of label columns
+    + It is a defect if horizontal alignment differs by cell within the same column
+    + It is a defect if quantity columns of numbers and units (amounts, ratios, scores, etc.) are centered or left-aligned
+    + It is a defect if expressions that mix numbers with words for a condition, a point in time or an order (○○ points or more, year 4, stage 3, etc.) or formula columns are right-aligned
+    + It is a defect if columns of the same nature (periods, amounts, ratios, etc.) are aligned differently in different tables
     + Figure size and caption, clipped and overlapping text
     + Spacing before and after tables and figures. It is a defect if the next numbered title (chapter band, section 1., subsection 가., item 1)), a Module or Task band, □, or ❍ touches the bottom border of a table or figure, or if the table overlaps the paragraph above. Check for each table that it has the same spacing as other tables
     + Spacing defects occur mainly after `(장표: engine)` tables. When found, replace the directive line of that table with `(장표: split N)` and retypeset. Then check the PNG again
