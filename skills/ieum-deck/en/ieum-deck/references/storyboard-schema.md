@@ -98,7 +98,8 @@
 - Fields that hold a table use head (header row text array), rows (row array), align (per-column horizontal alignment array) and colW (column width ratio array)
 - These fields are the slots of the table template, the table of illustrative, the sample.table of task, and the table blocks of free and composite
 - align is written for every table with "right", "center" and "left", and its length equals the column count (a different length gives a build warning)
-- The align rules (quantity columns right, identifier and short text columns centered) and the default alignment when omitted are in `references/templates.md` table typesetting
+- The rules for judging align are in the `references/writing-rules.md` tables section
+- The default alignment when align is omitted is in `references/templates.md` table typesetting
 
 ## Section ledger ledger.json
 
