@@ -95,7 +95,6 @@ COL_ONE_LINE_UNITS = 20         # 이 단위를 넘는 셀이 있는 열은 장�
 COL_SEARCH_STEPS = 40           # 열 폭 기준선 이분 탐색 횟수 (HWPUNIT 1 미만까지 수렴)
 CELL_MARGIN = (510, 510, 141, 141)  # 셀 안쪽 여백 좌, 우, 위, 아래 (HWPUNIT)
 CELL_UNIT_W = 500               # 행 높이 추정용 가중 1단위 폭 (표 글자 10pt)
-AMOUNT_CELL = re.compile(r"\d,\d{3}|\d\.\d")  # 천 단위 쉼표나 소수점이 있는 수치. 이런 열만 오른쪽 정렬
 FIG_CAPTION_SIDE = "BOTTOM"    # 그림 캡션 위치 (TOP | BOTTOM)
 MERGE_LABEL_COLS = 2            # 선행 라벨 열 중 세로 병합 대상 최대 열 수 (연속 동일값 병합 관행)
 LONG_TABLE_ROWS = 25            # 초과 시 글자취급 해제 + 엔진 분할 + 제목행 반복
@@ -571,15 +570,14 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 
 def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
-    """정렬 결정 단위는 열. 명시 마커 > 금액과 소수 숫자 열 RIGHT > 그 외 숫자 열(연번, 연도, 건수) CENTER > 글머리와 장문 포함 LEFT > CENTER."""
+    """정렬 결정 단위는 열. 명시 마커 > 글머리, 줄바꿈, 장문 포함 LEFT > CENTER.
+    Why: 수량(금액, 건수)과 식별값(연도, 연월, 연번)은 셀 글자의 숫자 모양이 같아 구분 불가. 수량 열의 RIGHT는 열의 의미를 아는 원고 작성자가 마커로 지정"""
     ncol = max(len(r) for r in rows)
     out = []
     for c in range(ncol):
         body = [r[c] for r in rows[1:] if c < len(r) and r[c].strip()]
         if c < len(explicit) and explicit[c]:
             out.append(explicit[c])
-        elif body and all(NUMERIC_CELL.match(v.replace(" ", "")) for v in body):
-            out.append("RIGHT" if any(AMOUNT_CELL.search(v) for v in body) else "CENTER")
         elif any(v.lstrip().startswith(BULLET_PREFIXES) or "\n" in v
                  or _weighted_len(v) > COL_ONE_LINE_UNITS for v in body):
             out.append("LEFT")
@@ -674,7 +672,7 @@ def cell_lines(val: str, role_fn) -> tuple[str, list[str | None]]:
 
 
 def cell_role(align: str, is_head: bool) -> tuple[str, str | None]:
-    """셀 문단의 역할과 정렬 덮어쓰기. 장문 열은 왼쪽 스타일, 금액 열은 오른쪽 정렬, 머리글은 가운데"""
+    """셀 문단의 역할과 정렬 덮어쓰기. 장문 열은 왼쪽 스타일, 우측 마커 열(수량 열)은 오른쪽 정렬, 머리글은 가운데"""
     role = "table_cell_left" if align == "LEFT" and not is_head else "table_cell"
     return role, ("RIGHT" if not is_head and align == "RIGHT" else None)
 

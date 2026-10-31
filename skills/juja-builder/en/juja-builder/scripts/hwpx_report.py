@@ -95,7 +95,6 @@ COL_ONE_LINE_UNITS = 20         # a column with a cell over this many units is a
 COL_SEARCH_STEPS = 40           # bisection steps for the column width baseline (converges below 1 HWPUNIT)
 CELL_MARGIN = (510, 510, 141, 141)  # cell padding left, right, top, bottom (HWPUNIT)
 CELL_UNIT_W = 500               # width of one weighted unit for row height estimation (10pt table text)
-AMOUNT_CELL = re.compile(r"\d,\d{3}|\d\.\d")  # figures with thousands separators or decimal points. Only such columns are right-aligned
 FIG_CAPTION_SIDE = "BOTTOM"    # figure caption position (TOP | BOTTOM)
 MERGE_LABEL_COLS = 2            # maximum number of leading label columns subject to vertical merging (convention of merging consecutive equal values)
 LONG_TABLE_ROWS = 25            # above this: treat-as-character off + engine splitting + header row repetition
@@ -571,15 +570,14 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 
 def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
-    """Alignment is decided per column. Explicit marker > amount and decimal number columns RIGHT > other number columns (serial, year, count) CENTER > columns with bullets or long text LEFT > CENTER."""
+    """Alignment is decided per column. Explicit marker > columns with bullets, line breaks, or long text LEFT > CENTER.
+    Why: quantities (amounts, counts) and identifiers (years, year-months, serials) share the same number shape in cell text. The manuscript author, who knows what a column means, sets RIGHT for quantity columns with a marker"""
     ncol = max(len(r) for r in rows)
     out = []
     for c in range(ncol):
         body = [r[c] for r in rows[1:] if c < len(r) and r[c].strip()]
         if c < len(explicit) and explicit[c]:
             out.append(explicit[c])
-        elif body and all(NUMERIC_CELL.match(v.replace(" ", "")) for v in body):
-            out.append("RIGHT" if any(AMOUNT_CELL.search(v) for v in body) else "CENTER")
         elif any(v.lstrip().startswith(BULLET_PREFIXES) or "\n" in v
                  or _weighted_len(v) > COL_ONE_LINE_UNITS for v in body):
             out.append("LEFT")
@@ -674,7 +672,7 @@ def cell_lines(val: str, role_fn) -> tuple[str, list[str | None]]:
 
 
 def cell_role(align: str, is_head: bool) -> tuple[str, str | None]:
-    """Role and alignment override of a cell paragraph. Long-text columns use the left style, amount columns right alignment, headers center"""
+    """Role and alignment override of a cell paragraph. Long-text columns use the left style, right-marker columns (quantity columns) right alignment, headers center"""
     role = "table_cell_left" if align == "LEFT" and not is_head else "table_cell"
     return role, ("RIGHT" if not is_head and align == "RIGHT" else None)
 
