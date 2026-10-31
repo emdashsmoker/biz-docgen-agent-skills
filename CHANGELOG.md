@@ -27,6 +27,19 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-10-31
+
+### ieum-deck
+- Fixed horizontal and vertical lines that PowerPoint drew slanted by 0.01 mm because soffice reserialization stored their zero height or width as 360 EMU (#79)
+- Added a finalize.py failure with exit code 1 when slanted lines remain after processing (#79)
+- Added low and high end labels in vertical text on the y axis of the matrix block (y.low, y.high) (#79)
+- Added the low and high labels on the y axis of the priority_matrix recipe sample (#79)
+
+* soffice 재직렬화의 360 EMU 크기 기록으로 PowerPoint 의 가로선과 세로선이 0.01mm 기울어지는 현상 수정 (#79)
+* 처리 후 남은 기울어진 직선의 finalize.py 실패 판정(종료 코드 1) 추가 (#79)
+* matrix 블록 y 축 양끝의 세로 글자 표기(y.low, y.high) 추가 (#79)
+* priority_matrix 레시피 견본의 y 축 양끝 표기(낮음, 높음) 추가 (#79)
+
 ## 2026-10-30
 
 ### ieum-deck

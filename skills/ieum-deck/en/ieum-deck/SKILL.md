@@ -749,6 +749,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
 - finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
+- finalize.py resets the 0.01 mm (360 EMU) that soffice reserialization leaves as the height of horizontal lines and the width of vertical lines back to 0, so PowerPoint draws these lines straight
+    + (Cause) LibreOffice stores a zero size as one internal unit (1/100 mm), and a line shape runs between the corners of its box
+    + finalize.py fails with exit code 1 when slanted lines remain after processing
 - LibreOffice rendering does not read the two attributes and breaks lines at Korean and English word boundaries
     + Confirm that PowerPoint receives the line break unit through the finalize.py count of paragraphs without it, since review images cannot show it
     + In a character-level deck, PowerPoint line ends may differ from the review images
@@ -913,7 +916,7 @@ ieum-deck/
 │   ├── composite.js         Grid and blocks of the composite template
 │   ├── labels.js            Lookup of the fixed template and block labels (slide slot, then meta.labels, then assets/labels.json)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, line break unit (meta.lineBreak), doughnut hole preservation, table cell fill normalization, table cell margin restoration, language tags (meta.labels.language), bullet font correction, soffice reserialization
+│   ├── finalize.py          OPC normalization, shape id renumbering, duplicate pPr removal, adj application, line break unit (meta.lineBreak), doughnut hole preservation, table cell fill normalization, table cell margin restoration, language tags (meta.labels.language), bullet font correction, straight line restoration, soffice reserialization
 │   ├── validate.py          Package structure validation (content types, XML syntax, relationship targets, slide ids, shape ids, python-pptx opening; schema validation when OOXML_PML_XSD is set)
 │   ├── lint.py              storyboard checks
 │   ├── check_layout.py      Checks of the typeset result

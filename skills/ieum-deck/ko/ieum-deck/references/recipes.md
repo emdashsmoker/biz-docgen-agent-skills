@@ -106,7 +106,7 @@
 | `canvas` | 비즈니스 모델 캔버스 9블록 (배치 고정) | `partners`, `activities`, `resources`, `value`, `relationships`, `channels`, `segments`, `cost`, `revenue`(각 문구 배열), `numbered`(작성 순서 번호), `labels`(같은 키로 블록 제목 변경, 선택) |
 | `market` | 시장 규모 TAM, SAM, SOM (포갠 원 3개와 설명 행) | `levels[{label, name, value, items[]}]` (바깥 원부터 안쪽 원 순서) |
 | `flow` | 화살표로 잇는 상자 흐름 | `nodes[{title, items 또는 text, fill}]`, `dir`(h 또는 v). `fill` 값은 navy |
-| `matrix` | 2×2 매트릭스와 항목 배치 | `x{label, low, high}`, `y{label}` (y 축은 세로 글자로 조판되므로 방향 표기는 label 에 포함. 예: "기대 효과 (위로 높음)"), `quadrants[좌상, 우상, 좌하, 우하]`, `items[{label, x, y}]`, `focus`(강조 사분면 순번 0-3), `legend`, `numbered` |
+| `matrix` | 2×2 매트릭스와 항목 배치 | `x{label, low, high}`, `y{label, low, high}` (y 축 이름과 양끝 표기는 세로 글자로 조판. low 는 아래 끝, high 는 위 끝), `quadrants[좌상, 우상, 좌하, 우하]`, `items[{label, x, y}]`, `focus`(강조 사분면 순번 0-3), `legend`, `numbered` |
 | `pyramid` | 계층 피라미드 | `levels[]`(위층부터), `side[]`(층별 설명, 선택) |
 | `cycle` | 순환 단계 | `stages[{title, text}]`, `center` |
 | `tree` | 2단 트리 | `root`, `children[{text, children[]}]`, `top`(뿌리 위 상위 주체, 선택), `sides[{side, text, dash}]`(뿌리 좌우 주체, 선택). `side` 값은 left 또는 right, `dash` 가 true 이면 점선 |

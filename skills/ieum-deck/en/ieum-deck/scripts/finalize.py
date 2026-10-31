@@ -411,6 +411,41 @@ def count_line_break_unset(xml: str) -> int:
     return unset
 
 
+# Short side restoration for straight line shapes
+# WHY: soffice reserialization writes the zero height of horizontal lines and the zero width of vertical lines as one LibreOffice internal unit (1/100 mm = 360 EMU).
+#      A line shape runs from the top left to the bottom right of its box, so PowerPoint shows such a line as a diagonal slanted by 0.01 mm
+LO_UNIT_EMU = 360
+STRAIGHT_LINE_SHAPE_PATTERN = re.compile(r"<p:(sp|cxnSp)\b.*?</p:\1>", re.S)
+STRAIGHT_LINE_PRESET_PATTERN = re.compile(r'<a:prstGeom prst="(?:line|straightConnector1)"')
+SHAPE_EXT_PATTERN = re.compile(r'<a:ext cx="(\d+)" cy="(\d+)"\s*/>')
+
+
+def straighten_lines(xml: str) -> tuple[str, int]:
+    """Resets the short side of a straight line shape to 0 when it is at most one LibreOffice unit, restoring horizontal and vertical lines.
+    A diagonal whose short side is at most 0.01 mm cannot be told apart from a horizontal or vertical line, so intended diagonals are unaffected"""
+    count = 0
+
+    def fix_ext(m):
+        nonlocal count
+        cx, cy = int(m.group(1)), int(m.group(2))
+        if 0 < cy <= LO_UNIT_EMU < cx:
+            cy = 0
+        elif 0 < cx <= LO_UNIT_EMU < cy:
+            cx = 0
+        else:
+            return m.group(0)
+        count += 1
+        return f'<a:ext cx="{cx}" cy="{cy}"/>'
+
+    def fix_shape(m):
+        body = m.group(0)
+        if not STRAIGHT_LINE_PRESET_PATTERN.search(body):
+            return body
+        return SHAPE_EXT_PATTERN.sub(fix_ext, body, count=1)  # The first a:ext is the shape's own xfrm
+
+    return STRAIGHT_LINE_SHAPE_PATTERN.sub(fix_shape, xml), count
+
+
 def apply_shape_adjust(xml: str) -> tuple[str, int]:
     """Moves the shape name adj:N into the adj value of prstGeom avLst (pptxgenjs does not support adjust values, so they travel in objectName)
     Used to match the tip width of chevrons and home plates and the radius of rounded rectangles to the source"""
@@ -487,6 +522,8 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["duplicate_ppr"] = dup
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
+        xml, sl = straighten_lines(xml)
+        stats["straightened_lines"] = sl
         xml, cf = fix_table_cell_fills(xml)
         stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
@@ -617,8 +654,8 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML-level defect counts. Number of slides with duplicate ids, label positions in stacked charts, OpenSymbol bullets in slides and slide paragraphs without the line break unit"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0}
+    """XML-level defect counts. Number of slides with duplicate ids, label positions in stacked charts, OpenSymbol bullets in slides, slide paragraphs without the line break unit and slanted straight lines in slides"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0, "slanted_lines": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
@@ -629,6 +666,7 @@ def count_xml_defects(data: bytes) -> dict:
                     counts["duplicate_id_slides"] += 1
                 counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
                 counts["line_break_unset"] += count_line_break_unset(xml)
+                counts["slanted_lines"] += straighten_lines(xml)[1]
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -653,6 +691,7 @@ FAILABLE_METRICS = {
     "stacked_label_positions": "stacked_chart_label_positions",
     "opensymbol_bullets": "opensymbol_bullets",
     "line_break_unset": "line_break_unset_paragraphs",
+    "slanted_lines": "slanted_lines",
 }
 
 
