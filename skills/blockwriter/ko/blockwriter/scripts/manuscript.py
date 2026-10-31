@@ -595,16 +595,16 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 
 def col_aligns(rows: list[list[str]], explicit: list, hdr: int = 1) -> list[str]:
-    """정렬 결정 단위는 열. 명시 마커 > 숫자 전용 RIGHT > 글머리·장문 포함 LEFT > CENTER.
-    판정 대상은 머리글 행(hdr개)을 뺀 본문 셀이며 병합 지시 셀은 내용이 없으므로 제외."""
+    """정렬 결정 단위는 열. 명시 마커 > 글머리, 줄바꿈, 장문 포함 LEFT > CENTER.
+    판정 대상은 머리글 행(hdr개)을 뺀 본문 셀이며 병합 지시 셀은 내용이 없으므로 제외.
+    Why: 수량(금액, 건수)과 식별값(연도, 연월, 연번)은 셀 글자의 숫자 모양이 같아 글자로 구분할 수 없음.
+    수량 열의 RIGHT는 열의 의미를 아는 원고 작성자가 마커로 지정"""
     ncol = max(len(r) for r in rows)
     out = []
     for c in range(ncol):
         body = [r[c] for r in rows[hdr:] if c < len(r) and r[c].strip() and r[c].strip() not in MERGE_MARKS]
         if c < len(explicit) and explicit[c]:
             out.append(explicit[c])
-        elif body and all(is_numeric_cell(v) for v in body):
-            out.append("RIGHT")
         elif any(v.lstrip().startswith(BULLET_PREFIXES) or "\n" in v or weighted_len(v) > C.COL_ONE_LINE_UNITS
                  for v in body):   # 같은 원고가 HWPX와 DOCX에서 같은 정렬을 갖도록 빈칸 폭은 기본값(HWPX)으로 판정
             out.append("LEFT")
