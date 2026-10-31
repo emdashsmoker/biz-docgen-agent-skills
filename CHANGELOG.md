@@ -54,6 +54,17 @@ Changelog rules
 * 정렬 콜론이 있는 마크다운 구분 행(|:---:|)을 md2storyboard.py 가 데이터 행으로 읽는 현상 수정 (#80)
 * 수량 열이 있는 레시피와 템플릿 견본 표의 align 추가 (#80)
 
+### juja-builder
+- Changed table column alignment to separator-row markers set per table in the manuscript, with quantity columns right and identifier and short text columns centered (#81)
+- Changed number columns without a marker that have thousands separators or decimal points from right to center alignment (#81)
+- Added alignment markers to the example and common part template tables that have quantity columns (#81)
+- Action needed: add `---:` to the separator row of quantity columns in manuscripts written before this change before typesetting them again (#81)
+
+* 표 열 정렬을 원고 구분 행의 표별 정렬 표기로 변경 (수량 열 우측, 식별값 열과 짧은 문구 열 가운데) (#81)
+* 정렬 표기가 없는 표의 천 단위 쉼표나 소수점이 있는 숫자 열 정렬을 우측에서 가운데로 변경 (#81)
+* 수량 열이 있는 예시 표와 공통 파트 서식 표의 정렬 표기 추가 (#81)
+* 기존 원고의 재조판 전 수량 열 구분 행의 `---:` 추가 필요 (#81)
+
 ## 2026-10-30
 
 ### ieum-deck
