@@ -40,6 +40,11 @@ THOUSAND_WON_PER_EOK = 100_000  # KRW 100 million (1억원) = 100,000 thousand w
 # Units added to basic information values. Added only to number-only values and placeholders (keeps the unit notation of the table and headline the same)
 FIELD_UNITS = {"설립연도": "년", "임직원 수": "명"}
 BARE_VALUE_RE = re.compile(r"[\d,]+|\[[^\]]*\]")
+# Column alignment of the form tables (storyboard align). Quantity columns (months, contract amount, yearly amounts) are right-aligned, identifier columns (year, serial number, period) and short text columns are centered
+# The user can rename header cells in company.md (e.g. "계약금액 (지분)"), so alignment follows column order, not header names
+HISTORY_ALIGN = ["center", "center"]  # 연도, 내용
+RECORD_ALIGN = ["center", "center", "center", "center", "right", "right"]  # 연번, 발주기관, 과제명, 기간, 개월, 계약금액
+FINANCE_LABEL_ALIGN, FINANCE_VALUE_ALIGN = "center", "right"  # 구분 column, yearly amount columns
 
 # Management part: (section title, [(recipe, management methodology phrase key)]). Section titles follow the usual evaluation item names of public RFPs
 MGMT_SECTIONS = [
@@ -119,7 +124,7 @@ def profile_slide(company, basic, history):
         "marker": "제안사 개요", "factSource": FACT_SOURCE,
         "slots": {"recipe": "company_profile", "cols": [1, 1.2], "regions": [
             {"title": "기본 정보", "block": {"kind": "labeled", "rows": rows}},
-            {"title": "주요 연혁", "block": {"kind": "table", "head": ["연도", "내용"], "rows": hist}},
+            {"title": "주요 연혁", "block": {"kind": "table", "head": ["연도", "내용"], "rows": hist, "align": HISTORY_ALIGN}},
         ]},
     }
 
@@ -163,7 +168,8 @@ def finance_slide(company, fin):
         "id": "C03", "template": "composite", "secNo": "3.", "section": "제안업체 경영상태", "chapter": CH_COMPANY,
         "headline": finance_headline(company, fin), "marker": "제안사 경영 상태", "factSource": FACT_SOURCE,
         "slots": {"recipe": "finance_status", "cols": [1.6, 1], "regions": [
-            {"title": "재무 현황 (단위 천원)", "block": {"kind": "table", "head": head, "rows": [r[: len(head)] for r in fin[1:]]}},
+            {"title": "재무 현황 (단위 천원)", "block": {"kind": "table", "head": head, "rows": [r[: len(head)] for r in fin[1:]],
+                                                     "align": [FINANCE_LABEL_ALIGN] + [FINANCE_VALUE_ALIGN] * (len(head) - 1)}},
             {"title": "신용평가등급", "block": {"kind": "image", "label": "신용평가등급 확인서", "caption": "신용평가기관 발급 확인서 (사용자 제공)"}},
         ]},
     }
@@ -175,6 +181,8 @@ def record_slides(company, rec):
     n_slides = max(1, -(-len(body) // RECORD_ROWS_PER_SLIDE))
     size = max(1, -(-len(body) // n_slides))
     chunks = [body[i:i + size] for i in range(0, len(body), size)] or [[]]
+    # With a column count different from the form, column order no longer tells the meaning, so align is left out (builder default alignment)
+    align = {"align": RECORD_ALIGN} if len(head) == len(RECORD_ALIGN) else {}
     slides = []
     for k, rows in enumerate(chunks):
         suffix = "" if len(chunks) == 1 else f" ({k + 1}/{len(chunks)})"
@@ -182,7 +190,7 @@ def record_slides(company, rec):
             "id": f"C04{chr(ord('a') + k) if len(chunks) > 1 else ''}", "template": "table", "secNo": "4.", "section": "유사분야 수행실적", "chapter": CH_COMPANY,
             "headline": f"{josa(company, '은', '는')} 유사 분야 과업 {len(body)}건을 수행하여 과업 수행 경험을 축적",
             "marker": f"유사 분야 수행 실적{suffix}", "factSource": FACT_SOURCE,
-            "slots": {"head": head, "rows": rows},
+            "slots": {"head": head, "rows": rows, **align},
         })
     return slides
 

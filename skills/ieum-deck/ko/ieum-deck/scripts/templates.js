@@ -343,7 +343,7 @@ function tableColW(tb, w, sz, listCols, dataCols) {
   return { cw: out, fill: sN / w };
 }
 /** 표 열 폭, 열 서식, 행별 필요 높이와 상한
- *  열 서식: 항목 2개 이상 셀이 있는 열은 모든 셀에 불릿과 왼쪽 정렬, 질문 문장 열은 왼쪽 정렬, 그 외 열은 가운데 정렬
+ *  열 서식: 항목 2개 이상 셀이 있는 열은 모든 셀에 불릿과 왼쪽 정렬, 질문 문장 열은 왼쪽 정렬, 그 외 열은 가운데 정렬 (storyboard align 이 있는 열은 그 정렬)
  *  행 높이 상한: 글자만 있는 한 줄 행은 ROW_H_TEXT, 여러 줄 행은 줄 간격 확대분, 하베이 볼이 있는 표는 ROW_H_MAX */
 function tableMetrics(tb, w, szOpt) {
   const ncol = tb.head ? tb.head.length : tb.rows[0].length;
@@ -359,9 +359,10 @@ function tableMetrics(tb, w, szOpt) {
   const dataCols = listCols.map((l, i) => (l ? "" : kindOf(textsOf(i))));
   const colw = fixed ? tb.colW.map((r) => +((w * r) / sumOf(tb.colW)).toFixed(3)) : tableColW(tb, w, sz, listCols, dataCols).cw;
   const innerOf = (cw, i, span) => Math.max(0.3, sumOf(cw.slice(i, i + span)) - 2 * TABLE_CELL_PAD - (listCols[i] ? T.PARA.bulletIndentIn : 0));
-  // 숫자 열은 자릿수 대조를 위해 오른쪽 정렬 (모든 표에서 같은 규칙을 적용하여 표 사이 정렬 혼재 방지)
-  // 항목 2개 이상 셀이 있는 열과 질문 문장 열은 왼쪽 정렬, 그 외 열(한 줄 문구, 하베이 볼, 기호)은 가운데 정렬
-  const aligns = tb.align || listCols.map((l, i) => (dataCols[i] === "num" ? "right" : l || textsOf(i).some((t) => QUESTION_END.test(t)) ? "left" : "center"));
+  // 열 정렬은 storyboard 의 align 을 우선 적용. 빠진 열은 기본 정렬
+  // Why: 셀 글자 모양으로는 수량(85.5백만원, 9개월)과 식별값(연도 2005, 연번 1)을 가를 수 없음. 열의 의미를 아는 작성자가 수량 열의 우측 정렬을 지정
+  // 기본 정렬: 항목 2개 이상 셀이 있는 열과 질문 문장 열은 왼쪽, 그 외 열(한 줄 문구, 숫자, 하베이 볼, 기호)은 가운데
+  const aligns = listCols.map((l, i) => (tb.align && tb.align[i]) || (l || textsOf(i).some((t) => QUESTION_END.test(t)) ? "left" : "center"));
   const linesOf = (v, i) => {
     if (v && v.merged) return 1;
     const inner = innerOf(colw, i, cellSpan(v));
@@ -401,6 +402,7 @@ function tableBlock(ctx, slide, box, tb, opt) {
   const L = tableLayout(tb, box.w, box.h, o.sz);
   const { colw, sz, headH, lh, listCols, aligns } = L;
   if (L.fill < T.LIMIT.tableFillMin && !o.noWarn) ctx.warn(`표 글자 채움 ${Math.round(L.fill * 100)}% (셀 문구 보강, 열 추가, 칸 폭 축소 중 선택)`);
+  if (tb.align && tb.align.length !== L.ncol) ctx.warn(`표 align ${tb.align.length}개, 열 ${L.ncol}개 (열 수와 같게 지정. 빠진 열은 기본 정렬)`);
   const hts = tb.head ? [headH, ...L.rows] : L.rows.slice();
   const rowHt = (ri) => hts[ri];
   const rowY = (ri) => hts.slice(0, ri).reduce((a, b) => a + b, 0);
@@ -1397,6 +1399,8 @@ function steps(ctx, slide, sb) {
   source(ctx, slide, sb);
 }
 
+// 인력 구성 표 열 정렬 (구분, 인원, 비중). 빌더가 만드는 고정 열 표라서 수량 열(인원, 비중)의 우측 정렬을 여기서 지정
+const PEOPLE_ALIGN = ["center", "right", "right"];
 /** 회사 조직도. slots: {ceo, advisory{name,note}, staff{name,note}, units[{name,teams[]}], people[{label,count,ratio}], peopleHead[], network[], leftHead, rightHead, netHead} */
 function orgchart(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb), P = ctx.pres;
@@ -1491,7 +1495,7 @@ function orgchart(ctx, slide, sb) {
     const R = subhead(ctx, slide, { x: b.x + leftW + 0.25, y: b.y, w: b.w - leftW - 0.25, h: b.h - netH }, LB.label("orgchart", "rightHead", s.rightHead));
     const head = LB.label("orgchart", "peopleHead", s.peopleHead);
     const rows2 = people.map((p) => [p.label || "", p.count || "", p.ratio || ""]);
-    tableBlock(ctx, slide, R, { head, rows: rows2 });
+    tableBlock(ctx, slide, R, { head, rows: rows2, align: PEOPLE_ALIGN });
   }
   // 하단 네트워크 띠
   if (net.length) {

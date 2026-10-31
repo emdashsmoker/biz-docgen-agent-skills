@@ -344,7 +344,7 @@ function tableColW(tb, w, sz, listCols, dataCols) {
   return { cw: out, fill: sN / w };
 }
 /** Table column widths, column formats, needed height and cap per row
- *  Column format: columns with a cell of 2 or more items get bullets and left alignment in every cell, question sentence columns are left-aligned, other columns are centered
+ *  Column format: columns with a cell of 2 or more items get bullets and left alignment in every cell, question sentence columns are left-aligned, other columns are centered (a column with a storyboard align uses that alignment)
  *  Row height cap: ROW_H_TEXT for text-only single-line rows, the widened spacing for multi-line rows, ROW_H_MAX for tables with Harvey balls */
 function tableMetrics(tb, w, szOpt) {
   const ncol = tb.head ? tb.head.length : tb.rows[0].length;
@@ -360,9 +360,10 @@ function tableMetrics(tb, w, szOpt) {
   const dataCols = listCols.map((l, i) => (l ? "" : kindOf(textsOf(i))));
   const colw = fixed ? tb.colW.map((r) => +((w * r) / sumOf(tb.colW)).toFixed(3)) : tableColW(tb, w, sz, listCols, dataCols).cw;
   const innerOf = (cw, i, span) => Math.max(0.3, sumOf(cw.slice(i, i + span)) - 2 * TABLE_CELL_PAD - (listCols[i] ? T.PARA.bulletIndentIn : 0));
-  // Number columns are right-aligned so digits compare (the same rule for every table prevents mixed alignment across tables)
-  // Columns with cells of 2 or more items and question sentence columns are left-aligned, other columns (one-line text, Harvey balls, symbols) are centered
-  const aligns = tb.align || listCols.map((l, i) => (dataCols[i] === "num" ? "right" : l || textsOf(i).some((t) => QUESTION_END.test(t)) ? "left" : "center"));
+  // Column alignment takes the storyboard align first. Missing columns use the default alignment
+  // Why: the shape of cell text cannot separate quantities (85.5백만원, 9개월) from identifiers (year 2005, serial 1). The author, who knows what a column means, sets right alignment for quantity columns
+  // Default alignment: columns with cells of 2 or more items and question sentence columns are left-aligned, other columns (one-line text, numbers, Harvey balls, symbols) are centered
+  const aligns = listCols.map((l, i) => (tb.align && tb.align[i]) || (l || textsOf(i).some((t) => QUESTION_END.test(t)) ? "left" : "center"));
   const linesOf = (v, i) => {
     if (v && v.merged) return 1;
     const inner = innerOf(colw, i, cellSpan(v));
@@ -402,6 +403,7 @@ function tableBlock(ctx, slide, box, tb, opt) {
   const L = tableLayout(tb, box.w, box.h, o.sz);
   const { colw, sz, headH, lh, listCols, aligns } = L;
   if (L.fill < T.LIMIT.tableFillMin && !o.noWarn) ctx.warn(`table text fill ${Math.round(L.fill * 100)}% (enrich cell text, add columns or narrow the cell)`);
+  if (tb.align && tb.align.length !== L.ncol) ctx.warn(`table align has ${tb.align.length} entries for ${L.ncol} columns (match the column count. Missing columns use the default alignment)`);
   const hts = tb.head ? [headH, ...L.rows] : L.rows.slice();
   const rowHt = (ri) => hts[ri];
   const rowY = (ri) => hts.slice(0, ri).reduce((a, b) => a + b, 0);
@@ -1398,6 +1400,8 @@ function steps(ctx, slide, sb) {
   source(ctx, slide, sb);
 }
 
+// Staff table column alignment (group, staff, share). The builder makes this fixed-column table, so right alignment of its quantity columns (staff, share) is set here
+const PEOPLE_ALIGN = ["center", "right", "right"];
 /** Company organization chart. slots: {ceo, advisory{name,note}, staff{name,note}, units[{name,teams[]}], people[{label,count,ratio}], peopleHead[], network[], leftHead, rightHead, netHead} */
 function orgchart(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb), P = ctx.pres;
@@ -1492,7 +1496,7 @@ function orgchart(ctx, slide, sb) {
     const R = subhead(ctx, slide, { x: b.x + leftW + 0.25, y: b.y, w: b.w - leftW - 0.25, h: b.h - netH }, LB.label("orgchart", "rightHead", s.rightHead));
     const head = LB.label("orgchart", "peopleHead", s.peopleHead);
     const rows2 = people.map((p) => [p.label || "", p.count || "", p.ratio || ""]);
-    tableBlock(ctx, slide, R, { head, rows: rows2 });
+    tableBlock(ctx, slide, R, { head, rows: rows2, align: PEOPLE_ALIGN });
   }
   // Network band at the bottom
   if (net.length) {

@@ -40,6 +40,11 @@ THOUSAND_WON_PER_EOK = 100_000  # 1억원 = 10만 천원
 # 기본 정보 값에 붙이는 단위. 숫자만 적은 값과 자리 표기에만 붙임 (표와 헤드라인의 단위 표기를 같게 유지)
 FIELD_UNITS = {"설립연도": "년", "임직원 수": "명"}
 BARE_VALUE_RE = re.compile(r"[\d,]+|\[[^\]]*\]")
+# 양식 표의 열 정렬 (storyboard align). 수량 열(개월, 계약금액, 연도별 금액)은 우측, 식별값 열(연도, 연번, 기간)과 짧은 문구 열은 가운데
+# 사용자가 company.md 에서 머리 행 이름을 바꿀 수 있으므로(예: "계약금액 (지분)") 머리 행 이름 대신 열 순서로 지정
+HISTORY_ALIGN = ["center", "center"]  # 연도, 내용
+RECORD_ALIGN = ["center", "center", "center", "center", "right", "right"]  # 연번, 발주기관, 과제명, 기간, 개월, 계약금액
+FINANCE_LABEL_ALIGN, FINANCE_VALUE_ALIGN = "center", "right"  # 구분 열, 연도별 금액 열
 
 # 관리 부문: (절 제목, [(레시피, 관리 방법론 문구 키)]). 절 제목은 공공 제안요청서의 평가항목 명칭 관행을 따름
 MGMT_SECTIONS = [
@@ -119,7 +124,7 @@ def profile_slide(company, basic, history):
         "marker": "제안사 개요", "factSource": FACT_SOURCE,
         "slots": {"recipe": "company_profile", "cols": [1, 1.2], "regions": [
             {"title": "기본 정보", "block": {"kind": "labeled", "rows": rows}},
-            {"title": "주요 연혁", "block": {"kind": "table", "head": ["연도", "내용"], "rows": hist}},
+            {"title": "주요 연혁", "block": {"kind": "table", "head": ["연도", "내용"], "rows": hist, "align": HISTORY_ALIGN}},
         ]},
     }
 
@@ -163,7 +168,8 @@ def finance_slide(company, fin):
         "id": "C03", "template": "composite", "secNo": "3.", "section": "제안업체 경영상태", "chapter": CH_COMPANY,
         "headline": finance_headline(company, fin), "marker": "제안사 경영 상태", "factSource": FACT_SOURCE,
         "slots": {"recipe": "finance_status", "cols": [1.6, 1], "regions": [
-            {"title": "재무 현황 (단위 천원)", "block": {"kind": "table", "head": head, "rows": [r[: len(head)] for r in fin[1:]]}},
+            {"title": "재무 현황 (단위 천원)", "block": {"kind": "table", "head": head, "rows": [r[: len(head)] for r in fin[1:]],
+                                                     "align": [FINANCE_LABEL_ALIGN] + [FINANCE_VALUE_ALIGN] * (len(head) - 1)}},
             {"title": "신용평가등급", "block": {"kind": "image", "label": "신용평가등급 확인서", "caption": "신용평가기관 발급 확인서 (사용자 제공)"}},
         ]},
     }
@@ -175,6 +181,8 @@ def record_slides(company, rec):
     n_slides = max(1, -(-len(body) // RECORD_ROWS_PER_SLIDE))
     size = max(1, -(-len(body) // n_slides))
     chunks = [body[i:i + size] for i in range(0, len(body), size)] or [[]]
+    # 열 수가 양식과 다르면 열 순서로 의미를 알 수 없으므로 align 을 생략 (빌더 기본 정렬)
+    align = {"align": RECORD_ALIGN} if len(head) == len(RECORD_ALIGN) else {}
     slides = []
     for k, rows in enumerate(chunks):
         suffix = "" if len(chunks) == 1 else f" ({k + 1}/{len(chunks)})"
@@ -182,7 +190,7 @@ def record_slides(company, rec):
             "id": f"C04{chr(ord('a') + k) if len(chunks) > 1 else ''}", "template": "table", "secNo": "4.", "section": "유사분야 수행실적", "chapter": CH_COMPANY,
             "headline": f"{josa(company, '은', '는')} 유사 분야 과업 {len(body)}건을 수행하여 과업 수행 경험을 축적",
             "marker": f"유사 분야 수행 실적{suffix}", "factSource": FACT_SOURCE,
-            "slots": {"head": head, "rows": rows},
+            "slots": {"head": head, "rows": rows, **align},
         })
     return slides
 

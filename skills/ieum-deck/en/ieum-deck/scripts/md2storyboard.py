@@ -23,7 +23,8 @@ ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"]
 
 
 def parse_table(lines):
-    rows = [[c.strip() for c in ln.strip().strip("|").split("|")] for ln in lines if ln.strip().startswith("|") and not re.match(r"^\|?\s*-{2,}", ln.strip())]
+    # Skip separator rows (|---|, |:---:|). Separator rows with alignment colons must not become data rows either (same test as company2slides.parse_tables)
+    rows = [[c.strip() for c in ln.strip().strip("|").split("|")] for ln in lines if ln.strip().startswith("|") and not re.match(r"^\|?\s*:?-{2,}", ln.strip())]
     if not rows: return None
     return {"head": rows[0], "rows": rows[1:]}
 

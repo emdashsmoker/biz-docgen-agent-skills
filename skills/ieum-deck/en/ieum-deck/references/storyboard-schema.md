@@ -93,6 +93,13 @@
 - Other text is recognized when it is "[인력A]" or "name + consulting firm or research institute title" (e.g. 수석컨설턴트, 수석위원, 책임연구원, Senior Manager)
 - English names are recognized as 2-3 words starting with a capital ("Jane Kim"); in free text, only when a title follows a comma, as in "Jane Kim, Senior Consultant"
 
+### Table fields
+
+- Fields that hold a table use head (header row text array), rows (row array), align (per-column horizontal alignment array) and colW (column width ratio array)
+- These fields are the slots of the table template, the table of illustrative, the sample.table of task, and the table blocks of free and composite
+- align is written for every table with "right", "center" and "left", and its length equals the column count (a different length gives a build warning)
+- The align rules (quantity columns right, identifier and short text columns centered) and the default alignment when omitted are in `references/templates.md` table typesetting
+
 ## Section ledger ledger.json
 
 - Structure: {"slides": [{"id", "chapter", "section", "headline", "rfpTasks": [], "moduleTasks": [], "evalItems": [], "template", "status"}]}

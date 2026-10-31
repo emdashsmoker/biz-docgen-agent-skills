@@ -854,6 +854,13 @@
       "0.20"
      ]
     ],
+    "align": [
+     "center",
+     "center",
+     "center",
+     "center",
+     "right"
+    ],
     "point": "가중치는 전문가 AHP 설문으로 산정하고 연 1회 재검증"
    },
    "moduleTasks": [
