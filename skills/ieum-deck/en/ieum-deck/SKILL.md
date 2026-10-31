@@ -608,7 +608,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Merging is specified with the `merged` field of the storyboard
     + The builder merges only as specified by `merged`
 - (Alignment) Horizontal alignment is uniform per column, vertical alignment is uniform per row
-    + A single item is centered without a bullet, even when it wraps into several lines
+    + A single item is centered without a bullet, even when it wraps into several lines (table columns follow the `references/writing-rules.md` tables section)
     + Two or more items use left-aligned bullets and vertical centering
     + Cells of the same column use the same horizontal alignment
     + Cells of the same row use the same vertical alignment
@@ -820,6 +820,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### Alignment
 
 - Does horizontal alignment differ by cell within the same table column?
+- Are quantity columns of numbers and units (amounts, ratios, scores, etc.) centered or left-aligned?
 - Are expressions that mix numbers with words (○○ points or more, year 4, etc.) or formula columns right-aligned?
 - Do columns of the same nature (periods, amounts, ratios, etc.) use different alignments in different tables?
 - Does vertical alignment differ by row so text heights look uneven?

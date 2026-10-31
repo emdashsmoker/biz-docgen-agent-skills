@@ -595,7 +595,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 병합 지정은 storyboard 의 `merged` 필드
     + 빌더는 `merged` 지정대로만 병합
 - (정렬) 가로 정렬은 열 단위, 세로 정렬은 행 단위로 통일
-    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬
+    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬 (표 열은 `references/writing-rules.md` 표 절)
     + 항목 2개 이상은 불릿 좌측 정렬과 세로 가운데 정렬
     + 같은 열의 셀은 같은 가로 정렬을 사용
     + 같은 행의 셀은 같은 세로 정렬을 사용
@@ -806,6 +806,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### 정렬
 
 - 표의 같은 열에서 가로 정렬이 셀마다 다른가
+- 숫자와 단위로 된 수량 열(금액, 비율, 점수 등)이 가운데나 좌측으로 정렬되었는가
 - 글자와 섞인 수치 표현(○○점 이상, 4년차 등)이나 산식 열이 우측으로 정렬되었는가
 - 성격이 같은 열(기간, 금액, 비율 등)이 표마다 다르게 정렬되었는가
 - 표의 세로 정렬이 행마다 달라 글자 높이가 들쭉날쭉한가
