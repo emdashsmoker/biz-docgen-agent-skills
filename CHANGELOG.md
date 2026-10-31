@@ -54,6 +54,12 @@ Changelog rules
 - Changed the staff and share columns of the orgchart staff table to right alignment (#80)
 - Fixed md2storyboard.py reading Markdown separator rows with alignment colons (|:---:|) as data rows (#80)
 - Added align to the recipe and template sample tables that have quantity columns (#80)
+- Changed table column alignment rules to judge each column by the role it plays in the whole table (quantity columns right, columns read as one expression such as periods and formulas centered, columns read line by line such as multi-sentence descriptions left) (#83)
+- Changed columns of number-and-word values (○○% (2030년), ○○점 이상, 4년차, etc.) from right to center alignment (#83)
+- Added a rule that columns of the same nature use the same alignment in every table of a deck (#83)
+- Added center alignment for columns that are hard to judge (#83)
+- Added review checklist items for quantity columns that are not right-aligned, number-and-word or formula columns that are right-aligned, and same-nature columns aligned differently across tables (#83)
+- Changed the target value columns of the recipe samples and the payback period column of the scenario sample to center alignment (#83)
 
 * soffice 재직렬화의 360 EMU 크기 기록으로 PowerPoint 의 가로선과 세로선이 0.01mm 기울어지는 현상 수정 (#79)
 * 처리 후 남은 기울어진 직선의 finalize.py 실패 판정(종료 코드 1) 추가 (#79)
@@ -66,6 +72,12 @@ Changelog rules
 * 조직도 인력 구성 표의 인원과 비중 열 정렬을 우측으로 변경 (#80)
 * 정렬 콜론이 있는 마크다운 구분 행(|:---:|)을 md2storyboard.py 가 데이터 행으로 읽는 현상 수정 (#80)
 * 수량 열이 있는 레시피와 템플릿 견본 표의 align 추가 (#80)
+* 표 열 정렬 판정 기준을 표 전체에서 열이 하는 역할로 변경 (수량 열 우측, 기간과 산식 등 한 덩어리로 읽는 열 가운데, 여러 문장 설명 등 줄을 따라 읽는 열 좌측) (#83)
+* 글자와 섞인 수치 표현 열(○○% (2030년), ○○점 이상, 4년차 등)의 정렬을 우측에서 가운데로 변경 (#83)
+* 같은 덱에서 성격이 같은 열의 정렬 통일 규칙 추가 (#83)
+* 판정이 어려운 열의 가운데 정렬 규칙 추가 (#83)
+* 수량 열의 우측 정렬 누락, 글자와 섞인 수치 표현 열과 산식 열의 우측 정렬, 표 간 정렬 불일치의 검수 항목 추가 (#83)
+* 레시피 견본 목표값 열과 시나리오 표 투자 회수기간 열의 정렬을 가운데로 변경 (#83)
 
 ### juja-builder
 - Changed table column alignment to separator-row markers set per table in the manuscript, with quantity columns right and identifier and short text columns centered (#81)
