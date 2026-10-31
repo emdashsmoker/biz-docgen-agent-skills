@@ -411,6 +411,41 @@ def count_line_break_unset(xml: str) -> int:
     return unset
 
 
+# 직선 도형의 짧은 변 복원
+# WHY: soffice 재직렬화는 가로선 높이 0 과 세로선 폭 0 을 LibreOffice 내부 최소 단위 1칸(1/100mm = 360 EMU)으로 기록.
+#      line 도형은 상자의 왼쪽 위에서 오른쪽 아래로 그려지므로 PowerPoint 는 이 선을 0.01mm 기울어진 사선으로 표시
+LO_UNIT_EMU = 360
+STRAIGHT_LINE_SHAPE_PATTERN = re.compile(r"<p:(sp|cxnSp)\b.*?</p:\1>", re.S)
+STRAIGHT_LINE_PRESET_PATTERN = re.compile(r'<a:prstGeom prst="(?:line|straightConnector1)"')
+SHAPE_EXT_PATTERN = re.compile(r'<a:ext cx="(\d+)" cy="(\d+)"\s*/>')
+
+
+def straighten_lines(xml: str) -> tuple[str, int]:
+    """직선 도형의 짧은 변이 LibreOffice 최소 단위 이하이면 0 으로 되돌려 수평선과 수직선을 복원.
+    짧은 변이 0.01mm 이하인 사선은 수평선, 수직선과 구별되지 않으므로 의도된 사선은 영향 없음"""
+    count = 0
+
+    def fix_ext(m):
+        nonlocal count
+        cx, cy = int(m.group(1)), int(m.group(2))
+        if 0 < cy <= LO_UNIT_EMU < cx:
+            cy = 0
+        elif 0 < cx <= LO_UNIT_EMU < cy:
+            cx = 0
+        else:
+            return m.group(0)
+        count += 1
+        return f'<a:ext cx="{cx}" cy="{cy}"/>'
+
+    def fix_shape(m):
+        body = m.group(0)
+        if not STRAIGHT_LINE_PRESET_PATTERN.search(body):
+            return body
+        return SHAPE_EXT_PATTERN.sub(fix_ext, body, count=1)  # 첫 a:ext 가 도형 자신의 xfrm
+
+    return STRAIGHT_LINE_SHAPE_PATTERN.sub(fix_shape, xml), count
+
+
 def apply_shape_adjust(xml: str) -> tuple[str, int]:
     """도형 이름 adj:N 을 prstGeom avLst 의 adj 값으로 옮긴다 (pptxgenjs 는 조정값을 지원하지 않아 objectName 으로 전달)
     셰브론과 홈플레이트의 꼭짓점 폭, 둥근 사각형의 반경을 원본과 같게 맞추는 용도"""
@@ -487,6 +522,8 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["duplicate_ppr"] = dup
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
+        xml, sl = straighten_lines(xml)
+        stats["straightened_lines"] = sl
         xml, cf = fix_table_cell_fills(xml)
         stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
@@ -617,8 +654,8 @@ def count_package_defects(data: bytes) -> dict:
 
 
 def count_xml_defects(data: bytes) -> dict:
-    """XML 수준의 결함 수치. id 중복 슬라이드 수, 누적 차트의 레이블 위치 수, 슬라이드의 OpenSymbol 불릿 수, 슬라이드의 줄바꿈 단위 미기록 문단 수"""
-    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0}
+    """XML 수준의 결함 수치. id 중복 슬라이드 수, 누적 차트의 레이블 위치 수, 슬라이드의 OpenSymbol 불릿 수, 슬라이드의 줄바꿈 단위 미기록 문단 수, 슬라이드의 기울어진 직선 수"""
+    counts = {"duplicate_id_slides": 0, "stacked_label_positions": 0, "opensymbol_bullets": 0, "line_break_unset": 0, "slanted_lines": 0}
 
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for name in archive.namelist():
@@ -629,6 +666,7 @@ def count_xml_defects(data: bytes) -> dict:
                     counts["duplicate_id_slides"] += 1
                 counts["opensymbol_bullets"] += len(OPENSYMBOL_BULLET_FONT_PATTERN.findall(xml))
                 counts["line_break_unset"] += count_line_break_unset(xml)
+                counts["slanted_lines"] += straighten_lines(xml)[1]
             elif name.startswith("ppt/charts/") and name.endswith(".xml"):
                 xml = archive.read(name).decode("utf-8")
                 _, remaining = strip_stacked_label_position(xml)
@@ -653,6 +691,7 @@ FAILABLE_METRICS = {
     "stacked_label_positions": "누적 차트 레이블 위치",
     "opensymbol_bullets": "OpenSymbol 불릿",
     "line_break_unset": "줄바꿈 단위 미기록 문단",
+    "slanted_lines": "기울어진 직선",
 }
 
 

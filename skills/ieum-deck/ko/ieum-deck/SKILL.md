@@ -735,6 +735,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py 는 차트 글자(범주, 범례, 데이터 레이블)에 나눔고딕을 동아시아 글꼴로 지정하여 차트 한글이 테마 기본 글꼴로 바뀌는 현상을 방지
 - finalize.py 는 한글이 든 글자 조각의 언어를 ko-KR 로 기록하여 LibreOffice 재저장이 실행 환경 로캘에 따라 한글을 다른 언어(zh-CN 등)로 저장하는 현상을 방지
 - finalize.py 는 줄표 불릿("-")이 본문 글꼴을 따르게 하여 PowerPoint 의 불릿 빈 네모 표시를 방지
+- finalize.py 는 soffice 재직렬화가 가로선 높이와 세로선 폭에 남기는 0.01mm(360 EMU)를 0 으로 되돌려 PowerPoint 의 직선 기울어짐을 방지
+    + (원인) LibreOffice 는 크기 0 을 내부 최소 단위 1칸(1/100mm)으로 기록하고 line 도형은 상자의 모서리를 잇는 선으로 그려짐
+    + 처리 후 기울어진 직선이 남으면 finalize.py 가 종료 코드 1 로 실패
 - LibreOffice 렌더링은 두 속성을 읽지 않고 한글 어절과 영문 단어 경계에서 줄을 바꿈
     + PowerPoint 의 줄바꿈 단위 반영 여부는 검수 이미지 대신 finalize.py 의 미기록 문단 수치로 확인
     + 글자 단위 덱은 PowerPoint 의 줄 끝 위치가 검수 이미지와 다를 수 있음
@@ -898,7 +901,7 @@ ieum-deck/
 │   ├── composite.js         composite 템플릿의 격자와 블록
 │   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사
