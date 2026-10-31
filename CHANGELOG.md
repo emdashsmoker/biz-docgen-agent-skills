@@ -29,6 +29,19 @@ Changelog rules
 
 ## 2026-10-31
 
+### blockwriter
+- Changed the alignment marker rule so that manuscripts the agent writes or rewrites carry a marker on every table column, with quantity columns right and identifier and short text columns centered (#82)
+- Changed number columns without a marker from right to center alignment (#82)
+- Added a step 1 plan question on adding alignment markers to user manuscripts with unmarked tables (#82)
+- Added alignment markers to the completion steps for manuscripts converted from DOCX, XLSX, and HWPX (#82)
+- Action needed: add `---:` to the separator row of quantity columns in manuscripts written before this change before typesetting them again (#82)
+
+* 정렬 표기 기입 범위를 에이전트가 작성하거나 고친 원고의 모든 표 열로 변경 (수량 열 우측, 식별값 열과 짧은 문구 열 가운데) (#82)
+* 정렬 표기가 없는 숫자 열 정렬을 우측에서 가운데로 변경 (#82)
+* 정렬 표기가 없는 유저 원고 표의 표기 추가 여부 질문을 1단계 기획안에 추가 (#82)
+* DOCX, XLSX, HWPX 변환 원고의 보완 항목에 정렬 표기 추가 (#82)
+* 기존 원고의 재조판 전 수량 열 구분 행의 `---:` 추가 필요 (#82)
+
 ### ieum-deck
 - Fixed horizontal and vertical lines that PowerPoint drew slanted by 0.01 mm because soffice reserialization stored their zero height or width as 360 EMU (#79)
 - Added a finalize.py failure with exit code 1 when slanted lines remain after processing (#79)

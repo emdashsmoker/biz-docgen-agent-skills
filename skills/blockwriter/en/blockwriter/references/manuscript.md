@@ -38,7 +38,15 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - If the row right below the header contains `^` and has no numeric cells, it is treated as a multi-row header
 - Inside a cell, lines starting with `○` (or `◦`, `ㅇ`, `ㆍ`, `·`, `•`) are printed as small-circle (◦) cell bullets, and lines starting with `- ` as - cell bullets. If a user form has no cell bullet styles, they are printed as table content with the symbol kept
 - The `- ` cell bullet is a sub-level that starts one step further in than the ◦ cell bullet. Use it for detail statements under a ○ line
-- Use alignment markers (`:---`, `---:`, `:---:`) only when the user specifies alignment. Without markers, alignment is decided automatically for each column
+- Set column alignment with alignment markers in the table separator row. The basis is the meaning of the column (year 2005 goes center, amount 2,005 goes right)
+    - Quantity columns (amounts, counts, ratios, durations, scores) take `---:` (right) so that digits are easy to compare
+    - Identifier columns (years, year-months, dates, serial numbers, numbers, period ranges, codes) and short text columns take `:---:` (center)
+    - Columns with bullets, line breaks, or long text (cells longer than about 10 Korean characters) take `:---` (left)
+    - (Marker example) The separator row of the project record table `| No. | Project | Year | Cases | Amount |` is `|:---:|:---|:---:|---:|---:|`
+- In a manuscript you write or rewrite, put an alignment marker on every column of every table
+- Keep the alignment markers in a manuscript the user provides
+- If a manuscript the user provides has tables without alignment markers, ask the user before typesetting whether to add markers
+- Columns without a marker take the default alignment (columns with bullets, line breaks, or long text go left, all other columns go center, number columns included)
 - For tables over 25 rows including the header rows (long tables), a build without `--long-table` reports them on a `HITL: [long table]` line
 
 ## Figures

@@ -55,8 +55,9 @@ Table width
 
 Cell formatting
 
-- Alignment is decided for each column. The order of priority is the manuscript alignment marker, right for numeric-only columns, left for columns that contain a cell starting with a bullet, containing a line break, or with a weighted length over 20, and center otherwise
-- Alignment is judged only on body cells, leaving out the header rows (including multi-row headers) and merge directive cells. Whether a cell is numeric is judged on its displayed text, without inline format markup such as bold
+- Alignment is decided for each column. The order of priority is the manuscript alignment marker, left for columns that contain a cell starting with a bullet, containing a line break, or with a weighted length over 20, and center otherwise. Number columns without a marker are centered
+- Right alignment of quantity columns is set with the manuscript alignment marker (`---:`). The marker criteria are in the Tables section of references/manuscript.md
+- Alignment is judged only on body cells, leaving out the header rows (including multi-row headers) and merge directive cells
 - Header rows use the center alignment of the table content style regardless of column alignment
 - Cell borders are 0.15mm black. The left border of the leftmost cells and the right border of the rightmost cells are left open (EDGE_OPEN_SIDES)
 - After merging, the left and right outer borders are set again from each cell's actual span. Merged cells that reach the table edge also have open outer borders
@@ -72,7 +73,7 @@ Table attachments
 
 Merging
 
-- Vertical merging (auto) merges consecutive identical values in the leading label columns (before the first numeric column, at most 2 columns, MERGE_LABEL_COLS)
+- Vertical merging (auto) merges consecutive identical values in the leading label columns (before the first numeric column, at most 2 columns, MERGE_LABEL_COLS). Whether a cell is numeric is judged on its displayed text, without inline format markup such as bold
 - A label column is merged only inside the merge spans of the label column above it, so spans do not overlap or leave gaps
 - The `^` directive works in every column. Horizontal merging happens only through the `<` directive. If a horizontal merge overlaps a vertical merge, build skips the horizontal merge with a warning
 - `--merge explicit` applies only the directives, and `--merge none` merges nothing
@@ -252,6 +253,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Nanum fonts) They are free fonts under the SIL Open Font License 1.1, so they can be installed without license fees in any Hangul or Word environment and documents open with the same appearance. Both NanumGothic and NanumBarunGothic are offered as safe fonts (안심글꼴) on 공유마당 (Gongu Madang) of the Korea Copyright Commission
 - (Table width cap) Using the full available width makes the table's left side stick out past the text start line, so the cap is reduced by the level indent
 - (Alignment per column) Deciding per cell splits the alignment within a column among numbers, long text, and short cells, so alignment is decided per column
+- (Manuscript alignment markers) Quantities (amounts, counts) and identifiers (years, year-months, serial numbers) look the same as cell text, so text cannot tell them apart. The manuscript author, who knows what each column means, sets the alignment with markers
 - (Caption objects and automatic numbers) When a table is moved in Hangul, the caption follows and the number updates. The DOCX number fields serve the same purpose
 - (Attached rows inside the table) The unit and source rows are transparent cells inside the table so that they move with the table during manual editing
 - (Outer table borders) The left and right outer borders are open to soften the boundary between the text and the table. If outer borders are needed, set EDGE_OPEN_SIDES to False

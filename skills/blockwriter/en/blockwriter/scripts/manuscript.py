@@ -595,16 +595,16 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 
 def col_aligns(rows: list[list[str]], explicit: list, hdr: int = 1) -> list[str]:
-    """Alignment is decided per column. Explicit marker > numeric-only RIGHT > LEFT if bullets or long text > CENTER.
-    Only body cells below the hdr header rows are judged, and merge directive cells are skipped because they hold no content."""
+    """Alignment is decided per column. Explicit marker > LEFT if bullets, line breaks, or long text > CENTER.
+    Only body cells below the hdr header rows are judged, and merge directive cells are skipped because they hold no content.
+    Why: quantities (amounts, counts) and identifiers (years, year-months, serial numbers) look the same as cell text, so text cannot tell them apart.
+    RIGHT for quantity columns is set with a marker by the manuscript author, who knows what each column means"""
     ncol = max(len(r) for r in rows)
     out = []
     for c in range(ncol):
         body = [r[c] for r in rows[hdr:] if c < len(r) and r[c].strip() and r[c].strip() not in MERGE_MARKS]
         if c < len(explicit) and explicit[c]:
             out.append(explicit[c])
-        elif body and all(is_numeric_cell(v) for v in body):
-            out.append("RIGHT")
         elif any(v.lstrip().startswith(BULLET_PREFIXES) or "\n" in v or weighted_len(v) > C.COL_ONE_LINE_UNITS
                  for v in body):   # use the default (HWPX) space width so the same manuscript gets the same alignment in HWPX and DOCX
             out.append("LEFT")
