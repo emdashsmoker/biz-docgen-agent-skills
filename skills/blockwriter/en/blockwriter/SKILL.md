@@ -135,7 +135,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (`WARN:`) A typesetting warning such as a missing style or a missing image
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
-    - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line (references/manuscript.md) to the manuscript and build again. Run the first build without column width lines
+    - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Set its values with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason

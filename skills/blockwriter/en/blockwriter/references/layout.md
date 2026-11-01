@@ -51,7 +51,7 @@ Table width
 - A column whose longest line is wider than 12000 HWPUNIT (about 42mm, 10 Hangul characters at 12pt, COL_ONE_LINE_W) is calculated with its width reduced to 60% (COL_WRAP_RATIO), assuming a 2-line wrap. The reduced width stays at 12000 or more, so names and short phrases within that width do not wrap
 - If the sum exceeds the cap, short columns whose required width is at most an equal share (the cap divided by the number of columns) keep their required width, and the remaining width is divided among the other columns in proportion to their required widths. Those columns then wrap at similar ratios, so row heights stay even
 - If the sum is below the floor, the columns are widened to the floor in proportion to their widths
-- A table with a column width line in the manuscript takes its column widths from that line instead of the sizing above. Each column width is the table width cap times value/100, with no floor adjustment. The conditions for use are in the Tables section of references/manuscript.md
+- A table with a column width line in the manuscript takes its column widths from that line instead of the sizing above. Each column width is the table width cap (the ○ level width) times value/100. There is no floor adjustment, so the sum of the values is the table width (a sum of 60 gives 60% of the cap). The conditions for use and the steps for setting the values are in the Tables section of references/manuscript.md
 
 Cell formatting
 
@@ -195,7 +195,7 @@ The fixed strings that build prints into documents and the language tags it writ
 | notation.unit | Unit line token (`(token: )`) | `단위` |
 | notation.table | Table caption line token (`<token> title`) | `표` |
 | notation.figure | Figure caption line token (`[token] caption`) | `그림` |
-| notation.colwidth | Column width line token (`(token: 20, 30, 50)`) | `열 폭` |
+| notation.colwidth | Column width line token (`(token: 15, 20, 25)`) | `열 폭` |
 | language.latin, language.east_asia | DOCX document default language (w:lang) for Latin and East Asian text | `en-US`, `ko-KR` |
 | language.hwpx_package | HWPX document language (opf:language in content.hpf) | `ko` |
 | language.hwpx_style_lcid | HWPX style language (langID, a Windows LCID integer) | `1042` |
@@ -223,7 +223,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 ```
 
 - Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
-- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 20, 30, 50)` together with the Korean tokens
+- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 15, 20, 25)` together with the Korean tokens
 
 ## Review items
 
