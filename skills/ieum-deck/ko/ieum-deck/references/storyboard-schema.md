@@ -95,11 +95,12 @@
 
 ### 표 필드
 
-- 표를 담는 칸은 head(머리 행 문구 배열), rows(행 배열), align(열별 가로 정렬 배열), colW(열 폭 비율 배열)를 사용
-- 해당 칸은 table 템플릿의 slots, illustrative 의 table, task 의 sample.table, free 와 composite 의 table 블록
+- 표를 담는 칸은 head(머리 행 문구 배열), rows(행 배열), align(열별 가로 정렬 배열), colW(열 폭 비율 배열), bulletRows(불릿 줄로 지정한 본문 행 번호 배열), bulletCols(불릿 줄로 지정한 열 번호 배열), labelCols(구분 열 번호 배열)를 사용
+- 해당 칸은 table 템플릿의 slots, illustrative 의 table, task 의 sample.table, free 와 composite 의 table 블록 (task 의 설계표 slots 는 head, rows, bulletRows, bulletCols, labelCols 만 사용)
 - align 은 표마다 "right", "center", "left" 로 작성 (배열 길이는 열 수와 같게 작성. 다르면 빌드 경고)
 - align 판정 기준은 `references/writing-rules.md` 표 절
 - align 생략 시 기본 정렬은 `references/templates.md` 표 조판
+- bulletRows, bulletCols, labelCols 의 번호 기준과 적용 범위는 `references/templates.md` 표 조판, 판정 기준은 `references/writing-rules.md` 표 절
 
 ## 섹션대장 ledger.json
 

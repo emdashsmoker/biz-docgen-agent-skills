@@ -103,7 +103,10 @@
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
 - Keep bullets when there are 2 or more items
-- A single item is written as a sentence without a bullet, even when it wraps onto several lines (the process, data used and deliverables boxes of module overview slides are an exception and take bullets)
+- An item with sub items (sub) counts as a list even when it is the only one (it keeps its bullet like 2 or more items)
+- A single item is written as a sentence without a bullet, even when it wraps onto several lines
+    + (Table cells) Lines that receive bullets by the comparison line condition or the whole table condition in the tables section below are an exception
+    + (Module overview slides) The process, data used and deliverables boxes are an exception and take bullets (treated as a table where both conditions always hold)
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
@@ -124,7 +127,15 @@
 
 - When a cell has two or more items, look at the cell content and the whole table and choose whichever reads more easily: bullets or a comma list
 - The default is a comma list for short noun phrases and bullets for descriptive items
-- Decide whether a column uses one notation by comparing the nature of its cells
+- A comparison line is a line of cells that sets the same attribute side by side across subjects. In a table with subjects in columns (module overview table, alternative comparison table), rows are the comparison lines. In a table with subjects in rows (track record table, etc.), columns are
+- Decide whether a comparison line uses one notation by comparing the nature of its cells
+- A cell written with bullets takes a bullet per item. A single item takes no bullet, even when it wraps onto several lines
+- Bullets on single-item cells are judged per comparison line
+    + (Comparison line condition) When half or more of the cells in a comparison line hold two or more items, every single-item cell in that line also takes a bullet. Header rows and label columns are not counted
+    + (Whole table condition) When most list-type lines of a table carry bullets, the remaining list-type lines may also take bullets as whole lines. Judge by how the whole table reads. A list-type line is one whose cells can hold several items (lines with one value per cell, such as amounts, periods and years, are excluded)
+    + (Line-level application) Added bullets apply to a whole line. Within a line that receives added bullets, do not mix cells with and without bullets
+    + (Module overview table) Treated as a table where both conditions always hold, so all three rows take bullets (applied by the builder)
+- Judge the lines that receive added bullets at the storyboard stage and give them with `bulletRows` and `bulletCols` (format in `references/templates.md` table typesetting)
 - Horizontal alignment is set per column
 - Column alignment is judged from the whole table by the role the column plays in it
     + (Quantity columns) Columns of numbers and units (amounts, counts, ratios, scores, weights, etc.) are right-aligned so digits compare easily
@@ -134,7 +145,7 @@
 - An expression that mixes numbers with words for a condition, a point in time or an order (○○ points or more, ○○% (2030), year 4, stage 3, etc.) makes a column read as one expression even though it contains numbers
 - Columns of the same nature use the same alignment in every table of a deck
 - A column that is hard to judge is centered
-- The cells of a column are all single-item or all multi-item
+- The cells of a comparison line are all single-item or all multi-item (when the item counts are hard to match, bullets in that line follow the comparison line condition above)
 - Vertical alignment is centered for the whole table
 - Cell fills use only the theme color, tint, gray and white
 - Set white even on cells without a fill

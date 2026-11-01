@@ -343,7 +343,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - Place one per module (none or two or more is lint FAIL)
 - The template is `module_overview` (columns are Tasks, rows are process, data used, deliverables)
-- The process, data used and deliverables boxes are typeset as left-aligned bullets even with a single item (an exception for consistency across Task columns, applied by the builder)
+- The process, data used and deliverables boxes are typeset as left-aligned bullets even with a single item (treated as a table where the comparison line condition and the whole table condition always hold, applied by the builder. Criteria in the `references/writing-rules.md` tables section)
 - For a custom slide used as a module overview, write its number under the module_overview role of the registration settings (`references/custom-slides.md`)
 - Show every Task of the module (omissions are lint FAIL)
 - Module overview slides are excluded from the Task slide appearance count
@@ -593,11 +593,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Place the Harvey ball legend above the table
     + Column widths are computed automatically from the one-line width of cell text
     + Groups of continuous data columns, such as role codes, yearly figures and evaluations per option, have the same width
-    + Bullets apply only to cells with two or more items (text wrapped into several lines is one item)
+    + Bullets apply to cells with two or more items and to cells in the lines given with `bulletRows` and `bulletCols` (`bulletRows` leaves out the label columns of `labelCols`. Text wrapped into several lines is one item)
+    + The criteria for giving lines (comparison line condition, whole table condition) are in the `references/writing-rules.md` tables section
     + Column alignment is set for every table at the storyboard stage with `align` (format in `references/templates.md` table typesetting)
     + The rules for judging column alignment are in the `references/writing-rules.md` tables section
     + The vertical alignment of cells is centered for the whole table
-    + The cells of one column are either all single-item or all multi-item
+    + The cells of one comparison line are either all single-item or all multi-item (bullets in lines hard to match follow the comparison line condition)
     + Table text fill below 60% is a build warning
     + Row height limits are 0.5 inch for text-only one-line rows, the height holding 1.3 line spacing for multi-line rows (0.8 inch or less), and 0.8 inch for tables with Harvey balls
     + Multi-line cells widen line spacing up to 1.3 as far as the row height allows
@@ -609,7 +610,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Merging is specified with the `merged` field of the storyboard
     + The builder merges only as specified by `merged`
 - (Alignment) Horizontal alignment is uniform per column, vertical alignment is uniform per row
-    + A single item is centered without a bullet, even when it wraps into several lines (table columns follow the `references/writing-rules.md` tables section, module overview slides are an exception)
+    + A single item is centered without a bullet, even when it wraps into several lines (table columns and bullet lines given in tables follow the `references/writing-rules.md` tables section, module overview slides are an exception)
     + Two or more items use left-aligned bullets and vertical centering
     + Cells of the same column use the same horizontal alignment
     + Cells of the same row use the same vertical alignment

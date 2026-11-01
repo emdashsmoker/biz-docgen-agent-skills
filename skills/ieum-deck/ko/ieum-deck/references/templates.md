@@ -35,6 +35,12 @@
 - 불릿은 항목 경계를 식별하는 표지이므로 줄바꿈으로 여러 줄이 된 문구도 항목 1개로 셈
 - 표기 예: `"rows": [["조사 단계", ["문헌 분석", "통계 검토", "전문가 자문"], "1단계"]]`
 - 문자열 안의 줄바꿈도 항목 구분으로 조판 (항목마다 불릿)
+- 항목 1개 셀의 불릿은 줄 단위로 지정. 대상 줄은 표 객체의 `bulletRows`(본문 행 번호 배열)와 `bulletCols`(열 번호 배열)로 기재
+    + 판정 기준(비교 줄 조건, 표 전체 조건)은 `references/writing-rules.md` 표 절
+    + 번호는 0부터. 행 번호는 `rows` 순번(머리 행 제외), 열 번호는 행 배열 안 칸 순번(`{"merged": true}` 칸 포함)
+    + `bulletRows` 는 `labelCols`(구분 열 번호 배열, 생략 시 `[0]`)의 칸을 빼고 적용. 구분 열이 없는 표는 `"labelCols": []`
+    + 빌더는 지정한 줄의 항목 1개 셀에 불릿과 좌측 정렬을 적용 (빈 칸, 병합으로 가려진 칸, 하베이 볼 칸 제외)
+    + 표기 예: `"head": ["구분", "A안", "B안", "C안"], "rows": [["장점", ["구축 비용 절감", "기존 체계 연계"], ["확장 용이", "유지보수 단순"], "도입 기간 단축"]], "bulletRows": [0]`
 - 셀 조판 규칙은 표를 쓰는 모든 템플릿에 공통 (table, task, illustrative, free 와 composite 의 table 블록)
 - 열 폭은 열마다 가장 긴 셀 문구의 한 줄 폭으로 자동 산정
     + 자료 열은 숫자 열, 하베이 볼 열, 두 글자 이하 기호 열(역할 부호 등)
@@ -48,10 +54,10 @@
     + 표기 예: `"head": ["연번", "과제명", "기간", "개월", "계약금액"], "align": ["center", "center", "center", "right", "right"]`
 - `align` 배열의 길이는 열 수와 같게 작성 (다르면 빌드 경고)
 - `align` 을 생략한 표와 `align` 에서 빠진 열은 기본 정렬을 적용
-    + 여러 항목 셀이 있는 열과 진단 질문 열은 좌측 정렬
+    + 불릿 셀(여러 항목 셀, 줄 지정 셀)이 있는 열과 진단 질문 열은 좌측 정렬
     + 그 외 한 항목 셀만 있는 열은 숫자 열과 하베이 볼 열을 포함하여 가운데 정렬
     + 판정 결과가 기본 정렬과 같은 표는 `align` 생략 가능
-- 한 열의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성 (여러 항목 열의 한 항목 셀은 불릿 없이 좌측 정렬)
+- 한 비교 줄의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성 (줄 지정이 없는 한 항목 셀은 불릿 없이 열 정렬을 따름)
 - 셀의 세로 정렬은 표 전체를 가운데로 통일
 - `colW`(폭 비율)는 빈 기입 칸처럼 문구와 무관한 폭이 필요할 때만 지정
 - 표 글자 채움(열별 한 줄 폭 합이 표 폭에서 차지하는 비율)이 60% 미만이면 빌드 경고
@@ -98,11 +104,11 @@
 | 제안 개요 | features | 질문 배너와 역량 타일 | question, tiles[{title, items[]}] | 타일 2-4, 타일별 항목 1-4 |
 | 제안 개요 | strategy | 지붕(목표), 전략 기둥, 기단(결론)의 집 모양 | goal, strategies[{title, items[], result}], conclusion | 전략 2-4, 전략별 항목 4-5 (기둥 안을 채우는 분량). 기둥은 같은 폭. 지붕과 기단은 기둥 묶음보다 양옆으로 0.2인치 넓음. 층 사이 간격은 0.16인치. 글자는 지붕 16pt(길면 14pt 까지 축소), 기둥 제목과 기단 14pt, 기둥 항목 12pt |
 | 제안 개요 | process | 모듈 셰브론과 Task 상자 | modules[{id, title, tasks[]}], idFormat, titleFormat | 모듈 2-7, 모듈별 Task 2-6. 모듈 번호는 id 에 기재 (title 은 모듈명만 기재). id 가 없으면 idFormat (기본값 "Module {n}"), 셰브론 문구는 titleFormat (기본값 "M{n}. {t}"). Task 상자는 마지막 상자 하단을 본문 하단에 맞춰 배분 (상자 간격은 균등 간격의 1.5배 상한). 모듈 사이는 ㄱ자 연결선. 모듈 6개 이상이면 모든 셰브론의 높이와 글꼴을 같은 값으로 자동 조정 |
-| 수행계획 | module_overview | 모듈 개요표 | tasks[{title, process[], data[], output[]}], rowLabels | Task 2-6. 산출물이 여럿이면 output 배열에 모두 기재. 세 행 모두 항목이 1개여도 불릿 좌측 정렬 (Task 열 비교의 통일성을 위한 예외) |
-| 수행계획 | task | Task 설계표와 실측 표본 | leftHead, head[], rows[[항목, 내용]], sample{head, table 또는 items 또는 image 또는 chart, tag}, point | 행 3-6. 설계표 열 제목은 head (기본값 "항목", "내용"). 표본 꼬리표는 sample.tag (기본값 Sample) |
+| 수행계획 | module_overview | 모듈 개요표 | tasks[{title, process[], data[], output[]}], rowLabels | Task 2-6. 산출물이 여럿이면 output 배열에 모두 기재. 세 행 모두 항목이 1개여도 불릿 좌측 정렬 (비교 줄 조건과 표 전체 조건이 늘 성립하는 표로 봄. 표 조판 절) |
+| 수행계획 | task | Task 설계표와 실측 표본 | leftHead, head[], rows[[항목, 내용]], bulletRows[], bulletCols[], labelCols[], sample{head, table 또는 items 또는 image 또는 chart, tag}, point | 행 3-6. 설계표 열 제목은 head (기본값 "항목", "내용"). 설계표의 항목 1개 셀 불릿 줄은 bulletRows, bulletCols, labelCols (표 조판 절). 표본 꼬리표는 sample.tag (기본값 Sample) |
 | 수행계획 | task_multi | Task 묶음 매트릭스 (분량 제한 시) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Task 2-4. items 는 "라벨 : 값" 형식 (행 정렬 조건). 이 형식이 아닌 항목을 모으는 행의 라벨은 freeLabel (기본값 "주요 내용"). id 가 없으면 idFormat (기본값 "Task {n}") |
 | 분석과 비교 | bullets | 패널 1-4열 | panels[{head, items 또는 text, headFill, fill}], point | 열 1-4 |
-| 분석과 비교 | table | 전폭 표 | title, legend, head[], rows[][], align[], point | 행 1-16. 열 정렬은 align (표 조판 절) |
+| 분석과 비교 | table | 전폭 표 | title, legend, head[], rows[][], align[], bulletRows[], bulletCols[], labelCols[], point | 행 1-16. 열 정렬은 align, 항목 1개 셀의 불릿 줄은 bulletRows, bulletCols, labelCols (표 조판 절) |
 | 분석과 비교 | chart_text | 차트와 시사점 | chartTitle, chart{type, barDir, categories, series, numFmt}, findings[{head, items}] | 발견 1-3. chart 필드는 `references/recipes.md` 의 chart 블록과 같음 |
 | 분석과 비교 | chart_two | 2단 차트 | left{title, chart, items}, right{title, chart, items} | - |
 | 분석과 비교 | compare | AS-IS, TO-BE, 격차 | asis{head, items}, tobe{head, items}, gap[], gapHead | 항목 2-4. 항목은 20자 안팎의 제목(text)으로 작성하고 근거는 하위 항목(sub) 1-2개로 병기. 격차는 항목별 개선 수단을 10자 안팎으로 기재하여 항목 수와 맞춤 (격차가 한 문장이면 gap 1개로 두 패널 아래 띠에 조판) |

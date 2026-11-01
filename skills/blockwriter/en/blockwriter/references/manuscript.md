@@ -38,6 +38,14 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - If the row right below the header contains `^` and has no numeric cells, it is treated as a multi-row header
 - Inside a cell, lines starting with `○` (or `◦`, `ㅇ`, `ㆍ`, `·`, `•`) are printed as small-circle (◦) cell bullets, and lines starting with `- ` as - cell bullets. If a user form has no cell bullet styles, they are printed as table content with the symbol kept
 - The `- ` cell bullet is a sub-level that starts one step further in than the ◦ cell bullet. Use it for detail statements under a ○ line
+- When a cell holds two or more items, put a ◦ cell bullet on each item. A single item takes no cell bullet, even when it wraps onto several lines
+- ◦ cell bullets on single-item cells are judged per comparison line. A comparison line is a line of cells that sets the same attribute side by side across subjects. In a table with subjects in columns (alternative comparison table, etc.), rows are the comparison lines. In a table with subjects in rows (project record table, etc.), columns are
+    - (Comparison line condition) When half or more of the cells in a comparison line hold two or more items, every single-item cell in that line also takes a ◦ cell bullet. Header rows and label columns are not counted
+    - (Whole table condition) When most list-type lines of a table carry ◦ cell bullets, the remaining list-type lines may also take ◦ cell bullets as whole lines. Judge by how the whole table reads. A list-type line is one whose cells can hold several items (lines with one value per cell, such as amounts, periods and years, are excluded)
+    - (Line-level application) Added ◦ cell bullets apply to a whole line. Within a line that receives added cell bullets, do not mix cells with and without cell bullets
+- A ◦ item with `- ` cell bullets under it counts as a list even when it is the only one (handled like a cell with two or more items)
+- In a manuscript you write or rewrite, put cell bullets by the rules above
+- Keep the cell symbols in a manuscript the user provides
 - Set column alignment with alignment markers in the table separator row (`---:` right, `:---:` center, `:---` left)
 - Horizontal alignment is set per column
 - Column alignment is judged from the whole table by the role the column plays in it (year 2005 goes center, amount 2,005 goes right)
