@@ -235,7 +235,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check whether expressions that mix numbers with words for a condition, a point in time or an order (○○ points or more, year 4, stage 3, etc.) or formula columns are right-aligned
 - Check whether columns of the same nature (periods, amounts, ratios, etc.) are aligned differently in different tables
 - If automatic merging looks odd, switch to `--merge explicit` and merge only where needed with `^` and `<`. Whether a merge fits differs from table to table, so judge it in the free review
-- A long-text cell wrapping to 2 lines is normal. Only a line break that cuts a word in the middle (for example `대한민` and `국` on different lines) counts as a defect
+- A long-text cell wrapping to 2 lines and a line break in the middle of a word (for example `대한민` and `국` on different lines) are normal placement and do not count as defects. They are not a reason to add a column width line either
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text

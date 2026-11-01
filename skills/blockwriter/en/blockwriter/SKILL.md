@@ -133,9 +133,10 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (`LINT:`) A manuscript defect. Fix the manuscript and run build again
     - (`HITL:`) A typesetting choice for the user (page breaks, long tables). build prints it only when `--page-break` or `--long-table` is not given, so pass the items decided in step 1 as options
     - (`WARN:`) A typesetting warning such as a missing style or a missing image
+    - (`INFO:`) The current width and the no-wrap width (as % of the ○ level width) of tables whose cells wrap and tables with a column width line. Automatic sizing expects cells to wrap, so this line alone is no reason to edit the manuscript. Use its values for column width lines when fixing a column width defect in step 4
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
-    - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Set its values with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
+    - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason

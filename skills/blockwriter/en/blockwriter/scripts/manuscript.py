@@ -362,11 +362,10 @@ def pad_rows(rows: list[list[str]]) -> list[list[str]]:
     return [r + [""] * (width - len(r)) for r in rows]
 
 
-def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[int]:
-    """Compute column widths from the real character widths of the table body style and fit them between the cap and floor. The sum is the table width.
-    A fixed, generous character width adds slack to every column, so even tables with little information widen to the cap and go past the ○ level"""
+def col_line_widths(rows: list[list[str]], font: CellFont) -> list[float]:
+    """Width of the longest line in each column (HWPUNIT). Computed in one place so automatic sizing and the no-wrap width use the same character widths"""
     ncol = max(len(r) for r in rows)
-    line_w = [0.0] * ncol   # width of the longest line in each column (HWPUNIT). Not rounded up, so a space's fractional excess does not widen a column
+    line_w = [0.0] * ncol   # not rounded up, so a space's fractional excess does not widen a column
     for r in rows:
         for c, cell in enumerate(r):
             if cell.strip() in MERGE_MARKS:
@@ -376,9 +375,23 @@ def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[i
                 share = font.line_units(ln.strip()) * font.unit_w / span
                 for k in range(c, c + span):
                     line_w[k] = max(line_w[k], share)
+    return line_w
+
+
+def col_need_widths(line_w: list[float]) -> list[int]:
+    """Column need widths: line width plus column padding, with the minimum width guaranteed (HWPUNIT).
+    Given the longest line widths as they are, the result is the no-wrap width, where every line of the column fits on one line"""
+    return [max(round(w) + C.COL_PAD_W, C.COL_MIN_W) for w in line_w]
+
+
+def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[int]:
+    """Compute column widths from the real character widths of the table body style and fit them between the cap and floor. The sum is the table width.
+    A fixed, generous character width adds slack to every column, so even tables with little information widen to the cap and go past the ○ level"""
+    ncol = max(len(r) for r in rows)
+    line_w = col_line_widths(rows, font)
     # the one-line width is a physical width independent of font size. Names and short phrases within it do not wrap; only wider columns wrap to two lines
     eff = [w if w <= C.COL_ONE_LINE_W else max(C.COL_ONE_LINE_W, w * C.COL_WRAP_RATIO) for w in line_w]
-    need = [max(round(w) + C.COL_PAD_W, C.COL_MIN_W) for w in eff]
+    need = col_need_widths(eff)
     total = sum(need)
     floor_w = int(max_w * C.TABLE_MIN_RATIO)
     if total > max_w:
@@ -400,10 +413,11 @@ def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[i
     return widths
 
 
-def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str) -> list[int] | None:
+def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str, nowrap_pct: float) -> list[int] | None:
     """Convert the manuscript column width line (each column as % of the table width cap) to column widths. The sum of the values is the table width.
     It is a manual setting for tables that automatic sizing does not suit, so the given values are used without the floor adjustment.
-    Returns None when there is no setting. When the values do not fit, prints a WARN and returns None so the table uses automatic sizing"""
+    Returns None when there is no setting. When the values do not fit, prints a WARN and returns None so the table uses automatic sizing.
+    When the sum exceeds the no-wrap width (nowrap_pct, %) by the tolerance or more, prints a WARN only and uses the given values"""
     if not spec:
         return None
     try:
@@ -420,8 +434,37 @@ def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str) -> lis
     if total > C.COL_WIDTH_PCT_MAX + C.COL_WIDTH_PCT_TOL:
         print(msg("warn_colwidth_over", title=title or "-", total=f"{total:g}", limit=C.COL_WIDTH_PCT_MAX))
         return None
+    # width beyond the no-wrap width does not reduce line count and only widens the table. It may be a width the user asked for, so the given values stay
+    if round(total - nowrap_pct, C.COL_WIDTH_PCT_DIGITS) >= C.COL_WIDTH_NOWRAP_TOL:
+        print(msg("warn_colwidth_nowrap", title=title or "-", total=f"{total:g}",
+                  nowrap=pct_text([nowrap_pct]), tol=C.COL_WIDTH_NOWRAP_TOL))
     widths = [int(max_w * v / C.COL_WIDTH_PCT_MAX) for v in values]
     widths[-1] += round(max_w * total / C.COL_WIDTH_PCT_MAX) - sum(widths)   # the rounding remainder goes to the last column
+    return widths
+
+
+def width_pct(w: float, max_w: int) -> float:
+    """A width (HWPUNIT) in the unit of the column width line (% of the table width cap). Rounded to the printed digits so decisions follow the printed values"""
+    return round(w * C.COL_WIDTH_PCT_MAX / max_w, C.COL_WIDTH_PCT_DIGITS)
+
+
+def pct_text(values: list[float]) -> str:
+    """A list of % values as text that can be copied into a column width line ('9.18, 12.98')"""
+    return ", ".join(f"{v:.{C.COL_WIDTH_PCT_DIGITS}f}" for v in values)
+
+
+def table_col_widths(rows: list[list[str]], spec: str | None, max_w: int, font: CellFont, title: str) -> list[int]:
+    """Column widths of a table. The column width line when present, otherwise (or when it does not fit) automatic sizing.
+    For tables whose cells wrap and tables with a column width line, prints the current width and the no-wrap width as INFO.
+    Setting column width lines from these values instead of eyeballing the render PNG prevents tables widened more than needed"""
+    nowrap = col_need_widths(col_line_widths(rows, font))   # width where the longest line of each column fits on one line
+    nowrap_pct = width_pct(sum(nowrap), max_w)
+    widths = (fixed_col_widths(spec, len(nowrap), max_w, title, nowrap_pct)
+              or calc_col_widths(rows, max_w, font))
+    if spec or any(w < n for w, n in zip(widths, nowrap)):
+        print(msg("info_colwidth", title=title or "-",
+                  cur=pct_text([width_pct(sum(widths), max_w)]), cur_cols=pct_text([width_pct(w, max_w) for w in widths]),
+                  nowrap=pct_text([nowrap_pct]), nowrap_cols=pct_text([width_pct(w, max_w) for w in nowrap])))
     return widths
 
 
