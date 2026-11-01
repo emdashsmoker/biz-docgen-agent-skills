@@ -640,6 +640,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (Comparison line condition) When half or more of the cells in a comparison line hold two or more items, every single-item cell in that line also takes `◦`. Header rows and label columns are not counted
     + (Whole table condition) When most list-type lines of a table carry `◦`, the remaining list-type lines may also take `◦` as whole lines. Judge by how the whole table reads. A list-type line is one whose cells can hold several items (lines with one value per cell, such as amounts, periods and years, are excluded)
     + (Line-level application) Added `◦` applies to a whole line. Within a line that receives added `◦`, do not mix cells with and without `◦`
+    + (Context judgment) The conditions above do not fit every table mechanically. Make the final call from the context of the whole table
     + (Module overview table) Treated as a table where both conditions always hold, so all three rows take `◦` (Task Description Standard section)
 - Set column alignment per table with alignment markers in the separator row while writing the manuscript (`---:` right, `:---:` center, `:---` left)
 - Horizontal alignment is set per column

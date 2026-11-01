@@ -43,6 +43,7 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
     - (Comparison line condition) When half or more of the cells in a comparison line hold two or more items, every single-item cell in that line also takes a ◦ cell bullet. Header rows and label columns are not counted
     - (Whole table condition) When most list-type lines of a table carry ◦ cell bullets, the remaining list-type lines may also take ◦ cell bullets as whole lines. Judge by how the whole table reads. A list-type line is one whose cells can hold several items (lines with one value per cell, such as amounts, periods and years, are excluded)
     - (Line-level application) Added ◦ cell bullets apply to a whole line. Within a line that receives added cell bullets, do not mix cells with and without cell bullets
+    - (Context judgment) The conditions above do not fit every table mechanically. Make the final call from the context of the whole table
 - A ◦ item with `- ` cell bullets under it counts as a list even when it is the only one (handled like a cell with two or more items)
 - In a manuscript you write or rewrite, put cell bullets by the rules above
 - Keep the cell symbols in a manuscript the user provides

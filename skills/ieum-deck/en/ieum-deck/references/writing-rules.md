@@ -134,6 +134,7 @@
     + (Comparison line condition) When half or more of the cells in a comparison line hold two or more items, every single-item cell in that line also takes a bullet. Header rows and label columns are not counted
     + (Whole table condition) When most list-type lines of a table carry bullets, the remaining list-type lines may also take bullets as whole lines. Judge by how the whole table reads. A list-type line is one whose cells can hold several items (lines with one value per cell, such as amounts, periods and years, are excluded)
     + (Line-level application) Added bullets apply to a whole line. Within a line that receives added bullets, do not mix cells with and without bullets
+    + (Context judgment) The conditions above do not fit every table mechanically. Make the final call from the context of the whole table
     + (Module overview table) Treated as a table where both conditions always hold, so all three rows take bullets (applied by the builder)
 - Judge the lines that receive added bullets at the storyboard stage and give them with `bulletRows` and `bulletCols` (format in `references/templates.md` table typesetting)
 - Horizontal alignment is set per column
