@@ -33,10 +33,14 @@ Changelog rules
 - Added a rule that table cells take ◦ cell bullets only when they hold two or more items (#87)
 - Added a rule that puts ◦ on the single-item cells of a comparison line (a row or column comparing subjects) when half or more of its cells hold two or more items, or when most list-type lines of the table carry ◦ (#87)
 - Added a rule that a ◦ item with `- ` sub lines counts as a list (#87)
+- Fixed the column width line description to state that each value is one column's width against the ○ level width, so the sum of the values is the table width (#88)
+- Added column width defect steps that read the current table width from the rendered pages and divide the columns again within that width (#88)
 
 * 항목이 2개 이상인 표 셀에만 ◦ 셀 글머리를 붙이는 규칙 추가 (#87)
 * 비교 줄(대상을 나란히 비교하는 행이나 열)의 절반 이상이 여러 항목 셀이거나 표의 목록형 줄 대부분에 ◦가 붙은 경우의 항목 1개 셀 ◦ 규칙 추가 (#87)
 * `- ` 셀 글머리가 딸린 ◦ 항목의 목록 판정 규칙 추가 (#87)
+* 열 폭 줄 값의 의미를 ○ 계위 폭 대비 열 하나의 폭으로 밝히는 설명 수정 (#88)
+* 렌더 쪽에서 읽은 현재 표 폭 안에서 열 폭을 다시 나누는 열 폭 결함 수정 순서 추가 (#88)
 
 ### ieum-deck
 - Added the bulletRows, bulletCols and labelCols table fields that put bullets on the single-item cells of the given rows or columns (#87)
