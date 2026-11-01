@@ -362,11 +362,10 @@ def pad_rows(rows: list[list[str]]) -> list[list[str]]:
     return [r + [""] * (width - len(r)) for r in rows]
 
 
-def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[int]:
-    """열 필요폭을 표 내용 스타일의 실제 글자 폭으로 산정하고 상한과 하한 안에 맞춘다. 합계가 표의 실폭이다.
-    글자 폭을 고정값으로 크게 잡으면 열마다 여유가 쌓여 정보가 적은 표도 상한까지 넓어지고 ○ 계위 밖으로 나감"""
+def col_line_widths(rows: list[list[str]], font: CellFont) -> list[float]:
+    """열마다 가장 긴 줄의 폭 (HWPUNIT). 자동 산정과 줄바꿈 없는 폭이 같은 글자 폭을 쓰도록 한곳에서 계산"""
     ncol = max(len(r) for r in rows)
-    line_w = [0.0] * ncol   # 열에서 가장 긴 줄의 폭 (HWPUNIT). 올림하지 않아 빈칸 하나의 소수 초과분이 열을 넓히지 않음
+    line_w = [0.0] * ncol   # 올림하지 않아 빈칸 하나의 소수 초과분이 열을 넓히지 않음
     for r in rows:
         for c, cell in enumerate(r):
             if cell.strip() in MERGE_MARKS:
@@ -376,9 +375,23 @@ def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[i
                 share = font.line_units(ln.strip()) * font.unit_w / span
                 for k in range(c, c + span):
                     line_w[k] = max(line_w[k], share)
+    return line_w
+
+
+def col_need_widths(line_w: list[float]) -> list[int]:
+    """줄 폭에 열 여유를 더하고 최소 폭을 보장한 열 필요폭 (HWPUNIT).
+    가장 긴 줄의 폭을 그대로 넣으면 그 열의 모든 줄이 한 줄에 담기는 줄바꿈 없는 폭"""
+    return [max(round(w) + C.COL_PAD_W, C.COL_MIN_W) for w in line_w]
+
+
+def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[int]:
+    """열 필요폭을 표 내용 스타일의 실제 글자 폭으로 산정하고 상한과 하한 안에 맞춘다. 합계가 표의 실폭이다.
+    글자 폭을 고정값으로 크게 잡으면 열마다 여유가 쌓여 정보가 적은 표도 상한까지 넓어지고 ○ 계위 밖으로 나감"""
+    ncol = max(len(r) for r in rows)
+    line_w = col_line_widths(rows, font)
     # 1줄 보장 폭은 글자 크기와 관계없는 실제 폭. 이 폭 안의 이름과 짧은 문구는 접지 않고 넘는 열만 2줄로 접음
     eff = [w if w <= C.COL_ONE_LINE_W else max(C.COL_ONE_LINE_W, w * C.COL_WRAP_RATIO) for w in line_w]
-    need = [max(round(w) + C.COL_PAD_W, C.COL_MIN_W) for w in eff]
+    need = col_need_widths(eff)
     total = sum(need)
     floor_w = int(max_w * C.TABLE_MIN_RATIO)
     if total > max_w:
@@ -400,10 +413,11 @@ def calc_col_widths(rows: list[list[str]], max_w: int, font: CellFont) -> list[i
     return widths
 
 
-def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str) -> list[int] | None:
+def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str, nowrap_pct: float) -> list[int] | None:
     """원고의 열 폭 줄(열별 표 폭 상한 대비 %)을 열 폭으로 바꾼다. 값의 합계가 표 폭.
     자동 산정이 맞지 않는 표에 쓰는 수동 지정이므로 하한 보정 없이 지정값을 따름.
-    지정이 없으면 None. 값이 맞지 않으면 WARN을 출력하고 None을 돌려 자동 산정으로 조판"""
+    지정이 없으면 None. 값이 맞지 않으면 WARN을 출력하고 None을 돌려 자동 산정으로 조판.
+    합계가 줄바꿈 없는 폭(nowrap_pct, %)을 허용 차이 이상 넘으면 WARN만 출력하고 지정값으로 조판"""
     if not spec:
         return None
     try:
@@ -420,8 +434,37 @@ def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str) -> lis
     if total > C.COL_WIDTH_PCT_MAX + C.COL_WIDTH_PCT_TOL:
         print(msg("warn_colwidth_over", title=title or "-", total=f"{total:g}", limit=C.COL_WIDTH_PCT_MAX))
         return None
+    # 줄바꿈 없는 폭을 넘는 폭은 줄 수를 줄이지 않고 표만 넓힘. 유저가 요청한 폭일 수 있으므로 지정값은 그대로 따름
+    if round(total - nowrap_pct, C.COL_WIDTH_PCT_DIGITS) >= C.COL_WIDTH_NOWRAP_TOL:
+        print(msg("warn_colwidth_nowrap", title=title or "-", total=f"{total:g}",
+                  nowrap=pct_text([nowrap_pct]), tol=C.COL_WIDTH_NOWRAP_TOL))
     widths = [int(max_w * v / C.COL_WIDTH_PCT_MAX) for v in values]
     widths[-1] += round(max_w * total / C.COL_WIDTH_PCT_MAX) - sum(widths)   # 반올림 잔차는 마지막 열에
+    return widths
+
+
+def width_pct(w: float, max_w: int) -> float:
+    """폭(HWPUNIT)을 열 폭 줄과 같은 단위(표 폭 상한 대비 %)로 바꾼 값. 출력 자릿수로 반올림하여 출력값으로 판정"""
+    return round(w * C.COL_WIDTH_PCT_MAX / max_w, C.COL_WIDTH_PCT_DIGITS)
+
+
+def pct_text(values: list[float]) -> str:
+    """% 값 목록을 열 폭 줄에 그대로 옮겨 쓸 수 있는 문자열로 ('9.18, 12.98')"""
+    return ", ".join(f"{v:.{C.COL_WIDTH_PCT_DIGITS}f}" for v in values)
+
+
+def table_col_widths(rows: list[list[str]], spec: str | None, max_w: int, font: CellFont, title: str) -> list[int]:
+    """표의 열 폭. 열 폭 줄이 있으면 그 값, 없거나 맞지 않으면 자동 산정.
+    셀이 접히는 표와 열 폭 줄이 있는 표는 현재 폭과 줄바꿈 없는 폭을 INFO로 출력.
+    열 폭 줄의 값을 렌더 PNG의 눈대중 대신 이 수치로 정하게 하여 필요 이상으로 넓힌 표를 막음"""
+    nowrap = col_need_widths(col_line_widths(rows, font))   # 열마다 가장 긴 줄이 한 줄에 담기는 폭
+    nowrap_pct = width_pct(sum(nowrap), max_w)
+    widths = (fixed_col_widths(spec, len(nowrap), max_w, title, nowrap_pct)
+              or calc_col_widths(rows, max_w, font))
+    if spec or any(w < n for w, n in zip(widths, nowrap)):
+        print(msg("info_colwidth", title=title or "-",
+                  cur=pct_text([width_pct(sum(widths), max_w)]), cur_cols=pct_text([width_pct(w, max_w) for w in widths]),
+                  nowrap=pct_text([nowrap_pct]), nowrap_cols=pct_text([width_pct(w, max_w) for w in nowrap])))
     return widths
 
 

@@ -61,6 +61,8 @@ COL_ONE_LINE_W = 12000          # one-line width (about 42mm, 10 Hangul characte
 COL_WRAP_RATIO = 0.6            # narrowing ratio for columns assumed to wrap
 COL_WIDTH_PCT_MAX = 100         # basis of the manuscript column width line (table width cap = 100%). A sum above it would push the table outside the ○ level
 COL_WIDTH_PCT_TOL = 0.01        # floating-point tolerance for the column width sum (33.34 + 33.33 + 33.33 and the like)
+COL_WIDTH_PCT_DIGITS = 2        # decimal places of the column width % that build prints. Precision at which printed values can be copied into a column width line
+COL_WIDTH_NOWRAP_TOL = 2        # WARN when the column width line sum exceeds the no-wrap width sum by this value (percentage points) or more. Width beyond it does not reduce line count
 MERGE_LABEL_COLS = 2            # maximum number of leading label columns eligible for vertical merge
 LONG_TABLE_ROWS = 25            # above this, long-table handling applies (split at page boundaries, repeat header rows)
 # the weighted-length unit is half a Hangul character width (half of CELL_HANGUL_EM). Column widths and row line counts are measured in this unit
@@ -237,6 +239,12 @@ MESSAGES = {
     "warn_colwidth_over": {
         "ko": "WARN: 표 '{title}' 열 폭 합계 {total}%가 {limit}%를 넘어 자동 산정으로 조판",
         "en": "WARN: table '{title}' column widths sum to {total}%, over {limit}%; automatic sizing used"},
+    "warn_colwidth_nowrap": {
+        "ko": "WARN: 표 '{title}' 열 폭 합계 {total}%가 줄바꿈 없는 폭 {nowrap}%를 {tol}%p 이상 넘음. 넘는 폭은 줄 수를 줄이지 않음. 결함 수정용 열 폭 줄이면 합계를 {nowrap}% 이하로 조정. 지정값으로 조판",
+        "en": "WARN: table '{title}' column widths sum to {total}%, {tol} percentage points or more above the no-wrap width {nowrap}%. Width beyond it does not reduce line count. For a column width line that fixes a defect, lower the sum to {nowrap}% or less. Typeset with the given values"},
+    "info_colwidth": {
+        "ko": "INFO: 표 '{title}' ○ 계위 폭 대비 현재 폭 {cur}% (열별 {cur_cols}), 줄바꿈 없는 폭 {nowrap}% (열별 {nowrap_cols})",
+        "en": "INFO: table '{title}' as % of the ○ level width: current {cur}% (columns {cur_cols}), no-wrap {nowrap}% (columns {nowrap_cols})"},
     "warn_image_missing": {"ko": "WARN: 이미지 없음 {path}", "en": "WARN: image not found {path}"},
     "err_no_hwpx": {
         "ko": "ERROR: python-hwpx 미설치. `pip install -U python-hwpx` 후 재실행",

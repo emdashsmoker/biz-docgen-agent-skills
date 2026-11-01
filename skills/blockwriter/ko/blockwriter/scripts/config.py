@@ -61,6 +61,8 @@ COL_ONE_LINE_W = 12000          # 1줄 보장 폭 (약 42mm, 12pt 한글 10자).
 COL_WRAP_RATIO = 0.6            # 접힘 전제 축소율
 COL_WIDTH_PCT_MAX = 100         # 원고 열 폭 줄의 기준 (표 폭 상한 = 100%). 합계가 이를 넘으면 표가 ○ 계위 밖으로 나감
 COL_WIDTH_PCT_TOL = 0.01        # 열 폭 합계의 부동소수 오차 허용 (33.34 + 33.33 + 33.33 등)
+COL_WIDTH_PCT_DIGITS = 2        # build가 출력하는 열 폭 %의 소수 자릿수. 출력값을 열 폭 줄에 그대로 옮겨 쓰는 정밀도
+COL_WIDTH_NOWRAP_TOL = 2        # 열 폭 줄 합계가 줄바꿈 없는 폭 합계를 이 값(%p) 이상 넘으면 WARN. 넘는 폭은 줄 수를 줄이지 않음
 MERGE_LABEL_COLS = 2            # 선행 라벨 열 중 세로 병합 대상 최대 열 수
 LONG_TABLE_ROWS = 25            # 초과 시 장표 처리 (쪽 경계 분할과 제목행 반복)
 # 가중 길이 단위는 한글 반 자 폭 (CELL_HANGUL_EM의 절반). 글자 폭을 이 단위로 세어 열 폭과 행 줄 수를 산정
@@ -237,6 +239,12 @@ MESSAGES = {
     "warn_colwidth_over": {
         "ko": "WARN: 표 '{title}' 열 폭 합계 {total}%가 {limit}%를 넘어 자동 산정으로 조판",
         "en": "WARN: table '{title}' column widths sum to {total}%, over {limit}%; automatic sizing used"},
+    "warn_colwidth_nowrap": {
+        "ko": "WARN: 표 '{title}' 열 폭 합계 {total}%가 줄바꿈 없는 폭 {nowrap}%를 {tol}%p 이상 넘음. 넘는 폭은 줄 수를 줄이지 않음. 결함 수정용 열 폭 줄이면 합계를 {nowrap}% 이하로 조정. 지정값으로 조판",
+        "en": "WARN: table '{title}' column widths sum to {total}%, {tol} percentage points or more above the no-wrap width {nowrap}%. Width beyond it does not reduce line count. For a column width line that fixes a defect, lower the sum to {nowrap}% or less. Typeset with the given values"},
+    "info_colwidth": {
+        "ko": "INFO: 표 '{title}' ○ 계위 폭 대비 현재 폭 {cur}% (열별 {cur_cols}), 줄바꿈 없는 폭 {nowrap}% (열별 {nowrap_cols})",
+        "en": "INFO: table '{title}' as % of the ○ level width: current {cur}% (columns {cur_cols}), no-wrap {nowrap}% (columns {nowrap_cols})"},
     "warn_image_missing": {"ko": "WARN: 이미지 없음 {path}", "en": "WARN: image not found {path}"},
     "err_no_hwpx": {
         "ko": "ERROR: python-hwpx 미설치. `pip install -U python-hwpx` 후 재실행",

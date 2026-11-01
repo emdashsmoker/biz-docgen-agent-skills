@@ -520,8 +520,7 @@ class Builder:
         rows, hdr, aligns = plan["rows"], plan["hdr"], plan["aligns"]
         nrow, ncol = len(rows), len(rows[0])
         font = self._cell_font()
-        widths = (M.fixed_col_widths(e.data.get("colwidth"), ncol, self.table_max_w, e.text)
-                  or M.calc_col_widths(rows, self.table_max_w, font))
+        widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         table_w = sum(widths)
         self.gap()
         r = self._centered_refs("table_pos")
