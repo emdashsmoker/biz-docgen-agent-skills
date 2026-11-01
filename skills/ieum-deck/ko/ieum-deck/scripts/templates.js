@@ -193,6 +193,19 @@ const cellText = (v) => (typeof v === "string" ? v : typeof v === "number" ? Str
 const isHarvey = (v) => typeof v === "string" && !!HARVEY[v.trim()];
 /** 셀 항목 목록 (배열 원소와 줄바꿈으로 나눈 문구가 각각 항목 1개. 빈 항목 제외) */
 const cellList = (v) => (v && v.merged ? [] : (cellItems(v) || [cellText(v)]).flatMap((t) => String(t == null ? "" : t).split("\n")).map((t) => t.trim()).filter(Boolean));
+const DEFAULT_LABEL_COLS = [0]; // labelCols 생략 시 구분 열 (bulletRows 에서 빼는 열)
+const arrayOr = (v, fallback) => (Array.isArray(v) ? v : fallback);
+/** 불릿 셀 판정. 항목 2개 이상 셀과 storyboard 의 bulletRows, bulletCols 로 지정한 줄의 항목 1개 셀
+ *  Why: 비교 줄 조건과 표 전체 조건은 표의 의미를 아는 작성자가 판정하고 빌더는 지정된 줄만 적용
+ *  bulletRows 는 labelCols 의 구분 열 칸을 빼고 적용. 빈 칸, 병합으로 가려진 칸, 하베이 볼 칸은 제외
+ *  tableMetrics(열 폭, 기본 정렬)와 tableBlock(문단)이 같이 사용 (판정이 다르면 열 폭 계산에서 불릿 들여쓰기 폭이 빠짐) */
+function isBulletCell(tb, ri, ci, v) {
+  const items = cellList(v);
+  if (items.length > 1) return true;
+  if (items.length !== 1 || HARVEY[items[0]]) return false;
+  const inRow = arrayOr(tb.bulletRows, []).includes(ri) && !arrayOr(tb.labelCols, DEFAULT_LABEL_COLS).includes(ci);
+  return inRow || arrayOr(tb.bulletCols, []).includes(ci);
+}
 const cellBold = (v) => !!(v && typeof v === "object" && !Array.isArray(v) && v.bold);
 const cellSpan = (v) => (v && v.colspan) || 1;
 const TABLE_CELL_PAD = T.PANEL.CELL_MG[0]; // 표 셀 좌우 여백
@@ -343,15 +356,16 @@ function tableColW(tb, w, sz, listCols, dataCols) {
   return { cw: out, fill: sN / w };
 }
 /** 표 열 폭, 열 서식, 행별 필요 높이와 상한
- *  열 서식: 항목 2개 이상 셀이 있는 열은 모든 셀에 불릿과 왼쪽 정렬, 질문 문장 열은 왼쪽 정렬, 그 외 열은 가운데 정렬 (storyboard align 이 있는 열은 그 정렬)
+ *  열 서식: 불릿 셀(isBulletCell)이 있는 열은 왼쪽 정렬과 불릿 들여쓰기 폭, 질문 문장 열은 왼쪽 정렬, 그 외 열은 가운데 정렬 (storyboard align 이 있는 열은 그 정렬)
  *  행 높이 상한: 글자만 있는 한 줄 행은 ROW_H_TEXT, 여러 줄 행은 줄 간격 확대분, 하베이 볼이 있는 표는 ROW_H_MAX */
 function tableMetrics(tb, w, szOpt) {
   const ncol = tb.head ? tb.head.length : tb.rows[0].length;
   const sz = szOpt || (tb.rows.length > 10 ? T.SIZE.tableDense : T.SIZE.tableBody);
   const lh = A.lineHeightIn(sz, T.METRIC.TABLE_LINE_HEIGHT);
   const fixed = tb.colW && tb.colW.length === ncol;
-  const colOf = (i) => tb.rows.map((r) => r[i]).filter((c) => c != null && cellSpan(c) === 1 && !c.merged);
-  const listCols = Array.from({ length: ncol }, (_, i) => colOf(i).some((c) => cellList(c).length > 1));
+  const inCol = (c) => c != null && cellSpan(c) === 1 && !c.merged;
+  const colOf = (i) => tb.rows.map((r) => r[i]).filter(inCol);
+  const listCols = Array.from({ length: ncol }, (_, i) => tb.rows.some((r, ri) => inCol(r[i]) && isBulletCell(tb, ri, i, r[i])));
   const isNum = (t) => /^[\d.,%+\-~ ]+$/.test(t);
   const textsOf = (i) => colOf(i).map((c) => cellList(c).join(" ")).filter(Boolean);
   // 자료 열 종류: 하베이 볼, 숫자, 두 글자 이하 기호 (그 외 열은 문구 열)
@@ -403,23 +417,29 @@ function tableBlock(ctx, slide, box, tb, opt) {
   const { colw, sz, headH, lh, listCols, aligns } = L;
   if (L.fill < T.LIMIT.tableFillMin && !o.noWarn) ctx.warn(`표 글자 채움 ${Math.round(L.fill * 100)}% (셀 문구 보강, 열 추가, 칸 폭 축소 중 선택)`);
   if (tb.align && tb.align.length !== L.ncol) ctx.warn(`표 align ${tb.align.length}개, 열 ${L.ncol}개 (열 수와 같게 지정. 빠진 열은 기본 정렬)`);
+  // 줄 지정 번호 점검. 범위 밖 번호와 배열이 아닌 값은 적용되지 않으므로 알림 (1부터 센 번호 등)
+  [["bulletRows", tb.rows.length], ["bulletCols", L.ncol], ["labelCols", L.ncol]].forEach(([k, n]) => {
+    if (tb[k] == null) return;
+    const bad = Array.isArray(tb[k]) ? tb[k].filter((x) => !Number.isInteger(x) || x < 0 || x >= n) : [tb[k]];
+    if (bad.length) ctx.warn(`표 ${k} 의 ${bad.join(", ")} 미적용 (0부터 ${n - 1} 까지의 번호 배열로 지정. 행 번호는 머리 행 제외)`);
+  });
   const hts = tb.head ? [headH, ...L.rows] : L.rows.slice();
   const rowHt = (ri) => hts[ri];
   const rowY = (ri) => hts.slice(0, ri).reduce((a, b) => a + b, 0);
   const colX = (ci) => box.x + colw.slice(0, ci).reduce((a, w2) => a + w2, 0);
-  const mk = (txt, i, head) => {
+  const mk = (txt, i, head, ri) => {
     const at = txt && typeof txt === "object" && !Array.isArray(txt) ? txt : {};
     const runOf = (t) => ({ t: String(t), sz, b: head || !!at.bold, color: head ? T.COLOR.white : T.COLOR.textDark });
     const items = head ? [String(txt)] : cellList(txt);
-    // 항목 2개 이상 셀만 항목마다 불릿 (항목 경계 식별). 같은 열의 한 항목 셀은 불릿 없이 열 정렬(좌측)을 따름
-    const paras = !head && items.length > 1
+    // 항목 2개 이상 셀(항목 경계 식별)과 지정한 줄의 한 항목 셀(비교 줄 통일)만 항목마다 불릿. 그 외 한 항목 셀은 불릿 없이 열 정렬을 따름
+    const paras = !head && isBulletCell(tb, ri, i, txt)
       ? items.map((t) => ({ align: "left", bullet: true, indent: T.PARA.bulletIndentIn, runs: [runOf(t)] }))
       : [{ align: head ? "center" : aligns[i], runs: [runOf(items.join(" "))] }];
     return { fill: head ? T.COLOR.navy : at.fill || undefined, paras, colspan: at.colspan, rowspan: at.rowspan, merged: at.merged };
   };
   const rowsOut = [];
   if (tb.head) rowsOut.push(tb.head.map((h, i) => mk(h, i, true)));
-  tb.rows.forEach((r) => rowsOut.push(r.map((c, i) => mk(c, i, false))));
+  tb.rows.forEach((r, ri) => rowsOut.push(r.map((c, i) => mk(c, i, false, ri))));
   // 여러 줄 셀은 행 높이가 남는 만큼 줄 간격을 넓혀 셀 여백을 글줄 사이로 나눔
   tb.rows.forEach((r, ri) => r.forEach((c, ci) => {
     const cell = rowsOut[ri + (tb.head ? 1 : 0)][ci];
@@ -868,7 +888,7 @@ function task(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
   const lw = b.w * 0.42;
   const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "leftHead", s.leftHead));
-  tableBlock(ctx, slide, L, { head: LB.label("task", "head", s.head), rows: s.rows || [] });
+  tableBlock(ctx, slide, L, { head: LB.label("task", "head", s.head), rows: s.rows || [], bulletRows: s.bulletRows, bulletCols: s.bulletCols, labelCols: s.labelCols });
   const R = subhead(ctx, slide, { x: b.x + lw + 0.3, y: b.y, w: b.w - lw - 0.3, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "sample.head", s.sample && s.sample.head));
   sampleBlock(ctx, slide, R, s.sample || {});
   if (s.point) callout(ctx, slide, { x: b.x, y: b.y + b.h - 0.5, w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point);

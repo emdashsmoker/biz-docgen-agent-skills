@@ -35,6 +35,12 @@
 - A bullet marks an item boundary, so text wrapped onto several lines still counts as one item
 - Example: `"rows": [["조사 단계", ["문헌 분석", "통계 검토", "전문가 자문"], "1단계"]]`
 - A line break inside a string is also typeset as an item break (a bullet per item)
+- Bullets on single-item cells are given per line. Write the target lines in the table object as `bulletRows` (array of body row numbers) and `bulletCols` (array of column numbers)
+    + The criteria (comparison line condition, whole table condition) are in the `references/writing-rules.md` tables section
+    + Numbers start at 0. A row number is the position in `rows` (header row excluded), and a column number is the cell position in the row array (`{"merged": true}` cells included)
+    + `bulletRows` leaves out the cells of `labelCols` (array of label column numbers, `[0]` when omitted). A table without a label column uses `"labelCols": []`
+    + The builder applies bullets and left alignment to single-item cells in the given lines (empty cells, cells hidden by merging and Harvey ball cells excluded)
+    + Example: `"head": ["구분", "A안", "B안", "C안"], "rows": [["장점", ["구축 비용 절감", "기존 체계 연계"], ["확장 용이", "유지보수 단순"], "도입 기간 단축"]], "bulletRows": [0]`
 - The cell typesetting rules are common to every template that uses tables (table, task, illustrative, and the table block of free and composite)
 - Column widths are computed automatically from the one-line width of the longest cell text in each column
     + Data columns are number columns, Harvey ball columns and symbol columns of two characters or less (role codes, etc.)
@@ -48,10 +54,10 @@
     + Example: `"head": ["연번", "과제명", "기간", "개월", "계약금액"], "align": ["center", "center", "center", "right", "right"]`
 - The `align` array has the same length as the column count (a different length gives a build warning)
 - Tables without `align` and columns missing from `align` use the default alignment
-    + Columns with multi-item cells and diagnostic question columns are left-aligned
+    + Columns with bullet cells (multi-item cells, cells in given lines) and diagnostic question columns are left-aligned
     + Other columns with only single-item cells are centered, including number columns and Harvey ball columns
     + A table whose judged alignment matches the default alignment may leave out `align`
-- The cells of a column are all single-item or all multi-item (a single-item cell in a multi-item column is left-aligned without a bullet)
+- The cells of a comparison line are all single-item or all multi-item (a single-item cell outside the given lines follows the column alignment without a bullet)
 - Vertical alignment is centered for the whole table
 - Set `colW` (width ratios) only when a width unrelated to the text is needed, such as empty fill-in cells
 - If the table text fill (the per-column one-line width sum as a share of the table width) is below 60%, a build warning appears
@@ -98,11 +104,11 @@
 | Proposal overview | features | Question banner and capability tiles | question, tiles[{title, items[]}] | Tiles 2-4, 1-4 items per tile |
 | Proposal overview | strategy | House shape with roof (goal), strategy pillars and base (conclusion) | goal, strategies[{title, items[], result}], conclusion | Strategies 2-4, 4-5 items per strategy (enough to fill the pillar). Pillars share one width. The roof and base are 0.2 inch wider than the pillar group on each side. The gap between tiers is 0.16 inch. Text: roof 16pt (shrinks to 14pt if long), pillar titles and base 14pt, pillar items 12pt |
 | Proposal overview | process | Module chevrons and Task boxes | modules[{id, title, tasks[]}], idFormat, titleFormat | Modules 2-7, 2-6 Tasks per module. Put the module number in id (title holds only the module name). Without id, idFormat applies (default "Module {n}"), and the chevron text follows titleFormat (default "M{n}. {t}"). Task boxes are spread so the last box bottom meets the body bottom (box spacing capped at 1.5x the even spacing). Modules are joined with L-shaped connectors. With 6 or more modules, every chevron gets the same auto-adjusted height and font |
-| Execution plan | module_overview | Module overview table | tasks[{title, process[], data[], output[]}], rowLabels | Tasks 2-6. List every output in the output array when there are several. All three rows use left-aligned bullets even with a single item (an exception for consistency across Task columns) |
-| Execution plan | task | Task design table and measured sample | leftHead, head[], rows[[item, content]], sample{head, table or items or image or chart, tag}, point | Rows 3-6. The design table column titles are head (default "항목", "내용"). The sample tag is sample.tag (default Sample) |
+| Execution plan | module_overview | Module overview table | tasks[{title, process[], data[], output[]}], rowLabels | Tasks 2-6. List every output in the output array when there are several. All three rows use left-aligned bullets even with a single item (treated as a table where the comparison line condition and the whole table condition always hold. Table typesetting section) |
+| Execution plan | task | Task design table and measured sample | leftHead, head[], rows[[item, content]], bulletRows[], bulletCols[], labelCols[], sample{head, table or items or image or chart, tag}, point | Rows 3-6. The design table column titles are head (default "항목", "내용"). Bullet lines for single-item cells of the design table are bulletRows, bulletCols and labelCols (table typesetting section). The sample tag is sample.tag (default Sample) |
 | Execution plan | task_multi | Task bundle matrix (for page limits) | tasks[{id, title, items[]}], rowLabels[], freeLabel, idFormat, point | Tasks 2-4. items use the "label : value" format (row alignment condition). The label of the row collecting items not in this format is freeLabel (default "주요 내용"). Without id, idFormat applies (default "Task {n}") |
 | Analysis and comparison | bullets | Panels in 1-4 columns | panels[{head, items or text, headFill, fill}], point | Columns 1-4 |
-| Analysis and comparison | table | Full-width table | title, legend, head[], rows[][], align[], point | Rows 1-16. Column alignment is align (table typesetting section) |
+| Analysis and comparison | table | Full-width table | title, legend, head[], rows[][], align[], bulletRows[], bulletCols[], labelCols[], point | Rows 1-16. Column alignment is align, and bullet lines for single-item cells are bulletRows, bulletCols and labelCols (table typesetting section) |
 | Analysis and comparison | chart_text | Chart with findings | chartTitle, chart{type, barDir, categories, series, numFmt}, findings[{head, items}] | Findings 1-3. The chart fields are the same as the chart block in `references/recipes.md` |
 | Analysis and comparison | chart_two | Two charts side by side | left{title, chart, items}, right{title, chart, items} | - |
 | Analysis and comparison | compare | AS-IS, TO-BE, gap | asis{head, items}, tobe{head, items}, gap[], gapHead | Items 2-4. Write each item as a title (text) of about 20 characters and add 1-2 evidence sub-items (sub). Write each gap as an improvement means of about 10 characters per item and match the item count (a one-sentence gap goes in a single gap entry typeset in the strip under the two panels) |

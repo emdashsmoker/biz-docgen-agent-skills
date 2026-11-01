@@ -330,7 +330,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - 모듈마다 1장 배치 (없거나 2장 이상이면 lint FAIL)
 - 템플릿은 `module_overview` (열은 Task, 행은 추진과정, 활용자료, 산출물)
-- 추진과정, 활용자료, 산출물 상자는 항목이 1개여도 불릿 좌측 정렬로 조판 (Task 열 비교의 통일성을 위한 예외, 빌더가 자동 적용)
+- 추진과정, 활용자료, 산출물 상자는 항목이 1개여도 불릿 좌측 정렬로 조판 (표의 비교 줄 조건과 표 전체 조건이 늘 성립하는 표로 봄, 빌더가 자동 적용. 기준은 `references/writing-rules.md` 표 절)
 - 모듈 개요용 커스텀 슬라이드는 등록 설정의 역할 module_overview 에 번호를 적어 사용 (`references/custom-slides.md`)
 - 해당 모듈의 Task 전건을 표기 (누락은 lint FAIL)
 - 모듈 개요 슬라이드는 Task 슬라이드 출현 집계에서 제외
@@ -580,11 +580,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 하베이 볼 범례는 표 위에 배치
     + 열 폭은 셀 문구의 한 줄 폭으로 자동 산정
     + 역할 부호, 연도별 수치, 대안별 평가처럼 이어진 자료 열 묶음은 같은 폭
-    + 불릿은 항목이 2개 이상인 셀에만 적용 (줄바꿈으로 여러 줄이 된 문구는 항목 1개)
+    + 불릿은 항목이 2개 이상인 셀과 `bulletRows`, `bulletCols` 로 지정한 줄의 셀에 적용 (`bulletRows` 는 `labelCols` 의 구분 열 제외. 줄바꿈으로 여러 줄이 된 문구는 항목 1개)
+    + 줄 지정 기준(비교 줄 조건, 표 전체 조건)은 `references/writing-rules.md` 표 절
     + 열 정렬은 storyboard 작성 단계에서 표마다 `align` 으로 지정 (형식은 `references/templates.md` 표 조판)
     + 열 정렬 판정 기준은 `references/writing-rules.md` 표 절
     + 셀의 세로 정렬은 표 전체를 가운데로 통일
-    + 한 열의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성
+    + 한 비교 줄의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성 (맞추기 어려운 줄의 불릿은 비교 줄 조건)
     + 표 글자 채움 60% 미만은 빌드 경고
     + 행 높이 상한은 글자만 있는 한 줄 행 0.5인치, 여러 줄 행은 줄 간격 1.3배를 담는 높이(0.8인치 이하), 하베이 볼이 있는 표 0.8인치
     + 여러 줄 셀은 행 높이가 남는 만큼 줄 간격을 1.3배까지 넓힘
@@ -596,7 +597,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 병합 지정은 storyboard 의 `merged` 필드
     + 빌더는 `merged` 지정대로만 병합
 - (정렬) 가로 정렬은 열 단위, 세로 정렬은 행 단위로 통일
-    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬 (표 열은 `references/writing-rules.md` 표 절, 모듈 개요 슬라이드는 예외)
+    + 항목 1개는 줄바꿈으로 여러 줄이 되어도 불릿 없이 가운데 정렬 (표 열과 표의 불릿 줄 지정은 `references/writing-rules.md` 표 절, 모듈 개요 슬라이드는 예외)
     + 항목 2개 이상은 불릿 좌측 정렬과 세로 가운데 정렬
     + 같은 열의 셀은 같은 가로 정렬을 사용
     + 같은 행의 셀은 같은 세로 정렬을 사용

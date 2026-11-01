@@ -95,11 +95,12 @@
 
 ### Table fields
 
-- Fields that hold a table use head (header row text array), rows (row array), align (per-column horizontal alignment array) and colW (column width ratio array)
-- These fields are the slots of the table template, the table of illustrative, the sample.table of task, and the table blocks of free and composite
+- Fields that hold a table use head (header row text array), rows (row array), align (per-column horizontal alignment array), colW (column width ratio array), bulletRows (array of body row numbers given as bullet lines), bulletCols (array of column numbers given as bullet lines) and labelCols (array of label column numbers)
+- These fields are the slots of the table template, the table of illustrative, the sample.table of task, and the table blocks of free and composite (the design table slots of task use only head, rows, bulletRows, bulletCols and labelCols)
 - align is written for every table with "right", "center" and "left", and its length equals the column count (a different length gives a build warning)
 - The rules for judging align are in the `references/writing-rules.md` tables section
 - The default alignment when align is omitted is in `references/templates.md` table typesetting
+- The numbering and scope of bulletRows, bulletCols and labelCols are in `references/templates.md` table typesetting, and the criteria are in the `references/writing-rules.md` tables section
 
 ## Section ledger ledger.json
 

@@ -27,6 +27,35 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-01
+
+### blockwriter
+- Added a rule that table cells take ◦ cell bullets only when they hold two or more items (#87)
+- Added a rule that puts ◦ on the single-item cells of a comparison line (a row or column comparing subjects) when half or more of its cells hold two or more items, or when most list-type lines of the table carry ◦ (#87)
+- Added a rule that a ◦ item with `- ` sub lines counts as a list (#87)
+
+* 항목이 2개 이상인 표 셀에만 ◦ 셀 글머리를 붙이는 규칙 추가 (#87)
+* 비교 줄(대상을 나란히 비교하는 행이나 열)의 절반 이상이 여러 항목 셀이거나 표의 목록형 줄 대부분에 ◦가 붙은 경우의 항목 1개 셀 ◦ 규칙 추가 (#87)
+* `- ` 셀 글머리가 딸린 ◦ 항목의 목록 판정 규칙 추가 (#87)
+
+### ieum-deck
+- Added the bulletRows, bulletCols and labelCols table fields that put bullets on the single-item cells of the given rows or columns (#87)
+- Added criteria for choosing those lines: half or more multi-item cells in a comparison line, or bullets on most list-type lines of the table (#87)
+- Added a build warning for out-of-range or non-array numbers in bulletRows, bulletCols and labelCols (#87)
+- Changed the rules on uniform item structure and uniform notation to apply per comparison line instead of per column (#87)
+- Added a rule that an item with sub items counts as a list (#87)
+
+* 지정한 행이나 열의 항목 1개 셀에 불릿을 붙이는 표 필드(bulletRows, bulletCols, labelCols) 추가 (#87)
+* 비교 줄의 절반 이상이 여러 항목 셀이거나 표의 목록형 줄 대부분에 불릿이 붙은 경우의 줄 지정 기준 추가 (#87)
+* bulletRows, bulletCols, labelCols 의 범위 밖 번호와 배열이 아닌 값의 빌드 경고 추가 (#87)
+* 항목 구성 통일 규칙과 표기 방식 통일 규칙의 적용 단위를 열에서 비교 줄로 변경 (#87)
+* 하위 항목(sub)이 딸린 항목의 목록 판정 규칙 추가 (#87)
+
+### juja-builder
+- Added a rule that puts ◦ on the single-item cells of a comparison line (a row or column comparing subjects) when half or more of its cells hold two or more items, or when most list-type lines of the table carry ◦ (#87)
+
+* 비교 줄(대상을 나란히 비교하는 행이나 열)의 절반 이상이 여러 항목 셀이거나 표의 목록형 줄 대부분에 ◦가 붙은 경우의 항목 1개 셀 ◦ 규칙 추가 (#87)
+
 ## 2026-10-31
 
 ### blockwriter

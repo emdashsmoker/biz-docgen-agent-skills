@@ -193,6 +193,19 @@ const cellText = (v) => (typeof v === "string" ? v : typeof v === "number" ? Str
 const isHarvey = (v) => typeof v === "string" && !!HARVEY[v.trim()];
 /** Cell item list (each array element and each line-break piece is 1 item. Empty items excluded) */
 const cellList = (v) => (v && v.merged ? [] : (cellItems(v) || [cellText(v)]).flatMap((t) => String(t == null ? "" : t).split("\n")).map((t) => t.trim()).filter(Boolean));
+const DEFAULT_LABEL_COLS = [0]; // Label columns when labelCols is omitted (columns left out of bulletRows)
+const arrayOr = (v, fallback) => (Array.isArray(v) ? v : fallback);
+/** Bullet cell check. Cells with 2 or more items, and single-item cells in the lines given by the storyboard bulletRows and bulletCols
+ *  Why: the comparison line condition and the whole table condition are judged by the author, who knows what the table means. The builder applies only the given lines
+ *  bulletRows leaves out the label column cells of labelCols. Empty cells, cells hidden by merging and Harvey ball cells are excluded
+ *  Shared by tableMetrics (column widths, default alignment) and tableBlock (paragraphs). A different check would drop the bullet indent from the width calculation */
+function isBulletCell(tb, ri, ci, v) {
+  const items = cellList(v);
+  if (items.length > 1) return true;
+  if (items.length !== 1 || HARVEY[items[0]]) return false;
+  const inRow = arrayOr(tb.bulletRows, []).includes(ri) && !arrayOr(tb.labelCols, DEFAULT_LABEL_COLS).includes(ci);
+  return inRow || arrayOr(tb.bulletCols, []).includes(ci);
+}
 const cellBold = (v) => !!(v && typeof v === "object" && !Array.isArray(v) && v.bold);
 const cellSpan = (v) => (v && v.colspan) || 1;
 const TABLE_CELL_PAD = T.PANEL.CELL_MG[0]; // Left and right table cell inset
@@ -344,15 +357,16 @@ function tableColW(tb, w, sz, listCols, dataCols) {
   return { cw: out, fill: sN / w };
 }
 /** Table column widths, column formats, needed height and cap per row
- *  Column format: columns with a cell of 2 or more items get bullets and left alignment in every cell, question sentence columns are left-aligned, other columns are centered (a column with a storyboard align uses that alignment)
+ *  Column format: columns with a bullet cell (isBulletCell) get left alignment and the bullet indent width, question sentence columns are left-aligned, other columns are centered (a column with a storyboard align uses that alignment)
  *  Row height cap: ROW_H_TEXT for text-only single-line rows, the widened spacing for multi-line rows, ROW_H_MAX for tables with Harvey balls */
 function tableMetrics(tb, w, szOpt) {
   const ncol = tb.head ? tb.head.length : tb.rows[0].length;
   const sz = szOpt || (tb.rows.length > 10 ? T.SIZE.tableDense : T.SIZE.tableBody);
   const lh = A.lineHeightIn(sz, T.METRIC.TABLE_LINE_HEIGHT);
   const fixed = tb.colW && tb.colW.length === ncol;
-  const colOf = (i) => tb.rows.map((r) => r[i]).filter((c) => c != null && cellSpan(c) === 1 && !c.merged);
-  const listCols = Array.from({ length: ncol }, (_, i) => colOf(i).some((c) => cellList(c).length > 1));
+  const inCol = (c) => c != null && cellSpan(c) === 1 && !c.merged;
+  const colOf = (i) => tb.rows.map((r) => r[i]).filter(inCol);
+  const listCols = Array.from({ length: ncol }, (_, i) => tb.rows.some((r, ri) => inCol(r[i]) && isBulletCell(tb, ri, i, r[i])));
   const isNum = (t) => /^[\d.,%+\-~ ]+$/.test(t);
   const textsOf = (i) => colOf(i).map((c) => cellList(c).join(" ")).filter(Boolean);
   // Data column kinds: Harvey balls, numbers, symbols of two characters or less (other columns are text columns)
@@ -404,23 +418,29 @@ function tableBlock(ctx, slide, box, tb, opt) {
   const { colw, sz, headH, lh, listCols, aligns } = L;
   if (L.fill < T.LIMIT.tableFillMin && !o.noWarn) ctx.warn(`table text fill ${Math.round(L.fill * 100)}% (enrich cell text, add columns or narrow the cell)`);
   if (tb.align && tb.align.length !== L.ncol) ctx.warn(`table align has ${tb.align.length} entries for ${L.ncol} columns (match the column count. Missing columns use the default alignment)`);
+  // Check the line numbers. Out-of-range numbers and non-array values are not applied, so report them (numbers counted from 1, etc.)
+  [["bulletRows", tb.rows.length], ["bulletCols", L.ncol], ["labelCols", L.ncol]].forEach(([k, n]) => {
+    if (tb[k] == null) return;
+    const bad = Array.isArray(tb[k]) ? tb[k].filter((x) => !Number.isInteger(x) || x < 0 || x >= n) : [tb[k]];
+    if (bad.length) ctx.warn(`table ${k} entries ${bad.join(", ")} not applied (give an array of numbers from 0 to ${n - 1}. Row numbers exclude the header row)`);
+  });
   const hts = tb.head ? [headH, ...L.rows] : L.rows.slice();
   const rowHt = (ri) => hts[ri];
   const rowY = (ri) => hts.slice(0, ri).reduce((a, b) => a + b, 0);
   const colX = (ci) => box.x + colw.slice(0, ci).reduce((a, w2) => a + w2, 0);
-  const mk = (txt, i, head) => {
+  const mk = (txt, i, head, ri) => {
     const at = txt && typeof txt === "object" && !Array.isArray(txt) ? txt : {};
     const runOf = (t) => ({ t: String(t), sz, b: head || !!at.bold, color: head ? T.COLOR.white : T.COLOR.textDark });
     const items = head ? [String(txt)] : cellList(txt);
-    // Only cells with 2 or more items get a bullet per item (marks item boundaries). Single-item cells in the same column follow the column alignment (left) without bullets
-    const paras = !head && items.length > 1
+    // Only cells with 2 or more items (marks item boundaries) and single-item cells in a given line (consistent comparison lines) get a bullet per item. Other single-item cells follow the column alignment without bullets
+    const paras = !head && isBulletCell(tb, ri, i, txt)
       ? items.map((t) => ({ align: "left", bullet: true, indent: T.PARA.bulletIndentIn, runs: [runOf(t)] }))
       : [{ align: head ? "center" : aligns[i], runs: [runOf(items.join(" "))] }];
     return { fill: head ? T.COLOR.navy : at.fill || undefined, paras, colspan: at.colspan, rowspan: at.rowspan, merged: at.merged };
   };
   const rowsOut = [];
   if (tb.head) rowsOut.push(tb.head.map((h, i) => mk(h, i, true)));
-  tb.rows.forEach((r) => rowsOut.push(r.map((c, i) => mk(c, i, false))));
+  tb.rows.forEach((r, ri) => rowsOut.push(r.map((c, i) => mk(c, i, false, ri))));
   // Multi-line cells widen line spacing as far as the row height allows, spreading the cell's spare space between lines
   tb.rows.forEach((r, ri) => r.forEach((c, ci) => {
     const cell = rowsOut[ri + (tb.head ? 1 : 0)][ci];
@@ -869,7 +889,7 @@ function task(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
   const lw = b.w * 0.42;
   const L = subhead(ctx, slide, { x: b.x, y: b.y, w: lw, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "leftHead", s.leftHead));
-  tableBlock(ctx, slide, L, { head: LB.label("task", "head", s.head), rows: s.rows || [] });
+  tableBlock(ctx, slide, L, { head: LB.label("task", "head", s.head), rows: s.rows || [], bulletRows: s.bulletRows, bulletCols: s.bulletCols, labelCols: s.labelCols });
   const R = subhead(ctx, slide, { x: b.x + lw + 0.3, y: b.y, w: b.w - lw - 0.3, h: b.h - (s.point ? 0.7 : 0) }, LB.label("task", "sample.head", s.sample && s.sample.head));
   sampleBlock(ctx, slide, R, s.sample || {});
   if (s.point) callout(ctx, slide, { x: b.x, y: b.y + b.h - 0.5, w: b.w, h: 0.5 }, pointLabel(ctx, sb), s.point);
