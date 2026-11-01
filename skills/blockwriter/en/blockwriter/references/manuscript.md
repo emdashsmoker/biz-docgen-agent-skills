@@ -30,8 +30,15 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - The default position of the `(단위: )` (unit) line is between the caption and the table. If it is written before the caption or right after the table, it still moves to the unit row above the table
 - Write a unit line placed before the caption directly above the caption. If a table comes before it, leave a blank line between that table and the unit line
 - Write a unit line for tables with numbers that need a stated unit to be read, such as amounts, ratios, and quantities
-- A `(열 폭: 20, 30, 50)` (column width) line between the caption and the table sets each column's width as a percentage of the table width cap (the ○ level width). Write one value per column, separated by commas. The sum becomes the table width and is 100 or less
+- A `(열 폭: 15, 20, 25)` (column width) line between the caption and the table sets each column's actual width as a percentage of the ○ level width. Each value is the width of one column. Write one value per column, separated by commas
+    - (○ level width) The body width minus the level indent (the table width cap in the Table width section of references/layout.md). In the rendered PNGs it is almost the same as the width of one ○ paragraph line (from the ○ symbol to the line end)
+    - (Sum) The sum of the values is the table width. `15, 20, 25` sums to 60, so the table is 60% of the ○ level width and sits in the middle of the body. A sum of 100 makes the table fill the whole ○ level width, so use it only for a table that needs all of that width
+    - (Sum limit) The sum is 100 or less. Over 100, build prints a WARN and uses automatic sizing
 - Use a column width line only for a table whose column widths the user asked for separately, or a table whose automatically sized column widths showed a defect in the render review. When writing the manuscript first, leave out column width lines and review the automatic sizing first
+- Set the values of a column width line that fixes a column width defect with the following steps
+    - (Read the current width) Read from the rendered PNGs what percentage of the ○ level width the current table takes. An automatically sized table takes 50-100% of the ○ level width
+    - (Redistribute between columns) Keep the width read as the sum and divide it among the columns again. When the third column wraps in a 3-column table about 50% wide, take width from the other columns and add it to the third, as in `(열 폭: 10, 12, 28)`
+    - (Widen the table) Raise the sum only for a defect that redistribution cannot fix and that needs a wider table. Raise it only as far as the defect needs
 - Put the `출처: ` (source) line after the table
 - Write a line break inside a cell as `<br>`
 - A cell value `^` merges the cell vertically with the cell above, and `<` merges it horizontally with the cell on the left

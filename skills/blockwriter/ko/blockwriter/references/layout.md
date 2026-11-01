@@ -47,7 +47,7 @@
 - 가장 긴 줄의 폭이 12000 HWPUNIT(약 42mm, 12pt 한글 10자, COL_ONE_LINE_W)을 넘는 열은 2줄 접힘을 전제로 폭을 60%(COL_WRAP_RATIO)로 줄여 계산. 줄인 폭도 12000 이상 유지하여 이 폭 안의 이름과 짧은 문구는 접지 않음
 - 합계가 상한을 넘으면 필요폭이 균등 몫(상한을 열 수로 나눈 값) 이하인 짧은 열은 필요폭을 보장하고 남은 폭을 나머지 열에 필요폭 비율로 나눔. 나머지 열의 접힘 비율이 비슷해져 행 높이가 고르게 됨
 - 합계가 하한보다 작으면 하한까지 열 폭 비율로 늘림
-- 원고에 열 폭 줄이 있는 표는 위 산정 대신 열 폭 줄의 값으로 열 폭을 정함. 열 폭은 표 폭 상한에 값/100을 곱한 값이며 하한 보정은 적용하지 않음. 사용 조건은 references/manuscript.md의 표 절
+- 원고에 열 폭 줄이 있는 표는 위 산정 대신 열 폭 줄의 값으로 열 폭을 정함. 열 하나의 폭은 표 폭 상한(○ 계위 폭)에 값/100을 곱한 값. 하한 보정은 적용하지 않으므로 값의 합계가 표 폭(합계 60이면 상한의 60%). 사용 조건과 값을 정하는 순서는 references/manuscript.md의 표 절
 
 셀 서식
 
@@ -191,7 +191,7 @@ build가 문서에 찍는 고정 문구와 파일에 기록하는 언어 태그�
 | notation.unit | 단위 줄 토큰(`(토큰: )`) | `단위` |
 | notation.table | 표 캡션 줄 토큰(`<토큰> 제목`) | `표` |
 | notation.figure | 그림 캡션 줄 토큰(`[토큰] 캡션`) | `그림` |
-| notation.colwidth | 열 폭 줄 토큰(`(토큰: 20, 30, 50)`) | `열 폭` |
+| notation.colwidth | 열 폭 줄 토큰(`(토큰: 15, 20, 25)`) | `열 폭` |
 | language.latin, language.east_asia | DOCX 문서 기본 언어(w:lang)의 라틴, 동아시아 값 | `en-US`, `ko-KR` |
 | language.hwpx_package | HWPX 문서 언어(content.hpf의 opf:language) | `ko` |
 | language.hwpx_style_lcid | HWPX 스타일 언어(langID, Windows LCID 정수) | `1042` |
@@ -219,7 +219,7 @@ build가 문서에 찍는 고정 문구와 파일에 기록하는 언어 태그�
 ```
 
 - `Chapter 1. 제목`, `1.1 제목`, `(a) 제목`, 목차 제목 `Contents`, 캡션 `<Table 1-1> 제목`(SEQ Table)과 `[Figure 1-1] 캡션`을 출력
-- `<Table> 제목`, `[Figure] 캡션`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, `(Column widths: 20, 30, 50)`을 한국어 토큰과 함께 인식
+- `<Table> 제목`, `[Figure] 캡션`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, `(Column widths: 15, 20, 25)`을 한국어 토큰과 함께 인식
 
 ## 검수 항목
 
