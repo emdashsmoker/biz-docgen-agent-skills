@@ -849,13 +849,13 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + For example "제안사는 의사결정 속도를 높이기 위해 착수 2주 내에 OO공단 보유 자료 목록을 확정" (to speed up decisions, the proposer finalizes the list of materials held by the OO Corporation within two weeks of kickoff): one each of who, why, when, and what
     + A compound sentence example "자료를 확보하고 대상을 선정하여 조사를 수행" (secure materials, select targets, and carry out the survey) → split into three sentences or three hyphens
 - Do not write ungrammatical sentences. Check subject-predicate agreement (write "제안사는 OO을 확보". "제안사는 OO이 확보" is ungrammatical), missing objects ("OO을 분석": analyze what), and mismatch between the nominal ending and the preceding particle (write "OO을 검토" for "OO에 대해 검토"). If reading the manuscript aloud catches on a sentence, it is ungrammatical
-- Nominal endings (-함, -임, -필요, -추진, -제시). No honorific or colloquial style. For unnatural endings, see the Sentence Ending Vocabulary section of lexicon.md
+- Nominal endings (-함, -임, -필요, -추진, -제시). No honorific, colloquial, or informal style. Also avoid a colloquial or informal tone in endings, words, and expressions. For unnatural endings, see the Sentence Ending Vocabulary section of lexicon.md
 - A proposal is in formal written style. Colloquial style that looks professional is easily mistaken for formal style. `check tone` flags the markers below as FAIL
     + (Hedged endings) -듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐. Markers that blur the verdict. End with "-로 판단", "-로 확인", or "-로 집계" together with grounds. Dependent nouns are flagged only in their spaced form. Endings in "개편", "재편", "데이터", and "센터" are excluded from the verdict
     + (Explanatory endings) -는데, -인데, -더라, -거든, -잖아. Split the sentence and end with a nominal form
     + (Colloquial contractions) -하는 게, -할 거, -한 걸, -하는 건. Contractions of "것이" and "것을". Convert to a nominal form
     + (Colloquial modifiers and adverbs) -식으로, -쪽으로, 일단, 약간, 좀, 꽤, 딱, 그냥, 나름. Delete or replace with figures and criteria
-- Do not use the colloquial "것" ending. "남은 것", "해야 할 것", "과업의 포인트인 것", and "OO것임" are endings of online community colloquial style. `check tone` flags them as FAIL. Convert to nominal endings ("OO 잔존", "OO 필요", "OO이 과업의 핵심"). The verdict target is a "것" ending at the end of a line
+- Do not use placeholder nouns such as 것, 곳, 거, 셈, or 부분. Name the referent with a concrete noun. Do not use the colloquial "것" ending. "남은 것", "해야 할 것", "과업의 포인트인 것", and "OO것임" are endings of online community colloquial style. `check tone` flags them as FAIL. Convert to nominal endings ("OO 잔존", "OO 필요", "OO이 과업의 핵심"). The verdict target is a "것" ending at the end of a line
 - Do not join two predicates with connective endings (-으며, -하며, -이며, -하고) or conjunctive adverbs (그리고, 그러나, 그래서). Split the sentences. Express relations between sentences through the hierarchy
 - Use commas only for lists of three or more items of the same category. Write a list of two as "A 및 B". "및" is the conventional notation of client official letters
     + Established names in a field keep their customary wording. For example, the BSC perspective name "학습과 성장"
