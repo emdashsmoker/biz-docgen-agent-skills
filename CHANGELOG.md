@@ -27,6 +27,22 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-06
+
+### ieum-deck
+- Added informal style and a colloquial or informal tone to the colloquial style rule for headlines and body text (#91)
+- Added a writing rule against placeholder nouns such as 것, 곳, 거, 셈, and 부분 (#91)
+
+* 헤드라인 및 본문 구어체 규칙의 대상에 비격식체, 구어적 어감, 비격식적 어감 추가 (#91)
+* 빈자리 명사(것, 곳, 거, 셈, 부분 등) 미사용 규칙 추가 (#91)
+
+### juja-builder
+- Added informal style and a colloquial or informal tone to the honorific and colloquial style rule for manuscripts (#91)
+- Changed the colloquial "것" ending rule to cover all placeholder nouns such as 것, 곳, 거, 셈, and 부분 (#91)
+
+* 원고 문체 규칙의 대상에 비격식체, 구어적 어감, 비격식적 어감 추가 (#91)
+* 구어체 "것" 종결 규칙의 적용 범위를 빈자리 명사(것, 곳, 거, 셈, 부분 등) 전체로 변경 (#91)
+
 ## 2026-11-01
 
 ### blockwriter
