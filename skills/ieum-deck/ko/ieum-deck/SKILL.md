@@ -155,6 +155,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 번호는 주석 묶음의 항목이 2개 이상이면 1) 부터 차례로 번호를 붙임
     + 번호 표기에서 항목이 1개이면 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 항목은 "출처:")
     + 번호 표기의 출처 행은 "출처:" 로 시작
+    + 번호 표기에서는 빌드가 남은 ※ 도 바꿈 (※ 로 시작하는 줄은 위 표기, 제목 안 "(※ 시안)" 은 "(시안)")
     + 라벨 문구는 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
 
 ## 회사 사실 정보

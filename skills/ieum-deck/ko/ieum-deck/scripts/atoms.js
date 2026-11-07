@@ -314,6 +314,28 @@ function lineOpt(ln, fallbackPt) {
 }
 
 // ---------------------------------------------------------------- 텍스트 실행 목록 변환
+let NOTE_STYLE = null; // 번호 표기 덱이면 { labels } (build.js 가 meta.footnoteStyle 로 설정). ※ 기호 덱은 null
+/** 덱의 주석 표기 지정. number 이면 runsOf 가 작성자가 직접 쓴 ※ 를 번호 표기로 바꿈 */
+function setNoteStyle(style, labels) { NOTE_STYLE = style === "number" ? { labels } : null; }
+const LEAD_MARK = /^\s*※/;
+/** 번호 표기 덱의 문단 변환. ※ 로 시작하는 연속 문단은 주석 묶음으로 보고 noteLines 표기를 붙이고, 문장 중간의 ※ 는 뺌 (예: "(※ 시안)" → "(시안)")
+ *  Why: 커스텀 슬라이드 원문, 본문 칸에 직접 쓴 주석, 제목의 시안 표시처럼 주석 함수를 거치지 않는 ※ 도 착수 질의에서 고른 표기를 따르게 함 */
+function numberStyleParas(paras, labels) {
+  const textOf = (p) => (p.runs || []).filter((r) => !r.br).map((r) => r.t).join("");
+  const out = paras.map((p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) }));
+  for (let i = 0; i < out.length;) {
+    if (!LEAD_MARK.test(textOf(out[i]))) { i += 1; continue; }
+    let j = i;
+    while (j < out.length && LEAD_MARK.test(textOf(out[j]))) j += 1;
+    const group = out.slice(i, j);
+    const lines = noteLines(group.map(textOf), "number", labels);
+    // 내용 없는 ※ 문단이 섞여 줄 수가 달라지면 묶음 번호 대신 아래의 ※ 제거만 적용
+    if (lines.length === group.length) group.forEach((p, k) => { const r0 = p.runs.find((r) => !r.br) || {}; p.runs = [{ ...r0, t: lines[k] }]; });
+    i = j;
+  }
+  out.forEach((p) => p.runs.forEach((r) => { if (r.t) r.t = r.t.replace(/※\s*/g, ""); }));
+  return out;
+}
 /**
  * paras: [{align, bullet, buChar, lvl, marL, indent, spcBef, spcAft, lnSpc, runs:[{t,sz,b,color,u,br}]}]
  * → pptxgenjs text 배열. 문단 속성은 문단 첫 run 에 부여
@@ -321,8 +343,9 @@ function lineOpt(ln, fallbackPt) {
 function runsOf(paras, defaults) {
   const out = [];
   const d = defaults || {};
-  paras.forEach((p, pi) => {
-    const last = pi === paras.length - 1;
+  const src = NOTE_STYLE ? numberStyleParas(paras, NOTE_STYLE.labels) : paras;
+  src.forEach((p, pi) => {
+    const last = pi === src.length - 1;
     const pOpt = {};
     if (p.align) pOpt.align = p.align;
     if (p.bullet) {
@@ -1372,4 +1395,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteLines, SOURCE_MARK, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteLines, SOURCE_MARK, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

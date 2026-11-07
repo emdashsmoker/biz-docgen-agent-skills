@@ -314,6 +314,28 @@ function lineOpt(ln, fallbackPt) {
 }
 
 // ---------------------------------------------------------------- Text run list conversion
+let NOTE_STYLE = null; // { labels } in a number-style deck (set by build.js from meta.footnoteStyle). null in a ※ mark deck
+/** Sets the deck note style. With number, runsOf turns the ※ the author wrote into number-style marks */
+function setNoteStyle(style, labels) { NOTE_STYLE = style === "number" ? { labels } : null; }
+const LEAD_MARK = /^\s*※/;
+/** Paragraph conversion for a number-style deck. Consecutive paragraphs starting with ※ are a note group and get the noteLines marks; a ※ inside a sentence is removed (e.g. "(※ 시안)" → "(시안)")
+ *  Why: makes ※ that does not pass through the note functions (custom slide text, notes written in body cells, draft marks in titles) follow the style chosen at kickoff */
+function numberStyleParas(paras, labels) {
+  const textOf = (p) => (p.runs || []).filter((r) => !r.br).map((r) => r.t).join("");
+  const out = paras.map((p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) }));
+  for (let i = 0; i < out.length;) {
+    if (!LEAD_MARK.test(textOf(out[i]))) { i += 1; continue; }
+    let j = i;
+    while (j < out.length && LEAD_MARK.test(textOf(out[j]))) j += 1;
+    const group = out.slice(i, j);
+    const lines = noteLines(group.map(textOf), "number", labels);
+    // If an empty ※ paragraph changes the line count, only the ※ removal below applies instead of group numbering
+    if (lines.length === group.length) group.forEach((p, k) => { const r0 = p.runs.find((r) => !r.br) || {}; p.runs = [{ ...r0, t: lines[k] }]; });
+    i = j;
+  }
+  out.forEach((p) => p.runs.forEach((r) => { if (r.t) r.t = r.t.replace(/※\s*/g, ""); }));
+  return out;
+}
 /**
  * paras: [{align, bullet, buChar, lvl, marL, indent, spcBef, spcAft, lnSpc, runs:[{t,sz,b,color,u,br}]}]
  * → pptxgenjs text array. Paragraph properties go on the first run of the paragraph
@@ -321,8 +343,9 @@ function lineOpt(ln, fallbackPt) {
 function runsOf(paras, defaults) {
   const out = [];
   const d = defaults || {};
-  paras.forEach((p, pi) => {
-    const last = pi === paras.length - 1;
+  const src = NOTE_STYLE ? numberStyleParas(paras, NOTE_STYLE.labels) : paras;
+  src.forEach((p, pi) => {
+    const last = pi === src.length - 1;
     const pOpt = {};
     if (p.align) pOpt.align = p.align;
     if (p.bullet) {
@@ -1372,4 +1395,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteLines, SOURCE_MARK, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteLines, SOURCE_MARK, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

@@ -157,7 +157,7 @@
 | scope | goalHead, visionTag, scopeTag, outputTag | 본 과업의 최종 목표, VISION, SCOPE, OUTPUT |
 | process | idFormat, titleFormat | Module {n}, M{n}. {t} |
 | module_overview | rowLabels | 단계, 추진과정, 활용자료, 산출물 |
-| task | leftHead, head, sample.head, sample.tag | Task 수행 설계, [항목, 내용], 실측 표본 (시안), Sample |
+| task | leftHead, head, sample.head, sample.tag | Task 수행 설계, [항목, 내용], 실측 표본 (※ 시안), Sample |
 | task_multi | freeLabel, idFormat | 주요 내용, Task {n} |
 | compare | asis.head, tobe.head, gapHead | AS-IS, TO-BE, GAP |
 | swot | labels{S, W, O, T, SO, WO, ST, WT} | 강점 (S), 약점 (W), 기회 (O), 위협 (T), SO, WO, ST, WT |
@@ -205,7 +205,7 @@
  "scope": {"goalHead": "Final goal of the project", "visionTag": "VISION", "scopeTag": "SCOPE", "outputTag": "OUTPUT"},
  "process": {"idFormat": "Module {n}", "titleFormat": "M{n}. {t}"},
  "module_overview": {"rowLabels": ["Stage", "Process", "Data used", "Outputs"]},
- "task": {"leftHead": "Task design", "head": ["Item", "Details"], "sample.head": "Measured sample (draft)", "sample.tag": "Sample"},
+ "task": {"leftHead": "Task design", "head": ["Item", "Details"], "sample.head": "Measured sample (※ draft)", "sample.tag": "Sample"},
  "task_multi": {"freeLabel": "Key content", "idFormat": "Task {n}"},
  "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},
  "swot": {"labels": {"S": "Strengths (S)", "W": "Weaknesses (W)", "O": "Opportunities (O)", "T": "Threats (T)", "SO": "SO", "WO": "WO", "ST": "ST", "WT": "WT"}},

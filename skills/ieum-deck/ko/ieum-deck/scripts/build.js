@@ -131,6 +131,7 @@ async function main() {
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
   LB.useDeck(meta); // 덱 단위 라벨(meta.labels) 등록
+  A.setNoteStyle(meta.footnoteStyle, { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }); // 번호 표기 덱은 남은 ※ 를 덱 표기로 변환
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`판형 ${layoutKey} 미정의. 선택: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";

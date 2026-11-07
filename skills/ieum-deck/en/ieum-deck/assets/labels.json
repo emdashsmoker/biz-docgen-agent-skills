@@ -7,7 +7,7 @@
  "scope": {"goalHead": "본 과업의 최종 목표", "visionTag": "VISION", "scopeTag": "SCOPE", "outputTag": "OUTPUT"},
  "process": {"idFormat": "Module {n}", "titleFormat": "M{n}. {t}"},
  "module_overview": {"rowLabels": ["단계", "추진과정", "활용자료", "산출물"]},
- "task": {"leftHead": "Task 수행 설계", "head": ["항목", "내용"], "sample.head": "실측 표본 (시안)", "sample.tag": "Sample"},
+ "task": {"leftHead": "Task 수행 설계", "head": ["항목", "내용"], "sample.head": "실측 표본 (※ 시안)", "sample.tag": "Sample"},
  "task_multi": {"freeLabel": "주요 내용", "idFormat": "Task {n}"},
  "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},
  "swot": {"labels": {"S": "강점 (S)", "W": "약점 (W)", "O": "기회 (O)", "T": "위협 (T)", "SO": "SO", "WO": "WO", "ST": "ST", "WT": "WT"}},

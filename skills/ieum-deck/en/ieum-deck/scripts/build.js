@@ -131,6 +131,7 @@ async function main() {
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
   LB.useDeck(meta); // Register the deck-level labels (meta.labels)
+  A.setNoteStyle(meta.footnoteStyle, { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }); // A number-style deck turns the remaining ※ into deck marks
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`Page size ${layoutKey} is undefined. Choose: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";

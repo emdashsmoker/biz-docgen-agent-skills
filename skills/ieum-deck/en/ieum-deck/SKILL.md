@@ -168,6 +168,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + The number style numbers a note group with two or more items in order from 1)
     + In the number style, a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
     + In the number style, the source line starts with "출처:"
+    + In the number style, the build also replaces any remaining ※ (lines starting with ※ get the marks above, "(※ 시안)" in a title becomes "(시안)")
     + Change the label text with footnoteLabel and sourceLabel in `meta.labels.common`
 
 ## Company facts

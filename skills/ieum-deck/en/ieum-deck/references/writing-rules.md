@@ -112,12 +112,11 @@
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
-- Notes and sources start with the `meta.footnoteStyle` mark (the build adds it to note-type slots, footnotes and source; notes written directly in body cells get the deck mark such as ※ or "참조:" by hand)
+- Notes and sources start with the `meta.footnoteStyle` mark (the build adds it to note-type slots, footnotes and source; notes written directly in body cells get ※ by hand, and in a number-style deck the build turns ※ into the deck mark)
 - Use ※ only for evidence, sources, premises and caveats
-- Mark drafts or examples inside titles and labels in parentheses without ※ (e.g. Measured sample (draft))
 - Put evidence and caveats in note slots or footnotes to use the mark the build adds
 - ※ paragraphs in sample slides are example positions
-    + Used as a note, start it with the deck note mark (※ or "참조:")
+    + Used as a note, start it with ※
     + Used as a normal item, write it without ※
 - Shortened body sentences, item descriptions and labels have no ※ and use the font size of their tier
 - All bullets in one box use the same font size
