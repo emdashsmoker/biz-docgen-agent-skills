@@ -142,6 +142,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 ## Kickoff question items
 
+- Present every choice of a choice item and mark the default with "(default)"
+    + (Reason) The user chooses only among the choices the question shows
+    + (Choice description) Describe in one line what each choice changes in the output. Keep setting keys and build behavior out of the question text
+    + Write any item that does not fit in the question tool in the response body with all of its choices
+
 1. (Output type) Proposal deck conversion, proposal deck new, report meeting deck (kickoff, interim, final), report-style PPT, briefing deck, general planning PPT
 2. (Execution structure) The output type sets the default structure, so confirm only for documents not in the list of the execution structure selection section
 3. (Subject term) Choose from 본 과업, 본 연구, 본 과제, 본 사업, 본 프로젝트, 본 보고서. If the RFP uses a term, use the RFP term
@@ -164,10 +169,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 17. (Note style) ※ mark (default) or numbers. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as mark or number
-    + The ※ mark style puts ※ before each note item and the source line
-    + The number style numbers a note group with two or more items in order from 1)
-    + In the number style, a note group with a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
-    + In the number style, the source line starts with "출처:"
+    + (※ mark) Puts ※ before each note item and the source line
+    + (Numbers) Numbers a note group with two or more items in order from 1). A note group with a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark). The source line starts with "출처:"
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
     + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
