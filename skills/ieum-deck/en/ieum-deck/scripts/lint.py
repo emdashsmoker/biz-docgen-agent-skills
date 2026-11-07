@@ -30,7 +30,7 @@ Checks
 - Empty table cells: WARN if a leading category column has 2 or more empty cells without merged
 - Duplicate prefixes: WARN for a STEP prefix in steps titles or an M/Module prefix in process module names
 - Number notation: WARN without a space after the number ("1.목차" → "1. 목차"), WARN if secNo has no period
-- Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:", "Note:" or a token added with meta.labels.notation.source (※ on note-type slots and source is added by the build, so they are not checked)
+- Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:", "Note:" or a token added with meta.labels.notation.source (※ on note-type slots and source is added by the build, so they are not checked. The slide footnoteLabel and sourceLabel are label settings like meta.labels.common, so they are not checked)
 - Module notation: WARN if section titles and contents items use the "Module N." format ([Module N] recommended)
 - Subject term: WARN for mixed subject terms, 과업 left after changing the subject term, engagement labels left in non-proposal outputs, and "본 기획"
 - Leader titles: WARN if the titles of the overall leader and quality leader are mixed within one deck
@@ -805,7 +805,9 @@ def lint(story, ledger=None, story_path=".", layout=None):
     extra_note = re.compile(r"^\s*(?:" + "|".join(re.escape(t) for t in extra) + r")\s*[:：]") if extra else None
     for sl in slides:
         for k, v in texts_of(sl):
-            if k in ("note", "notes", "source", "caption", "footnotes"): continue  # Note slots are fine
+            # The slide footnoteLabel and sourceLabel are label settings like meta.labels.common, so only this check skips them
+            # Not removed in texts_of(): the em dash and placeholder checks still apply to labels (same rule as the meta.labels em dash check in label_checks)
+            if k in ("note", "notes", "source", "caption", "footnotes", "footnoteLabel", "sourceLabel"): continue  # Note slots are fine
             if isinstance(v, str) and (re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v) or (extra_note and extra_note.match(v))):
                 warns.append(f"[{sl.get('id')}] note mark in a body item ('{v[:16]}') → moving it to a note slot or source is recommended")
                 break
