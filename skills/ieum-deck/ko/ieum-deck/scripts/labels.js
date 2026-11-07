@@ -52,9 +52,12 @@ function format(tpl, vars) {
 function language() {
   return { latin: label("language", "latin"), east_asia: label("language", "east_asia") };
 }
-/** meta.labels.notation.source 로 추가한 주석 토큰("토큰:" 형태)으로 시작하는지 여부. 기본 토큰(※, 출처:, 자료:, Source:, Note:)은 각 조판 규칙이 판정 */
+/** meta.labels.notation.source 로 추가한 주석 토큰("토큰:" 형태)이나 번호 표기 라벨(common.footnoteLabel, sourceLabel)로 시작하는지 여부
+ *  기본 토큰(※, 출처:, 자료:, Source:, Note:)은 각 조판 규칙이 판정
+ *  Why: 번호 표기 덱에서 작성자가 본문 칸이나 커스텀 슬라이드에 직접 쓴 "참조:" 줄도 주석으로 조판 */
 function isExtraNote(text) {
-  return !!notePattern && notePattern.test(String(text));
+  const t = String(text).trim();
+  return (!!notePattern && notePattern.test(t)) || ["footnoteLabel", "sourceLabel"].some((k) => t.startsWith(label("common", k)));
 }
 
 module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote };

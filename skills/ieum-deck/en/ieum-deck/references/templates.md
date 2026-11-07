@@ -148,6 +148,8 @@
 |---|---|---|
 | common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | Key Point |
 | common | company (the slide company and meta.company take precedence) | 회사명 |
+| common | footnoteLabel (replaces the number when a note group in a number-style deck has one item; the slide footnoteLabel takes precedence) | 참조: |
+| common | sourceLabel (before the source line of a number-style deck and a single note item that starts with a source mark; the slide sourceLabel takes precedence) | 출처: |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |
@@ -195,7 +197,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key Point", "company": "Company name"},
+ "common": {"pointLabel": "Key Point", "company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

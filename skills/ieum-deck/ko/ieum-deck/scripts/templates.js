@@ -88,7 +88,7 @@ function bulletParas(list, o, sz) {
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // ※ 나 출처로 시작하는 줄은 주석이므로 불릿을 붙이지 않고 작은 회색으로 표기
     // "자료 수집" 같은 일반 항목과 구분하도록 출처와 자료는 콜론이 붙은 경우만 주석으로 판정 (영문 Source, Note 도 같은 기준)
-    // meta.labels.notation.source 로 추가한 토큰("토큰:")도 주석으로 인식
+    // meta.labels.notation.source 로 추가한 토큰("토큰:")과 번호 표기 라벨(common.footnoteLabel, sourceLabel)도 주석으로 인식 (LB.isExtraNote)
     const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
     if (isNote) {
       paras.push({ bullet: false, indent: 0, marL: 0, align: "left", spcBef: o.gapPt || T.PARA.paraGapPt,
@@ -538,18 +538,33 @@ function calloutW(ctx, text, w0, maxW) {
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
   return w;
 }
-/** 주석 문자열 앞에 ※ 를 붙임 (출처, ※, * 로 시작하면 그대로 둠) */
-function noteText(v, joiner) {
-  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim());
-  if (joiner === "; ") return `※ ${arr.map((x) => x.replace(/^※\s*/, "")).join("; ")}`;
-  // 출처와 자료로 시작해도 ※ 를 앞에 붙임 (당구장 기호 누락 방지)
-  return arr.map((x) => (/^(※|\*)/.test(x) ? x : `※ ${x}`)).join("\n");
+/** 덱의 주석 표기(meta.footnoteStyle)와 번호 표기 라벨. 라벨은 슬라이드 footnoteLabel, sourceLabel, meta.labels.common, 기본값 순 */
+function noteStyle(ctx) {
+  const sb = ctx.sb || {};
+  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) } };
+}
+/** 상자 아래 주석 문자열. 덱의 주석 표기를 붙여 줄바꿈으로 이음 (표기 규칙은 atoms.noteLines) */
+function noteText(ctx, v) {
+  const { style, labels } = noteStyle(ctx);
+  return A.noteLines(v, style, labels).join("\n");
+}
+/** 출처 행 문자열. ※ 기호 덱은 "※ A; B", 번호 표기 덱은 항목마다 ※ 와 출처 표기를 떼고 출처 라벨 1개 뒤에 이음 (예: "출처: A; B") */
+function sourceText(ctx, v) {
+  const { style, labels } = noteStyle(ctx);
+  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));
+  if (style !== "number") return `※ ${arr.join("; ")}`;
+  const unmark = (x) => {
+    const s = x.replace(A.SOURCE_MARK, "");
+    return s.startsWith(labels.source) ? s.slice(labels.source.length).trim() : s;
+  };
+  return `${labels.source} ${arr.map(unmark).filter(Boolean).join("; ")}`;
 }
 function source(ctx, slide, sb) {
-  A.footnotes(slide, ctx.S, sb.footnotes);
+  const { style, labels } = noteStyle(ctx);
+  A.footnotes(slide, ctx.S, sb.footnotes, style, labels);
   if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, sourceText(ctx, sb.source), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative 태그: 회전 -27도 테두리 상자
@@ -667,7 +682,7 @@ function purpose(ctx, slide, sb) {
     // 근거 상자는 주석 높이(noteH)를 뺀 높이로 잡았으므로 주석은 리드 칸 안에 들어감
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
     if (notes.length) A.text(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH },
-      noteText(notes),
+      noteText(ctx, notes),
       { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
   });
   label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, LB.label("purpose", "purposeHead", s.purposeHead), { sz: T.SIZE.body });
@@ -1169,7 +1184,7 @@ function roadmap(ctx, slide, sb) {
       slide.addText(A.runsOf(A.parasFromString(t.text, { sz: T.SIZE.tableDense, color: T.COLOR.textDark, align: "left" })), { ...bx, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: 0.5 }, valign: "middle", margin: A.boxMargin([0.06, 0.01, 0.06, 0.01]), isTextBox: true, autoFit: false });
     });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
+  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
   source(ctx, slide, sb);
 }
 /** 간트: 구분, 과업 열 + 월별 주 격자. slots: {months:N, weeks:4, groups:[{name, tasks:[{name, from, to}]}], reports:[{name, at}], groupHead, taskHead, reportHead} */
@@ -1298,7 +1313,7 @@ function org(ctx, slide, sb) {
     // 분담 문구는 본문 정보이므로 본문 하한(11pt)으로 조판 (10pt 는 check_layout 이 주석 크기로 판정)
     if (t.share) A.text(slide, { x: c.x, y: bd.y + bd.h, w: c.w, h: 0.28 }, t.share, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "center" });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
+  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
   source(ctx, slide, sb);
 }
 
@@ -1600,6 +1615,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, noteStyle, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

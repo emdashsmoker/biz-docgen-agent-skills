@@ -17,6 +17,7 @@
 | pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
+| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. mark(주석 항목과 출처 행 앞에 ※, 기본), number(주석 묶음의 항목 2개 이상은 1) 부터 번호, 1개는 common.footnoteLabel, 출처 표기로 시작하는 1개와 출처 행은 common.sourceLabel). 덱 전체에 적용 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
@@ -56,6 +57,7 @@
 | tintNavy, tintHead, tintBg | 피라미드 4-5층, 머리 칸, 배경 틴트 | 본문 글자색 | 4.5 |
 | textMuted | AS-IS 머리 칸, 일정 막대, 출처와 각주와 축 양끝 표기의 글자색 | 흰색 (글자색으로 쓸 때는 흰 바탕) | 4.5 |
 
+- 차트 계열이나 원형 조각이 차트 팔레트 색 수보다 많으면 빌드가 팔레트의 첫 색과 끝 색 사이를 같은 간격으로 나누어 색을 배정
 - 매트릭스 초점 사분면과 tint 채움에 color navy 를 지정한 격자 칸은 tintHead 채움 위에 navy 글자를 얹음
 - navy 와 tintHead 의 대비가 4.5 미만이면 두 요소를 그린 슬라이드에 빌드 경고 (색은 지정값 유지)
 
@@ -72,8 +74,9 @@
 | marker | 마커 텍스트. 30자(한글 환산) 초과는 lint FAIL. 값을 비우면 마커 도형도 생략 |
 | bandMode | 밴드 모드의 강제 지정. full(기본), noMarker, headerOnly, blank |
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |
-| source | 출처 행. 문자열 또는 배열 |
-| footnotes | 각주 배열. 1), 2) 번호를 자동 부여하여 출처 행 위에 배치 |
+| source | 출처 행. 문자열 또는 배열. 번호 표기 덱은 항목 앞의 ※ 와 출처 표기(출처:, 자료:, Source:)를 떼고 common.sourceLabel 1개로 시작 |
+| footnotes | 각주 배열. `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙여 출처 행 위에 배치. 항목 앞에 직접 쓴 ※, 번호, 라벨은 덱 기준 표기로 교체 |
+| footnoteLabel, sourceLabel | 번호 표기 덱에서 이 슬라이드에 쓸 주석 라벨과 출처 라벨. `meta.labels.common` 보다 우선 (※ 기호 덱은 쓰지 않음) |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
 | rfpTasks, moduleTasks, evalItems | 대응 ID 목록. lint 가 전수 대응과 배점 귀속을 검사 |
 | allowCount | RFP 가 지정한 개수를 헤드라인에 쓸 때 true (숫자 선언 검사 예외) |

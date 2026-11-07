@@ -100,6 +100,7 @@
     + Write slot text without symbols such as "-" or "·" (the builder typesets bullets)
     + Write steps titles without prefixes such as "STEP 1." (set stepLabel to "" if no prefix is needed)
     + A grid cell that carries inherited numbering (1-1.) sets numbered so the number replaces the bullet
+    + Write note and footnotes items without ※ or a mark such as "1)" or "참조:" (the mark comes from `meta.footnoteStyle` and the label text from the slide footnoteLabel and sourceLabel or `meta.labels.common`)
     + Write process module names without numbers such as "M1" (the module number goes in the id field)
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
@@ -111,9 +112,9 @@
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
-- Notes and sources start with ※ (the build attaches it automatically to source and note-type slots, and notes written directly in body cells get it by hand)
+- Notes and sources start with the `meta.footnoteStyle` mark (the build adds it to note-type slots, footnotes and source; notes written directly in body cells get ※ by hand, and in a number-style deck the build turns ※ into the deck mark)
 - Use ※ only for evidence, sources, premises and caveats
-- Put evidence and caveats in note slots or footnotes to use the automatic ※
+- Put evidence and caveats in note slots or footnotes to use the mark the build adds
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
     + Used as a normal item, write it without ※
@@ -123,6 +124,26 @@
 - Module section titles use the `[Module 1] 모듈명` format (to avoid clashing with the period after the section number)
 - Task markers use the `Task 2. Task명` format
 - Module items in organization charts and the table of contents also use the `[Module 1] 모듈명` format
+
+## Notes
+
+- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments and scope in the body correctly
+    + (Figures) Calculation basis such as formula, unit, reference date or conversion basis
+    + (Terms) Definitions of terms, abbreviations or symbols unfamiliar to readers
+    + (Judgments) Grounds such as the governing law or a higher-level guideline
+    + (Scope) Conditions under which the content holds, such as assumptions, scope, exceptions, or whether figures are examples or provisional
+- Write content that forms the body message in the body
+- Write the material that figures and facts come from in `source`
+- Write each note item as a simple sentence with one subject-predicate pair and avoid complex sentences (simple refers to sentence structure, not length)
+- Merge caveats on the same target into one item
+- A note that supplements a specific word or figure names its target in the note (e.g. "TTL stands for Travel, transport, and logistics")
+- Compose note items without duplication or omission
+- Do not repeat in a note what the headline, body or Key Point band already says
+- Keep the number of notes per slide to the minimum the body needs
+    + (※ mark) Write one item by default. Stacked ※ lines stand out more than the body, so use two or more items when caveats on different targets are needed together
+    + (Numbers) Apply the same minimum. With two or more items the build tells them apart by number
+    + These counts are common practice and do not fit every slide, so judge from the content and context of the slide instead of applying them mechanically
+- When caveats cannot be cut further, consider moving them into a table or box in the body before adding notes
 
 ## Tables
 

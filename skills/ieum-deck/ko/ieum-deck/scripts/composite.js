@@ -32,7 +32,7 @@ const CELL_GAP_H = 0.14; // 일반 격자 칸 사이 가로 간격 (테두리 �
 const GRID_FLOW_GAP = 0.46; // flow 격자의 열 사이 간격 (오른쪽 화살표 폭 0.28과 좌우 여백)
 const STEP_GAP = 0.26, STEP_GAP_MAX = 0.5; // 세로 단계 사이 화살표 간격과 상한
 const FLOW_GAP = 0.42, FLOW_GAP_MAX = 0.6; // 흐름 상자 사이 화살표 간격과 상한
-const NOTE_H = 0.26; // 영역 주석(※) 높이
+const NOTE_H = 0.26; // 영역 주석 높이
 const CELL_SNAP = 0.3; // 표 칸이 이웃 칸보다 이만큼 이하로 짧으면 행 높이를 늘려 위아래 끝을 맞춤
 const BOTTOM_BAND_H = 0.5; // 결론 밴드와 Key Point 높이
 const BOTTOM_GAP = 0.2;
@@ -811,7 +811,7 @@ BLOCKS.numbers = (ctx, H, slide, box, k) => {
     const y = c.y + Math.max(0.04, (c.h - block) / 2);
     A.text(slide, { x: c.x, y, w: c.w, h: vh }, String(it.value || ""), { sz: vsz, bold: true, color: T.COLOR.navy, align: "center", mg: [0, 0, 0, 0] });
     A.text(slide, { x: c.x + 0.06, y: y + vh, w: c.w - 0.12, h: 0.32 }, it.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, it.note, { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
+    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, H.noteText(ctx, it.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
   });
 };
 
@@ -1721,7 +1721,7 @@ function composite(ctx, slide, sb, H) {
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
         else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
       }
-      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, /^\s*(※|\*)/.test(rg.note) ? rg.note : `※ ${rg.note}`, { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, H.noteText(ctx, rg.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;
       const nSum = measured ? needs.reduce((a, v) => a + v, 0) : 0;
       const growSum = measured ? caps.reduce((a, v, j) => a + Math.max(0, v - needs[j]), 0) : 0;

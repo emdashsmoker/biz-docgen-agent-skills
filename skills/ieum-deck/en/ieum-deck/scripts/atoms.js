@@ -314,6 +314,28 @@ function lineOpt(ln, fallbackPt) {
 }
 
 // ---------------------------------------------------------------- Text run list conversion
+let NOTE_STYLE = null; // { labels } in a number-style deck (set by build.js from meta.footnoteStyle). null in a ※ mark deck
+/** Sets the deck note style. With number, runsOf turns the ※ the author wrote into number-style marks */
+function setNoteStyle(style, labels) { NOTE_STYLE = style === "number" ? { labels } : null; }
+const LEAD_MARK = /^\s*※/;
+/** Paragraph conversion for a number-style deck. Consecutive paragraphs starting with ※ are a note group and get the noteLines marks; a ※ inside a sentence is removed (e.g. "(※ 시안)" → "(시안)")
+ *  Why: makes ※ that does not pass through the note functions (custom slide text, notes written in body cells, draft marks in titles) follow the style chosen at kickoff */
+function numberStyleParas(paras, labels) {
+  const textOf = (p) => (p.runs || []).filter((r) => !r.br).map((r) => r.t).join("");
+  const out = paras.map((p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) }));
+  for (let i = 0; i < out.length;) {
+    if (!LEAD_MARK.test(textOf(out[i]))) { i += 1; continue; }
+    let j = i;
+    while (j < out.length && LEAD_MARK.test(textOf(out[j]))) j += 1;
+    const group = out.slice(i, j);
+    const lines = noteLines(group.map(textOf), "number", labels);
+    // If an empty ※ paragraph changes the line count, only the ※ removal below applies instead of group numbering
+    if (lines.length === group.length) group.forEach((p, k) => { const r0 = p.runs.find((r) => !r.br) || {}; p.runs = [{ ...r0, t: lines[k] }]; });
+    i = j;
+  }
+  out.forEach((p) => p.runs.forEach((r) => { if (r.t) r.t = r.t.replace(/※\s*/g, ""); }));
+  return out;
+}
 /**
  * paras: [{align, bullet, buChar, lvl, marL, indent, spcBef, spcAft, lnSpc, runs:[{t,sz,b,color,u,br}]}]
  * → pptxgenjs text array. Paragraph properties go on the first run of the paragraph
@@ -321,8 +343,9 @@ function lineOpt(ln, fallbackPt) {
 function runsOf(paras, defaults) {
   const out = [];
   const d = defaults || {};
-  paras.forEach((p, pi) => {
-    const last = pi === paras.length - 1;
+  const src = NOTE_STYLE ? numberStyleParas(paras, NOTE_STYLE.labels) : paras;
+  src.forEach((p, pi) => {
+    const last = pi === src.length - 1;
     const pOpt = {};
     if (p.align) pOpt.align = p.align;
     if (p.bullet) {
@@ -698,6 +721,11 @@ function rampBetween(from, to, n) {
   const [a, b] = [rgb(from), rgb(to)];
   return Array.from({ length: n }, (_, k) => a.map((v, j) => Math.round(v + ((b[j] - v) * k) / (n - 1)).toString(16).padStart(2, "0")).join("").toUpperCase());
 }
+/** Colors for n categories. Up to the palette size, the first palette colors; above it, n colors spaced evenly between the first and last palette color
+ *  Why: cycling the palette sends the 5th category back to the 1st category color, so pie slices, bar series and line series repeat a color */
+function categoryColors(palette, n) {
+  return n <= palette.length ? palette.slice(0, n) : rampBetween(palette[0], palette[palette.length - 1], n);
+}
 function chart(pres, slide, box, spec) {
   const ctype = { bar: pres.ChartType.bar, line: pres.ChartType.line, pie: pres.ChartType.pie, doughnut: pres.ChartType.doughnut, area: pres.ChartType.area }[spec.type] || pres.ChartType.bar;
   let cats = (spec.categories || []).map(String);
@@ -705,7 +733,7 @@ function chart(pres, slide, box, spec) {
   if (!series.length) series = [{ name: "", labels: cats, values: cats.map(() => 0) }];
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
-    chartColors: series.length > 1 ? T.COLOR.navyRamp : [T.COLOR.navyPastel],
+    chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
     showValue: true, dataLabelFontSize: T.SIZE.tableDense, dataLabelColor: T.COLOR.textDark, dataLabelFontFace: T.FONT.regular,
     dataLabelFormatCode: spec.numFmt || undefined, valAxisLabelFormatCode: spec.numFmt || undefined,
     catAxisLabelFontSize: T.SIZE.tableDense, catAxisLabelFontFace: T.FONT.regular, catAxisLabelColor: T.COLOR.textDark,
@@ -729,10 +757,7 @@ function chart(pres, slide, box, spec) {
       opt.barGrouping = spec.grouping; opt.dataLabelPosition = "ctr";
       // Labels inside segments use one dark text color, so drop the darkest navy and use only the lighter colors
       // With more series than light colors, space colors evenly between the darkest and lightest light color (the background tint is not used as a series color because it does not stand out from white)
-      if (series.length > 1) {
-        const light = T.COLOR.navyRamp.slice(1);
-        opt.chartColors = series.length > light.length ? rampBetween(light[0], light[light.length - 1], series.length) : light;
-      }
+      if (series.length > 1) opt.chartColors = categoryColors(T.COLOR.navyRamp.slice(1), series.length);
     }
     // With negative bars, the zero baseline must show for the direction of change to read, so show the category axis line
     if (series.some((sr) => sr.values.some((v) => v < 0))) {
@@ -752,7 +777,7 @@ function chart(pres, slide, box, spec) {
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
-    opt.chartColors = series[0].values.map((_, i) => T.COLOR.navyRamp[i % T.COLOR.navyRamp.length]);
+    opt.chartColors = categoryColors(T.COLOR.navyRamp, series[0].values.length);
     opt.showLegend = true; opt.legendPos = "r";
     // WHY: pptxgenjs allows only one label color per chart. White text inside segments is unreadable on light segments,
     //      so labels go outside the segments in dark text
@@ -760,7 +785,7 @@ function chart(pres, slide, box, spec) {
     opt.dataLabelColor = T.COLOR.textDark;
     if (spec.type === "doughnut") { opt.holeSize = spec.holeSize || 78; opt.showLegend = false; opt.showPercent = false; opt.showValue = false; opt.showLabel = false; } // A separate text box carries the center figure text
   }
-  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = [T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2]; opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
+  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
   slide.addChart(ctype, series, opt);
 }
 
@@ -879,12 +904,32 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-/** Footnote list. Placed above the source line at the slide bottom in the 1) 2) format */
-function footnotes(slide, S, items) {
-  const arr = [].concat(items || []).filter(Boolean);
-  if (!arr.length) return;
-  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: /^\d+\)/.test(String(t).trim()) ? String(t) : `${i + 1}) ${t}`, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
-  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
+const NOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a note
+const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // source mark the author wrote before a source
+/** Lines of one note group. Shared by slide footnotes, notes under boxes and number card notes
+ *  style is meta.footnoteStyle. mark puts ※ on each item (a line starting with * is kept as the author's mark paired with a spot in the body)
+ *  number numbers two or more items 1) 2) and gives a single item labels.note (labels.source when it starts with a source mark)
+ *  Why: removing the author's ※, number or label and adding the deck mark again keeps one note style in a deck wherever the note sits
+ *       A single item has no other item to tell apart, so a content type label replaces the number */
+function noteLines(items, style, labels) {
+  const lb = labels || {};
+  const unmark = (t) => {
+    const s = t.replace(NOTE_LEAD, "");
+    return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
+  };
+  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
+  if (style !== "number") return raw.map((t) => (t.startsWith("*") ? t : unmark(t))).filter(Boolean).map((t) => (t.startsWith("*") ? t : `※ ${t}`));
+  const arr = raw.map(unmark).filter(Boolean);
+  if (arr.length !== 1) return arr.map((t, i) => `${i + 1}) ${t}`);
+  const src = arr[0].match(SOURCE_MARK);
+  return [src ? `${lb.source} ${arr[0].slice(src[0].length)}` : `${lb.note} ${arr[0]}`];
+}
+/** Footnote list. Placed above the source line at the slide bottom (marks follow noteLines) */
+function footnotes(slide, S, items, style, labels) {
+  const lines = noteLines(items, style, labels);
+  if (!lines.length) return;
+  const paras = lines.map((t) => ({ align: "left", runs: [{ t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
+  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * lines.length, w: S.bodyW, h: 0.2 * lines.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {
   text(slide, S.pageNo, String(n), { sz: T.SIZE.pageNo, color: T.COLOR.textGray, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
@@ -1350,4 +1395,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteLines, SOURCE_MARK, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

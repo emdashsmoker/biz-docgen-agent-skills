@@ -159,6 +159,7 @@ def main():
     prs = Presentation(args[0])
     record = _build_record(args[0])
     own_slides = set(record.get("ownSlides") or [])
+    note_labels = tuple(str(t) for t in record.get("noteLabels") or [] if str(t).strip())  # labels before footnotes and the source line in a number-style deck (build.json noteLabels)
     OWN_SMALL = _own_small_boxes(record)
     # Add the theme colors in the build record (custom themes included) to the allowed table cell colors
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
@@ -196,7 +197,7 @@ def main():
                         txt_all = tf.text.strip()
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # Text starting with ※ already carries the note mark, so its use needs no check
-                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all))  # includes footnote numbers 1) 2)
+                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # includes footnote numbers 1) 2) and the labels of a number-style deck (참조: etc.)
                         own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True

@@ -159,6 +159,7 @@ def main():
     prs = Presentation(args[0])
     record = _build_record(args[0])
     own_slides = set(record.get("ownSlides") or [])
+    note_labels = tuple(str(t) for t in record.get("noteLabels") or [] if str(t).strip())  # 번호 표기 덱의 각주와 출처 행 앞 라벨 (build.json noteLabels)
     OWN_SMALL = _own_small_boxes(record)
     # 빌드 기록의 테마 색(사용자 지정 테마 포함)을 표 셀 허용 색에 더함
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
@@ -196,7 +197,7 @@ def main():
                         txt_all = tf.text.strip()
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # ※ 로 시작하면 주석 표기가 이미 붙어 있으므로 용도 확인 대상이 아님
-                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all))  # 각주 번호 1) 2) 포함
+                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # 각주 번호 1) 2) 와 번호 표기 덱의 라벨(참조: 등) 포함
                         own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True
