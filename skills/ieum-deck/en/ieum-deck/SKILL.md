@@ -169,7 +169,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In the number style, a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
     + In the number style, the source line starts with "출처:"
     + In the number style, the build also replaces any remaining ※ (lines starting with ※ get the marks above, "(※ 시안)" in a title becomes "(시안)")
-    + Change the label text with footnoteLabel and sourceLabel in `meta.labels.common`
+    + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
 
 ## Company facts
 
@@ -538,6 +538,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Keep id, template, slot keys and placeholders as they are
 - Source and note lines starting with "Source:" or "Note:" are recognized the same way as "출처:" and "자료:"
     + Add note tokens of other languages in `meta.labels.notation.source` (the built-in tokens stay)
+- In a number-style deck, also set the note labels (footnoteLabel and sourceLabel in `meta.labels.common`) in English (e.g. "Note:", "Source:")
 - Headline and marker character limits are checked in Hangul-equivalent characters (about twice as many English characters fit in the same width)
 - English names and English staffing tables are recognized as described in `references/storyboard-schema.md`
 - In the visual review, check that no slide still shows a Korean default label

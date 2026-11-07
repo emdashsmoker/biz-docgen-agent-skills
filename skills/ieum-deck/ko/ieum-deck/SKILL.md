@@ -156,7 +156,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 번호 표기에서 항목이 1개이면 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 항목은 "출처:")
     + 번호 표기의 출처 행은 "출처:" 로 시작
     + 번호 표기에서는 빌드가 남은 ※ 도 바꿈 (※ 로 시작하는 줄은 위 표기, 제목 안 "(※ 시안)" 은 "(시안)")
-    + 라벨 문구는 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
+    + 라벨 문구(기본 "참조:", "출처:")는 발주기관 관행(예: "주:", "자료:")이나 문서 언어(예: "Note:", "Source:")에 맞춰 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
 
 ## 회사 사실 정보
 
@@ -525,6 +525,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + id, template, 슬롯 키, 자리 표기는 그대로 유지
 - 출처와 주석 줄은 "Source:", "Note:" 로 시작해도 "출처:", "자료:" 와 같이 인식
     + 다른 언어의 주석 토큰은 `meta.labels.notation.source` 에 추가 (기본 토큰은 유지)
+- 번호 표기 덱은 주석 라벨(`meta.labels.common` 의 footnoteLabel, sourceLabel)도 영문으로 지정 (예: "Note:", "Source:")
 - 헤드라인과 마커의 글자 수 상한은 한글 환산 글자 수로 검사 (영문은 같은 폭에 약 2배 글자가 들어감)
 - 영문 성명과 영문 투입인력표의 인식 기준은 `references/storyboard-schema.md` 를 따름
 - 시각 검수에서 한국어 기본 라벨이 남은 슬라이드가 없는지 확인
