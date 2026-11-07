@@ -549,7 +549,7 @@ function noteText(ctx, v) {
   const { style, labels } = noteStyle(ctx);
   return A.noteLines(v, style, labels).join("\n");
 }
-/** Source line string. "※ A; B" in a ※ mark deck; in a number-style deck, removes ※ and the source mark from each item and joins them after one source label (e.g. "출처: A; B") */
+/** Source line string. "※ A; B" in a ※ mark deck; in a number-style deck, removes ※ and the source mark from each item and joins them after one source label (e.g. "Source: A; B") */
 function sourceText(ctx, v) {
   const { style, labels } = noteStyle(ctx);
   const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));

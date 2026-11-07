@@ -197,7 +197,7 @@ def main():
                         txt_all = tf.text.strip()
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # Text starting with ※ already carries the note mark, so its use needs no check
-                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # includes footnote numbers 1) 2) and the labels of a number-style deck (참조: etc.)
+                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # includes footnote numbers 1) 2) and the labels of a number-style deck (Note: etc.)
                         own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True

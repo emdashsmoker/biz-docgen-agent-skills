@@ -197,7 +197,7 @@ def main():
                         txt_all = tf.text.strip()
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # ※ 로 시작하면 주석 표기가 이미 붙어 있으므로 용도 확인 대상이 아님
-                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # 각주 번호 1) 2) 와 번호 표기 덱의 라벨(참조: 등) 포함
+                        note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # 각주 번호 1) 2) 와 번호 표기 덱의 라벨(Note: 등) 포함
                         own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True

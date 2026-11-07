@@ -157,11 +157,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 글자 단위는 줄 끝 글자에서 줄을 바꾸므로 단어 중간 줄바꿈을 허용
 17. (주석 표기) ※ 기호(기본) 또는 번호. 덱 전체의 각주, 상자 아래 주석, 출처 행 등에 적용. 선택 값은 `meta.footnoteStyle` 에 mark 나 number 로 기록
     + (※ 기호) 주석 항목과 출처 행 앞에 ※ 를 붙임
-    + (번호) 같은 위치의 주석이 2개 이상이면 1) 부터 차례로 번호를 붙임. 주석이 1개이면 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 주석은 "출처:"). 출처 행은 "출처:" 로 시작
-    + (번호 선택지의 라벨) 질의에서는 "참조:" 와 "출처:" 를 번호 선택지 설명 안에 라벨별 사용 위치와 함께 기재 (예: 주석이 1개인 위치는 "참조:", 출처 행은 "출처:")
+    + (번호) 같은 위치의 주석이 2개 이상이면 1) 부터 차례로 번호를 붙임. 주석이 1개이면 번호 대신 "Note:" 를 붙임 (출처 표기로 시작하는 주석은 "Source:"). 출처 행은 "Source:" 로 시작
+    + (번호 선택지의 라벨) 질의에서는 "Note:" 와 "Source:" 를 번호 선택지 설명 안에 라벨별 사용 위치와 함께 기재 (예: 주석이 1개인 위치는 "Note:", 출처 행은 "Source:")
     + 번호 표기 덱에서는 커스텀 슬라이드 원문, 본문 칸, 제목 등에 직접 쓴 ※ 도 빌드가 변환 (※ 로 시작하는 줄은 위 번호나 라벨로 교체. 문장 중간의 ※ 는 삭제. 예: "(※ 시안)" → "(시안)")
-    + 라벨 문구(기본 "참조:", "출처:")는 발주기관 관행(예: "주:", "자료:")이나 문서 언어(예: "Note:", "Source:")에 맞춰 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
-    + 일부 슬라이드에만 다른 라벨이 필요하면 해당 슬라이드의 footnoteLabel 과 sourceLabel 에 지정 (덱 라벨보다 우선. 예: 덱 라벨이 "참조:" 일 때 주석이 단서 성격인 슬라이드만 "주:")
+    + 라벨 문구(기본 "Note:", "Source:")는 발주기관 관행(예: "주:", "자료:")이나 한글 표기(예: "참조:", "출처:")에 맞춰 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
+    + 일부 슬라이드에만 다른 라벨이 필요하면 해당 슬라이드의 footnoteLabel 과 sourceLabel 에 지정 (덱 라벨보다 우선. 예: 덱 라벨이 "Note:" 일 때 주석이 단서 성격인 슬라이드만 "주:")
 
 ## 회사 사실 정보
 
@@ -477,6 +477,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
 - 근거, 단서, 전제 등은 `note` 나 `footnotes` 에 기재 (항목 앞의 ※, 번호, 라벨은 빌드가 `meta.footnoteStyle` 에 맞춰 붙임)
 - 출처 행과 주석에서 인용하는 자료는 독자가 직접 찾아볼 수 있는 외부 자료로 구성 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 출처로 기재하지 않음)
+- 출처 항목은 `기관명(연도), 자료명` 형식으로 표기
 - 강조 어구 1곳은 `accent` 필드에 지정
 
 ### 대상 지칭어
@@ -530,7 +531,6 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + id, template, 슬롯 키, 자리 표기는 그대로 유지
 - 출처와 주석 줄은 "Source:", "Note:" 로 시작해도 "출처:", "자료:" 와 같이 인식
     + 다른 언어의 주석 토큰은 `meta.labels.notation.source` 에 추가 (기본 토큰은 유지)
-- 번호 표기 덱은 주석 라벨(`meta.labels.common` 의 footnoteLabel 과 sourceLabel)도 영문으로 지정 (예: "Note:", "Source:")
 - 헤드라인과 마커의 글자 수 상한은 한글 환산 글자 수로 검사 (영문은 같은 폭에 약 2배 글자가 들어감)
 - 영문 성명과 영문 투입인력표의 인식 기준은 `references/storyboard-schema.md` 를 따름
 - 시각 검수에서 한국어 기본 라벨이 남은 슬라이드가 없는지 확인

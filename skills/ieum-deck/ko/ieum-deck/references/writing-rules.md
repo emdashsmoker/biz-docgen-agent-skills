@@ -98,7 +98,7 @@
     + 슬롯 텍스트는 "-" 나 "·" 같은 기호 없이 작성 (불릿은 빌더가 조판)
     + steps 의 title 은 "STEP 1." 같은 접두 없이 작성 (접두가 필요 없으면 stepLabel 을 "")
     + 번호 계승(1-1.)을 적는 grid 칸은 numbered 를 지정하여 번호가 불릿을 대신하게 함
-    + note 와 footnotes 항목은 ※, "1)", "참조:" 같은 표기 없이 작성 (표기 방식은 `meta.footnoteStyle`, 라벨 문구는 슬라이드 footnoteLabel 과 sourceLabel 또는 `meta.labels.common` 에서 지정)
+    + note 와 footnotes 항목은 ※, "1)", "Note:" 같은 표기 없이 작성 (표기 방식은 `meta.footnoteStyle`, 라벨 문구는 슬라이드 footnoteLabel 과 sourceLabel 또는 `meta.labels.common` 에서 지정)
     + process 의 모듈명은 "M1" 같은 번호 없이 작성 (모듈 번호는 id 필드)
     + 마커가 있는 슬라이드의 본문 첫 줄은 마커와 다른 내용으로 시작
 - 기호 반복 규칙의 대상은 직접 입력한 기호 (빌더가 그리는 불릿은 유지)
@@ -108,6 +108,7 @@
     + (표 셀) 아래 표 절의 비교 줄 조건이나 표 전체 조건으로 불릿을 추가한 줄은 예외
     + (모듈 개요 슬라이드) 추진과정, 활용자료, 산출물 상자는 예외로 불릿 표기 (두 조건이 늘 성립하는 표로 봄)
 - 같은 계층 항목은 번호와 기호의 유무를 통일
+- 출처 항목은 `기관명(연도), 자료명` 형식으로 표기
 - 출처가 여럿이면 세미콜론으로 이어 한 줄로 표기 (`source` 배열은 자동 결합)
 - 출처(`source`, `factSource`)의 문헌 제목과 자료명은 원문 그대로 인용 (em dash 와 en dash 만 하이픈으로 교체)
 - 주석과 출처는 `meta.footnoteStyle` 의 표기로 시작
