@@ -161,7 +161,7 @@ async function main() {
   T.writeLimits(path.join(__dirname));
   // 커스텀 슬라이드 재생 슬라이드는 원본 글꼴과 폭 흡수 축소를 따르므로 본문 하한 검사에서 제외 (check_layout 이 읽음)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
-  // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout, finalize 가 읽음)
+  // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout 이 읽음)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;

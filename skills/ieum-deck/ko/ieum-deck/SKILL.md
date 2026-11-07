@@ -906,7 +906,7 @@ ieum-deck/
 │   ├── composite.js         composite 템플릿의 격자와 블록
 │   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 재직렬화가 넣은 표 셀 채움 되돌림, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사

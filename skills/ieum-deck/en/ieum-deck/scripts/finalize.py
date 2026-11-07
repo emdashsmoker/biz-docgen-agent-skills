@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import io
 import json
 import os
@@ -524,8 +525,6 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)
         stats["straightened_lines"] = sl
-        xml, cf = fix_table_cell_fills(xml)
-        stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
@@ -705,16 +704,15 @@ def format_metrics(label: str, metrics: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-# Base colors allowed as table cell fills (navy and mono theme colors, tints, grays, white). Table style accent colors added by re-serialization revert to white
-# finalize() adds custom theme colors read from the palette in the build record
-CELL_PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2",
-                "C9CDD8", "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D",
-                "808080", "D9D9D9", "C0392B", "52596C", "EBEBEB", "F8F8F8"}
-
-
 TC_BLOCK = re.compile(r"<a:tc\b[^>]*>.*?</a:tc>", re.S)
 TC_PR_OPEN = re.compile(r"<a:tcPr\b([^>]*?)(/?)>")
 BODY_PR_OPEN = re.compile(r"<a:bodyPr\b([^>]*?)/?>")
+# Cell fill = the fill element that is a direct child of tcPr (noFill, solidFill and others whose names end in Fill). In schema order the borders
+# (lnL, lnR, lnT, lnB, lnTlToBr, lnBlToTr) precede the fill and each border holds its own line color solidFill, so whole border elements are skipped
+CELL_FILL = re.compile(r'<a:tcPr\b[^>]*>(?:<a:(ln\w*)\b(?:[^>]*?/>|.*?</a:\1>))*'
+                       r'(?P<fill><a:(?P<kind>\w+Fill)\b(?:[^>]*?/>|.*?</a:(?P=kind)>))', re.S)
+CELL_TEXT = re.compile(r"<a:t\b[^>]*>([^<]*)</a:t>")
+WHITE_FILL = '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'
 
 
 def restore_cell_vertical_margins(xml: str) -> tuple[str, int]:
@@ -740,19 +738,57 @@ def restore_cell_vertical_margins(xml: str) -> tuple[str, int]:
     return TC_BLOCK.sub(fix_cell, xml), count
 
 
-def fix_table_cell_fills(xml: str) -> tuple[str, int]:
+def cell_text(block: str) -> str:
+    """Cell text. soffice rewrites tabs and similar characters as character references (&#9;), so references are resolved to compare before and after re-serialization on the same basis"""
+    return html.unescape("".join(CELL_TEXT.findall(block)))
+
+
+def capture_cell_fills(data: bytes) -> dict:
+    """Records (text, has a direct fill) for each table cell per part before soffice re-serialization"""
+    out = {}
+    for name, payload in read_package(data):
+        if SHAPE_TREE_PART_PATTERN.match(name):
+            cells = [(cell_text(b), bool(CELL_FILL.search(b))) for b in TC_BLOCK.findall(payload.decode("utf-8", "replace"))]
+            if cells:
+                out[name] = cells
+    return out
+
+
+def reset_injected_cell_fills(xml: str, before: list | None) -> tuple[str, int | None]:
+    """Reverts to white only the solid fills (table style accent colors) that soffice put into cells that had no fill before re-serialization.
+    Fills written by the build stay even in off-palette colors, so check_layout reports them as WARN.
+    Cells are matched by their order within the part; if the cell text sequence differs from before re-serialization the match is uncertain, so nothing changes and None is returned"""
+    blocks = TC_BLOCK.findall(xml)
+    if not blocks:
+        return xml, 0
+    if before is None or [cell_text(b) for b in blocks] != [text for text, _ in before]:
+        return xml, None
+    had_fill = iter(fill for _, fill in before)
     count = 0
 
-    def rep(m):
+    def fix_cell(m):
         nonlocal count
-        color = m.group(2).upper()
-        if color in CELL_PALETTE:
-            return m.group(0)
+        block = m.group(0)
+        was_empty = not next(had_fill)
+        fill = CELL_FILL.search(block)
+        if not (was_empty and fill and fill.group("kind") == "solidFill"):
+            return block
         count += 1
-        return f'{m.group(1)}<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'
+        return block[:fill.start("fill")] + WHITE_FILL + block[fill.end("fill"):]
 
-    xml = re.sub(r'(<a:tcPr[^>]*>(?:(?!</a:tcPr>).)*?)<a:solidFill><a:srgbClr val="([0-9a-fA-F]{6})"\s*/></a:solidFill>', rep, xml, flags=re.S)
-    return xml, count
+    return TC_BLOCK.sub(fix_cell, xml), count
+
+
+def restore_cell_fills(data: bytes, before: dict) -> bytes:
+    fixed = []
+    for name, payload in read_package(data):
+        if SHAPE_TREE_PART_PATTERN.match(name):
+            xml, count = reset_injected_cell_fills(payload.decode("utf-8", "replace"), before.get(name))
+            if count is None:
+                print(f"[finalize] Kept cell fills because table cells could not be matched before and after re-serialization: {name}")
+            payload = xml.encode("utf-8")
+        fixed.append((name, payload))
+    return write_package(fixed)
 
 
 def capture_hole_sizes(data: bytes) -> dict:
@@ -779,17 +815,6 @@ def restore_hole_sizes(data: bytes, holes: dict) -> bytes:
             payload = xml.encode("utf-8")
         fixed.append((name, payload))
     return write_package(fixed)
-
-
-def theme_palette(pptx_path: Path) -> set:
-    """Theme colors left in the build record (<file name>.build.json). Read so table cell fills in custom theme colors are not reverted to white"""
-    record = pptx_path.with_suffix(".build.json")
-    if not record.is_file():
-        return set()
-    try:
-        return {str(c).upper() for c in json.loads(record.read_text(encoding="utf-8")).get("palette") or []}
-    except (OSError, ValueError):
-        return set()
 
 
 def record_language(pptx_path: Path) -> dict:
@@ -828,7 +853,6 @@ def record_line_break(pptx_path: Path) -> str:
 
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """Post-processes the input PPTX, overwrites it in place and returns the metrics before and after"""
-    CELL_PALETTE.update(theme_palette(pptx_path))
     RUN_LANGUAGE.update(record_language(pptx_path))
     LINE_BREAK["mode"] = record_line_break(pptx_path)
     before = inspect(pptx_path)
@@ -842,14 +866,14 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     reserialized = False
     if use_soffice:
         holes = capture_hole_sizes(data)  # soffice re-serialization resets the donut hole size to 50, so keep it
+        cell_fills = capture_cell_fills(data)  # soffice re-serialization puts table style accent colors into cells without a fill (such as cells hidden by a merge), so record the state before it
         reserialized = reserialize_with_soffice(pptx_path)
         if reserialized:
             data = pptx_path.read_bytes()
             data, _ = normalize_package(data)
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
-            entries = [(n, fix_table_cell_fills(p.decode("utf-8", "replace"))[0].encode("utf-8") if SHAPE_TREE_PART_PATTERN.match(n) else p) for n, p in read_package(data)]
-            data = write_package(entries)
+            data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:
             print("[finalize] Re-serialization skipped because soffice is missing or conversion failed. "

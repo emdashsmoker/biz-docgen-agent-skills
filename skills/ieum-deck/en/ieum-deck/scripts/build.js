@@ -161,7 +161,7 @@ async function main() {
   T.writeLimits(path.join(__dirname));
   // Custom slide playback keeps the source font and width-absorbing shrink, so those slides skip the body minimum check (read by check_layout)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
-  // palette records custom theme colors so they count as allowed table cell colors (read by check_layout and finalize)
+  // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;

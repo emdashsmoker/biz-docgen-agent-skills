@@ -21,6 +21,7 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
 from __future__ import annotations
 
 import argparse
+import html
 import io
 import json
 import os
@@ -524,8 +525,6 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)
         stats["straightened_lines"] = sl
-        xml, cf = fix_table_cell_fills(xml)
-        stats["cell_fill"] = cf
         xml, cm = restore_cell_vertical_margins(xml)
         stats["cell_margin"] = cm
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
@@ -705,16 +704,15 @@ def format_metrics(label: str, metrics: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-# 표 셀 채움에 허용되는 기본 색 (navy 와 mono 테마 색, 틴트, 회색, 흰색). 재직렬화가 넣는 표 스타일 강조색을 흰색으로 되돌림
-# 사용자 지정 테마 색은 finalize() 가 빌드 기록의 palette 에서 읽어 더함
-CELL_PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2",
-                "C9CDD8", "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D",
-                "808080", "D9D9D9", "C0392B", "52596C", "EBEBEB", "F8F8F8"}
-
-
 TC_BLOCK = re.compile(r"<a:tc\b[^>]*>.*?</a:tc>", re.S)
 TC_PR_OPEN = re.compile(r"<a:tcPr\b([^>]*?)(/?)>")
 BODY_PR_OPEN = re.compile(r"<a:bodyPr\b([^>]*?)/?>")
+# 셀 채움 = tcPr 직계 채움 요소(noFill, solidFill 등 이름이 Fill 로 끝남). 스키마 순서상 테두리(lnL, lnR, lnT, lnB, lnTlToBr, lnBlToTr)가
+# 채움보다 앞서고 테두리마다 선 색 solidFill 을 품으므로 테두리 요소를 통째로 건너뜀
+CELL_FILL = re.compile(r'<a:tcPr\b[^>]*>(?:<a:(ln\w*)\b(?:[^>]*?/>|.*?</a:\1>))*'
+                       r'(?P<fill><a:(?P<kind>\w+Fill)\b(?:[^>]*?/>|.*?</a:(?P=kind)>))', re.S)
+CELL_TEXT = re.compile(r"<a:t\b[^>]*>([^<]*)</a:t>")
+WHITE_FILL = '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'
 
 
 def restore_cell_vertical_margins(xml: str) -> tuple[str, int]:
@@ -740,19 +738,57 @@ def restore_cell_vertical_margins(xml: str) -> tuple[str, int]:
     return TC_BLOCK.sub(fix_cell, xml), count
 
 
-def fix_table_cell_fills(xml: str) -> tuple[str, int]:
+def cell_text(block: str) -> str:
+    """셀 글자. soffice 는 탭 등을 문자 참조(&#9;)로 다시 쓰므로 참조를 풀어 재직렬화 전후를 같은 기준으로 비교"""
+    return html.unescape("".join(CELL_TEXT.findall(block)))
+
+
+def capture_cell_fills(data: bytes) -> dict:
+    """soffice 재직렬화 전 부품별 표 셀의 (글자, 직계 채움 유무) 목록"""
+    out = {}
+    for name, payload in read_package(data):
+        if SHAPE_TREE_PART_PATTERN.match(name):
+            cells = [(cell_text(b), bool(CELL_FILL.search(b))) for b in TC_BLOCK.findall(payload.decode("utf-8", "replace"))]
+            if cells:
+                out[name] = cells
+    return out
+
+
+def reset_injected_cell_fills(xml: str, before: list | None) -> tuple[str, int | None]:
+    """재직렬화 전에 채움이 없던 셀에 soffice 가 넣은 단색 채움(표 스타일 강조색)만 흰색으로 되돌림.
+    빌드가 쓴 채움은 팔레트 밖 색이어도 그대로 두어 check_layout 이 WARN 으로 알리게 함.
+    셀은 부품 안 순서로 대응하며, 셀 글자 순서가 재직렬화 전과 다르면 대응을 확정할 수 없으므로 고치지 않고 None 을 반환"""
+    blocks = TC_BLOCK.findall(xml)
+    if not blocks:
+        return xml, 0
+    if before is None or [cell_text(b) for b in blocks] != [text for text, _ in before]:
+        return xml, None
+    had_fill = iter(fill for _, fill in before)
     count = 0
 
-    def rep(m):
+    def fix_cell(m):
         nonlocal count
-        color = m.group(2).upper()
-        if color in CELL_PALETTE:
-            return m.group(0)
+        block = m.group(0)
+        was_empty = not next(had_fill)
+        fill = CELL_FILL.search(block)
+        if not (was_empty and fill and fill.group("kind") == "solidFill"):
+            return block
         count += 1
-        return f'{m.group(1)}<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'
+        return block[:fill.start("fill")] + WHITE_FILL + block[fill.end("fill"):]
 
-    xml = re.sub(r'(<a:tcPr[^>]*>(?:(?!</a:tcPr>).)*?)<a:solidFill><a:srgbClr val="([0-9a-fA-F]{6})"\s*/></a:solidFill>', rep, xml, flags=re.S)
-    return xml, count
+    return TC_BLOCK.sub(fix_cell, xml), count
+
+
+def restore_cell_fills(data: bytes, before: dict) -> bytes:
+    fixed = []
+    for name, payload in read_package(data):
+        if SHAPE_TREE_PART_PATTERN.match(name):
+            xml, count = reset_injected_cell_fills(payload.decode("utf-8", "replace"), before.get(name))
+            if count is None:
+                print(f"[finalize] 재직렬화 전후 표 셀 대응 실패로 셀 채움 유지: {name}")
+            payload = xml.encode("utf-8")
+        fixed.append((name, payload))
+    return write_package(fixed)
 
 
 def capture_hole_sizes(data: bytes) -> dict:
@@ -779,17 +815,6 @@ def restore_hole_sizes(data: bytes, holes: dict) -> bytes:
             payload = xml.encode("utf-8")
         fixed.append((name, payload))
     return write_package(fixed)
-
-
-def theme_palette(pptx_path: Path) -> set:
-    """빌드 기록(<파일명>.build.json)에 남은 테마 색. 사용자 지정 테마 색의 표 셀 채움을 흰색으로 되돌리지 않기 위해 읽음"""
-    record = pptx_path.with_suffix(".build.json")
-    if not record.is_file():
-        return set()
-    try:
-        return {str(c).upper() for c in json.loads(record.read_text(encoding="utf-8")).get("palette") or []}
-    except (OSError, ValueError):
-        return set()
 
 
 def record_language(pptx_path: Path) -> dict:
@@ -828,7 +853,6 @@ def record_line_break(pptx_path: Path) -> str:
 
 def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     """입력 PPTX를 후처리하여 같은 경로에 덮어쓰고 처리 전후 수치를 반환"""
-    CELL_PALETTE.update(theme_palette(pptx_path))
     RUN_LANGUAGE.update(record_language(pptx_path))
     LINE_BREAK["mode"] = record_line_break(pptx_path)
     before = inspect(pptx_path)
@@ -842,14 +866,14 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     reserialized = False
     if use_soffice:
         holes = capture_hole_sizes(data)  # soffice 재직렬화가 도넛 구멍 크기를 50 으로 되돌리므로 보존
+        cell_fills = capture_cell_fills(data)  # soffice 재직렬화가 채움 없는 셀(병합으로 가려진 셀 등)에 표 스타일 강조색을 넣으므로 전 상태를 기록
         reserialized = reserialize_with_soffice(pptx_path)
         if reserialized:
             data = pptx_path.read_bytes()
             data, _ = normalize_package(data)
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
-            entries = [(n, fix_table_cell_fills(p.decode("utf-8", "replace"))[0].encode("utf-8") if SHAPE_TREE_PART_PATTERN.match(n) else p) for n, p in read_package(data)]
-            data = write_package(entries)
+            data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:
             print("[finalize] soffice 부재 또는 변환 실패로 재직렬화 생략. "
