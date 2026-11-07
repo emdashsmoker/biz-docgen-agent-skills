@@ -32,7 +32,7 @@
 - `check volume` warns on overruns. Resolve an overflowing sentence by splitting it and adding a lower level, or by converting to a table
 - When below a lower bound, add units in the order below
     1. Add evidence lines (one line of figures, one of material names, one of cases)
-    2. Add ※ notes (term definitions, source dates, calculation bases)
+    2. Add ※ notes (source dates, calculation bases)
     3. Add tables (preliminary survey results, target lists, criteria tables)
     4. Split □ (separate a cause □ and an effect □)
 

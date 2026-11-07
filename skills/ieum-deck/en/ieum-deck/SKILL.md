@@ -850,6 +850,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Is the purpose of text smaller than the body clear (grounds, sources, assumptions and similar text carry the ※, number or label of `meta.footnoteStyle`)?
 - Is each note a simple sentence with one subject-predicate pair?
 - Is each note that defines a term, abbreviation or symbol written as `(term) explanation`?
+- Does each definition note cover a term readers do not meet in their work (delete definition notes for terms readers use, such as RFP, consulting or participation rate)?
 - Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?

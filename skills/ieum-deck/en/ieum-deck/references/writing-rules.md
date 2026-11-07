@@ -145,6 +145,9 @@
 - Write each note item as a simple sentence with one subject-predicate pair (judge a simple sentence by its structure regardless of length)
 - Merge caveats on the same target into one item
 - A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "Revenue is based on the 2024 settled accounts")
+- Write a definition note for a term that readers of the deck (client staff, evaluators, the people briefed and similar readers) do not meet in their work and cannot guess the meaning of
+    + Example targets are analysis methods, industry classifications and symbols set in this deck (e.g. location quotient, TTL)
+    + Use general terms and abbreviations readers use in their work (e.g. RFP, consulting, participation rate) without a definition note
 - Write a note that defines a term, abbreviation or symbol as `(term) explanation` (the term in parentheses names the target)
     + Write the term in parentheses exactly as the body writes it
     + Write the explanation as one noun phrase that spells out the meaning (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
