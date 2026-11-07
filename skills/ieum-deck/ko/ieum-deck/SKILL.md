@@ -150,14 +150,14 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (줄바꿈 단위) 단어 단위(기본) 또는 글자 단위. 선택 값은 `meta.lineBreak` 에 word 나 char 로 기록
     + 단어 단위는 줄 끝에서 한글 어절과 영문 단어를 나누지 않음
     + 글자 단위는 줄 끝 글자에서 줄을 바꾸므로 단어 중간 줄바꿈을 허용
-17. (주석 표기) 덱 전체의 각주, 상자 아래 주석, 출처 행에 적용할 표기. ※ 기호(기본) 또는 번호. 선택 값은 `meta.footnoteStyle` 에 mark 나 number 로 기록
-    + ※ 기호는 주석 항목과 출처 행 앞에 ※ 를 붙임
-    + 번호는 주석 묶음의 항목이 2개 이상이면 1) 부터 차례로 번호를 붙임
-    + 번호 표기에서 항목이 1개이면 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 항목은 "출처:")
+17. (주석 표기) ※ 기호(기본) 또는 번호. 덱 전체의 각주, 상자 아래 주석, 출처 행에 적용. 선택 값은 `meta.footnoteStyle` 에 mark 나 number 로 기록
+    + ※ 기호 표기는 주석 항목과 출처 행 앞에 ※ 를 붙임
+    + 번호 표기는 항목이 2개 이상인 주석 묶음에 1) 부터 차례로 번호를 붙임
+    + 번호 표기는 항목이 1개인 주석 묶음에 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 항목은 "출처:")
     + 번호 표기의 출처 행은 "출처:" 로 시작
-    + 번호 표기에서는 빌드가 남은 ※ 도 바꿈 (※ 로 시작하는 줄은 위 표기, 제목 안 "(※ 시안)" 은 "(시안)")
+    + 번호 표기 덱에서는 커스텀 슬라이드 원문, 본문 칸, 제목 등에 직접 쓴 ※ 도 빌드가 변환 (※ 로 시작하는 줄은 위 번호나 라벨로 교체. 문장 중간의 ※ 는 삭제. 예: "(※ 시안)" → "(시안)")
     + 라벨 문구(기본 "참조:", "출처:")는 발주기관 관행(예: "주:", "자료:")이나 문서 언어(예: "Note:", "Source:")에 맞춰 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
-    + 특정 슬라이드만 다른 라벨이 필요하면 그 슬라이드의 footnoteLabel, sourceLabel 에 지정 (덱 라벨보다 우선. 예: 덱 라벨은 "참조:" 이고 그 슬라이드 주석만 단서 성격이면 "주:")
+    + 일부 슬라이드에만 다른 라벨이 필요하면 해당 슬라이드의 footnoteLabel 과 sourceLabel 에 지정 (덱 라벨보다 우선. 예: 덱 라벨이 "참조:" 일 때 주석이 단서 성격인 슬라이드만 "주:")
 
 ## 회사 사실 정보
 
@@ -471,8 +471,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 헤드라인은 1줄과 2줄 모두 18pt 로 조판
 - 헤드라인은 문구를 줄여 1줄로 맞춤
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
-- 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (note 와 footnotes 앞의 ※, 번호, 라벨은 빌드가 `meta.footnoteStyle` 에 맞춰 붙임)
-- 출처와 주석에는 독자가 직접 찾아볼 수 있는 외부 자료만 출처로 기재 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 기재하지 않음)
+- 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (항목 앞의 ※, 번호, 라벨은 빌드가 `meta.footnoteStyle` 에 맞춰 붙임)
+- 출처 행과 주석에서 인용하는 자료는 독자가 직접 찾아볼 수 있는 외부 자료로 구성 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 출처로 기재하지 않음)
 - 강조 어구 1곳은 `accent` 필드에 지정
 
 ### 대상 지칭어
@@ -526,7 +526,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + id, template, 슬롯 키, 자리 표기는 그대로 유지
 - 출처와 주석 줄은 "Source:", "Note:" 로 시작해도 "출처:", "자료:" 와 같이 인식
     + 다른 언어의 주석 토큰은 `meta.labels.notation.source` 에 추가 (기본 토큰은 유지)
-- 번호 표기 덱은 주석 라벨(`meta.labels.common` 의 footnoteLabel, sourceLabel)도 영문으로 지정 (예: "Note:", "Source:")
+- 번호 표기 덱은 주석 라벨(`meta.labels.common` 의 footnoteLabel 과 sourceLabel)도 영문으로 지정 (예: "Note:", "Source:")
 - 헤드라인과 마커의 글자 수 상한은 한글 환산 글자 수로 검사 (영문은 같은 폭에 약 2배 글자가 들어감)
 - 영문 성명과 영문 투입인력표의 인식 기준은 `references/storyboard-schema.md` 를 따름
 - 시각 검수에서 한국어 기본 라벨이 남은 슬라이드가 없는지 확인
@@ -829,7 +829,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### 표기
 
 - 본문보다 작은 글씨의 용도가 분명한가 (근거, 출처, 전제에는 `meta.footnoteStyle` 의 ※, 번호, 라벨 부착)
-- 주석이 복문 없이 단문으로 쓰였고 슬라이드에 필요한 개수인가 (※ 주석 2개 이상은 서로 다른 대상의 단서인지 확인)
+- 주석이 주어와 서술어 1쌍의 단문으로 쓰였는가
+- 주석 수가 본문 이해에 필요한 최소인가 (※ 주석 2개 이상은 서로 다른 대상의 단서인지 확인)
 - 같은 계층의 글꼴 크기가 서로 다른가
 - 한 상자 안 불릿 중 하나만 글꼴이 달라 튀어 보이는가
 
@@ -916,7 +917,7 @@ ieum-deck/
 │   ├── composite.js         composite 템플릿의 격자와 블록
 │   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 재직렬화가 넣은 표 셀 채움 되돌림, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 재직렬화가 추가한 표 셀 채움 되돌림, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사

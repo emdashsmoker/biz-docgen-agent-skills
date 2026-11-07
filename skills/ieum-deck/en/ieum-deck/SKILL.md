@@ -163,14 +163,14 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (Line break unit) Word-level (default) or character-level. Record the choice in `meta.lineBreak` as word or char
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
-17. (Note style) The style for every footnote, note under a box and source line in the deck. ※ mark (default) or numbers. Record the choice in `meta.footnoteStyle` as mark or number
+17. (Note style) ※ mark (default) or numbers. Applies to every footnote, note under a box and source line in the deck. Record the choice in `meta.footnoteStyle` as mark or number
     + The ※ mark style puts ※ before each note item and the source line
     + The number style numbers a note group with two or more items in order from 1)
-    + In the number style, a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
+    + In the number style, a note group with a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
     + In the number style, the source line starts with "출처:"
-    + In the number style, the build also replaces any remaining ※ (lines starting with ※ get the marks above, "(※ 시안)" in a title becomes "(시안)")
+    + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
-    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. the deck uses "참조:" and one slide's note is a caveat, so that slide uses "주:")
+    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
 
 ## Company facts
 
@@ -484,8 +484,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Headlines are typeset at 18pt for both one and two lines
 - Shorten the text to fit a headline on one line
 - check_layout reports inconsistent headline font sizes
-- Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※, a number or a label before notes and footnotes per `meta.footnoteStyle`)
-- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process)
+- Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※, a number or a label before each item per `meta.footnoteStyle`)
+- Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term
@@ -843,7 +843,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### Notation
 
 - Is the purpose of text smaller than the body clear (grounds, sources and assumptions carry the ※, number or label of `meta.footnoteStyle`)?
-- Are notes written as simple sentences without complex ones, and no more than the slide needs (with two or more ※ notes, check that each covers a different target)?
+- Is each note a simple sentence with one subject-predicate pair?
+- Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
 
