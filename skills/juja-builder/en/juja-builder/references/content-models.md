@@ -17,7 +17,6 @@
 | Task | 1 or more tables or figures, 900 or more characters of text | Named analysis target lists, filled preliminary survey tables, comparison matrices, diagnosis item tables |
 
 - `check volume` judges the lower bounds of the □ point and Task rows. A shortage of ❍ under □ and a Task without a table are FAIL. Evidence line and character counts are warnings
-- Term definition ※ notes (`※ (term) explanation`) do not count as evidence lines or characters. Whether a term needs a definition depends on whether readers know it
 - Lower bounds at the level of the Background, Features and Strengths, and Implementation Strategy sections are outside code checks. Check them directly when completing a file
 - The source of lower and upper bounds is the constants in the settings part of scripts/proposal.py (VOLUME_*, SQUARE_TITLE_MAX, LINE_MAX). If they differ from values in the documents, the settings part rules
 - Line limits per level are in the table below. □ and ※ take one typeset line. ❍, hyphen, and ․ take two lines at most. Values are character counts including spaces (confirmed by rhwp rendering, varying by 2-3 characters with word length)
@@ -33,7 +32,7 @@
 - `check volume` warns on overruns. Resolve an overflowing sentence by splitting it and adding a lower level, or by converting to a table
 - When below a lower bound, add units in the order below
     1. Add evidence lines (one line of figures, one of material names, one of cases)
-    2. Add ※ notes (source dates, calculation bases)
+    2. Add ※ notes (term definitions, source dates, calculation bases)
     3. Add tables (preliminary survey results, target lists, criteria tables)
     4. Split □ (separate a cause □ and an effect □)
 
