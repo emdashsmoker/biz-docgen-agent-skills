@@ -17,7 +17,7 @@
 | pointLabel | Label text of the Key Point band (default "Key Point"). Can also be set per slide |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
-| footnoteStyle | Style of notes (footnotes, note slots) and the source line. mark (※ before note items and the source line, default), number (a note group with two or more items numbered from 1), a single item gets common.footnoteLabel, a single item that starts with a source mark and the source line get common.sourceLabel). Applies to the whole deck |
+| footnoteStyle | Style of notes (footnotes, note slots) and the source line. Applies to the whole deck. mark (default) puts ※ before note items and the source line. number numbers a note group with two or more items from 1). In number, a note group with a single item gets common.footnoteLabel (common.sourceLabel for an item that starts with a source mark). In number, the source line starts with common.sourceLabel |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
@@ -74,9 +74,9 @@
 | marker | Marker text. Over 30 characters (Hangul equivalent) is a lint FAIL. An empty value also omits the marker shape |
 | bandMode | Forced band mode. full (default), noMarker, headerOnly, blank |
 | slots, panels, blocks | Content per template (`references/templates.md`) |
-| source | Source line. String or array. In a number-style deck, the ※ and source mark (출처:, 자료:, Source:) before each item are removed and the line starts with one common.sourceLabel |
-| footnotes | Footnote array. Gets the ※, number or label of `meta.footnoteStyle` and is placed above the source line. A ※, number or label written before an item is replaced with the deck style |
-| footnoteLabel, sourceLabel | Note label and source label for this slide in a number-style deck. Take precedence over `meta.labels.common` (unused in a ※ mark deck) |
+| source | Source line. String or array. In a number-style deck, the source line starts with one common.sourceLabel (the build removes the ※ and source marks such as 출처:, 자료: and Source: before each item) |
+| footnotes | Footnote array. Placed above the source line. The build adds the ※, number or label of `meta.footnoteStyle` (a ※, number or label written before an item is replaced with the deck style) |
+| footnoteLabel, sourceLabel | Note label and source label for this slide in a number-style deck. Take precedence over `meta.labels.common` (not applied in a ※ mark deck) |
 | markerNote | Subtitle to the right of the marker (unit, reference date, etc.) |
 | rfpTasks, moduleTasks, evalItems | Lists of matching IDs. lint checks full coverage and score attribution |
 | allowCount | true when the headline uses a count set by the RFP (exempt from the number declaration check) |

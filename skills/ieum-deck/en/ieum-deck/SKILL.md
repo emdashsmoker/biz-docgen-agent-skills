@@ -59,7 +59,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | Band | The top area of a slide. Holds the section number, section title, chapter tracker and headline |
 | Headline | The one conclusion sentence in the middle of the band |
 | Marker | The subheading on the first line of the body. Typeset with a square shape |
-| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body |
 | Template | The typesetting method named by the `template` value in the storyboard |
 | Parametric template | A fixed-structure template whose layout changes with the number of items (`references/templates.md`) |
 | Recipe | A sample combination of grid and blocks for the composite template (`references/recipes.md`) |
@@ -163,14 +163,14 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (Line break unit) Word-level (default) or character-level. Record the choice in `meta.lineBreak` as word or char
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
-17. (Note style) The style for every footnote, note under a box and source line in the deck. ※ mark (default) or numbers. Record the choice in `meta.footnoteStyle` as mark or number
+17. (Note style) ※ mark (default) or numbers. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as mark or number
     + The ※ mark style puts ※ before each note item and the source line
     + The number style numbers a note group with two or more items in order from 1)
-    + In the number style, a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
+    + In the number style, a note group with a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark)
     + In the number style, the source line starts with "출처:"
-    + In the number style, the build also replaces any remaining ※ (lines starting with ※ get the marks above, "(※ 시안)" in a title becomes "(시안)")
+    + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
-    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. the deck uses "참조:" and one slide's note is a caveat, so that slide uses "주:")
+    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
 
 ## Company facts
 
@@ -484,8 +484,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Headlines are typeset at 18pt for both one and two lines
 - Shorten the text to fit a headline on one line
 - check_layout reports inconsistent headline font sizes
-- Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※, a number or a label before notes and footnotes per `meta.footnoteStyle`)
-- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process)
+- Write grounds, conditions, assumptions and similar content in `note` or `footnotes` (the build adds ※, a number or a label before each item per `meta.footnoteStyle`)
+- Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term
@@ -514,7 +514,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Phrases) The lists of lint FAIL expressions and lint WARN vocabulary follow `references/writing-rules.md`
 - (Fixed wording) Keep the standard spelling of key RFP wording
 - (Figures) Mark unconfirmed figures with the `[확인 필요]` placeholder
-- (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body
     + Write one-line formulas or conditions in `footnotes` to free body height
 - lint reports writing rule violations as FAIL and WARN
@@ -842,8 +842,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 #### Notation
 
-- Is the purpose of text smaller than the body clear (grounds, sources and assumptions carry the ※, number or label of `meta.footnoteStyle`)?
-- Are notes written as simple sentences without complex ones, and no more than the slide needs (with two or more ※ notes, check that each covers a different target)?
+- Is the purpose of text smaller than the body clear (grounds, sources, assumptions and similar text carry the ※, number or label of `meta.footnoteStyle`)?
+- Is each note a simple sentence with one subject-predicate pair?
+- Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
 

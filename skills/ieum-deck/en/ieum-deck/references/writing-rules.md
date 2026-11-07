@@ -16,10 +16,10 @@
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
 - Polite headlines end in the formal 하십시오체 style (e.g. "수립합니다", "확보합니다", "보유하고 있습니다", "추진하겠습니다" and similar forms)
 - Body style is noun-ending regardless of the headline style
-- Headlines and body text use no colloquial or informal style. Also avoid a colloquial or informal tone in endings, words, and expressions
+- Headlines and body text use no colloquial or informal style (including a colloquial or informal tone in endings, words, expressions and similar elements)
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
-- Do not use placeholder nouns such as 것, 곳, 거, 셈, or 부분. Name the referent with a concrete noun
+- Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
@@ -80,7 +80,7 @@
 - Table cell text carries whichever of subject, criterion and figures is needed (enough to fill the column width)
 - If there is nothing to add, shrink the box and gather it to the center
 - If it still looks awkward after shrinking, change the form of expression or merge it with a neighboring box
-- Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 
@@ -112,9 +112,12 @@
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
-- Notes and sources start with the `meta.footnoteStyle` mark (the build adds it to note-type slots, footnotes and source; notes written directly in body cells get ※ by hand, and in a number-style deck the build turns ※ into the deck mark)
-- Use ※ only for evidence, sources, premises and caveats
-- Put evidence and caveats in note slots or footnotes to use the mark the build adds
+- Notes and sources start with the `meta.footnoteStyle` mark
+    + The build adds the mark to note-type slots, footnotes and source
+    + Notes written directly in body cells get ※ by hand
+    + In a number-style deck, the build turns a ※ added by hand into the deck mark
+- Use ※ only for note text such as evidence, sources, premises and caveats
+- Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
     + Used as a normal item, write it without ※
@@ -127,23 +130,22 @@
 
 ## Notes
 
-- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments and scope in the body correctly
+- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the body correctly (example targets: figures, terms, judgments, scope and similar parts)
     + (Figures) Calculation basis such as formula, unit, reference date or conversion basis
-    + (Terms) Definitions of terms, abbreviations or symbols unfamiliar to readers
+    + (Terms) Definitions of terms, abbreviations, symbols and similar items unfamiliar to readers
     + (Judgments) Grounds such as the governing law or a higher-level guideline
     + (Scope) Conditions under which the content holds, such as assumptions, scope, exceptions, or whether figures are examples or provisional
 - Write content that forms the body message in the body
-- Write the material that figures and facts come from in `source`
-- Write each note item as a simple sentence with one subject-predicate pair and avoid complex sentences (simple refers to sentence structure, not length)
+- Write the material that figures, facts and similar content come from in `source`
+- Write each note item as a simple sentence with one subject-predicate pair (judge a simple sentence by its structure regardless of length)
 - Merge caveats on the same target into one item
-- A note that supplements a specific word or figure names its target in the note (e.g. "TTL stands for Travel, transport, and logistics")
+- A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "TTL stands for Travel, transport, and logistics")
 - Compose note items without duplication or omission
-- Do not repeat in a note what the headline, body or Key Point band already says
+- Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs
-    + (※ mark) Write one item by default. Stacked ※ lines stand out more than the body, so use two or more items when caveats on different targets are needed together
-    + (Numbers) Apply the same minimum. With two or more items the build tells them apart by number
-    + These counts are common practice and do not fit every slide, so judge from the content and context of the slide instead of applying them mechanically
-- When caveats cannot be cut further, consider moving them into a table or box in the body before adding notes
+    + (※ mark) Write one item by default. Use two or more items when caveats on different targets are needed together (stacked ※ lines stand out more than the body)
+    + (Numbers) Apply the same minimum as the ※ mark (with two or more items the build tells them apart by number)
+    + (Judgment per slide) These counts are common practice, so do not apply them mechanically to every slide. Make the final judgment from the content and context of the slide
 
 ## Tables
 

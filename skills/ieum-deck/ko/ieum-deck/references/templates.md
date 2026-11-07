@@ -148,8 +148,8 @@
 |---|---|---|
 | common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | Key Point |
 | common | company (슬라이드 company 와 meta.company 가 우선) | 회사명 |
-| common | footnoteLabel (번호 표기 덱에서 주석 항목이 1개일 때 번호 자리. 슬라이드 footnoteLabel 이 우선) | 참조: |
-| common | sourceLabel (번호 표기 덱의 출처 행 앞과 출처 표기로 시작하는 주석 1항목 앞. 슬라이드 sourceLabel 이 우선) | 출처: |
+| common | footnoteLabel (번호 표기 덱에서 같은 위치의 주석이 1개일 때 번호 대신 붙는 라벨. 슬라이드 footnoteLabel 이 우선) | 참조: |
+| common | sourceLabel (번호 표기 덱에서 출처 행 및 출처 표기로 시작하는 1항목 주석의 앞에 붙는 라벨. 슬라이드 sourceLabel 이 우선) | 출처: |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |

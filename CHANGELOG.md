@@ -51,6 +51,9 @@ Changelog rules
 - Added note writing rules on the purpose of notes, simple sentences, no duplication or omission, the minimum count per slide and naming the target (#93)
 - Changed six example-figure source lines in the recipe samples to footnotes (#93)
 - Changed complex note sentences in the recipe samples to simple sentences (#93)
+- Removed the note rule that asked to move caveats that cannot be cut into a body table or box (#94)
+- Changed the ※ usage rule to cover note text such as evidence, sources, premises and caveats (#94)
+- Changed the note target, Key Point band content and register scope lists to example lists that end in 등 (#94)
 
 * 출처, 각주, 축 양끝 표기의 보조 글자색을 흰색 대비 4.5:1 이상인 52596C(navy)와 595959(mono)로 변경 (#92)
 * 사용자 지정 textMuted 테마 색의 대비 하한을 3.0에서 4.5로 변경 (#92)
@@ -68,6 +71,9 @@ Changelog rules
 * 주석의 용도, 단문 작성, 중복과 누락 없는 구성, 슬라이드별 최소 개수 판단, 대상 명시에 관한 주석 작성 규칙 추가 (#93)
 * 레시피 견본의 예시 수치 출처 행 6건을 각주로 변경 (#93)
 * 레시피 견본의 복문 주석을 단문으로 변경 (#93)
+* 더 줄일 수 없는 단서를 본문의 표나 상자로 옮기는 주석 규칙 삭제 (#94)
+* ※ 사용 범위를 근거, 출처, 전제, 단서 등 주석 성격의 문구로 변경 (#94)
+* 주석 대상, Key Point 밴드 내용, 문체 적용 범위의 목록을 "등" 으로 끝나는 예시 목록으로 변경 (#94)
 
 ### juja-builder
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
