@@ -698,6 +698,11 @@ function rampBetween(from, to, n) {
   const [a, b] = [rgb(from), rgb(to)];
   return Array.from({ length: n }, (_, k) => a.map((v, j) => Math.round(v + ((b[j] - v) * k) / (n - 1)).toString(16).padStart(2, "0")).join("").toUpperCase());
 }
+/** Colors for n categories. Up to the palette size, the first palette colors; above it, n colors spaced evenly between the first and last palette color
+ *  Why: cycling the palette sends the 5th category back to the 1st category color, so pie slices, bar series and line series repeat a color */
+function categoryColors(palette, n) {
+  return n <= palette.length ? palette.slice(0, n) : rampBetween(palette[0], palette[palette.length - 1], n);
+}
 function chart(pres, slide, box, spec) {
   const ctype = { bar: pres.ChartType.bar, line: pres.ChartType.line, pie: pres.ChartType.pie, doughnut: pres.ChartType.doughnut, area: pres.ChartType.area }[spec.type] || pres.ChartType.bar;
   let cats = (spec.categories || []).map(String);
@@ -705,7 +710,7 @@ function chart(pres, slide, box, spec) {
   if (!series.length) series = [{ name: "", labels: cats, values: cats.map(() => 0) }];
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
-    chartColors: series.length > 1 ? T.COLOR.navyRamp : [T.COLOR.navyPastel],
+    chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
     showValue: true, dataLabelFontSize: T.SIZE.tableDense, dataLabelColor: T.COLOR.textDark, dataLabelFontFace: T.FONT.regular,
     dataLabelFormatCode: spec.numFmt || undefined, valAxisLabelFormatCode: spec.numFmt || undefined,
     catAxisLabelFontSize: T.SIZE.tableDense, catAxisLabelFontFace: T.FONT.regular, catAxisLabelColor: T.COLOR.textDark,
@@ -729,10 +734,7 @@ function chart(pres, slide, box, spec) {
       opt.barGrouping = spec.grouping; opt.dataLabelPosition = "ctr";
       // Labels inside segments use one dark text color, so drop the darkest navy and use only the lighter colors
       // With more series than light colors, space colors evenly between the darkest and lightest light color (the background tint is not used as a series color because it does not stand out from white)
-      if (series.length > 1) {
-        const light = T.COLOR.navyRamp.slice(1);
-        opt.chartColors = series.length > light.length ? rampBetween(light[0], light[light.length - 1], series.length) : light;
-      }
+      if (series.length > 1) opt.chartColors = categoryColors(T.COLOR.navyRamp.slice(1), series.length);
     }
     // With negative bars, the zero baseline must show for the direction of change to read, so show the category axis line
     if (series.some((sr) => sr.values.some((v) => v < 0))) {
@@ -752,7 +754,7 @@ function chart(pres, slide, box, spec) {
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
-    opt.chartColors = series[0].values.map((_, i) => T.COLOR.navyRamp[i % T.COLOR.navyRamp.length]);
+    opt.chartColors = categoryColors(T.COLOR.navyRamp, series[0].values.length);
     opt.showLegend = true; opt.legendPos = "r";
     // WHY: pptxgenjs allows only one label color per chart. White text inside segments is unreadable on light segments,
     //      so labels go outside the segments in dark text
@@ -760,7 +762,7 @@ function chart(pres, slide, box, spec) {
     opt.dataLabelColor = T.COLOR.textDark;
     if (spec.type === "doughnut") { opt.holeSize = spec.holeSize || 78; opt.showLegend = false; opt.showPercent = false; opt.showValue = false; opt.showLabel = false; } // A separate text box carries the center figure text
   }
-  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = [T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2]; opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
+  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
   slide.addChart(ctype, series, opt);
 }
 

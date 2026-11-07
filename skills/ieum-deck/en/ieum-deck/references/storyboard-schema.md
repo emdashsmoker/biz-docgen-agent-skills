@@ -57,6 +57,7 @@
 | textMuted | AS-IS head cell, schedule bars, text color of sources, footnotes and axis ends | White (on a white background when used as text color) | 4.5 |
 
 - The matrix focus quadrant and tint-filled grid cells with color navy put navy text on a tintHead fill
+- When a chart has more series or pie slices than its palette colors, the build spaces the colors evenly between the first and last palette color
 - When navy and tintHead have a contrast below 4.5, slides that draw these two elements get a build warning (colors keep the specified values)
 
 ## slides[] common fields

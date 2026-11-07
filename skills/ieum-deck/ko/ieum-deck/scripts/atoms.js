@@ -698,6 +698,11 @@ function rampBetween(from, to, n) {
   const [a, b] = [rgb(from), rgb(to)];
   return Array.from({ length: n }, (_, k) => a.map((v, j) => Math.round(v + ((b[j] - v) * k) / (n - 1)).toString(16).padStart(2, "0")).join("").toUpperCase());
 }
+/** 범주 n 개의 색. 팔레트 색 수 이하이면 팔레트 앞쪽 색, 넘으면 팔레트 첫 색과 끝 색 사이를 같은 간격으로 나눈 n 색
+ *  Why: 팔레트를 순환하면 5번째 범주가 1번째 범주 색으로 돌아가 원형 조각과 막대 계열과 꺾은선 계열이 같은 색으로 겹침 */
+function categoryColors(palette, n) {
+  return n <= palette.length ? palette.slice(0, n) : rampBetween(palette[0], palette[palette.length - 1], n);
+}
 function chart(pres, slide, box, spec) {
   const ctype = { bar: pres.ChartType.bar, line: pres.ChartType.line, pie: pres.ChartType.pie, doughnut: pres.ChartType.doughnut, area: pres.ChartType.area }[spec.type] || pres.ChartType.bar;
   let cats = (spec.categories || []).map(String);
@@ -705,7 +710,7 @@ function chart(pres, slide, box, spec) {
   if (!series.length) series = [{ name: "", labels: cats, values: cats.map(() => 0) }];
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
-    chartColors: series.length > 1 ? T.COLOR.navyRamp : [T.COLOR.navyPastel],
+    chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
     showValue: true, dataLabelFontSize: T.SIZE.tableDense, dataLabelColor: T.COLOR.textDark, dataLabelFontFace: T.FONT.regular,
     dataLabelFormatCode: spec.numFmt || undefined, valAxisLabelFormatCode: spec.numFmt || undefined,
     catAxisLabelFontSize: T.SIZE.tableDense, catAxisLabelFontFace: T.FONT.regular, catAxisLabelColor: T.COLOR.textDark,
@@ -729,10 +734,7 @@ function chart(pres, slide, box, spec) {
       opt.barGrouping = spec.grouping; opt.dataLabelPosition = "ctr";
       // 조각 안 레이블은 어두운 글자 1색이므로 가장 진한 네이비를 빼고 밝은 쪽 색만 사용
       // 계열이 밝은 색 수보다 많으면 가장 짙은 색과 가장 밝은 색 사이를 같은 간격으로 나눔 (배경 틴트는 흰 바탕과 구분되지 않아 계열 색으로 쓰지 않음)
-      if (series.length > 1) {
-        const light = T.COLOR.navyRamp.slice(1);
-        opt.chartColors = series.length > light.length ? rampBetween(light[0], light[light.length - 1], series.length) : light;
-      }
+      if (series.length > 1) opt.chartColors = categoryColors(T.COLOR.navyRamp.slice(1), series.length);
     }
     // 음수 막대가 있으면 0 기준선이 보여야 증감 방향이 읽히므로 범주 축 선을 표시
     if (series.some((sr) => sr.values.some((v) => v < 0))) {
@@ -752,7 +754,7 @@ function chart(pres, slide, box, spec) {
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
-    opt.chartColors = series[0].values.map((_, i) => T.COLOR.navyRamp[i % T.COLOR.navyRamp.length]);
+    opt.chartColors = categoryColors(T.COLOR.navyRamp, series[0].values.length);
     opt.showLegend = true; opt.legendPos = "r";
     // WHY: pptxgenjs 는 차트 전체에 레이블 색 1개만 지정 가능. 조각 안쪽 흰 글자는 옅은 조각에서 읽히지 않으므로
     //      레이블을 조각 바깥에 어두운 글자로 둔다
@@ -760,7 +762,7 @@ function chart(pres, slide, box, spec) {
     opt.dataLabelColor = T.COLOR.textDark;
     if (spec.type === "doughnut") { opt.holeSize = spec.holeSize || 78; opt.showLegend = false; opt.showPercent = false; opt.showValue = false; opt.showLabel = false; } // 중앙 수치 텍스트는 별도 텍스트 상자가 담당
   }
-  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = [T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2]; opt.dataLabelPosition = "t"; } // 레이블이 선과 겹치지 않도록 표식 위에 배치
+  if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // 레이블이 선과 겹치지 않도록 표식 위에 배치
   slide.addChart(ctype, series, opt);
 }
 
