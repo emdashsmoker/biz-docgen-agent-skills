@@ -56,6 +56,9 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const slide = pres.addSlide();
   const tpl = sb.template || sb.type || "free";
   const ctx = { pres, S, T, A, own, meta, sb, index, warn: (m) => warnings.push(`[${sb.id || index}] ${m}`) };
+  // A number-style deck turns the remaining ※ into this slide's note labels (the slide footnoteLabel and sourceLabel take precedence over the deck labels)
+  const ns = TEMPLATES.helpers.noteStyle(ctx);
+  A.setNoteStyle(ns.style, ns.labels);
   // Normalize the section number to the "1." form (add a missing period as in 01 or 1, and drop leading zeros)
   const secNo = sb.secNo == null ? sb.secNo : String(sb.secNo).trim().replace(/^0+(\d)/, "$1").replace(/^([\dIVXivx①-⑮]+)$/, "$1.");
   const band = { secNo, secTitle: sb.section, tracker: sb.tracker || sb.chapter, headline: sb.headline, marker: sb.marker, markerNote: sb.markerNote };
@@ -131,7 +134,6 @@ async function main() {
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
   LB.useDeck(meta); // Register the deck-level labels (meta.labels)
-  A.setNoteStyle(meta.footnoteStyle, { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }); // A number-style deck turns the remaining ※ into deck marks
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`Page size ${layoutKey} is undefined. Choose: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
@@ -168,9 +170,9 @@ async function main() {
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
-  // noteLabels holds the labels before footnotes and the source line in a number-style deck (check_layout treats those lines as notes)
+  // noteLabels holds the labels before footnotes and the source line in a number-style deck, including labels set on slides (check_layout treats those lines as notes)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel")], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

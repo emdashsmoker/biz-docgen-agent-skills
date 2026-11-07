@@ -56,6 +56,9 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const slide = pres.addSlide();
   const tpl = sb.template || sb.type || "free";
   const ctx = { pres, S, T, A, own, meta, sb, index, warn: (m) => warnings.push(`[${sb.id || index}] ${m}`) };
+  // 번호 표기 덱은 남은 ※ 를 이 슬라이드의 주석 라벨로 변환 (슬라이드 footnoteLabel, sourceLabel 이 덱 라벨보다 우선)
+  const ns = TEMPLATES.helpers.noteStyle(ctx);
+  A.setNoteStyle(ns.style, ns.labels);
   // 절 번호는 "1." 형태로 정규화 (01, 1 처럼 마침표가 없으면 붙이고 앞의 0 은 제거)
   const secNo = sb.secNo == null ? sb.secNo : String(sb.secNo).trim().replace(/^0+(\d)/, "$1").replace(/^([\dIVXivx①-⑮]+)$/, "$1.");
   const band = { secNo, secTitle: sb.section, tracker: sb.tracker || sb.chapter, headline: sb.headline, marker: sb.marker, markerNote: sb.markerNote };
@@ -131,7 +134,6 @@ async function main() {
   const story = JSON.parse(fs.readFileSync(inPath, "utf8"));
   const meta = story.meta || {};
   LB.useDeck(meta); // 덱 단위 라벨(meta.labels) 등록
-  A.setNoteStyle(meta.footnoteStyle, { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }); // 번호 표기 덱은 남은 ※ 를 덱 표기로 변환
   const layoutKey = argv.layout || meta.layout || "16:9";
   if (!T.LAYOUTS[layoutKey]) throw new Error(`판형 ${layoutKey} 미정의. 선택: ${Object.keys(T.LAYOUTS).join(", ")}`);
   const theme = argv.theme || meta.theme || "navy";
@@ -168,9 +170,9 @@ async function main() {
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout 이 읽음)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
-  // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨 (check_layout 이 주석 줄로 인식)
+  // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨. 슬라이드에서 지정한 라벨 포함 (check_layout 이 주석 줄로 인식)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel")], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

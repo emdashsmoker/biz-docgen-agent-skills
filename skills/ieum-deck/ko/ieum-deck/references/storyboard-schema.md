@@ -76,6 +76,7 @@
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |
 | source | 출처 행. 문자열 또는 배열. 번호 표기 덱은 항목 앞의 ※ 와 출처 표기(출처:, 자료:)를 떼고 common.sourceLabel 1개로 시작 |
 | footnotes | 각주 배열. `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙여 출처 행 위에 배치. 항목 앞에 직접 쓴 ※, 번호, 라벨은 덱 기준 표기로 교체 |
+| footnoteLabel, sourceLabel | 번호 표기 덱에서 이 슬라이드에 쓸 주석 라벨과 출처 라벨. `meta.labels.common` 보다 우선 (※ 기호 덱은 쓰지 않음) |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
 | rfpTasks, moduleTasks, evalItems | 대응 ID 목록. lint 가 전수 대응과 배점 귀속을 검사 |
 | allowCount | RFP 가 지정한 개수를 헤드라인에 쓸 때 true (숫자 선언 검사 예외) |

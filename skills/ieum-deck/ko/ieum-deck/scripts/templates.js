@@ -538,9 +538,10 @@ function calloutW(ctx, text, w0, maxW) {
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
   return w;
 }
-/** 덱의 주석 표기(meta.footnoteStyle)와 번호 표기 라벨 */
+/** 덱의 주석 표기(meta.footnoteStyle)와 번호 표기 라벨. 라벨은 슬라이드 footnoteLabel, sourceLabel, meta.labels.common, 기본값 순 */
 function noteStyle(ctx) {
-  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") } };
+  const sb = ctx.sb || {};
+  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) } };
 }
 /** 상자 아래 주석 문자열. 덱의 주석 표기를 붙여 줄바꿈으로 이음 (표기 규칙은 atoms.noteLines) */
 function noteText(ctx, v) {
@@ -1614,6 +1615,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, noteStyle, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

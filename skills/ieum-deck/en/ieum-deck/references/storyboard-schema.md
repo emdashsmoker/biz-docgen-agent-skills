@@ -76,6 +76,7 @@
 | slots, panels, blocks | Content per template (`references/templates.md`) |
 | source | Source line. String or array. In a number-style deck, the ※ and source mark (출처:, 자료:, Source:) before each item are removed and the line starts with one common.sourceLabel |
 | footnotes | Footnote array. Gets the ※, number or label of `meta.footnoteStyle` and is placed above the source line. A ※, number or label written before an item is replaced with the deck style |
+| footnoteLabel, sourceLabel | Note label and source label for this slide in a number-style deck. Take precedence over `meta.labels.common` (unused in a ※ mark deck) |
 | markerNote | Subtitle to the right of the marker (unit, reference date, etc.) |
 | rfpTasks, moduleTasks, evalItems | Lists of matching IDs. lint checks full coverage and score attribution |
 | allowCount | true when the headline uses a count set by the RFP (exempt from the number declaration check) |
