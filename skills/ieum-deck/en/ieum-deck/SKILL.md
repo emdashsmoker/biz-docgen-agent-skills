@@ -59,7 +59,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | Band | The top area of a slide. Holds the section number, section title, chapter tracker and headline |
 | Headline | The one conclusion sentence in the middle of the band |
 | Marker | The subheading on the first line of the body. Typeset with a square shape |
-| Point band | A strip below the body holding a label cell and one sentence ("수행 Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
 | Template | The typesetting method named by the `template` value in the storyboard |
 | Parametric template | A fixed-structure template whose layout changes with the number of items (`references/templates.md`) |
 | Recipe | A sample combination of grid and blocks for the composite template (`references/recipes.md`) |
@@ -493,7 +493,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - An engagement label left in a non-proposal output is lint WARN
 - Change proposal-only labels to fit the output type
     + Set labels shared by the whole deck once in `meta.labels` (keys and defaults in the label slots section of `references/templates.md`)
-    + Change the label text of the Point band (default "수행 Point") with `meta.pointLabel`
+    + Change the label text of the Key Point band (default "Key Point") with `meta.pointLabel`
     + Change the engagement column header and the report row group name of the gantt (defaults "과업", "보고회") with `taskHead` and `reportHead` of gantt
     + Set the company name on the cover and closing slides with `meta.company`
 
@@ -506,7 +506,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Phrases) The lists of lint FAIL expressions and lint WARN vocabulary follow `references/writing-rules.md`
 - (Fixed wording) Keep the standard spelling of key RFP wording
 - (Figures) Mark unconfirmed figures with the `[확인 필요]` placeholder
-- (Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body
     + Write one-line formulas or conditions in `footnotes` to free body height
 - lint reports writing rule violations as FAIL and WARN
@@ -522,7 +522,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
     + Keys left out are typeset with the Korean defaults, so set every label of the templates the English deck uses
     + lint reports unknown template, block and slot names and type errors in `meta.labels` as FAIL
-- Set the 수행 Point band label with `meta.pointLabel` or `meta.labels.common.pointLabel`
+- Set the Key Point band label with `meta.pointLabel` or `meta.labels.common.pointLabel`
 - The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
 - Set the language tags of the PPTX text with `meta.labels.language` (default latin en-US, east_asia ko-KR for runs that contain Hangul; finalize.py applies them)
 - Keep the placeholders (`[회사 확인]`, `[확인 필요]`) as they are in English decks, since lint finds unfinished items by them

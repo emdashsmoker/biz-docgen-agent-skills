@@ -14,7 +14,7 @@
 | layout | 16:9 (default), A4, 10.83, 4:3. On page sizes narrower than 16:9, shorten box text by the body width ratio (A4 87.7%, 10.83 81.2%, 4:3 75.0%) |
 | headlineStyle | noun (noun-ending style, default), polite (polite style) |
 | marker | Marker shape. square (default), bar, triangle |
-| pointLabel | Label text of the Point band (default "수행 Point"). Can also be set per slide |
+| pointLabel | Label text of the Key Point band (default "Key Point"). Can also be set per slide |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
 | theme | navy (default), mono. Custom colors go in themeColors |
@@ -35,7 +35,7 @@
 - Sets label slot values that would otherwise repeat on every slide (cover label, gantt headers, module overview row labels and so on) once per deck
 - The resolution order is the slide slot value, then meta.labels, then the default (`assets/labels.json`)
 - The keys are template or composite block names and slot names (all keys, defaults and an English example are in the label slots section of `references/templates.md`)
-    + common.pointLabel: Point band label (meta.pointLabel takes precedence when set)
+    + common.pointLabel: Key Point band label (meta.pointLabel takes precedence when set)
     + language.latin, language.east_asia: language tags of the PPTX text (default en-US, ko-KR for runs that contain Hangul)
     + notation.source: extra tokens recognized as note lines (the built-in tokens ※, 출처:, 자료:, Source:, Note: stay)
 - Any key may be omitted (omitted keys keep the default)

@@ -41,7 +41,7 @@
 | `slots.rowFlow` | If true, down arrows between rows |
 | `slots.numbered` | If true, ①, ②, ③ numbers before cell titles |
 | `slots.dividers` | If true, gray divider lines between cells and rows (quadrant chart layout). Vertical lines at the same position in each row join into one line (crossing the horizontal line) |
-| `slots.point` | Point band text under the body (the label is the slide `pointLabel`, then `meta.pointLabel`, then `meta.labels.common.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| `slots.point` | Key Point band text under the body (the label is the slide `pointLabel`, then `meta.pointLabel`, then `meta.labels.common.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
 | `slots.conclusion` | Conclusion band text under the body |
 
 - A build warning appears when the cell count differs from the `regions` count
@@ -77,7 +77,7 @@
 - When a diagram block and a text box block are stacked in one cell, the text box block gets its content height first and the diagram block gets the rest
 - When a cell is shorter than the height its block content needs, the build warns of overflow risk (fix by cutting items or adjusting the grid)
 - When large spare height makes the group look small, add elements that carry more information, such as a weight column or a Harvey ball column
-- If the Point band only repeats the headline or summarizes the body, delete the band and give the body more height
+- If the Key Point band only repeats the headline or summarizes the body, delete the band and give the body more height
 - Put one-line formulas or caveats in `footnotes`
 - `check_layout.py` warns when the group is under 70% of the body height
 - Fix body vertical fill warnings by adding items or changing the layout type
@@ -191,7 +191,7 @@
 - The sizes in `market` carry the reference year and source
 - `market` description rows split the circle height into equal shares, and each abbreviation inside a circle sits at the middle height of its row, so one horizontal connector links them
 - The `market` description cell width fits the longest text, and the circle, connector and description cell group is centered in the cell (text wider than the cell uses the full cell width)
-- When a `market` or `matrix` without a cell title is centered narrower than the cell, the left and right ends of the conclusion band and the Point band align with those of the diagram
+- When a `market` or `matrix` without a cell title is centered narrower than the cell, the left and right ends of the conclusion band and the Key Point band align with those of the diagram
 - Fill the `market` description rows with three items per market: definition, formula, and growth trend or target scope
 - Write a cell with no correspondence to the row below as one full-width cell (e.g. the mission, vision and goal of a vision system)
 - A build warning appears when a `chart` cell is narrower than 2.4 inch or shorter than 1.2 inch (label overlap)

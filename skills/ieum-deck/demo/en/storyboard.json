@@ -8,7 +8,7 @@
   "track": "general",
   "chapters": ["Ⅰ. Proposal Overview", "Ⅱ. Project Execution", "Ⅲ. Project Management"],
   "labels": {
-   "common": {"pointLabel": "Key point", "company": "Company name"},
+   "common": {"pointLabel": "Key Point", "company": "Company name"},
    "cover": {"label": "Proposal"},
    "contents": {"title": "Contents"},
    "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},

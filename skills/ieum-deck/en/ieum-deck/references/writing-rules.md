@@ -80,7 +80,7 @@
 - Table cell text carries whichever of subject, criterion and figures is needed (enough to fill the column width)
 - If there is nothing to add, shrink the box and gather it to the center
 - If it still looks awkward after shrinking, change the form of expression or merge it with a neighboring box
-- Write the Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 

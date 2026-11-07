@@ -510,11 +510,11 @@ function noteRows(sb) {
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
 }
-const CALLOUT_LABEL_W = 1.2; // 수행 Point 라벨 칸 폭 (16:9 기준 인치, 판형 가로 비율로 환산)
-const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // 수행 Point 문구 칸 안 여백 (좌, 위, 우, 아래 인치)
-const CALLOUT_H = 0.5; // 수행 Point 띠 높이 (인치)
-const CALLOUT_W_STEP = 0.1; // 수행 Point 띠 폭을 넓히는 단위 (인치)
-/** 수행 Point 문구의 줄 목록 (배열 항목과 줄바꿈을 줄 단위로 나눔) */
+const CALLOUT_LABEL_W = 1.2; // Key Point 라벨 칸 폭 (16:9 기준 인치, 판형 가로 비율로 환산)
+const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Key Point 문구 칸 안 여백 (좌, 위, 우, 아래 인치)
+const CALLOUT_H = 0.5; // Key Point 띠 높이 (인치)
+const CALLOUT_W_STEP = 0.1; // Key Point 띠 폭을 넓히는 단위 (인치)
+/** Key Point 문구의 줄 목록 (배열 항목과 줄바꿈을 줄 단위로 나눔) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
 }
@@ -526,7 +526,7 @@ function callout(ctx, slide, box, lbl, text) {
   const paras = lines.map((t) => ({ align: "left", bullet: lines.length > 1, indent: lines.length > 1 ? T.PARA.bulletIndentIn : 0, marL: lines.length > 1 ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
   slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(CALLOUT_MG), isTextBox: true, autoFit: false });
 }
-/** 수행 Point 띠 폭. 묶음 폭 w0 에서 시작하여 문구가 띠 높이 안에 들어가는 폭까지 넓힘 (상한 maxW)
+/** Key Point 띠 폭. 묶음 폭 w0 에서 시작하여 문구가 띠 높이 안에 들어가는 폭까지 넓힘 (상한 maxW)
  *  패널이나 카드 묶음이 짧은 항목에 맞춰 좁아지면 띠 문구가 상자 밖으로 넘치므로 띠와 묶음을 함께 넓히는 데 씀 */
 function calloutW(ctx, text, w0, maxW) {
   const lines = calloutLines(text);
@@ -969,13 +969,13 @@ function bulletsT(ctx, slide, sb) {
   const full = cols({ x: b.x, y: b.y, w: b.w, h: b.h - ptH }, n);
   const psz = groupSize(full.map((c) => ({ ...c, h: c.h - T.PANEL.TITLE_H })), pn.map((p) => (p && p.items) || []), PANEL_ITEM_SZ);
   const ssz = Math.max(T.SIZE.BODY_MIN, psz - 2);
-  // 패널 폭은 가장 긴 글줄에 맞춘 같은 폭으로 두고 패널 묶음과 수행 Point 를 가운데 정렬 (짧은 항목에서 오른쪽이 비지 않게 함)
+  // 패널 폭은 가장 긴 글줄에 맞춘 같은 폭으로 두고 패널 묶음과 Key Point 를 가운데 정렬 (짧은 항목에서 오른쪽이 비지 않게 함)
   const pw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, psz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // 수행 Point 문구가 띠 높이에 들지 않으면 패널 묶음과 띠를 함께 넓힘 (띠는 패널 묶음과 같은 폭)
+  // Key Point 문구가 띠 높이에 들지 않으면 패널 묶음과 띠를 함께 넓힘 (띠는 패널 묶음과 같은 폭)
   const gw0 = pw0 * n + gap * (n - 1);
   const gw = point ? calloutW(ctx, point, gw0, b.w) : gw0;
   const pw = gw === gw0 ? pw0 : Math.min(full[0].w, (gw - gap * (n - 1)) / n), x0 = b.x + (b.w - gw) / 2;
-  // 패널 높이는 내용 높이 기준으로 두고 패널과 수행 Point 묶음을 본문 세로 가운데에 둠
+  // 패널 높이는 내용 높이 기준으로 두고 패널과 Key Point 묶음을 본문 세로 가운데에 둠
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
   const top = b.y + (b.h - gh - ptH) / 2;
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
@@ -1020,7 +1020,7 @@ function panelBodyH(widths, lists, sz, avail, subSz) {
 function table(ctx, slide, sb) {
   const s = sb.slots || sb, b = body(ctx, sb);
   const titleH = s.title ? T.PANEL.SUBHEAD_H : 0, legH = s.legend ? 0.3 : 0, ptH = s.point ? 0.7 : 0;
-  // 행 높이 상한에 걸려 표가 본문보다 짧으면 제목, 표, 수행 Point 묶음을 본문 세로 가운데에 둠 (각주 높이는 body() 가 이미 제외)
+  // 행 높이 상한에 걸려 표가 본문보다 짧으면 제목, 표, Key Point 묶음을 본문 세로 가운데에 둠 (각주 높이는 body() 가 이미 제외)
   const availT = b.h - titleH - legH - ptH;
   const shift = Math.max(0, (availT - tableLayout(s, b.w, availT).total) / 2);
   const g = { x: b.x, y: b.y + shift, w: b.w, h: b.h - 2 * shift };
@@ -1376,13 +1376,13 @@ function cards(ctx, slide, sb) {
   const lists = cd.map((x) => (x && (x.items || x.text)) || []);
   const csz = groupSize(full.map((c) => ({ ...c, h: c.h - T.PANEL.TITLE_H })), cd.map((x) => (x && x.items) || []), PANEL_ITEM_SZ);
   const ssz = Math.max(T.SIZE.BODY_MIN, csz - 2);
-  // 카드 폭은 가장 긴 글줄에 맞춘 같은 폭으로 두고 카드 묶음과 수행 Point 를 가운데 정렬 (짧은 항목에서 오른쪽이 비지 않게 함)
+  // 카드 폭은 가장 긴 글줄에 맞춘 같은 폭으로 두고 카드 묶음과 Key Point 를 가운데 정렬 (짧은 항목에서 오른쪽이 비지 않게 함)
   const cw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, csz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // 수행 Point 문구가 띠 높이에 들지 않으면 카드 묶음과 띠를 함께 넓힘 (띠는 카드 묶음과 같은 폭)
+  // Key Point 문구가 띠 높이에 들지 않으면 카드 묶음과 띠를 함께 넓힘 (띠는 카드 묶음과 같은 폭)
   const gw0 = cw0 * ncol + T.PANEL.GAP * (ncol - 1);
   const gw = s.point ? calloutW(ctx, s.point, gw0, b.w) : gw0;
   const cw = gw === gw0 ? cw0 : Math.min(full[0].w, (gw - T.PANEL.GAP * (ncol - 1)) / ncol), x0 = b.x + (b.w - gw) / 2;
-  // 카드 높이는 내용 높이 기준으로 두고 카드와 수행 Point 묶음을 본문 세로 가운데에 둠
+  // 카드 높이는 내용 높이 기준으로 두고 카드와 Key Point 묶음을 본문 세로 가운데에 둠
   const rowAvail = full[0].h - T.PANEL.TITLE_H;
   const ch = T.PANEL.TITLE_H + panelBodyH(cd.map(() => cw), lists, csz, rowAvail, ssz);
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);
