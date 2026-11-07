@@ -121,12 +121,21 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - A PDF of an HWPX document is likely to contain display defects in line breaks, spacing, and page breaks
     - (Purpose) chapter for a chaptered document of a full report. flat for a standalone document or a partial manuscript to insert into a full report. A cover and TOC are optional regardless of purpose
     - (Form contrast) Show this when asking about the purpose. chapter sets the 제N장, N.N, N.N.N, and 가. headings in NanumGothic bold and restarts caption numbers in each chapter (표 1-3). flat sets the document title, N., and N.N headings in NanumBarunGothic bold and the 가. headings in NanumGothic bold, and numbers captions continuously through the document (표 3). The body levels □, ○, -, ㆍ, ※ and the body font NanumGothic are the same in both forms. Only chapter has TOC styles
-    - (Page breaks) Choose chapter, section, or none. build reports the number of short sections with fewer than 8 elements on a `HITL: [page-break]` line. Under section, each page that holds a short section ends with a large blank area
-    - (Long tables) Choose engine or split. build reports those tables on a `HITL: [long table]` line
+    - (Page breaks) Choose chapter (default), section, or none. build reports the number of short sections with fewer than 8 elements on a `HITL: [page-break]` line
+        - (chapter) Starts a new page at each chapter. In flat, the same as none
+        - (section) Starts a new page at each chapter and section. Each page that holds a short section ends with a large blank area
+        - (none) Breaks pages only at `---` lines
+    - (Long tables) How tables over 25 rows including the header rows are handled. Choose engine (default) or split. build reports those tables on a `HITL: [long table]` line
+        - (engine) Splits one table at page boundaries and repeats the unit row and header rows on every page
+        - (split) Divides the table into several tables, each with the header row
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the TOC depth (chapter, section, subsection), the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
+    - (Choice items) Present every choice and mark the default with "(default)"
+        - (Reason) The user chooses only among the choices the question shows
+        - (Choice description) Describe in one line what each choice changes in the output. Keep option names and build behavior out of the question text
+        - Write any item that does not fit in the question tool in the response body with all of its choices
     - (Render test results) Report the render test result of each format (engine, pass or fail) in one line with the questions. If a source build is running, add its progress to the same line. For a format without a renderer, also state that its rendering review is skipped and why
 2. (Manuscript) Write the Markdown manuscript with the level rules below and the writing rules in references/manuscript.md
 3. (Typesetting) Run build and act on each output line prefix

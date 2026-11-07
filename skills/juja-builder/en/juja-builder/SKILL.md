@@ -169,6 +169,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Announcing the next task, self-assessment of finished work, offers of unrequested extra work (the one line of deepening options when presenting the storyline is the exception)
 - Report revisions by the changed points only. Report check results as the PASS count, FAIL count, and unresolved items only
 - Bundle questions in one turn. For items with a reasonable default, state the default and proceed
+- In the kickoff questions, present every choice of a choice item and mark the default with "(default)"
+    + (Reason) The user chooses only among the choices the question shows
+    + (Choice description) Describe in one line what each choice changes in the output. Keep option names and build behavior out of the question wording
+    + Write any item that does not fit in the question tool in the response body with all of its choices
 - The reply style is short bullet statements. Keep step completion reports short
 - Deliver files that ask the user for review, confirmation, or approval, and delivered files, through the file delivery feature of the execution environment. In an environment where the workspace is not visible to the user, the user cannot open a file from a path alone
     + The main delivery points are the step 2 approval request and re-presentation, confirmation of source image candidates, the step 6 delivery (hwpx or docx, and the PDF when included), and whenever the user asks for a file
@@ -301,7 +305,8 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Whether there is a consortium and each member's role
     + Principal investigator candidates and participating staff candidates
     + Whether an advisory committee runs, and its candidates
-    + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover, band color theme (navy by default, mono is black and gray). The conditions for turning on the table of contents and page numbers are in the Typesetting section
+    + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover. The conditions for turning on the table of contents and page numbers are in the Typesetting section
+    + Band color theme. navy (navy blue, default) or mono (black and gray)
     + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)

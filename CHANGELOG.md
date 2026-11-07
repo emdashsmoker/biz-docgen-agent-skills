@@ -31,8 +31,10 @@ Changelog rules
 
 ### blockwriter
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
+- Fixed the planning questions so that every choice item shows all of its choices with the default marked, including the page break and long table defaults (#96)
 
 * 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
+* 쪽 나눔과 장표처럼 기획안 질문에서 기본값과 선택지 설명이 빠지는 현상 수정 (#96)
 
 ### ieum-deck
 - Changed the muted text color for sources, notes, and axis end labels to 52596C (navy) and 595959 (mono) for at least 4.5:1 contrast with white (#92)
@@ -81,10 +83,12 @@ Changelog rules
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
 - Changed the source rule for figures taken from the RFP body to cite only the external material they came from and never the RFP itself (#92)
 - Removed "작성" from the first line of the preliminary diagnosis section (#92)
+- Fixed the kickoff questions of all three output types so that every choice item shows all of its choices, including the band color theme (#96)
 
 * 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
 * RFP 본문 그림의 출처 표기 대상을 그림의 원 출처인 외부 자료로 변경 (#92)
 * 예비 진단 절 첫 줄 문구의 "작성" 삭제 (#92)
+* 세 산출 유형의 착수 질의에서 밴드 색 테마처럼 기본값 외 선택지가 빠지는 현상 수정 (#96)
 
 ## 2026-11-06
 
