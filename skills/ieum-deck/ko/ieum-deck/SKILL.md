@@ -157,7 +157,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 번호 표기의 출처 행은 "출처:" 로 시작
     + 번호 표기에서는 빌드가 남은 ※ 도 바꿈 (※ 로 시작하는 줄은 위 표기, 제목 안 "(※ 시안)" 은 "(시안)")
     + 라벨 문구(기본 "참조:", "출처:")는 발주기관 관행(예: "주:", "자료:")이나 문서 언어(예: "Note:", "Source:")에 맞춰 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
-    + 특정 슬라이드만 다른 라벨이 필요하면 그 슬라이드의 footnoteLabel, sourceLabel 에 지정 (덱 라벨보다 우선)
+    + 특정 슬라이드만 다른 라벨이 필요하면 그 슬라이드의 footnoteLabel, sourceLabel 에 지정 (덱 라벨보다 우선. 예: 덱 라벨은 "참조:" 이고 그 슬라이드 주석만 단서 성격이면 "주:")
 
 ## 회사 사실 정보
 

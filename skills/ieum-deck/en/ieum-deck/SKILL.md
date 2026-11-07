@@ -170,7 +170,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In the number style, the source line starts with "출처:"
     + In the number style, the build also replaces any remaining ※ (lines starting with ※ get the marks above, "(※ 시안)" in a title becomes "(시안)")
     + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
-    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels)
+    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. the deck uses "참조:" and one slide's note is a caveat, so that slide uses "주:")
 
 ## Company facts
 

@@ -100,7 +100,7 @@
     + Write slot text without symbols such as "-" or "·" (the builder typesets bullets)
     + Write steps titles without prefixes such as "STEP 1." (set stepLabel to "" if no prefix is needed)
     + A grid cell that carries inherited numbering (1-1.) sets numbered so the number replaces the bullet
-    + Write note and footnotes items without ※ or a mark such as "1)" or "참조:" (the mark comes from `meta.footnoteStyle` and the label text from `meta.labels.common`)
+    + Write note and footnotes items without ※ or a mark such as "1)" or "참조:" (the mark comes from `meta.footnoteStyle` and the label text from the slide footnoteLabel and sourceLabel or `meta.labels.common`)
     + Write process module names without numbers such as "M1" (the module number goes in the id field)
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
