@@ -116,8 +116,8 @@
     + The build adds the mark to note-type slots, footnotes and source
     + Notes written directly in body cells get ※ by hand
     + In a number-style deck, the build turns a ※ added by hand into the deck mark
-- Use ※ only for evidence, sources, premises and caveats
-- Put evidence and caveats in note slots or footnotes (the build adds the mark)
+- Use ※ only for note text such as evidence, sources, premises and caveats
+- Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
     + Used as a normal item, write it without ※
@@ -130,7 +130,7 @@
 
 ## Notes
 
-- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments and scope in the body correctly
+- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments, scope and similar parts of the body correctly
     + (Figures) Calculation basis such as formula, unit, reference date or conversion basis
     + (Terms) Definitions of terms, abbreviations or symbols unfamiliar to readers
     + (Judgments) Grounds such as the governing law or a higher-level guideline
@@ -141,12 +141,11 @@
 - Merge caveats on the same target into one item
 - A note that supplements a specific word or figure names that target in its sentence (e.g. "TTL stands for Travel, transport, and logistics")
 - Compose note items without duplication or omission
-- Do not repeat in a note what the headline, body or Key Point band already says
+- Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs
     + (※ mark) Write one item by default. Use two or more items when caveats on different targets are needed together (stacked ※ lines stand out more than the body)
     + (Numbers) Apply the same minimum as the ※ mark (with two or more items the build tells them apart by number)
     + (Judgment per slide) These counts are common practice, so do not apply them mechanically to every slide. Make the final judgment from the content and context of the slide
-- Before adding notes for caveats that cannot be cut further, consider moving them into a table or box in the body
 
 ## Tables
 
