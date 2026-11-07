@@ -64,6 +64,8 @@ Changelog rules
 - Added a rule that puts an abbreviation's full name in parentheses at the end of its definition note (#100)
 - Fixed ※ mark decks leaving the source mark ("출처:", "자료:") out of source lines and source notes by adding a rule that writes it before the first source item and before notes that cite a source (#101)
 - Changed the source placeholder note in the recipe samples to "※ 출처: 기관명(연도), 자료명" (#101)
+- Fixed lint warning about a note mark in a body item when a slide sets footnoteLabel or sourceLabel, so decks with slide note labels pass lint (#102)
+- Added a rule that general terms and abbreviations readers use in their work (RFP, consulting, participation rate and so on) go without a definition note or full name (#102)
 
 * 출처, 각주, 축 양끝 표기의 보조 글자색을 흰색 대비 4.5:1 이상인 52596C(navy)와 595959(mono)로 변경 (#92)
 * 사용자 지정 textMuted 테마 색의 대비 하한을 3.0에서 4.5로 변경 (#92)
@@ -92,6 +94,8 @@ Changelog rules
 * 약어 정의 주석의 설명 끝 괄호에 전체 명칭을 병기하는 규칙 추가 (#100)
 * ※ 기호 덱의 출처 행과 출처 주석에서 "출처:", "자료:" 같은 출처 표기가 빠지는 현상 수정 (#101)
 * 레시피 견본의 출처 자리 주석을 "※ 출처: 기관명(연도), 자료명"으로 변경 (#101)
+* 슬라이드에 지정한 footnoteLabel 과 sourceLabel 을 lint 가 본문 주석 표기로 경고하는 현상 수정 (#102)
+* 독자가 업무에서 쓰는 일반 용어와 약어(RFP, 컨설팅, 참여율 등)의 정의 주석과 전체 명칭 병기를 생략하는 규칙 추가 (#102)
 
 ### juja-builder
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
@@ -101,6 +105,7 @@ Changelog rules
 - Fixed image extraction from hwpx, pptx and docx files so that BMP images are converted to PNG and kept as insertion candidates (#99)
 - Changed ※ notes that define a term, abbreviation or symbol to the "※ (term) explanation" format (#100)
 - Added a rule that a ※ note defining an abbreviation gives only the meaning because the body carries the full name on first use (#100)
+- Added a rule that general terms and abbreviations readers use in their work (RFP, consulting, participation rate and so on) go without a term definition ※ note or the full name on first use (#102)
 
 * 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
 * RFP 본문 그림의 출처 표기 대상을 그림의 원 출처인 외부 자료로 변경 (#92)
@@ -109,6 +114,7 @@ Changelog rules
 * hwpx, pptx, docx 안의 BMP 그림이 삽입 후보에서 모두 빠지는 현상 수정 (#99)
 * 용어, 약어, 표식을 정의하는 ※ 부기의 형식을 "※ (용어) 설명"으로 변경 (#100)
 * 본문에 정식 명칭을 병기한 약어의 ※ 부기에 뜻만 기재하는 규칙 추가 (#100)
+* 독자가 업무에서 쓰는 일반 용어와 약어(RFP, 컨설팅, 참여율 등)의 용어 정의 ※ 부기와 최초 1회 정식 명칭 병기를 생략하는 규칙 추가 (#102)
 
 ## 2026-11-06
 
