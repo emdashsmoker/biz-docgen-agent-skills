@@ -63,8 +63,23 @@ def from_pdf(src, out):
     return items
 
 
+def bmp_to_png(data):
+    """Convert BMP bytes to PNG bytes. Return the original bytes if conversion fails"""
+    import io
+    from PIL import Image
+    try:
+        image = Image.open(io.BytesIO(data))
+        if image.mode not in PNG_SAFE_MODES:
+            image = image.convert("RGB")
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return data  # a corrupted BMP has no readable size, so the lower bounds exclude it later
+
+
 def from_zip(src, out, prefix):
-    """hwpx, pptx, and docx use the media files inside the ZIP as is"""
+    """hwpx, pptx, and docx use the media files inside the ZIP as is. BMP is converted to PNG"""
     items = []
     with zipfile.ZipFile(src) as zf:
         for name in zf.namelist():
@@ -74,6 +89,8 @@ def from_zip(src, out, prefix):
             if not any(k in low for k in ("media", "bindata", "image")) or low.startswith("preview/"):
                 continue  # hwpx Preview/PrvImage.png is a first-page preview, not an insertion candidate
             data = zf.read(name)
+            if data[:2] == b"BM":
+                data = bmp_to_png(data)  # uncompressed BMP defeats the byte lower bound and the kind verdict (kind_of), so unify to PNG
             items.append((Path(name).stem, data, 0, 0, None))
     return items
 

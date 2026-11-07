@@ -90,11 +90,13 @@ Changelog rules
 - Changed the source rule for figures taken from the RFP body to cite only the external material they came from and never the RFP itself (#92)
 - Removed "작성" from the first line of the preliminary diagnosis section (#92)
 - Fixed the kickoff questions of all three output types so that every choice item shows all of its choices, including the band color theme (#96)
+- Fixed image extraction from hwpx, pptx and docx files so that BMP images are converted to PNG and kept as insertion candidates (#99)
 
 * 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
 * RFP 본문 그림의 출처 표기 대상을 그림의 원 출처인 외부 자료로 변경 (#92)
 * 예비 진단 절 첫 줄 문구의 "작성" 삭제 (#92)
 * 세 산출 유형의 착수 질의에서 밴드 색 테마처럼 기본값 외 선택지가 빠지는 현상 수정 (#96)
+* hwpx, pptx, docx 안의 BMP 그림이 삽입 후보에서 모두 빠지는 현상 수정 (#99)
 
 ## 2026-11-06
 
