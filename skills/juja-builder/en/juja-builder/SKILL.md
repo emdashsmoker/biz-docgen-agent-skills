@@ -691,6 +691,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + If almost every line on a one-page stretch of manuscript has a bracketed subheading, check whether bracketed subheadings have slipped into argument groups
 - Do not use meaningless bracketed subheadings such as (설명) and (내용), or repeat the same bracketed subheading
 - Labels used as a fixed set ((목적), (분석 대상), (산출물) of Tasks, and so on) are outside this judgment. The composition and application of the sets follow the Task Types section under Common Standards in references/methods.md
+- The `(term)` of a ※ note that defines a term marks the defined target. It is outside this judgment (format in the Sentence Discipline section)
 - In the first example below, the hyphens under the first ❍ enumerate evaluation elements and take bracketed subheadings. The second ❍ and its hyphens argue for the judgment statement and are written without bracketed subheadings. The second example shows hyphens under ❍ that enumerate grades. `-` lines in the manuscript are typeset as ❍ and indented `+` lines as hyphens
 
 ```
@@ -879,6 +880,10 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not state the budget of the project you are bidding on in the body. Turn unconfirmed figures into `[확인]` or a survey task
 - Recalculate ratios and totals in code. Do not use ratios whose numerator and denominator have different reference dates
 - For English abbreviations, give the full name alongside on first use
+- Write a ※ note that defines a term, abbreviation or symbol as `※ (term) explanation`. For example, "※ (입지계수) 특정 지역의 산업 비중을 전국의 같은 산업 비중으로 나눈 값"
+    + Write the term in parentheses exactly as the body writes it
+    + The explanation is one noun phrase that spells out the meaning. Do not repeat the defined term or use other technical terms
+    + The full name given in the body on first use covers an abbreviation's full name. The ※ note gives only the meaning
 - Do not use exaggerating modifiers (획기적, 혁신적, 선도적) or glue expressions (이러한 맥락에서)
 
 ## Common Part

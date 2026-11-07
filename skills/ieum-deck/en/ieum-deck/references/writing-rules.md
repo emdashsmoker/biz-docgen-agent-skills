@@ -140,7 +140,12 @@
 - Write the material that figures, facts and similar content come from in `source`
 - Write each note item as a simple sentence with one subject-predicate pair (judge a simple sentence by its structure regardless of length)
 - Merge caveats on the same target into one item
-- A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "TTL stands for Travel, transport, and logistics")
+- A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "Revenue is based on the 2024 settled accounts")
+- Write a note that defines a term, abbreviation or symbol as `(term) explanation` (the term in parentheses names the target)
+    + Write the term in parentheses exactly as the body writes it
+    + Write the explanation as one noun phrase that spells out the meaning (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
+    + Do not repeat the defined term or use other technical terms in the explanation
+    + For an abbreviation, add the full name in parentheses at the end of the explanation. When the full name already gives the meaning, write the full name alone (e.g. "(TTL) Travel, transport, and logistics")
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs
