@@ -428,7 +428,7 @@ class DocxBuilder:
 
     # ── Captions ───────────────────────────────────────────────────────────
     def _caption(self, kind: str, text: str, before: int, after: int, obj_w: int):
-        """<표 1-3> title. The number is a SEQ field, and the chapter form restarts numbering at each Heading 1 style (\\s 1).
+        """<표 1-3> title. The number is a SEQ field, and the chapter form restarts numbering at each Heading 1 style (\\s 1). The first caption of each chapter also carries \\r 1.
         obj_w is the width of the table or figure table the caption belongs to. Both sides are indented so the caption wraps within this width, like the HWPX caption object"""
         self.caption_n[kind] += 1
         role = "table_title" if kind == "TABLE" else "fig_title"
@@ -449,7 +449,11 @@ class DocxBuilder:
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         p.append(self._run(open_b + prefix))
         seq = C.caption_seq(kind)
-        instr = f" SEQ {seq} \\* ARABIC" + (" \\s 1 " if self.p.get("caption_prefix") else " ")
+        reset = ""
+        if self.p.get("caption_prefix"):
+            # Why \r 1: LibreOffice does not restart on \s 1, so review and bundled PDFs carried numbers across chapters. Fix the first caption of each chapter at 1. Keep \s 1 for Word
+            reset = " \\r 1 \\s 1" if self.caption_n[kind] == 1 else " \\s 1"
+        instr = f" SEQ {seq} \\* ARABIC{reset} "
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
         p.append(self._run(close_b + text))

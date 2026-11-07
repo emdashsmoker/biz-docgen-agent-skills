@@ -605,7 +605,8 @@ class ProposalLayout:
         self.unify_table_widths(elems)
         self.last_para = None
         self._body_started = False   # 본문 첫 요소 기록 여부. 간지의 쪽 나눔 판단에 사용
-        if getattr(self, "doc_title", None):
+        # 간지를 켜면 본문 첫 쪽이 1장 간지로 넘어가 제목 줄만 남은 쪽이 생김. 유저가 요청하지 않은 속표지이므로 생략. 문서 제목은 표지(--cover)가 담당
+        if getattr(self, "doc_title", None) and not getattr(self, "divider", False):
             self.para("doc_title", self.doc_title)
             self._body_started = True
         skip = 0
@@ -2486,7 +2487,7 @@ def main():
     p.add_argument("output", nargs="?", help="산출 경로 (확장자는 --format이 정함)")
     p.add_argument("--profile", default=None, help="proposal | report | plan | 프로파일 JSON 경로 (기본은 작업폴더 산출 유형, 단일 원고는 proposal)")
     p.add_argument("--format", default="hwpx", choices=["hwpx", "docx", "both"], help="산출 형식 (착수 질의 답변). 두 형식은 같은 원고와 같은 양식 정의로 조판")
-    p.add_argument("--title", help="본문 첫 줄 문서 제목 (기획보고서)")
+    p.add_argument("--title", help="본문 첫 줄 문서 제목 (기획보고서. --divider on이면 생략)")
     p.add_argument("--chapter-start", type=int, default=1, help="첫 장 번호 (전체 목차 중 일부 장만 산출할 때 전체 기준 번호)")
     p.add_argument("--divider", choices=["on", "off"], default=None, help="장 간지 (기본: 사전진단보고서 on, 제안서와 기획보고서 off)")
     p.add_argument("--skeleton", help="스켈레톤 hwpx (기본은 작업폴더/_양식/proposal.hwpx를 실행마다 생성)")

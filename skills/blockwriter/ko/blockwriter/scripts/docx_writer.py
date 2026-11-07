@@ -428,7 +428,7 @@ class DocxBuilder:
 
     # ── 캡션 ───────────────────────────────────────────────────────────
     def _caption(self, kind: str, text: str, before: int, after: int, obj_w: int):
-        """<표 1-3> 제목. 번호는 SEQ 필드이며 장 체계 양식은 제목 1 스타일마다 번호를 새로 시작(\\s 1).
+        """<표 1-3> 제목. 번호는 SEQ 필드이며 장 체계 양식은 제목 1 스타일마다 번호를 새로 시작(\\s 1). 장 첫 캡션에는 \\r 1을 함께 둠.
         obj_w는 캡션이 딸린 표나 그림 표의 폭. HWPX 캡션 개체처럼 이 폭 안에서 줄을 바꾸도록 양쪽을 들여씀"""
         self.caption_n[kind] += 1
         role = "table_title" if kind == "TABLE" else "fig_title"
@@ -449,7 +449,11 @@ class DocxBuilder:
         prefix = self.p.get("caption_prefix", "").format(c=max(self.numbering.n["chapter"], 1))
         p.append(self._run(open_b + prefix))
         seq = C.caption_seq(kind)
-        instr = f" SEQ {seq} \\* ARABIC" + (" \\s 1 " if self.p.get("caption_prefix") else " ")
+        reset = ""
+        if self.p.get("caption_prefix"):
+            # Why \r 1: LibreOffice는 \s 1로 번호를 다시 세지 않아 검수 PDF와 동봉 PDF의 번호가 장을 넘어 이어짐. 장 첫 캡션을 1로 고정. \s 1은 Word 동작을 위해 유지
+            reset = " \\r 1 \\s 1" if self.caption_n[kind] == 1 else " \\s 1"
+        instr = f" SEQ {seq} \\* ARABIC{reset} "
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
         p.append(self._run(close_b + text))

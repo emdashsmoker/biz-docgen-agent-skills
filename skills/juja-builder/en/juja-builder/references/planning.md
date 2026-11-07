@@ -220,5 +220,5 @@
 - Table of contents, page numbers, cover, and divider pages are OFF by default. Turn them on by the kickoff answers
 - If table of contents page numbers are missing, follow the handling in the references/report.md Typesetting section. Keep the table of contents and state the missing entries and the refresh guidance in the final report
 - Turn on divider pages with `--divider on`. A page holding only the chapter number and title goes before each chapter. The typesetting method is in the SKILL.md Typesetting section
-    + With divider pages on, the document title is placed alone on the first page
+    + With divider pages on, the document title line of the body is skipped. The cover (`--cover`) carries the document title
 - Output files are 납품/기획보고서.hwpx and .docx
