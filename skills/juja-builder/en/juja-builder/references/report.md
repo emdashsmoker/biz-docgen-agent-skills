@@ -250,7 +250,7 @@
     + Write improvement directions with expressions that widen the foundation, such as 보완, 확충, 강화, and 연계
 - (Report vocabulary) The vocabulary of the manuscripts is that of the final report the client receives
     + Do not use diagnosis design terms in the manuscripts. 가설, 반증, 검증 가설, 예비 진단, 진단 결과, 지지 조건, 뿌리 질문, 이슈 트리, and so on. Write what field research will confirm as 확인 사항 and what was analyzed as 분석 결과
-    + For technical terms of analysis techniques (location quotient, input-output analysis, and so on), add a one-line meaning on a ※ line under their first appearance
+    + For technical terms of analysis techniques (location quotient, input-output analysis, and so on), add a one-line meaning as a `※ (term) explanation` line under their first appearance (format in the Sentence Discipline section of SKILL.md)
 - (Implications) Write the implications of analysis sections as matters the client decides or prepares
     + Write the direction (draft) section so that what the client decides in advance consultation is visible. If there are options, present alternatives and selection criteria together
     + Describe the effects of the direction (draft) as changes that happen to the program's beneficiaries such as residents, companies, and users
