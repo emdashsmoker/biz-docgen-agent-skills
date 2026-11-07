@@ -1,0 +1,190 @@
+{
+ "meta": {
+  "title": "Gaon City Hyperscale AI Adoption Master Plan Proposal",
+  "kind": "general",
+  "layout": "16:9",
+  "theme": "mono",
+  "headlineStyle": "noun",
+  "track": "general",
+  "chapters": ["Ⅰ. Proposal Overview", "Ⅱ. Project Execution", "Ⅲ. Project Management"],
+  "labels": {
+   "common": {"pointLabel": "Key point", "company": "Company name"},
+   "cover": {"label": "Proposal"},
+   "contents": {"title": "Contents"},
+   "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},
+   "gantt": {"groupHead": "Group", "taskHead": "Task", "reportHead": "Reports", "monthFormat": "{n}M"},
+   "language": {"latin": "en-US", "east_asia": "ko-KR"}
+  }
+ },
+ "slides": [
+  {"id": "S01", "template": "cover", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"title": "Gaon City Hyperscale AI Adoption Master Plan", "client": "Gaon City"}},
+  {"id": "S02", "template": "contents", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"items": ["Proposal Overview", "Project Execution", "Project Management"]}},
+  {"id": "S03", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅰ", "title": "Proposal Overview"}},
+  {"id": "S04", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅰ", "title": "Proposal Overview"}},
+  {"id": "S05", "template": "strategy", "secNo": "3.", "section": "Strategy", "chapter": "Ⅰ. Proposal Overview",
+   "headline": "Demand-based tasks, common platform use and built-in safety rules for an executable plan",
+   "accent": "an executable plan",
+   "marker": "Strategy",
+   "slots": {
+    "goal": "Safe, phased adoption of hyperscale AI across Gaon City's administration",
+    "strategies": [
+     {"title": "Demand-based task selection",
+      "items": ["Survey of all staff (1,000+ responses)", "Face-to-face interviews in 10+ departments", "Citizen pain points from complaint data", "Scoring on impact, urgency, feasibility", "Scores and evidence kept in task definitions"],
+      "result": "Tasks grounded in field demand"},
+     {"title": "Common platform first",
+      "items": ["Government AI platform reviewed first", "Same criteria for on-premise and cloud", "Linkage check of city data and systems", "Document scope for AI retrieval", "Budget and staffing estimates per model"],
+      "result": "No duplicate investment"},
+     {"title": "Built-in safety rules",
+      "items": ["AI use notice and output labeling rules", "Early identification of high-impact AI tasks", "Written input bans and output checks", "Security checks linked to privacy safeguards", "Role-based training to embed the guideline"],
+      "result": "Guideline and training in step"}
+    ],
+    "conclusion": "An executable master plan that starts with services citizens feel first"
+   }},
+  {"id": "S06", "template": "compare", "secNo": "4.", "section": "Features and Strengths", "chapter": "Ⅰ. Proposal Overview",
+   "headline": "From ad hoc departmental trials to phased adoption under city-wide rules",
+   "marker": "Current state and after the master plan",
+   "slots": {
+    "asis": {"head": "Current (departmental trials)", "items": [
+     {"text": "Each department trials AI tools on its own", "sub": ["Tool selection criteria differ by department", "Who pays for usage is still open"]},
+     {"text": "Security checks of AI services are case by case", "sub": ["City criteria per service type are needed", "Approval steps for new services need updating"]},
+     {"text": "Complaint data entry depends on each officer", "sub": ["Rules against entering personal data are needed", "Checks on AI output need to be written down"]}
+    ]},
+    "tobe": {"head": "After the master plan", "items": [
+     {"text": "Priority tasks start from department demand", "sub": ["Ranked by impact, urgency and feasibility", "Start order set by the department council"]},
+     {"text": "Security checks set per adoption model", "sub": ["Check items for platform, cloud and on-premise", "Approval before a new service goes live"]},
+     {"text": "Input bans and output checks in force", "sub": ["Banned input list in the AI use guideline (draft)", "Role-based training to embed the guideline"]}
+    ]},
+    "gap": ["Demand-based selection", "Common platform first", "Guideline plus training"],
+    "gapHead": "Our approach"
+   }},
+  {"id": "S07", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S08", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S09", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S10", "template": "contents", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image). Contents breaks a run of four identical structures",
+   "slots": {"items": ["Proposal Overview", "Project Execution", "Project Management"]}},
+  {"id": "S11", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S12", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S13", "template": "composite", "secNo": "2.", "section": "[Module 2] Vision and Task Design", "chapter": "Ⅱ. Project Execution",
+   "headline": "Recommending an adoption model by scoring three options on the same criteria",
+   "marker": "Task 3. Adoption model comparison and recommendation",
+   "pointLabel": "Direction",
+   "slots": {
+    "recipe": "option_evaluation",
+    "cols": [1, 1.62],
+    "regions": [
+     {"title": "Options",
+      "block": {"kind": "labeled", "labelW": 0.36, "rows": [
+       {"label": "Option 1\nOn-premise", "items": ["Own models and GPU servers", "Own data and permissions"]},
+       {"label": "Option 2\nCloud service", "items": ["Private cloud AI contract", "Certified service features"]},
+       {"label": "Option 3\nGov. platform", "items": ["Platform models and GPUs", "Gov. network documents"]}
+      ]}},
+     {"title": "Evaluation (※ preliminary draft)",
+      "block": {"kind": "table",
+       "head": ["Criterion", "Weight", "Opt. 1", "Opt. 2", "Opt. 3"],
+       "rows": [
+        ["Security control (internal data protection)", "30%", "●", "◐", "●"],
+        ["Cost efficiency (initial build and adoption)", "25%", "○", "◐", "●"],
+        ["Extensibility (model swaps and new features)", "25%", "◐", "●", "◐"],
+        ["Ease of operation (staff and maintenance)", "20%", "○", "◐", "●"],
+        [{"text": "Weighted total", "bold": true}, "100%", "1.85", "2.25", {"text": "2.75", "bold": true}]
+       ],
+       "align": ["center", "right", "center", "center", "center"]},
+      "note": "● 3, ◐ 2, ○ 1 point. Draft scores from public data, confirmed after the linkage diagnosis"}
+    ],
+    "point": "Common platform as the base, with cloud services for features outside its scope, as the candidate"
+   },
+   "source": ["Source: National Law Information Center (Act on AI and Data-Based Administration, Art. 27)", "Ministry of Science and ICT (2025.11.25) press release"]},
+  {"id": "S14", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S15", "template": "composite", "secNo": "2.", "section": "[Module 3] Pilot Service and Safe Use", "chapter": "Ⅱ. Project Execution",
+   "headline": "Pilot workflow, data and functions designed with complaint replies as the example",
+   "marker": "Task 1. Pilot service design",
+   "slots": {
+    "recipe": "process_redesign",
+    "rows": [{"h": 1, "cols": [2.5, 1]}, {"h": 1, "cols": [2.5, 1]}],
+    "regions": [
+     {"caption": "Current process (As-Is)",
+      "block": {"kind": "flowchart", "lanes": ["Officer", "Reviewer"],
+       "nodes": [
+        {"id": "s", "type": "start", "text": "Intake", "lane": 0, "col": 0},
+        {"id": "a", "type": "process", "text": "Search rules and cases", "lane": 0, "col": 1},
+        {"id": "b", "type": "process", "text": "Draft reply", "lane": 0, "col": 2},
+        {"id": "d", "type": "decision", "text": "Review OK", "lane": 1, "col": 3},
+        {"id": "e", "type": "end", "text": "Send reply", "lane": 0, "col": 4}
+       ],
+       "edges": [
+        {"from": "s", "to": "a"},
+        {"from": "a", "to": "b"},
+        {"from": "b", "to": "d"},
+        {"from": "d", "to": "e", "label": "Yes"},
+        {"from": "d", "to": "b", "label": "No"}
+       ]}},
+     {"title": "Data design",
+      "block": {"kind": "bullets", "items": ["Masked complaint history", "Ordinances, manuals, rules", "Quality records of reply checks"]}},
+     {"caption": "Pilot process (To-Be, ※ draft)",
+      "block": {"kind": "flowchart", "lanes": ["Officer", "System"],
+       "nodes": [
+        {"id": "s", "type": "start", "text": "Intake", "lane": 0, "col": 0},
+        {"id": "a", "type": "process", "text": "Search and draft", "lane": 1, "col": 1, "fill": "tint"},
+        {"id": "d", "type": "decision", "text": "Cited OK", "lane": 0, "col": 2},
+        {"id": "e", "type": "end", "text": "Send reply", "lane": 0, "col": 4}
+       ],
+       "edges": [
+        {"from": "s", "to": "a", "route": "vh"},
+        {"from": "a", "to": "d"},
+        {"from": "d", "to": "e", "label": "Yes"},
+        {"from": "d", "to": "a", "label": "No"}
+       ]}},
+     {"title": "Functional requirements",
+      "block": {"kind": "bullets", "items": ["Sources and articles shown per reply", "Personal data detection and masking", "AI use notice and output labels"]}}
+    ]
+   },
+   "footnotes": ["Pilot tasks are set by the Module 2 priority scoring. Complaint replies show the design method as an example", "AI use notice and output labels reflect Article 31 of the AI Basic Act (transparency duty)"]},
+  {"id": "S16", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅱ", "title": "Project Execution"}},
+  {"id": "S17", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",
+   "slots": {"no": "Ⅲ", "title": "Project Management"}},
+  {"id": "S18", "template": "gantt", "secNo": "1.", "section": "Schedule and Management", "chapter": "Ⅲ. Project Management",
+   "headline": "Eight months of work checked at the kickoff, interim and final reports",
+   "marker": "Project schedule",
+   "markerNote": "Each month has a first half (1) and a second half (2)",
+   "slots": {
+    "months": 8,
+    "weeks": 2,
+    "groups": [
+     {"name": "Module 1", "tasks": [
+      {"name": "Technology and law review", "from": 0, "to": 3},
+      {"name": "Public-sector case study", "from": 1, "to": 4},
+      {"name": "Work and data diagnosis", "from": 1, "to": 4},
+      {"name": "Staff and citizen survey", "from": 2, "to": 5}
+     ]},
+     {"name": "Module 2", "tasks": [
+      {"name": "Vision and strategy", "from": 5, "to": 7},
+      {"name": "Task priority scoring", "from": 6, "to": 9},
+      {"name": "Adoption model comparison", "from": 7, "to": 9}
+     ]},
+     {"name": "Module 3", "tasks": [
+      {"name": "Pilot service design", "from": 8, "to": 12},
+      {"name": "Roadmap and budget", "from": 10, "to": 13},
+      {"name": "Team and training plan", "from": 11, "to": 14},
+      {"name": "Guideline and security", "from": 9, "to": 14}
+     ]}
+    ],
+    "reports": [
+     {"name": "Kickoff report", "at": 0},
+     {"name": "Interim report", "at": 7},
+     {"name": "Final report", "at": 13}
+    ]
+   },
+   "footnotes": ["The advisory committee meets in the first half of months 3 (survey design and diagnosis) and 6 (draft plan)", "Each module ends with a quality review by the principal investigator. City and personal data follow the security pledge and are returned or destroyed at the end"]}
+ ]
+}
