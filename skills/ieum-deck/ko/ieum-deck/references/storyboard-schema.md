@@ -74,7 +74,7 @@
 | marker | 마커 텍스트. 30자(한글 환산) 초과는 lint FAIL. 값을 비우면 마커 도형도 생략 |
 | bandMode | 밴드 모드의 강제 지정. full(기본), noMarker, headerOnly, blank |
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |
-| source | 출처 행. 문자열 또는 배열. 번호 표기 덱은 항목 앞의 ※ 와 출처 표기(출처:, 자료:)를 떼고 common.sourceLabel 1개로 시작 |
+| source | 출처 행. 문자열 또는 배열. 번호 표기 덱은 항목 앞의 ※ 와 출처 표기(출처:, 자료:, Source:)를 떼고 common.sourceLabel 1개로 시작 |
 | footnotes | 각주 배열. `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙여 출처 행 위에 배치. 항목 앞에 직접 쓴 ※, 번호, 라벨은 덱 기준 표기로 교체 |
 | footnoteLabel, sourceLabel | 번호 표기 덱에서 이 슬라이드에 쓸 주석 라벨과 출처 라벨. `meta.labels.common` 보다 우선 (※ 기호 덱은 쓰지 않음) |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
