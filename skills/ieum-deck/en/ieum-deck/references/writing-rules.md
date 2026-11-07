@@ -100,7 +100,7 @@
     + Write slot text without symbols such as "-" or "·" (the builder typesets bullets)
     + Write steps titles without prefixes such as "STEP 1." (set stepLabel to "" if no prefix is needed)
     + A grid cell that carries inherited numbering (1-1.) sets numbered so the number replaces the bullet
-    + Write note and footnotes items without ※ or a mark such as "1)" or "Note:" (the mark comes from `meta.footnoteStyle` and the label text from the slide footnoteLabel and sourceLabel or `meta.labels.common`)
+    + Write note and footnotes items without ※ or a mark such as "1)" or "Note:" (the mark comes from `meta.footnoteStyle` and the label text from the slide footnoteLabel and sourceLabel or `meta.labels.common`; the source mark of an item that cites a source follows the source mark rule below)
     + Write process module names without numbers such as "M1" (the module number goes in the id field)
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
@@ -114,9 +114,13 @@
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
 - Notes and sources start with the `meta.footnoteStyle` mark
-    + The build adds the mark to note-type slots, footnotes and source
+    + The build adds the ※, the number and the number-style label to note-type slots, footnotes and source
     + Notes written directly in body cells get ※ by hand
     + In a number-style deck, the build turns a ※ added by hand into the deck mark
+- Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:")
+    + (※ mark deck) The build adds only ※, so the source mark you write is typeset as is (e.g. "※ Source: organization (year), material name; organization (year), material name")
+    + (Number-style deck) The build replaces the source mark of the source line and of a single-item note with sourceLabel
+    + (source array) Write the source mark on the first item only (the items are joined on one line with semicolons)
 - Use ※ only for note text such as evidence, sources, premises and caveats
 - Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions

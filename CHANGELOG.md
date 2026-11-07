@@ -62,6 +62,8 @@ Changelog rules
 - Added a rule that writes each source item as 기관명(연도), 자료명, the same format as juja-builder (#98)
 - Changed notes that define a term, abbreviation or symbol to the "(term) explanation" format (#100)
 - Added a rule that puts an abbreviation's full name in parentheses at the end of its definition note (#100)
+- Fixed ※ mark decks leaving the source mark ("출처:", "자료:") out of source lines and source notes by adding a rule that writes it before the first source item and before notes that cite a source (#101)
+- Changed the source placeholder note in the recipe samples to "※ 출처: 기관명(연도), 자료명" (#101)
 
 * 출처, 각주, 축 양끝 표기의 보조 글자색을 흰색 대비 4.5:1 이상인 52596C(navy)와 595959(mono)로 변경 (#92)
 * 사용자 지정 textMuted 테마 색의 대비 하한을 3.0에서 4.5로 변경 (#92)
@@ -88,6 +90,8 @@ Changelog rules
 * 출처 항목을 juja-builder 와 같은 "기관명(연도), 자료명" 형식으로 표기하는 규칙 추가 (#98)
 * 용어, 약어, 표식을 정의하는 주석의 형식을 "(용어) 설명"으로 변경 (#100)
 * 약어 정의 주석의 설명 끝 괄호에 전체 명칭을 병기하는 규칙 추가 (#100)
+* ※ 기호 덱의 출처 행과 출처 주석에서 "출처:", "자료:" 같은 출처 표기가 빠지는 현상 수정 (#101)
+* 레시피 견본의 출처 자리 주석을 "※ 출처: 기관명(연도), 자료명"으로 변경 (#101)
 
 ### juja-builder
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
