@@ -130,7 +130,7 @@
 
 ## Notes
 
-- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments, scope and similar parts of the body correctly
+- Notes (footnotes, note slots) carry the supplementary information readers need to read or check the body correctly (example targets: figures, terms, judgments, scope and similar parts)
     + (Figures) Calculation basis such as formula, unit, reference date or conversion basis
     + (Terms) Definitions of terms, abbreviations, symbols and similar items unfamiliar to readers
     + (Judgments) Grounds such as the governing law or a higher-level guideline
