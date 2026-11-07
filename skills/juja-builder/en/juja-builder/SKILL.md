@@ -634,6 +634,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Sources of body text are `[^n]` footnotes. A source line placed under a paragraph moves into a footnote of the preceding paragraph at typesetting
     + Keep footnote labels unique within one manuscript file. build separates labels per file, so the same number in another file is allowed
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
+- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). A single item takes no `◦`, even when it wraps onto several lines. Columns with bullets are left-aligned at typesetting
 - `◦` on single-item cells is judged per comparison line. A comparison line is a line of cells that sets the same attribute side by side across subjects. In a table with subjects in columns (module overview table, alternative comparison table), rows are the comparison lines. In a table with subjects in rows (track record table, etc.), columns are
@@ -959,7 +960,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Insert in the manuscript as `![caption](path)`. For a figure taken from outside, put `※ 출처: 기관명(연도), 자료명` (source: organization (year), material name) on the next line. Size, placement, and caption follow the typesetter's figure rules as is (width 140mm for landscape, width 90mm for near-square, height 110mm for portrait, centered in a transparent table, source below the figure, caption below the transparent table)
 - Relative paths resolve from the location of 납품/_합본.md, which build creates. Write figures in the workspace as a relative path that points to the same file from both 원고/ and 납품/ (for example `../그림/파일.png`) or as an absolute path
 - If the build log shows `WARN: image not found`, that figure and its caption are missing from the delivered file. Fix the path and typeset again
-- State the source even when using a figure from the RFP body as is. The proposer confirms the copyright and usage rights of source images
+- For figures in the RFP body taken from external material (statistics, reports, etc.), cite only that external material as the source. Do not cite the RFP itself. The proposer confirms the copyright and usage rights of source images
 - Diagrams in decks (process and structure diagrams drawn with shapes and text boxes) are not extracted as embedded images. Capture the region of the reference PDF with the `figure` command. The user confirmation rule is the same. The procedure is in the deck-conversion.md Diagram Capture section
 - If there are many candidates, raise the lower bounds with `--min-px` and `--min-kb`. Logos are inserted small, so keep the lower bound for logo extraction low. Select logo candidates from the logo type
 

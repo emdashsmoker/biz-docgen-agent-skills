@@ -477,6 +477,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Shorten the text to fit a headline on one line
 - check_layout reports inconsistent headline font sizes
 - Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※ before a note)
+- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term

@@ -170,7 +170,7 @@ def finance_slide(company, fin):
         "slots": {"recipe": "finance_status", "cols": [1.6, 1], "regions": [
             {"title": "재무 현황 (단위 천원)", "block": {"kind": "table", "head": head, "rows": [r[: len(head)] for r in fin[1:]],
                                                      "align": [FINANCE_LABEL_ALIGN] + [FINANCE_VALUE_ALIGN] * (len(head) - 1)}},
-            {"title": "신용평가등급", "block": {"kind": "image", "label": "신용평가등급 확인서", "caption": "신용평가기관 발급 확인서 (사용자 제공)"}},
+            {"title": "신용평가등급", "block": {"kind": "image", "label": "신용평가등급 확인서", "caption": "신용평가기관 발급 확인서"}},
         ]},
     }
 

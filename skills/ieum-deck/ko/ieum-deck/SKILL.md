@@ -464,6 +464,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 헤드라인은 문구를 줄여 1줄로 맞춤
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
 - 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (note 앞의 ※ 는 빌드가 붙임)
+- 출처와 주석에는 독자가 직접 찾아볼 수 있는 외부 자료만 출처로 기재 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 기재하지 않음)
 - 강조 어구 1곳은 `accent` 필드에 지정
 
 ### 대상 지칭어

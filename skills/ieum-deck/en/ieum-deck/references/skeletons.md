@@ -133,6 +133,6 @@
 - Place a synthesis slide (conclusion or findings_synthesis) at the end of each chapter
 - Place 1-3 results summary slides after the overview chapter
 - Keep section numbers in section so the header shows continuing sections
-- Keep the source line (source) on every slide
+- Keep the source lines (source) carried over from the manuscript
 - Generate the draft with `md2storyboard.py --kind report`
 - Finish the draft by refining the headlines and panels
