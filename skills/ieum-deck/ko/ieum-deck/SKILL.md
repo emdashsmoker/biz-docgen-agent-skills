@@ -46,7 +46,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | 밴드 | 슬라이드 상단 영역. 절 번호, 절 제목, 장 추적기, 헤드라인이 놓임 |
 | 헤드라인 | 밴드 가운데의 결론 문장 1개 |
 | 마커 | 본문 첫 줄의 소제목. 정사각형 도형과 함께 조판 |
-| 수행 Point 밴드 | 본문 아래에 라벨 칸과 한 문장을 담은 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 표시 |
+| Key Point 밴드 | 본문 아래에 라벨 칸과 한 문장을 담은 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 표시 |
 | 템플릿 | storyboard 의 `template` 값이 가리키는 조판 방식 |
 | 파라메트릭 템플릿 | 항목 수에 따라 배치가 바뀌는 고정 구조 템플릿 (`references/templates.md`) |
 | 레시피 | composite 템플릿의 격자와 블록 조합 견본 (`references/recipes.md`) |
@@ -464,6 +464,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 헤드라인은 문구를 줄여 1줄로 맞춤
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
 - 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (note 앞의 ※ 는 빌드가 붙임)
+- 출처와 주석에는 독자가 직접 찾아볼 수 있는 외부 자료만 출처로 기재 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 기재하지 않음)
 - 강조 어구 1곳은 `accent` 필드에 지정
 
 ### 대상 지칭어
@@ -479,7 +480,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 제안 외 산출물에 과업 라벨이 남으면 lint WARN
 - 제안 전용 라벨은 산출 대상에 맞춰 변경
     + 덱 전체에 같은 라벨은 `meta.labels` 에 한 번 지정 (키와 기본값은 `references/templates.md` 라벨 슬롯 절)
-    + 수행 Point 밴드의 라벨 문구(기본 "수행 Point")는 `meta.pointLabel` 로 변경
+    + Key Point 밴드의 라벨 문구(기본 "Key Point")는 `meta.pointLabel` 로 변경
     + 간트의 과업 열 머리와 보고 행 묶음 이름(기본 "과업", "보고회")은 gantt 의 `taskHead`, `reportHead` 로 변경
     + 표지와 종료 슬라이드의 회사명은 `meta.company` 로 지정
 
@@ -492,7 +493,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (어구) lint FAIL 표현과 lint WARN 어휘의 목록은 `references/writing-rules.md` 를 따름
 - (고정 워딩) RFP 핵심 워딩은 표준 표기를 유지
 - (수치) 미확인 수치는 자리 표기 `[확인 필요]` 로 표시
-- (수행 Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용
+- (Key Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용
     + 헤드라인 반복이나 본문 요약만 담은 밴드는 삭제
     + 한 줄짜리 산식이나 단서는 `footnotes` 에 기재하여 본문 높이를 확보
 - lint 는 문장 규범 위반을 FAIL 과 WARN 으로 보고
@@ -508,7 +509,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 일부 슬라이드만 영문인 덱은 영문 슬라이드가 쓰는 템플릿의 라벨만 지정하거나 그 슬라이드의 슬롯에 지정
     + 지정하지 않은 키는 한국어 기본값으로 조판되므로 영문 덱이 쓰는 템플릿의 라벨은 모두 지정
     + lint 는 `meta.labels` 의 알 수 없는 템플릿, 블록, 슬롯 이름과 형식 오류를 FAIL 로 보고
-- 수행 Point 밴드 라벨은 `meta.pointLabel` 또는 `meta.labels.common.pointLabel` 로 지정
+- Key Point 밴드 라벨은 `meta.pointLabel` 또는 `meta.labels.common.pointLabel` 로 지정
 - scope 의 구조 라벨(visionTag, scopeTag, outputTag)은 10pt 로 조판되므로 영문 대문자로 지정 (다른 표기는 check_layout 11pt 하한 WARN)
 - PPTX 글자의 언어 태그는 `meta.labels.language` 로 지정 (기본 latin en-US, 한글이 든 run 은 east_asia ko-KR. finalize.py 가 적용)
 - 자리 표기(`[회사 확인]`, `[확인 필요]`)는 lint 가 미완성 항목을 찾는 표기이므로 영문 발표자료에서도 그대로 사용
@@ -905,7 +906,7 @@ ieum-deck/
 │   ├── composite.js         composite 템플릿의 격자와 블록
 │   ├── labels.js            템플릿과 블록의 고정 라벨 조회 (슬라이드 슬롯, meta.labels, assets/labels.json 순)
 │   ├── build.js             storyboard → pptx (--layout, --digest, --marker, --theme)
-│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 표 셀 채움색 정규화, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
+│   ├── finalize.py          OPC 정규화, 도형 id 재부여, 중복 pPr 제거, adj 적용, 줄바꿈 단위 기록(meta.lineBreak), 도넛 구멍 보존, 재직렬화가 넣은 표 셀 채움 되돌림, 표 셀 여백 복원, 언어 태그 지정(meta.labels.language), 불릿 글꼴 교정, 직선 기울기 복원, soffice 재직렬화
 │   ├── validate.py          패키지 구조 검증 (콘텐츠 형식, XML 문법, 관계 대상, 슬라이드 id, 도형 id, python-pptx 개방. OOXML_PML_XSD 지정 시 스키마 검증)
 │   ├── lint.py              storyboard 검사
 │   ├── check_layout.py      조판 결과 검사

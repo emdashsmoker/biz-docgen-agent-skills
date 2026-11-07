@@ -132,6 +132,6 @@
 - 장 말미에 종합 슬라이드(conclusion 또는 findings_synthesis)를 배치
 - 개요 장 뒤에 결과 요약 1-3장을 배치
 - section 에 절 번호를 유지하여 절이 이어지는 헤더를 구성
-- 출처 행(source)을 모든 슬라이드에 유지
+- 원고의 출처 행(source)은 슬라이드로 옮긴 뒤에도 유지
 - 초안은 `md2storyboard.py --kind report` 로 생성
 - 생성한 초안은 헤드라인과 패널을 다듬어 완성

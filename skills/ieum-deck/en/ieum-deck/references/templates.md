@@ -78,7 +78,7 @@
 
 - The height cap of side-by-side panels (bullets, compare, conclusion, cards, the chart_text findings panel) is the height with item spacing widened up to 18pt
 - Item spacing in a bullet box widens within the spare height measured in PowerPoint line height (1.4x the font size)
-- Panel groups and the Point band are centered vertically in the body
+- Panel groups and the Key Point band are centered vertically in the body
 - The 14pt panel title bar (bullets, compare, conclusion, cards, chart_text findings panel, strategy pillar, features tile, staff_card role) is 0.42 inch high (0.09 inch above and below the text line)
 - The gap between the row label box (module_overview, task_multi, roadmap) and the content box is 0.14 inch
 - compare is typeset as a row-matched comparison when the gap count equals the AS-IS item count and the TO-BE item count
@@ -88,8 +88,8 @@
     + Column titles are AS-IS gray, GAP light theme color, TO-BE theme color (change the GAP title with `gapHead`)
 - bullets, cards and conclusion panels are typeset with 14pt items and 12pt evidence (bullets and cards shrink to 11pt if the height runs short)
     + Panels share one width fitted to the longest text line, and the panel group is centered in the body
-    + The Point band and the conclusion band have the same width as the panel group
-    + If the Point text of bullets or cards runs past 2 lines in the band, the panel group and the band are widened together (up to the body width)
+    + The Key Point band and the conclusion band have the same width as the panel group
+    + If the Key Point text of bullets or cards runs past 2 lines in the band, the panel group and the band are widened together (up to the body width)
 - swot makes the center strategy cells (SO, WO, ST, WT) wider than the left and right factor columns and typesets the four strategy cells in the same format
     + Arrows converging from the four factor cells to the center strategy cells sit between the factor columns and the strategy cells
 
@@ -141,12 +141,12 @@
     + Object labels (labels) are merged per key (only the given keys change)
     + In format labels (idFormat, titleFormat, monthFormat), `{n}` is the number and `{t}` the title
     + Any key may be omitted (omitted keys keep the default)
-- The Point band label resolves from the slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default
+- The Key Point band label resolves from the slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default
 - lint reports unknown template, block and slot names and value type errors as FAIL (a format label missing `{n}` or `{t}` is a WARN)
 
 | Template or block | Slot | Default |
 |---|---|---|
-| common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | 수행 Point |
+| common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | Key Point |
 | common | company (the slide company and meta.company take precedence) | 회사명 |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
@@ -195,7 +195,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key point", "company": "Company name"},
+ "common": {"pointLabel": "Key Point", "company": "Company name"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

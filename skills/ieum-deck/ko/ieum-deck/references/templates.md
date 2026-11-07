@@ -78,7 +78,7 @@
 
 - 나란한 패널(bullets, compare, conclusion, cards, chart_text 의 발견 패널)의 높이 상한은 항목 간격을 18pt 까지 넓힌 높이
 - 불릿 상자의 항목 간격은 PowerPoint 줄 높이(글꼴 크기의 1.4배)로 잰 남는 높이 안에서 넓힘
-- 패널 묶음과 수행 Point 밴드는 본문 세로 가운데에 배치
+- 패널 묶음과 Key Point 밴드는 본문 세로 가운데에 배치
 - 14pt 패널 제목 바(bullets, compare, conclusion, cards, chart_text 발견 패널, strategy 기둥, features 타일, staff_card 역할)의 높이는 0.42인치 (글줄 위아래 여백 0.09인치)
 - 행 라벨 상자(module_overview, task_multi, roadmap)와 내용 상자 사이 간격은 0.14인치
 - compare 는 gap 수가 AS-IS 항목 수, TO-BE 항목 수와 같으면 행 대응 비교로 조판
@@ -88,8 +88,8 @@
     + 열 제목은 AS-IS 회색, GAP 연한 테마 색, TO-BE 테마 색 (GAP 제목은 `gapHead` 로 변경)
 - bullets, cards, conclusion 패널은 항목 14pt, 근거 12pt 로 조판 (bullets, cards 는 높이가 모자라면 11pt 까지 축소)
     + 패널 폭은 가장 긴 글줄에 맞춘 같은 폭이고 패널 묶음은 본문 가운데에 배치
-    + 수행 Point 밴드와 결론 밴드는 패널 묶음과 같은 폭
-    + bullets, cards 의 수행 Point 문구가 밴드 안에서 2줄을 넘으면 패널 묶음과 밴드를 함께 넓힘 (상한 본문 폭)
+    + Key Point 밴드와 결론 밴드는 패널 묶음과 같은 폭
+    + bullets, cards 의 Key Point 문구가 밴드 안에서 2줄을 넘으면 패널 묶음과 밴드를 함께 넓힘 (상한 본문 폭)
 - swot 은 가운데 전략 칸(SO, WO, ST, WT)을 좌우 요인 열보다 넓게 두고 네 전략 칸을 같은 서식으로 조판
     + 네 요인 칸에서 가운데 전략 칸으로 모이는 화살표를 요인 열과 전략 칸 사이에 배치
 
@@ -141,12 +141,12 @@
     + 객체 라벨(labels)은 키 단위로 병합 (지정한 키만 바뀜)
     + 형식 라벨(idFormat, titleFormat, monthFormat)의 `{n}` 은 번호, `{t}` 는 제목
     + 일부 키만 지정해도 됨 (생략한 키는 기본값)
-- 수행 Point 밴드 라벨은 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값 순
+- Key Point 밴드 라벨은 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값 순
 - lint 는 알 수 없는 템플릿, 블록, 슬롯 이름과 값 형식 오류를 FAIL 로 보고 (형식 라벨에 `{n}` 이나 `{t}` 가 빠지면 WARN)
 
 | 템플릿 또는 블록 | 슬롯 | 기본값 |
 |---|---|---|
-| common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | 수행 Point |
+| common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | Key Point |
 | common | company (슬라이드 company 와 meta.company 가 우선) | 회사명 |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
@@ -195,7 +195,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key point", "company": "Company name"},
+ "common": {"pointLabel": "Key Point", "company": "Company name"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

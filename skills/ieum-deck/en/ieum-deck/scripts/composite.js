@@ -34,7 +34,7 @@ const STEP_GAP = 0.26, STEP_GAP_MAX = 0.5; // arrow gap between vertical steps, 
 const FLOW_GAP = 0.42, FLOW_GAP_MAX = 0.6; // arrow gap between flow boxes, and its cap
 const NOTE_H = 0.26; // area note (※) height
 const CELL_SNAP = 0.3; // if a table cell is shorter than its neighbor by this much or less, raise the row height so top and bottom edges align
-const BOTTOM_BAND_H = 0.5; // height of the conclusion band and the 수행 Point callout
+const BOTTOM_BAND_H = 0.5; // height of the conclusion band and the Key Point callout
 const BOTTOM_GAP = 0.2;
 const ARROW_W = 0.28, ARROW_H = 0.34; // arrows between areas
 const CHART_MIN_H = 1.2, CHART_MIN_W = 2.4; // chart area floor that still fits a four-quadrant layout (smaller sizes overlap labels)
@@ -1690,7 +1690,7 @@ function composite(ctx, slide, sb, H) {
   let y = area.y + offset, idx = 0;
   const rowBoxes = [];
   const divV = []; // per-row vertical dividers {x, y1, y2}
-  // Content horizontal range: the drawn range a block returns for cells without a title, the cell width otherwise. The bands below (conclusion, 수행 Point) align their left and right ends to this range
+  // Content horizontal range: the drawn range a block returns for cells without a title, the cell width otherwise. The bands below (conclusion, Key Point) align their left and right ends to this range
   let exL = Infinity, exR = -Infinity;
   const extend = (x, w) => { exL = Math.min(exL, x); exR = Math.max(exR, x + w); };
   spec.forEach((r, ri) => {

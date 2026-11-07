@@ -92,7 +92,7 @@ const COLOR = {
   navyPastel2: "A9B9D9",
   navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"],
   textDark: "333333",
-  textMuted: "8B93A7",
+  textMuted: "52596C",
   textGray: "595959",
   tintHead: "E9EBF0", // Header tint
   tintBg: "F7F8FA", // Background tint
@@ -108,8 +108,8 @@ const COLOR = {
 // Tints (tintHead, tintBg) and the secondary gray (textMuted) are theme keys too, so reapplying a theme leaves no values from the previous theme
 // mono tints and secondary gray are achromatic grays with the same luminance as the navy values (the navy values are blue-gray and look mixed in an achromatic theme)
 const THEMES = {
-  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "8B93A7" },
-  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "939393" },
+  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C" },
+  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959" },
 };
 
 // Rules that compute all theme keys from one base color. The hue stays that of the base color
@@ -130,8 +130,9 @@ const PASTEL_CONTRAST_MIN = 3.0;
 const CONTRAST_STEP_L = 0.01; // Step by which lightness drops when contrast is below the minimum
 const DARK_TEXT_CONTRAST_MIN = 3.0; // Contrast minimum for diagram fills carrying body text color (pyramid tier 3, light funnel band, outer market size circle)
 const TINT_TEXT_CONTRAST_MIN = 4.5; // Contrast minimum for tint backgrounds carrying body text (WCAG AA body text)
-// The muted gray fills the AS-IS head cell (white text) and colors source, footnote and axis end text on white (default 8B93A7 has 3.08 contrast with white)
-const MUTED_CONTRAST_MIN = 3.0;
+// The muted gray fills the AS-IS head cell (white text) and colors source, footnote and axis end text on white (default 52596C has 6.99 contrast with white, mono 595959 has 7.00)
+// Gantt bars and the AS-IS head cell use the same key as their fill, so the weight of these two elements sets the upper limit on darkness
+const MUTED_CONTRAST_MIN = 4.5;
 // Text contrast rules per theme color key. on is the text color typeset on that color (white is white, textDark is the body text color)
 // Values computed from a base color are built to meet the rules, so lint checks only directly set color keys against the limits.json copy (below the minimum is a WARN, which passes with a stated reason)
 const THEME_TEXT_RULES = [

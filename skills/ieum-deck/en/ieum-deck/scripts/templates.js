@@ -511,11 +511,11 @@ function noteRows(sb) {
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
 }
-const CALLOUT_LABEL_W = 1.2; // Point band label cell width (inches on 16:9, scaled by the page width ratio)
-const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Point band text cell insets (left, top, right, bottom inches)
-const CALLOUT_H = 0.5; // Point band height (inches)
-const CALLOUT_W_STEP = 0.1; // Step for widening the Point band (inches)
-/** Lines of the Point text (array items and line breaks split into lines) */
+const CALLOUT_LABEL_W = 1.2; // Key Point band label cell width (inches on 16:9, scaled by the page width ratio)
+const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Key Point band text cell insets (left, top, right, bottom inches)
+const CALLOUT_H = 0.5; // Key Point band height (inches)
+const CALLOUT_W_STEP = 0.1; // Step for widening the Key Point band (inches)
+/** Lines of the Key Point text (array items and line breaks split into lines) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
 }
@@ -527,7 +527,7 @@ function callout(ctx, slide, box, lbl, text) {
   const paras = lines.map((t) => ({ align: "left", bullet: lines.length > 1, indent: lines.length > 1 ? T.PARA.bulletIndentIn : 0, marL: lines.length > 1 ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
   slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(CALLOUT_MG), isTextBox: true, autoFit: false });
 }
-/** Point band width. Starts at the group width w0 and widens until the text fits in the band height (upper bound maxW)
+/** Key Point band width. Starts at the group width w0 and widens until the text fits in the band height (upper bound maxW)
  *  When a panel or card group narrows to short items, the band text overflows, so the band and the group are widened together */
 function calloutW(ctx, text, w0, maxW) {
   const lines = calloutLines(text);
@@ -970,13 +970,13 @@ function bulletsT(ctx, slide, sb) {
   const full = cols({ x: b.x, y: b.y, w: b.w, h: b.h - ptH }, n);
   const psz = groupSize(full.map((c) => ({ ...c, h: c.h - T.PANEL.TITLE_H })), pn.map((p) => (p && p.items) || []), PANEL_ITEM_SZ);
   const ssz = Math.max(T.SIZE.BODY_MIN, psz - 2);
-  // Give all panels one width fitted to the longest line and center the panel group and the 수행 Point callout (so short items leave no empty right side)
+  // Give all panels one width fitted to the longest line and center the panel group and the Key Point callout (so short items leave no empty right side)
   const pw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, psz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // If the Point text does not fit in the band height, widen the panel group and the band together (the band has the same width as the panel group)
+  // If the Key Point text does not fit in the band height, widen the panel group and the band together (the band has the same width as the panel group)
   const gw0 = pw0 * n + gap * (n - 1);
   const gw = point ? calloutW(ctx, point, gw0, b.w) : gw0;
   const pw = gw === gw0 ? pw0 : Math.min(full[0].w, (gw - gap * (n - 1)) / n), x0 = b.x + (b.w - gw) / 2;
-  // Base panel height on content height and center the panels plus 수행 Point group vertically in the body
+  // Base panel height on content height and center the panels plus Key Point group vertically in the body
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
   const top = b.y + (b.h - gh - ptH) / 2;
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
@@ -1021,7 +1021,7 @@ function panelBodyH(widths, lists, sz, avail, subSz) {
 function table(ctx, slide, sb) {
   const s = sb.slots || sb, b = body(ctx, sb);
   const titleH = s.title ? T.PANEL.SUBHEAD_H : 0, legH = s.legend ? 0.3 : 0, ptH = s.point ? 0.7 : 0;
-  // If the row height cap leaves the table shorter than the body, center the title, table and 수행 Point group vertically (body() already excludes the footnote height)
+  // If the row height cap leaves the table shorter than the body, center the title, table and Key Point group vertically (body() already excludes the footnote height)
   const availT = b.h - titleH - legH - ptH;
   const shift = Math.max(0, (availT - tableLayout(s, b.w, availT).total) / 2);
   const g = { x: b.x, y: b.y + shift, w: b.w, h: b.h - 2 * shift };
@@ -1377,13 +1377,13 @@ function cards(ctx, slide, sb) {
   const lists = cd.map((x) => (x && (x.items || x.text)) || []);
   const csz = groupSize(full.map((c) => ({ ...c, h: c.h - T.PANEL.TITLE_H })), cd.map((x) => (x && x.items) || []), PANEL_ITEM_SZ);
   const ssz = Math.max(T.SIZE.BODY_MIN, csz - 2);
-  // Give all cards one width fitted to the longest line and center the card group and the 수행 Point callout (so short items leave no empty right side)
+  // Give all cards one width fitted to the longest line and center the card group and the Key Point callout (so short items leave no empty right side)
   const cw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, csz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // If the Point text does not fit in the band height, widen the card group and the band together (the band has the same width as the card group)
+  // If the Key Point text does not fit in the band height, widen the card group and the band together (the band has the same width as the card group)
   const gw0 = cw0 * ncol + T.PANEL.GAP * (ncol - 1);
   const gw = s.point ? calloutW(ctx, s.point, gw0, b.w) : gw0;
   const cw = gw === gw0 ? cw0 : Math.min(full[0].w, (gw - T.PANEL.GAP * (ncol - 1)) / ncol), x0 = b.x + (b.w - gw) / 2;
-  // Base card height on content height and center the cards plus 수행 Point group vertically in the body
+  // Base card height on content height and center the cards plus Key Point group vertically in the body
   const rowAvail = full[0].h - T.PANEL.TITLE_H;
   const ch = T.PANEL.TITLE_H + panelBodyH(cd.map(() => cw), lists, csz, rowAvail, ssz);
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);

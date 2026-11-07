@@ -34,7 +34,7 @@ const STEP_GAP = 0.26, STEP_GAP_MAX = 0.5; // 세로 단계 사이 화살표 간
 const FLOW_GAP = 0.42, FLOW_GAP_MAX = 0.6; // 흐름 상자 사이 화살표 간격과 상한
 const NOTE_H = 0.26; // 영역 주석(※) 높이
 const CELL_SNAP = 0.3; // 표 칸이 이웃 칸보다 이만큼 이하로 짧으면 행 높이를 늘려 위아래 끝을 맞춤
-const BOTTOM_BAND_H = 0.5; // 결론 밴드와 수행 Point 높이
+const BOTTOM_BAND_H = 0.5; // 결론 밴드와 Key Point 높이
 const BOTTOM_GAP = 0.2;
 const ARROW_W = 0.28, ARROW_H = 0.34; // 영역 사이 화살표
 const CHART_MIN_H = 1.2, CHART_MIN_W = 2.4; // 4분면 배치까지 수용하는 차트 영역 하한 (그보다 작으면 레이블이 겹침)
@@ -1690,7 +1690,7 @@ function composite(ctx, slide, sb, H) {
   let y = area.y + offset, idx = 0;
   const rowBoxes = [];
   const divV = []; // 행별 세로 구분선 {x, y1, y2}
-  // 내용 가로 범위: 칸 제목이 없는 칸은 블록이 돌려준 그린 범위, 그 외는 칸 폭. 아래 띠(결론, 수행 Point)의 좌우 끝을 이 범위에 맞춤
+  // 내용 가로 범위: 칸 제목이 없는 칸은 블록이 돌려준 그린 범위, 그 외는 칸 폭. 아래 띠(결론, Key Point)의 좌우 끝을 이 범위에 맞춤
   let exL = Infinity, exR = -Infinity;
   const extend = (x, w) => { exL = Math.min(exL, x); exR = Math.max(exR, x + w); };
   spec.forEach((r, ri) => {

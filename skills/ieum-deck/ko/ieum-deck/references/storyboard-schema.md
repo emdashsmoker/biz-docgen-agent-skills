@@ -14,7 +14,7 @@
 | layout | 16:9(기본), A4, 10.83, 4:3. 16:9 보다 좁은 판형은 상자 문구를 본문 폭 비율(A4 87.7%, 10.83 81.2%, 4:3 75.0%)만큼 줄여 작성 |
 | headlineStyle | noun(명사형, 기본), polite(존댓말) |
 | marker | 마커 도형 모양. square(기본), bar, triangle |
-| pointLabel | 수행 Point 밴드의 라벨 문구 (기본 "수행 Point"). 슬라이드별 지정도 가능 |
+| pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
@@ -35,7 +35,7 @@
 - 슬라이드마다 반복하던 라벨 슬롯 값(표지 label, 간트 머리, 모듈 개요 행 라벨 등)을 덱 단위로 한 번 지정
 - 해석 순서는 슬라이드 슬롯 값, meta.labels, 기본값(`assets/labels.json`)
 - 키는 템플릿 또는 composite 블록 이름과 슬롯 이름 (전체 키, 기본값, 영문 예시는 `references/templates.md` 라벨 슬롯 절)
-    + common.pointLabel: 수행 Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선)
+    + common.pointLabel: Key Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선)
     + language.latin, language.east_asia: PPTX 글자의 언어 태그 (기본 en-US, 한글이 든 run 은 ko-KR)
     + notation.source: 주석 줄로 인식할 토큰 추가 목록 (기본 토큰 ※, 출처:, 자료:, Source:, Note: 는 유지)
 - 일부 키만 지정 가능 (생략한 키는 기본값)
@@ -54,7 +54,7 @@
 | navyPastel2 | 피라미드 3층, 깔때기 옅은 띠, 시장 규모 바깥 원, 차트 계열 3번째(navyRamp 2번) | 본문 글자색 | 3.0 |
 | navyRamp 3번 | 차트 계열 4번째, 깔때기 맨 위 띠 | 본문 글자색 | 3.0 |
 | tintNavy, tintHead, tintBg | 피라미드 4-5층, 머리 칸, 배경 틴트 | 본문 글자색 | 4.5 |
-| textMuted | AS-IS 머리 칸, 일정 막대, 출처와 각주와 축 양끝 표기의 글자색 | 흰색 (글자색으로 쓸 때는 흰 바탕) | 3.0 |
+| textMuted | AS-IS 머리 칸, 일정 막대, 출처와 각주와 축 양끝 표기의 글자색 | 흰색 (글자색으로 쓸 때는 흰 바탕) | 4.5 |
 
 - 매트릭스 초점 사분면과 tint 채움에 color navy 를 지정한 격자 칸은 tintHead 채움 위에 navy 글자를 얹음
 - navy 와 tintHead 의 대비가 4.5 미만이면 두 요소를 그린 슬라이드에 빌드 경고 (색은 지정값 유지)
