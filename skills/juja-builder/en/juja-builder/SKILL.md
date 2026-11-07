@@ -884,7 +884,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Write the term in parentheses exactly as the body writes it
     + The explanation is one noun phrase that spells out the meaning. Do not repeat the defined term or use other technical terms
     + The full name given in the body on first use covers an abbreviation's full name. The ※ note gives only the meaning
-- Use general terms and abbreviations readers use in their work (RFP, consulting, participation rate and so on) without supplementary marks such as a term definition ※ note or the full name on first use
+- Omit the term definition ※ note and the first-use full name for terms and abbreviations readers use at work or in daily life (RFP, consulting, participation rate and so on)
 - Do not use exaggerating modifiers (획기적, 혁신적, 선도적) or glue expressions (이러한 맥락에서)
 
 ## Common Part
