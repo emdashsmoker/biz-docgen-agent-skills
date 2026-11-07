@@ -89,7 +89,7 @@
 - bullets, cards and conclusion panels are typeset with 14pt items and 12pt evidence (bullets and cards shrink to 11pt if the height runs short)
     + Panels share one width fitted to the longest text line, and the panel group is centered in the body
     + The Key Point band and the conclusion band have the same width as the panel group
-    + If the Point text of bullets or cards runs past 2 lines in the band, the panel group and the band are widened together (up to the body width)
+    + If the Key Point text of bullets or cards runs past 2 lines in the band, the panel group and the band are widened together (up to the body width)
 - swot makes the center strategy cells (SO, WO, ST, WT) wider than the left and right factor columns and typesets the four strategy cells in the same format
     + Arrows converging from the four factor cells to the center strategy cells sit between the factor columns and the strategy cells
 

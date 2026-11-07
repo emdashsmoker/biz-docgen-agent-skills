@@ -515,7 +515,7 @@ const CALLOUT_LABEL_W = 1.2; // Key Point band label cell width (inches on 16:9,
 const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Key Point band text cell insets (left, top, right, bottom inches)
 const CALLOUT_H = 0.5; // Key Point band height (inches)
 const CALLOUT_W_STEP = 0.1; // Step for widening the Key Point band (inches)
-/** Lines of the Point text (array items and line breaks split into lines) */
+/** Lines of the Key Point text (array items and line breaks split into lines) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
 }
@@ -972,7 +972,7 @@ function bulletsT(ctx, slide, sb) {
   const ssz = Math.max(T.SIZE.BODY_MIN, psz - 2);
   // Give all panels one width fitted to the longest line and center the panel group and the Key Point callout (so short items leave no empty right side)
   const pw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, psz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // If the Point text does not fit in the band height, widen the panel group and the band together (the band has the same width as the panel group)
+  // If the Key Point text does not fit in the band height, widen the panel group and the band together (the band has the same width as the panel group)
   const gw0 = pw0 * n + gap * (n - 1);
   const gw = point ? calloutW(ctx, point, gw0, b.w) : gw0;
   const pw = gw === gw0 ? pw0 : Math.min(full[0].w, (gw - gap * (n - 1)) / n), x0 = b.x + (b.w - gw) / 2;
@@ -1379,7 +1379,7 @@ function cards(ctx, slide, sb) {
   const ssz = Math.max(T.SIZE.BODY_MIN, csz - 2);
   // Give all cards one width fitted to the longest line and center the card group and the Key Point callout (so short items leave no empty right side)
   const cw0 = Math.min(full[0].w, Math.max(...lists.map((l) => itemsNeedW(l, csz, ssz))) + 2 * T.PANEL.INSET + FIT_W_SLACK);
-  // If the Point text does not fit in the band height, widen the card group and the band together (the band has the same width as the card group)
+  // If the Key Point text does not fit in the band height, widen the card group and the band together (the band has the same width as the card group)
   const gw0 = cw0 * ncol + T.PANEL.GAP * (ncol - 1);
   const gw = s.point ? calloutW(ctx, s.point, gw0, b.w) : gw0;
   const cw = gw === gw0 ? cw0 : Math.min(full[0].w, (gw - T.PANEL.GAP * (ncol - 1)) / ncol), x0 = b.x + (b.w - gw) / 2;
