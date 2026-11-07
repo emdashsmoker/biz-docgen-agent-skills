@@ -109,8 +109,6 @@ Changelog rules
 - Added a rule that a ※ note defining an abbreviation gives only the meaning because the body carries the full name on first use (#100)
 - Added a rule that terms and abbreviations readers use at work or in daily life (RFP, consulting, participation rate and so on) go without a term definition ※ note or the full name on first use (#102, #103)
 - Fixed planning reports built with --title and divider pages getting a page that holds only the document title before the chapter 1 divider (#103)
-- Changed check volume to leave term definition ※ notes out of the evidence line and character counts (#104)
-- Removed term definitions from the ※ notes to add when a □ falls short of the volume lower bound (#104)
 
 * 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
 * RFP 본문 그림의 출처 표기 대상을 그림의 원 출처인 외부 자료로 변경 (#92)
@@ -121,8 +119,6 @@ Changelog rules
 * 본문에 정식 명칭을 병기한 약어의 ※ 부기에 뜻만 기재하는 규칙 추가 (#100)
 * 독자가 업무 및 일상에서 사용하는 용어와 약어(RFP, 컨설팅, 참여율 등)의 용어 정의 ※ 부기와 최초 1회 정식 명칭 병기를 생략하는 규칙 추가 (#102, #103)
 * 간지를 켠 기획보고서에서 문서 제목만 담은 쪽이 1장 간지 앞에 생기는 현상 수정 (#103)
-* check volume의 근거 줄과 글자 수 집계에서 용어 정의 ※ 부기를 제외하도록 변경 (#104)
-* 분량 하한 미달 시 추가하는 ※ 주석 목록에서 용어 정의 삭제 (#104)
 
 ## 2026-11-06
 

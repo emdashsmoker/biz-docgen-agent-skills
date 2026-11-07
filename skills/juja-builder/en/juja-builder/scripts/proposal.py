@@ -249,7 +249,6 @@ VOLUME_MIN_EVIDENCE = 2     # lower bound of hyphens + ※ under □
 VOLUME_MIN_BLOCK_PER_TASK = 1   # lower bound of tables or figures per Task
 VOLUME_TASK_MIN_CHARS = 900     # lower bound of body characters per Task (about 1.5 pages). A usual Task runs 2-5 pages
 VOLUME_SQUARE_MIN_CHARS = 350   # lower bound of characters per □ (about 0.5 page)
-DEFINITION_NOTE_RE = re.compile(r"^\([^()]+\)\s*\S")   # term definition note (※ (term) explanation). Left out of evidence line and character counts
 # Level count caps (SKILL.md Volume Units section). Overruns are check volume warnings and do not count toward the verdict
 SQUARE_PER_SECTION_MAX = 4       # □ within a section (##) or subsection (###). Group into subsections at 5 or more
 CIRCLE_PER_SQUARE_MAX = 4        # ❍ under □
@@ -1895,8 +1894,6 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
     if style is None:  # □ heading line cap and level count warnings. Planning reports get only these warnings, without lower bounds
         style = original
     for e in elems:
-        # Why: a term definition ※ is not evidence for a claim, and whether it is needed depends on the reader. Counting it toward volume invites definitions of terms readers know to meet the lower bound
-        defines_term = e.kind == "note" and DEFINITION_NOTE_RE.match(e.text) is not None
         if e.kind == "band" and e.data.get("kind") == "task":
             cur_task = {"name": e.text[:30], "blocks": 0, "chars": 0}
             tasks.append(cur_task)
@@ -1909,7 +1906,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         elif e.kind in ("circle", "dash", "dot", "note"):
             if len(e.text) > LINE_MAX[e.kind]:
                 warns.append(f"{e.kind} item {len(e.text)} characters ({'1-line' if e.kind == 'note' else '2-line'} cap {LINE_MAX[e.kind]} characters). Split the sentence and add a level, or convert to a table: {e.text[:24]}")
-            if cur_sq is not None and not defines_term:
+            if cur_sq is not None:
                 cur_sq["chars"] += len(e.text)
                 if e.kind == "circle":
                     cur_sq["circle"] += 1
@@ -1921,7 +1918,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
             if e.kind in ("table", "image"):
                 cur_task["blocks"] += 1
                 cur_task["chars"] += sum(len(c) for row in e.data.get("rows", []) for c in row)
-            elif e.kind in ("square", "circle", "dash", "dot", "note") and not defines_term:
+            elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 cur_task["chars"] += len(e.text)
     for s in squares:
         if s["circle"] == 0:
@@ -1935,7 +1932,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         if not original:
             continue
         if s["evidence"] < VOLUME_MIN_EVIDENCE:
-            warns.append(f"□ '{s['name']}' evidence lines (hyphen, ※; term definition ※ excluded) {s['evidence']} (recommended {VOLUME_MIN_EVIDENCE} or more). Add figures, material names, and cases on the evidence level")
+            warns.append(f"□ '{s['name']}' evidence lines (hyphen, ※) {s['evidence']} (recommended {VOLUME_MIN_EVIDENCE} or more). Add figures, material names, and cases on the evidence level")
         if s["chars"] < VOLUME_SQUARE_MIN_CHARS:
             warns.append(f"□ '{s['name']}' character count {s['chars']} (recommended {VOLUME_SQUARE_MIN_CHARS} or more)")
     if style:
