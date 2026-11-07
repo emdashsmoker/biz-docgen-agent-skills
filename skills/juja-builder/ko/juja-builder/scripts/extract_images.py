@@ -63,8 +63,23 @@ def from_pdf(src, out):
     return items
 
 
+def bmp_to_png(data):
+    """BMP 바이트를 PNG 바이트로 변환. 변환에 실패하면 원래 바이트를 반환"""
+    import io
+    from PIL import Image
+    try:
+        image = Image.open(io.BytesIO(data))
+        if image.mode not in PNG_SAFE_MODES:
+            image = image.convert("RGB")
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return data  # 손상된 BMP는 크기를 읽지 못하므로 이후 하한에서 제외됨
+
+
 def from_zip(src, out, prefix):
-    """hwpx, pptx, docx 는 ZIP 내부의 미디어 파일을 그대로 사용"""
+    """hwpx, pptx, docx 는 ZIP 내부의 미디어 파일을 그대로 사용. BMP는 PNG로 변환"""
     items = []
     with zipfile.ZipFile(src) as zf:
         for name in zf.namelist():
@@ -74,6 +89,8 @@ def from_zip(src, out, prefix):
             if not any(k in low for k in ("media", "bindata", "image")) or low.startswith("preview/"):
                 continue  # hwpx의 Preview/PrvImage.png는 첫 쪽 미리보기라 삽입 후보가 아님
             data = zf.read(name)
+            if data[:2] == b"BM":
+                data = bmp_to_png(data)  # 압축하지 않은 BMP는 용량 하한과 유형 판정(kind_of)을 무력화하므로 PNG로 통일
             items.append((Path(name).stem, data, 0, 0, None))
     return items
 
