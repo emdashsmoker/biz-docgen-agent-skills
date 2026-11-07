@@ -78,7 +78,6 @@ function groupSize(boxes, itemsList, base) {
   return best;
 }
 
-const NOTE_LABEL_KEYS = ["footnoteLabel", "sourceLabel"]; // Note label keys of a number-style deck (meta.labels.common)
 const PP_LINE_RATIO = 1.4; // Approximate NanumGothic line height in PowerPoint (relative to font size). Higher than the rendering value 1.2
 /** Paragraphs of a bullet list. Shared by bullets and bulletFitSize so both measure the same paragraphs */
 function bulletParas(list, o, sz) {
@@ -89,8 +88,8 @@ function bulletParas(list, o, sz) {
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // Lines starting with ※ or 출처 are notes, so they get no bullet and show in small gray
     // To tell them from normal items such as "자료 수집", 출처 and 자료 count as notes only with a colon (English Source and Note follow the same rule)
-    // Tokens added with meta.labels.notation.source ("token:") and the number-style labels (common.footnoteLabel, sourceLabel) are notes too
-    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx) || NOTE_LABEL_KEYS.some((k) => String(tx).trim().startsWith(LB.label("common", k)));
+    // Tokens added with meta.labels.notation.source ("token:") and the number-style labels (common.footnoteLabel, sourceLabel) are notes too (LB.isExtraNote)
+    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
     if (isNote) {
       paras.push({ bullet: false, indent: 0, marL: 0, align: "left", spcBef: o.gapPt || T.PARA.paraGapPt,
                    runs: [{ t: tx, sz: Math.max(T.SIZE.BODY_MIN, T.SIZE.note), color: T.COLOR.textMuted }] });

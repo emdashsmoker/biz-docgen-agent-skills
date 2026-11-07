@@ -52,9 +52,12 @@ function format(tpl, vars) {
 function language() {
   return { latin: label("language", "latin"), east_asia: label("language", "east_asia") };
 }
-/** Whether the text starts with a note token added with meta.labels.notation.source ("token:" form). Each typesetting rule judges the built-in tokens (※, 출처:, 자료:, Source:, Note:) */
+/** Whether the text starts with a note token added with meta.labels.notation.source ("token:" form) or a number-style label (common.footnoteLabel, sourceLabel)
+ *  Each typesetting rule judges the built-in tokens (※, 출처:, 자료:, Source:, Note:)
+ *  Why: in a number-style deck, a "참조:" line the author writes in a body cell or a custom slide is set as a note too */
 function isExtraNote(text) {
-  return !!notePattern && notePattern.test(String(text));
+  const t = String(text).trim();
+  return (!!notePattern && notePattern.test(t)) || ["footnoteLabel", "sourceLabel"].some((k) => t.startsWith(label("common", k)));
 }
 
 module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote };

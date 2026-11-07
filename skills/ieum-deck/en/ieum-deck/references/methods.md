@@ -54,7 +54,7 @@
 - Each Task specifies the data used, the survey scale and the outputs
 - Each Task gets at least 1 measured sample
 - The sample type is one of a real data table, a real tool screen (NTIS, KOSIS, patent DB, corporate information system) or a case summary
-- Mark the sample as a draft with ※
+- Mark the sample title as a draft in parentheses (e.g. Measured sample (draft))
 - Fix the input path for tasks and demand to fit the RFP
 - The input path is one of a demand survey (planning-sheet questionnaire), a perception survey (scale questionnaire), expert participation (FGI, Delphi, advisory committee) or direct derivation (literature)
 - When direct derivation is used alone, add a verification procedure

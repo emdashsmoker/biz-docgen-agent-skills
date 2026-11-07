@@ -78,7 +78,6 @@ function groupSize(boxes, itemsList, base) {
   return best;
 }
 
-const NOTE_LABEL_KEYS = ["footnoteLabel", "sourceLabel"]; // 번호 표기 덱의 주석 라벨 키 (meta.labels.common)
 const PP_LINE_RATIO = 1.4; // PowerPoint 의 나눔고딕 줄 높이 근사 (글꼴 크기 대비). 렌더링 판정치 1.2 보다 높음
 /** 불릿 목록 문단 구성. bullets 와 bulletFitSize 가 같은 문단으로 높이를 재도록 공유 */
 function bulletParas(list, o, sz) {
@@ -89,8 +88,8 @@ function bulletParas(list, o, sz) {
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // ※ 나 출처로 시작하는 줄은 주석이므로 불릿을 붙이지 않고 작은 회색으로 표기
     // "자료 수집" 같은 일반 항목과 구분하도록 출처와 자료는 콜론이 붙은 경우만 주석으로 판정 (영문 Source, Note 도 같은 기준)
-    // meta.labels.notation.source 로 추가한 토큰("토큰:")과 번호 표기 라벨(common.footnoteLabel, sourceLabel)도 주석으로 인식
-    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx) || NOTE_LABEL_KEYS.some((k) => String(tx).trim().startsWith(LB.label("common", k)));
+    // meta.labels.notation.source 로 추가한 토큰("토큰:")과 번호 표기 라벨(common.footnoteLabel, sourceLabel)도 주석으로 인식 (LB.isExtraNote)
+    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
     if (isNote) {
       paras.push({ bullet: false, indent: 0, marL: 0, align: "left", spcBef: o.gapPt || T.PARA.paraGapPt,
                    runs: [{ t: tx, sz: Math.max(T.SIZE.BODY_MIN, T.SIZE.note), color: T.COLOR.textMuted }] });

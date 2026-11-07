@@ -87,7 +87,7 @@
        {"label": "Option 2\nCloud service", "items": ["Private cloud AI contract", "Certified service features"]},
        {"label": "Option 3\nGov. platform", "items": ["Platform models and GPUs", "Gov. network documents"]}
       ]}},
-     {"title": "Evaluation (※ preliminary draft)",
+     {"title": "Evaluation (preliminary draft)",
       "block": {"kind": "table",
        "head": ["Criterion", "Weight", "Opt. 1", "Opt. 2", "Opt. 3"],
        "rows": [
@@ -130,7 +130,7 @@
        ]}},
      {"title": "Data design",
       "block": {"kind": "bullets", "items": ["Masked complaint history", "Ordinances, manuals, rules", "Quality records of reply checks"]}},
-     {"caption": "Pilot process (To-Be, ※ draft)",
+     {"caption": "Pilot process (To-Be, draft)",
       "block": {"kind": "flowchart", "lanes": ["Officer", "System"],
        "nodes": [
         {"id": "s", "type": "start", "text": "Intake", "lane": 0, "col": 0},
