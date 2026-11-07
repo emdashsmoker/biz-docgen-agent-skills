@@ -27,6 +27,41 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-07
+
+### blockwriter
+- Added a rule that sources and notes cite only external material the reader can look up (#92)
+
+* 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
+
+### ieum-deck
+- Changed the muted text color for sources, notes, and axis end labels to 52596C (navy) and 595959 (mono) for at least 4.5:1 contrast with white (#92)
+- Changed the contrast minimum for a custom textMuted theme color from 3.0 to 4.5 (#92)
+- Added a rule that sources and notes cite only external material the reader can look up (#92)
+- Changed the report-style source line rule to keep the source lines carried over from the manuscript instead of a source line on every slide (#92)
+- Removed "(사용자 제공)" from the default image captions of the company slides and samples (#92)
+- Changed the sample number-card notes that cited the proposer's analysis or internal material to a calculation basis or an external source placeholder (#92)
+- Fixed finalize so that it whitens only the table cell fills that soffice adds during reserialization and keeps the fills the build wrote (#92)
+- Changed the default Key Point band label from "수행 Point" to "Key Point" (#92)
+
+* 출처, 각주, 축 양끝 표기의 보조 글자색을 흰색 대비 4.5:1 이상인 52596C(navy)와 595959(mono)로 변경 (#92)
+* 사용자 지정 textMuted 테마 색의 대비 하한을 3.0에서 4.5로 변경 (#92)
+* 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
+* 보고서형 슬라이드의 출처 행 규칙을 원고에서 옮긴 출처 행의 유지로 변경 (#92)
+* 회사 소개 슬라이드와 견본의 기본 이미지 캡션에서 "(사용자 제공)" 삭제 (#92)
+* 제안사 분석이나 내부 자료를 출처로 단 견본 수치 카드 주석을 산정 근거와 외부 출처 자리 표기로 변경 (#92)
+* finalize가 흰색으로 되돌리는 표 셀 채움을 soffice 재직렬화가 넣은 채움으로 한정하는 동작 수정 (#92)
+* Key Point 밴드의 기본 라벨을 "수행 Point"에서 "Key Point"로 변경 (#92)
+
+### juja-builder
+- Added a rule that sources and notes cite only external material the reader can look up (#92)
+- Changed the source rule for figures taken from the RFP body to cite only the external material they came from and never the RFP itself (#92)
+- Removed "작성" from the first line of the preliminary diagnosis section (#92)
+
+* 출처와 주석의 출처 대상을 독자가 찾아볼 수 있는 외부 자료로 한정하는 규칙 추가 (#92)
+* RFP 본문 그림의 출처 표기 대상을 그림의 원 출처인 외부 자료로 변경 (#92)
+* 예비 진단 절 첫 줄 문구의 "작성" 삭제 (#92)
+
 ## 2026-11-06
 
 ### ieum-deck
