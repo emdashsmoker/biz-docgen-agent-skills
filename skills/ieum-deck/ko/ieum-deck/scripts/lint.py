@@ -2,7 +2,7 @@
 """lint.py: storyboard.json 검사. FAIL 0건이 빌드 착수 조건.
 사용: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "유지 사유"]
 검사 항목
-- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char) (FAIL)
+- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char), 각주 표기(meta.footnoteStyle: mark | number) (FAIL)
 - 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
@@ -57,6 +57,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
+FOOTNOTE_STYLES = ("mark", "number")  # 각주 표기(meta.footnoteStyle). build.js 의 FOOTNOTE_STYLES 와 같은 목록
 HANGUL_RE = re.compile(r"[가-힣]")
 # 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 빌더(atoms.js 의 playOwn, shape, fitParas)가 정할 문단 간격과 글꼴 크기를 같은 규칙으로 계산한 뒤 렌더 높이로 잼
 # 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn, fitParas)와 tokens.js 의 값
@@ -574,6 +575,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
     if meta.get("lineBreak", LINE_BREAKS[0]) not in LINE_BREAKS:
         fails.append(f"meta.lineBreak 는 {' 또는 '.join(LINE_BREAKS)}. 입력값: {meta.get('lineBreak')}")
+    if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
+        fails.append(f"meta.footnoteStyle 는 {' 또는 '.join(FOOTNOTE_STYLES)}. 입력값: {meta.get('footnoteStyle')}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]

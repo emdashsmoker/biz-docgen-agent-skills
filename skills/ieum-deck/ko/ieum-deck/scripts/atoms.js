@@ -881,11 +881,14 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-/** 각주 목록. 슬라이드 하단 출처 행 위에 1) 2) 형식으로 배치 */
-function footnotes(slide, S, items) {
-  const arr = [].concat(items || []).filter(Boolean);
+const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // 작성자가 각주 앞에 직접 붙인 ※ 나 번호
+/** 각주 목록. 슬라이드 하단 출처 행 위에 배치. style 은 meta.footnoteStyle (mark: 항목마다 ※, number: 1) 2) 번호)
+ *  Why: 작성자가 붙인 ※ 나 번호를 떼고 덱 기준 표기를 다시 붙여 한 덱 안의 각주 표기를 하나로 유지 */
+function footnotes(slide, S, items, style) {
+  const arr = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "")).filter(Boolean);
   if (!arr.length) return;
-  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: /^\d+\)/.test(String(t).trim()) ? String(t) : `${i + 1}) ${t}`, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
+  const lead = (i) => (style === "number" ? `${i + 1}) ` : "※ ");
+  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
   text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {

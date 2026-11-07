@@ -163,6 +163,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (Line break unit) Word-level (default) or character-level. Record the choice in `meta.lineBreak` as word or char
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
+17. (Footnote style) ※ mark (default) or numbers. Record the choice in `meta.footnoteStyle` as mark or number
+    + The ※ mark style puts ※ before each footnote item
+    + The number style numbers the items in order from 1) on each slide
+    + The chosen style applies to every footnote in the deck
 
 ## Company facts
 
@@ -476,7 +480,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Headlines are typeset at 18pt for both one and two lines
 - Shorten the text to fit a headline on one line
 - check_layout reports inconsistent headline font sizes
-- Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※ before a note)
+- Write grounds, conditions and assumptions in `note` or `footnotes` (the build adds ※ before a note and ※ or a number before a footnote)
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process)
 - Set one emphasized phrase in the `accent` field
 
@@ -833,7 +837,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 #### Notation
 
-- Is the purpose of text smaller than the body clear (※ attached to grounds, sources and assumptions)?
+- Is the purpose of text smaller than the body clear (※ attached to grounds, sources and assumptions; footnotes carry ※ or a number per `meta.footnoteStyle`)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
 
@@ -862,7 +866,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + The section number appears twice (the section number is repeated in the section title after the band number)
     + A number or symbol appears twice (a bullet or hyphen is written again in text after a bullet shape)
     + Several items have no bullets so the lines run together
-    + ※ is missing from notes and sources
+    + ※ is missing from notes and sources (footnotes carry ※ or a number per `meta.footnoteStyle`)
     + A section number, marker or bullet is missing where it should be
     + Only some items of the same level are numbered
 - The criterion is whether a practitioner would be called out for it when submitting the deck

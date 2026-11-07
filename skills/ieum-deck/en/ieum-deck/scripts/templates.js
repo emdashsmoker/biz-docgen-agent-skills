@@ -547,7 +547,7 @@ function noteText(v, joiner) {
   return arr.map((x) => (/^(※|\*)/.test(x) ? x : `※ ${x}`)).join("\n");
 }
 function source(ctx, slide, sb) {
-  A.footnotes(slide, ctx.S, sb.footnotes);
+  A.footnotes(slide, ctx.S, sb.footnotes, ctx.meta && ctx.meta.footnoteStyle);
   if (!sb.source) return;
   const S = ctx.S;
   A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });

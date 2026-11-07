@@ -19,6 +19,8 @@ const LB = require("./labels.js");
 const OWN_ENV = "IEUM_DECK_OWN";
 // 줄바꿈 단위(meta.lineBreak). word 는 단어 단위(기본), char 는 글자 단위. finalize.py 가 빌드 기록을 읽어 모든 문단 속성에 기록
 const LINE_BREAKS = ["word", "char"];
+// 각주 표기(meta.footnoteStyle). mark 는 항목마다 ※ (기본), number 는 슬라이드마다 1) 부터 번호
+const FOOTNOTE_STYLES = ["mark", "number"];
 
 function parseArgs(argv) {
   const o = { layout: null, digest: false, marker: null, theme: null, args: [] };
@@ -135,6 +137,7 @@ async function main() {
   if (!T.THEMES[theme] && !meta.themeColors) throw new Error(`색 테마 ${theme} 미정의. 선택: ${Object.keys(T.THEMES).join(", ")} 또는 meta.themeColors 지정`);
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`줄바꿈 단위 ${lineBreak} 미정의. 선택: ${LINE_BREAKS.join(", ")}`);
+  if (meta.footnoteStyle != null && !FOOTNOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`각주 표기 ${meta.footnoteStyle} 미정의. 선택: ${FOOTNOTE_STYLES.join(", ")}`);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);

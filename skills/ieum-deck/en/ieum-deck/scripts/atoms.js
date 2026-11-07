@@ -881,11 +881,14 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-/** Footnote list. Placed above the source line at the slide bottom in the 1) 2) format */
-function footnotes(slide, S, items) {
-  const arr = [].concat(items || []).filter(Boolean);
+const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a footnote
+/** Footnote list. Placed above the source line at the slide bottom. style is meta.footnoteStyle (mark: ※ on each item, number: 1) 2) numbers)
+ *  Why: removing the author's ※ or number and adding the deck mark again keeps one footnote style in a deck */
+function footnotes(slide, S, items, style) {
+  const arr = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "")).filter(Boolean);
   if (!arr.length) return;
-  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: /^\d+\)/.test(String(t).trim()) ? String(t) : `${i + 1}) ${t}`, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
+  const lead = (i) => (style === "number" ? `${i + 1}) ` : "※ ");
+  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
   text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {

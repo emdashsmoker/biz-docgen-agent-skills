@@ -19,6 +19,8 @@ const LB = require("./labels.js");
 const OWN_ENV = "IEUM_DECK_OWN";
 // Line break unit (meta.lineBreak). word is word-level (default), char is character-level. finalize.py reads the build record and writes it on every paragraph property
 const LINE_BREAKS = ["word", "char"];
+// Footnote style (meta.footnoteStyle). mark puts ※ on each item (default), number numbers items from 1) on each slide
+const FOOTNOTE_STYLES = ["mark", "number"];
 
 function parseArgs(argv) {
   const o = { layout: null, digest: false, marker: null, theme: null, args: [] };
@@ -135,6 +137,7 @@ async function main() {
   if (!T.THEMES[theme] && !meta.themeColors) throw new Error(`Color theme ${theme} is undefined. Choose: ${Object.keys(T.THEMES).join(", ")} or set meta.themeColors`);
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`Line break unit ${lineBreak} is undefined. Choose: ${LINE_BREAKS.join(", ")}`);
+  if (meta.footnoteStyle != null && !FOOTNOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`Footnote style ${meta.footnoteStyle} is undefined. Choose: ${FOOTNOTE_STYLES.join(", ")}`);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);

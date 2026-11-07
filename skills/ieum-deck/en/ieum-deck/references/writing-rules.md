@@ -100,6 +100,7 @@
     + Write slot text without symbols such as "-" or "·" (the builder typesets bullets)
     + Write steps titles without prefixes such as "STEP 1." (set stepLabel to "" if no prefix is needed)
     + A grid cell that carries inherited numbering (1-1.) sets numbered so the number replaces the bullet
+    + Write footnotes items without ※ or a mark such as "1)" (the mark comes from `meta.footnoteStyle`)
     + Write process module names without numbers such as "M1" (the module number goes in the id field)
     + On slides with a marker, start the first body line with content different from the marker
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)
@@ -111,9 +112,9 @@
 - Items in the same tier are consistent in having or not having numbers and symbols
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
-- Notes and sources start with ※ (the build attaches it automatically to source and note-type slots, and notes written directly in body cells get it by hand)
+- Notes and sources start with ※ (the build attaches it automatically to source and note-type slots, and notes written directly in body cells get it by hand, and footnotes follow `meta.footnoteStyle`)
 - Use ※ only for evidence, sources, premises and caveats
-- Put evidence and caveats in note slots or footnotes to use the automatic ※
+- Put evidence and caveats in note slots or footnotes to use the ※ or number the build adds
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
     + Used as a normal item, write it without ※

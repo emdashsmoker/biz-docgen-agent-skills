@@ -3,7 +3,7 @@
 Usage: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "reason for keeping"]
 The text checks target Korean deck text, and their word lists and patterns are Korean
 Checks
-- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char) (FAIL)
+- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char), footnote style (meta.footnoteStyle: mark | number) (FAIL)
 - Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
@@ -58,6 +58,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
+FOOTNOTE_STYLES = ("mark", "number")  # Footnote style (meta.footnoteStyle). Same list as FOOTNOTE_STYLES in build.js
 HANGUL_RE = re.compile(r"[가-힣]")
 # Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
 # Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
@@ -576,6 +577,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
     warns.extend(theme_contrast_warns(meta.get("themeColors") or {}))
     if meta.get("lineBreak", LINE_BREAKS[0]) not in LINE_BREAKS:
         fails.append(f"meta.lineBreak is {' or '.join(LINE_BREAKS)}. Input: {meta.get('lineBreak')}")
+    if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
+        fails.append(f"meta.footnoteStyle is {' or '.join(FOOTNOTE_STYLES)}. Input: {meta.get('footnoteStyle')}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]

@@ -17,6 +17,7 @@
 | pointLabel | Label text of the Key Point band (default "Key Point"). Can also be set per slide |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
+| footnoteStyle | Footnote style. mark (※ on each item, default), number (numbers from 1) on each slide). Applies to every footnote in the deck |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
@@ -56,8 +57,8 @@
 | tintNavy, tintHead, tintBg | Pyramid tiers 4-5, header cells, background tint | Body text color | 4.5 |
 | textMuted | AS-IS head cell, schedule bars, text color of sources, footnotes and axis ends | White (on a white background when used as text color) | 4.5 |
 
-- The matrix focus quadrant and tint-filled grid cells with color navy put navy text on a tintHead fill
 - When a chart has more series or pie slices than its palette colors, the build spaces the colors evenly between the first and last palette color
+- The matrix focus quadrant and tint-filled grid cells with color navy put navy text on a tintHead fill
 - When navy and tintHead have a contrast below 4.5, slides that draw these two elements get a build warning (colors keep the specified values)
 
 ## slides[] common fields
@@ -74,7 +75,7 @@
 | bandMode | Forced band mode. full (default), noMarker, headerOnly, blank |
 | slots, panels, blocks | Content per template (`references/templates.md`) |
 | source | Source line. String or array |
-| footnotes | Footnote array. Numbered 1), 2) automatically and placed above the source line |
+| footnotes | Footnote array. Gets the ※ or number of `meta.footnoteStyle` and is placed above the source line. A ※ or number written before an item is replaced with the deck style |
 | markerNote | Subtitle to the right of the marker (unit, reference date, etc.) |
 | rfpTasks, moduleTasks, evalItems | Lists of matching IDs. lint checks full coverage and score attribution |
 | allowCount | true when the headline uses a count set by the RFP (exempt from the number declaration check) |
