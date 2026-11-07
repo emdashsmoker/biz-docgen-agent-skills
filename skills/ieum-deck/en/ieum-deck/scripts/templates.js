@@ -78,6 +78,7 @@ function groupSize(boxes, itemsList, base) {
   return best;
 }
 
+const NOTE_LABEL_KEYS = ["footnoteLabel", "sourceLabel"]; // Note label keys of a number-style deck (meta.labels.common)
 const PP_LINE_RATIO = 1.4; // Approximate NanumGothic line height in PowerPoint (relative to font size). Higher than the rendering value 1.2
 /** Paragraphs of a bullet list. Shared by bullets and bulletFitSize so both measure the same paragraphs */
 function bulletParas(list, o, sz) {
@@ -88,8 +89,8 @@ function bulletParas(list, o, sz) {
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // Lines starting with ※ or 출처 are notes, so they get no bullet and show in small gray
     // To tell them from normal items such as "자료 수집", 출처 and 자료 count as notes only with a colon (English Source and Note follow the same rule)
-    // Tokens added with meta.labels.notation.source ("token:") are notes too
-    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
+    // Tokens added with meta.labels.notation.source ("token:") and the number-style labels (common.footnoteLabel, sourceLabel) are notes too
+    const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx) || NOTE_LABEL_KEYS.some((k) => String(tx).trim().startsWith(LB.label("common", k)));
     if (isNote) {
       paras.push({ bullet: false, indent: 0, marL: 0, align: "left", spcBef: o.gapPt || T.PARA.paraGapPt,
                    runs: [{ t: tx, sz: Math.max(T.SIZE.BODY_MIN, T.SIZE.note), color: T.COLOR.textMuted }] });
@@ -539,29 +540,32 @@ function calloutW(ctx, text, w0, maxW) {
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
   return w;
 }
-/** Adds ※ before a note string (left as is if it starts with ※ or *) */
-function noteText(v, joiner) {
-  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim());
-  if (joiner === "; ") return `※ ${arr.map((x) => x.replace(/^※\s*/, "")).join("; ")}`;
-  // ※ is added even before text starting with 출처 or 자료 (prevents a missing ※ mark)
-  return arr.map((x) => (/^(※|\*)/.test(x) ? x : `※ ${x}`)).join("\n");
+/** Note style of the deck (meta.footnoteStyle) and the number-style labels */
+function noteStyle(ctx) {
+  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") } };
 }
-const SOURCE_LEAD = /^(※\s*)?((출처|자료|[Ss]ources?)\s*[:：)]\s*)?/; // ※ and source mark the author wrote before a source
-/** Source line of a number-style deck. Removes ※ and the source mark from each item and joins them with semicolons after one source label (e.g. "출처) A; B") */
-function labeledSource(v) {
-  const label = LB.label("common", "sourceLabel");
+/** Note string under a box. Adds the deck note marks and joins the lines with line breaks (marks follow atoms.noteLines) */
+function noteText(ctx, v) {
+  const { style, labels } = noteStyle(ctx);
+  return A.noteLines(v, style, labels).join("\n");
+}
+/** Source line string. "※ A; B" in a ※ mark deck; in a number-style deck, removes ※ and the source mark from each item and joins them after one source label (e.g. "출처: A; B") */
+function sourceText(ctx, v) {
+  const { style, labels } = noteStyle(ctx);
+  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));
+  if (style !== "number") return `※ ${arr.join("; ")}`;
   const unmark = (x) => {
-    const s = String(x).trim().replace(SOURCE_LEAD, "");
-    return s.startsWith(label) ? s.slice(label.length).trim() : s;
+    const s = x.replace(A.SOURCE_MARK, "");
+    return s.startsWith(labels.source) ? s.slice(labels.source.length).trim() : s;
   };
-  return `${label} ${[].concat(v).filter(Boolean).map(unmark).filter(Boolean).join("; ")}`;
+  return `${labels.source} ${arr.map(unmark).filter(Boolean).join("; ")}`;
 }
 function source(ctx, slide, sb) {
-  const style = ctx.meta && ctx.meta.footnoteStyle;
-  A.footnotes(slide, ctx.S, sb.footnotes, style, LB.label("common", "footnoteLabel"));
+  const { style, labels } = noteStyle(ctx);
+  A.footnotes(slide, ctx.S, sb.footnotes, style, labels);
   if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, style === "number" ? labeledSource(sb.source) : noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, sourceText(ctx, sb.source), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative tag: bordered box rotated -27 degrees
@@ -679,7 +683,7 @@ function purpose(ctx, slide, sb) {
     // The evidence box height already excludes the note height (noteH), so the note stays inside the lead cell
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
     if (notes.length) A.text(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH },
-      noteText(notes),
+      noteText(ctx, notes),
       { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
   });
   label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, LB.label("purpose", "purposeHead", s.purposeHead), { sz: T.SIZE.body });
@@ -1181,7 +1185,7 @@ function roadmap(ctx, slide, sb) {
       slide.addText(A.runsOf(A.parasFromString(t.text, { sz: T.SIZE.tableDense, color: T.COLOR.textDark, align: "left" })), { ...bx, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: 0.5 }, valign: "middle", margin: A.boxMargin([0.06, 0.01, 0.06, 0.01]), isTextBox: true, autoFit: false });
     });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
+  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
   source(ctx, slide, sb);
 }
 /** Gantt: category and task columns + weekly grid by month. slots: {months:N, weeks:4, groups:[{name, tasks:[{name, from, to}]}], reports:[{name, at}], groupHead, taskHead, reportHead} */
@@ -1310,7 +1314,7 @@ function org(ctx, slide, sb) {
     // The share text is body information, so it uses the body floor (11pt); check_layout reads 10pt as note size
     if (t.share) A.text(slide, { x: c.x, y: bd.y + bd.h, w: c.w, h: 0.28 }, t.share, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "center" });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
+  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
   source(ctx, slide, sb);
 }
 
@@ -1612,6 +1616,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

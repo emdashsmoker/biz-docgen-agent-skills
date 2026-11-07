@@ -881,21 +881,32 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a footnote
-/** Footnote list. Placed above the source line at the slide bottom. style is meta.footnoteStyle (mark: ※ on each item, number: 1) 2) numbers)
- *  label is the label that replaces the number when the number style has one footnote (default "참조)")
- *  Why: removing the author's ※ or number and adding the deck mark again keeps one footnote style in a deck
- *       A single footnote has no other item to tell apart, so a content type label replaces the number */
-function footnotes(slide, S, items, style, label) {
+const NOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a note
+const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // source mark the author wrote before a source
+/** Lines of one note group. Shared by slide footnotes, notes under boxes and number card notes
+ *  style is meta.footnoteStyle. mark puts ※ on each item (a line starting with * is kept as the author's mark paired with a spot in the body)
+ *  number numbers two or more items 1) 2) and gives a single item labels.note (labels.source when it starts with a source mark)
+ *  Why: removing the author's ※, number or label and adding the deck mark again keeps one note style in a deck wherever the note sits
+ *       A single item has no other item to tell apart, so a content type label replaces the number */
+function noteLines(items, style, labels) {
+  const lb = labels || {};
   const unmark = (t) => {
-    const s = String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "");
-    return label && s.startsWith(label) ? s.slice(label.length).trim() : s;
+    const s = t.replace(NOTE_LEAD, "");
+    return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
   };
-  const arr = [].concat(items || []).map(unmark).filter(Boolean);
-  if (!arr.length) return;
-  const lead = (i) => (style !== "number" ? "※ " : arr.length === 1 && label ? `${label} ` : `${i + 1}) `);
-  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
-  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
+  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
+  if (style !== "number") return raw.map((t) => (t.startsWith("*") ? t : unmark(t))).filter(Boolean).map((t) => (t.startsWith("*") ? t : `※ ${t}`));
+  const arr = raw.map(unmark).filter(Boolean);
+  if (arr.length !== 1) return arr.map((t, i) => `${i + 1}) ${t}`);
+  const src = arr[0].match(SOURCE_MARK);
+  return [src ? `${lb.source} ${arr[0].slice(src[0].length)}` : `${lb.note} ${arr[0]}`];
+}
+/** Footnote list. Placed above the source line at the slide bottom (marks follow noteLines) */
+function footnotes(slide, S, items, style, labels) {
+  const lines = noteLines(items, style, labels);
+  if (!lines.length) return;
+  const paras = lines.map((t) => ({ align: "left", runs: [{ t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
+  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * lines.length, w: S.bodyW, h: 0.2 * lines.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {
   text(slide, S.pageNo, String(n), { sz: T.SIZE.pageNo, color: T.COLOR.textGray, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
@@ -1361,4 +1372,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteLines, SOURCE_MARK, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

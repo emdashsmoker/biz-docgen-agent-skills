@@ -150,11 +150,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (줄바꿈 단위) 단어 단위(기본) 또는 글자 단위. 선택 값은 `meta.lineBreak` 에 word 나 char 로 기록
     + 단어 단위는 줄 끝에서 한글 어절과 영문 단어를 나누지 않음
     + 글자 단위는 줄 끝 글자에서 줄을 바꾸므로 단어 중간 줄바꿈을 허용
-17. (각주 표기) 덱 전체의 각주와 출처 행에 적용할 표기. ※ 기호(기본) 또는 번호. 선택 값은 `meta.footnoteStyle` 에 mark 나 number 로 기록
-    + ※ 기호는 각주 항목과 출처 행 앞에 ※ 를 붙임
-    + 번호는 각주가 2개 이상인 슬라이드에서 1) 부터 차례로 번호를 붙임
-    + 번호 표기에서 각주가 1개이면 번호 대신 "참조)" 를 붙임
-    + 번호 표기의 출처 행은 "출처)" 로 시작
+17. (주석 표기) 덱 전체의 각주, 상자 아래 주석, 출처 행에 적용할 표기. ※ 기호(기본) 또는 번호. 선택 값은 `meta.footnoteStyle` 에 mark 나 number 로 기록
+    + ※ 기호는 주석 항목과 출처 행 앞에 ※ 를 붙임
+    + 번호는 주석 묶음의 항목이 2개 이상이면 1) 부터 차례로 번호를 붙임
+    + 번호 표기에서 항목이 1개이면 번호 대신 "참조:" 를 붙임 (출처 표기로 시작하는 항목은 "출처:")
+    + 번호 표기의 출처 행은 "출처:" 로 시작
     + 라벨 문구는 `meta.labels.common` 의 footnoteLabel 과 sourceLabel 로 변경
 
 ## 회사 사실 정보
@@ -469,7 +469,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 헤드라인은 1줄과 2줄 모두 18pt 로 조판
 - 헤드라인은 문구를 줄여 1줄로 맞춤
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
-- 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (note 앞의 ※ 와 footnotes 앞의 ※, 번호, 라벨은 빌드가 붙임)
+- 근거, 단서, 전제는 `note` 나 `footnotes` 에 기재 (note 와 footnotes 앞의 ※, 번호, 라벨은 빌드가 `meta.footnoteStyle` 에 맞춰 붙임)
 - 출처와 주석에는 독자가 직접 찾아볼 수 있는 외부 자료만 출처로 기재 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 기재하지 않음)
 - 강조 어구 1곳은 `accent` 필드에 지정
 
@@ -786,7 +786,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - 코드 검사가 놓치는 결함은 슬라이드마다 PNG 로 확인
 - 표지와 배경과 목적 슬라이드는 첫인상을 정하므로 가장 먼저 자세히 확인
-    + 배경과 목적의 주석이 ※ 로 시작하는가
+    + 배경과 목적의 주석이 `meta.footnoteStyle` 의 표기로 시작하는가
     + 근거가 항목 본문에 줄바꿈으로 붙어 있지 않은가
     + 리드마다 제목 1문장과 근거 2-3항목이 채워졌는가
     + 표지 제목이 두 가로선 사이 정중앙에 놓였는가
@@ -825,8 +825,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 #### 표기
 
-- 본문보다 작은 글씨의 용도가 분명한가 (근거, 출처, 전제에는 ※ 부착. 각주와 출처 행은 `meta.footnoteStyle` 의 ※, 번호, 라벨)
-- 각주가 단문이고 슬라이드에 필요한 최소 개수인가 (※ 각주 2개 이상은 서로 다른 대상의 단서인지 확인)
+- 본문보다 작은 글씨의 용도가 분명한가 (근거, 출처, 전제에는 `meta.footnoteStyle` 의 ※, 번호, 라벨 부착)
+- 주석이 복문 없이 단문으로 쓰였고 슬라이드에 필요한 개수인가 (※ 주석 2개 이상은 서로 다른 대상의 단서인지 확인)
 - 같은 계층의 글꼴 크기가 서로 다른가
 - 한 상자 안 불릿 중 하나만 글꼴이 달라 튀어 보이는가
 
@@ -855,7 +855,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 절 번호가 두 번 나옴 (밴드 번호 뒤 절 제목에 번호를 다시 씀)
     + 번호나 기호가 두 번 나옴 (불릿 도형 뒤 텍스트에 다시 불릿이나 하이픈을 씀)
     + 항목이 여럿인데 불릿이 없어 줄들이 붙어 보임
-    + 주석과 출처에 ※ 가 빠짐 (각주와 출처 행은 `meta.footnoteStyle` 의 ※, 번호, 라벨)
+    + 주석과 출처에 `meta.footnoteStyle` 의 표기(※, 번호, 라벨)가 빠짐
     + 절 번호, 마커, 불릿이 있어야 할 자리에 누락됨
     + 같은 계층인데 일부 항목에만 번호가 붙음
 - 판단 기준은 실무자가 발표자료로 제출했을 때 지적받을 수준인지 여부

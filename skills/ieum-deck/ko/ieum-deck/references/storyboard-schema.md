@@ -17,7 +17,7 @@
 | pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
-| footnoteStyle | 각주와 출처 행의 표기. mark(각주와 출처 행 앞에 ※, 기본), number(각주 2개 이상은 슬라이드마다 1) 부터 번호, 각주 1개는 common.footnoteLabel, 출처 행은 common.sourceLabel). 덱 전체에 적용 |
+| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. mark(주석 항목과 출처 행 앞에 ※, 기본), number(주석 묶음의 항목 2개 이상은 1) 부터 번호, 1개는 common.footnoteLabel, 출처 표기로 시작하는 1개와 출처 행은 common.sourceLabel). 덱 전체에 적용 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |

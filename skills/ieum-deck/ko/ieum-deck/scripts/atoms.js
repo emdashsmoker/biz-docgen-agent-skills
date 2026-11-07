@@ -881,21 +881,32 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // 작성자가 각주 앞에 직접 붙인 ※ 나 번호
-/** 각주 목록. 슬라이드 하단 출처 행 위에 배치. style 은 meta.footnoteStyle (mark: 항목마다 ※, number: 1) 2) 번호)
- *  label 은 번호 표기에서 각주가 1개일 때 번호 대신 붙이는 라벨 (기본 "참조)")
- *  Why: 작성자가 붙인 ※ 나 번호를 떼고 덱 기준 표기를 다시 붙여 한 덱 안의 각주 표기를 하나로 유지
- *       각주가 1개이면 구분할 다른 항목이 없으므로 번호 대신 내용 유형 라벨을 씀 */
-function footnotes(slide, S, items, style, label) {
+const NOTE_LEAD = /^(※|\d+\))\s*/; // 작성자가 주석 앞에 직접 붙인 ※ 나 번호
+const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // 작성자가 출처 앞에 쓴 출처 표기
+/** 주석 묶음 1개의 줄 목록. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석이 공통으로 사용
+ *  style 은 meta.footnoteStyle. mark 는 항목마다 ※ (* 로 시작하는 줄은 작성자가 본문 위치와 짝지은 표기로 보고 유지)
+ *  number 는 항목이 2개 이상이면 1) 2), 1개이면 labels.note (출처 표기로 시작하면 labels.source)
+ *  Why: 작성자가 붙인 ※, 번호, 라벨을 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
+ *       항목이 1개이면 구분할 다른 항목이 없으므로 번호 대신 내용 유형 라벨을 씀 */
+function noteLines(items, style, labels) {
+  const lb = labels || {};
   const unmark = (t) => {
-    const s = String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "");
-    return label && s.startsWith(label) ? s.slice(label.length).trim() : s;
+    const s = t.replace(NOTE_LEAD, "");
+    return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
   };
-  const arr = [].concat(items || []).map(unmark).filter(Boolean);
-  if (!arr.length) return;
-  const lead = (i) => (style !== "number" ? "※ " : arr.length === 1 && label ? `${label} ` : `${i + 1}) `);
-  const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
-  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
+  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
+  if (style !== "number") return raw.map((t) => (t.startsWith("*") ? t : unmark(t))).filter(Boolean).map((t) => (t.startsWith("*") ? t : `※ ${t}`));
+  const arr = raw.map(unmark).filter(Boolean);
+  if (arr.length !== 1) return arr.map((t, i) => `${i + 1}) ${t}`);
+  const src = arr[0].match(SOURCE_MARK);
+  return [src ? `${lb.source} ${arr[0].slice(src[0].length)}` : `${lb.note} ${arr[0]}`];
+}
+/** 각주 목록. 슬라이드 하단 출처 행 위에 배치 (표기 규칙은 noteLines) */
+function footnotes(slide, S, items, style, labels) {
+  const lines = noteLines(items, style, labels);
+  if (!lines.length) return;
+  const paras = lines.map((t) => ({ align: "left", runs: [{ t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
+  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * lines.length, w: S.bodyW, h: 0.2 * lines.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {
   text(slide, S.pageNo, String(n), { sz: T.SIZE.pageNo, color: T.COLOR.textGray, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
@@ -1361,4 +1372,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteLines, SOURCE_MARK, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

@@ -32,7 +32,7 @@ const CELL_GAP_H = 0.14; // horizontal gap between plain grid cells (same as the
 const GRID_FLOW_GAP = 0.46; // gap between flow grid columns (the 0.28 right arrow width plus side margin)
 const STEP_GAP = 0.26, STEP_GAP_MAX = 0.5; // arrow gap between vertical steps, and its cap
 const FLOW_GAP = 0.42, FLOW_GAP_MAX = 0.6; // arrow gap between flow boxes, and its cap
-const NOTE_H = 0.26; // area note (※) height
+const NOTE_H = 0.26; // area note height
 const CELL_SNAP = 0.3; // if a table cell is shorter than its neighbor by this much or less, raise the row height so top and bottom edges align
 const BOTTOM_BAND_H = 0.5; // height of the conclusion band and the Key Point callout
 const BOTTOM_GAP = 0.2;
@@ -811,7 +811,7 @@ BLOCKS.numbers = (ctx, H, slide, box, k) => {
     const y = c.y + Math.max(0.04, (c.h - block) / 2);
     A.text(slide, { x: c.x, y, w: c.w, h: vh }, String(it.value || ""), { sz: vsz, bold: true, color: T.COLOR.navy, align: "center", mg: [0, 0, 0, 0] });
     A.text(slide, { x: c.x + 0.06, y: y + vh, w: c.w - 0.12, h: 0.32 }, it.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, it.note, { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
+    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, H.noteText(ctx, it.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
   });
 };
 
@@ -1721,7 +1721,7 @@ function composite(ctx, slide, sb, H) {
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
         else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
       }
-      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, /^\s*(※|\*)/.test(rg.note) ? rg.note : `※ ${rg.note}`, { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, H.noteText(ctx, rg.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;
       const nSum = measured ? needs.reduce((a, v) => a + v, 0) : 0;
       const growSum = measured ? caps.reduce((a, v, j) => a + Math.max(0, v - needs[j]), 0) : 0;

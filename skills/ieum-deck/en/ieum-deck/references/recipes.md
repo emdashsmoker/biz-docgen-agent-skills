@@ -36,7 +36,7 @@
 | `regions[].block` | One block for the cell |
 | `regions[].blocks` | Array of blocks stacked top to bottom in the cell. `h` per block is the height ratio (default 1) |
 | `block.caption` | Caption above a block. Used as a per-block title when several blocks are stacked in one cell (the caption of an `image` block is typeset as a description under the image) |
-| `regions[].note` | Note under the cell. The builder adds ※ if it is missing |
+| `regions[].note` | Note under the cell. The builder adds the ※, number or label of `meta.footnoteStyle` |
 | `slots.flow` | If true, right arrows between cells in the same row |
 | `slots.rowFlow` | If true, down arrows between rows |
 | `slots.numbered` | If true, ①, ②, ③ numbers before cell titles |
@@ -113,7 +113,7 @@
 | `timeline` | Time axis with per-point event boxes (progress to date, history) | `events[{when, title, items or text, mark}]`. Events with `mark` true (the current point) get a filled marker and a tinted box |
 | `funnel` | Funnel (stage-by-stage selection from candidates to the final set) | `stages[{label, value, cells[] or items}]` (from the top stage), `head[]` (description column titles, optional), `funnelHead` (funnel column title, optional). The band holds the stage name and target count, and the cells on the right hold per-stage descriptions. With `head`, `cells` are typeset in column order |
 | `governance` | Governance chart (central management chain with review and partner bodies on both sides) | `spine[]` (bodies in the order R&D funds flow), `sides[{at, side, text, dash}]`. `at` is the index (from 0) of the chain body to connect, the `side` value is left or right, and `dash` true gives a dashed line (partnership) |
-| `numbers` | Key figure tiles | `items[{value, label, note}]` |
+| `numbers` | Key figure tiles | `items[{value, label, note}]`. note gets the same mark as a cell note |
 | `chart` | Native chart | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` is the number format of data labels and the value axis (e.g. "0.0" shows one decimal place. If unset, bar and line charts round to integers) |
 | `image` | Image or placeholder box | `src` (path or data URI), `caption` (description under the image), `label` (placeholder box text) |
 
