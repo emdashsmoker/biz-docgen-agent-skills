@@ -169,7 +169,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 17. (Note style) ※ mark (default) or numbers. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as mark or number
-    + (※ mark) Puts ※ before each note item and the source line
+    + (※ mark) Puts ※ before each note item and the source line. Write the source mark (e.g. "Source:", "출처:", "자료:") in the storyboard yourself (the build adds only ※; typeset example: "※ Source: organization (year), material name")
     + (Numbers) Numbers a note group with two or more items in order from 1). A note group with a single item gets "Note:" instead of a number ("Source:" for an item that starts with a source mark). The source line starts with "Source:"
     + (Labels of the numbers choice) In the question, write "Note:" and "Source:" inside the numbers choice description together with where each label appears (e.g. "Note:" for a note group with a single item, "Source:" for the source line)
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
@@ -491,6 +491,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Write grounds, conditions, assumptions and similar content in `note` or `footnotes` (the build adds ※, a number or a label before each item per `meta.footnoteStyle`)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
+- Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:"). In a ※ mark deck the build adds only ※, so write the source mark yourself (details in the notation section of `references/writing-rules.md`)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term
@@ -879,6 +880,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + A number or symbol appears twice (a bullet or hyphen is written again in text after a bullet shape)
     + Several items have no bullets so the lines run together
     + The `meta.footnoteStyle` mark (※, number or label) is missing from notes and sources
+    + A source mark (e.g. "Source:", "출처:", "자료:") is missing from the source line or a source note in a ※ mark deck
     + A section number, marker or bullet is missing where it should be
     + Only some items of the same level are numbered
 - The criterion is whether a practitioner would be called out for it when submitting the deck

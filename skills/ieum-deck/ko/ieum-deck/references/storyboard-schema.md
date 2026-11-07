@@ -17,7 +17,7 @@
 | pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
-| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. mark(기본)는 주석 항목과 출처 행 앞에 ※ 를 붙임. number 는 같은 위치의 주석이 2개 이상이면 1) 부터 번호를 붙임. number 는 같은 위치의 주석이 1개이면 common.footnoteLabel 을 붙임 (출처 표기로 시작하는 주석은 common.sourceLabel). number 의 출처 행은 common.sourceLabel 로 시작 |
+| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. mark(기본)는 주석 항목과 출처 행 앞에 ※ 를 붙임 ("출처:", "자료:" 같은 출처 표기는 직접 기재한 문구를 유지). number 는 같은 위치의 주석이 2개 이상이면 1) 부터 번호를 붙임. number 는 같은 위치의 주석이 1개이면 common.footnoteLabel 을 붙임 (출처 표기로 시작하는 주석은 common.sourceLabel). number 의 출처 행은 common.sourceLabel 로 시작 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
@@ -74,7 +74,7 @@
 | marker | 마커 텍스트. 30자(한글 환산) 초과는 lint FAIL. 값을 비우면 마커 도형도 생략 |
 | bandMode | 밴드 모드의 강제 지정. full(기본), noMarker, headerOnly, blank |
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |
-| source | 출처 행. 문자열 또는 배열. 번호 표기 덱의 출처 행은 common.sourceLabel 1개로 시작 (항목 앞의 ※ 와 출처:, 자료:, Source: 같은 출처 표기는 빌드가 삭제) |
+| source | 출처 행. 문자열 또는 배열. 첫 항목은 출처 표기(예: "출처:", "자료:")로 시작. ※ 기호 덱은 직접 쓴 출처 표기를 유지하여 "※ 출처: A; B" 로 조판. 번호 표기 덱의 출처 행은 common.sourceLabel 1개로 시작 (항목 앞의 ※ 와 출처:, 자료:, Source: 같은 출처 표기는 빌드가 삭제) |
 | footnotes | 각주 배열. 출처 행 위에 배치. 빌드가 `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙임 (항목 앞에 직접 쓴 ※, 번호, 라벨은 덱 기준 표기로 교체) |
 | footnoteLabel, sourceLabel | 번호 표기 덱에서 이 슬라이드에 쓸 주석 라벨과 출처 라벨. `meta.labels.common` 보다 우선 (※ 기호 덱에서는 적용하지 않음) |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
