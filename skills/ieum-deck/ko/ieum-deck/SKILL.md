@@ -826,6 +826,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### 표기
 
 - 본문보다 작은 글씨의 용도가 분명한가 (근거, 출처, 전제에는 ※ 부착. 각주와 출처 행은 `meta.footnoteStyle` 의 ※, 번호, 라벨)
+- 각주가 단문이고 슬라이드에 필요한 최소 개수인가 (※ 각주 2개 이상은 서로 다른 대상의 단서인지 확인)
 - 같은 계층의 글꼴 크기가 서로 다른가
 - 한 상자 안 불릿 중 하나만 글꼴이 달라 튀어 보이는가
 

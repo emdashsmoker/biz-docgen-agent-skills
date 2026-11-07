@@ -840,6 +840,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### Notation
 
 - Is the purpose of text smaller than the body clear (※ attached to grounds, sources and assumptions; footnotes and the source line carry ※, a number or a label per `meta.footnoteStyle`)?
+- Are footnotes simple sentences, no more than the slide needs (with two or more ※ footnotes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
 

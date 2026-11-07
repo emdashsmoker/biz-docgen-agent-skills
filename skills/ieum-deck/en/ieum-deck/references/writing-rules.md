@@ -125,6 +125,18 @@
 - Task markers use the `Task 2. Task명` format
 - Module items in organization charts and the table of contents also use the `[Module 1] 모듈명` format
 
+## Footnotes
+
+- Write a footnote only to clarify a formula, reference date, assumption or scope that the body alone could leave misread
+- Write each footnote item as one simple sentence
+- Merge caveats on the same target into one item
+- Keep footnote items from overlapping in content
+- Do not repeat in a footnote what the headline, body or Key Point band already says
+- Keep the number of footnotes per slide to the minimum the body needs
+    + (※ mark) Write one item by default. Stacked ※ lines stand out more than the body, so use two or more items only when caveats on different targets are needed together
+    + (Numbers) Apply the same minimum. With two or more items the build tells them apart by number
+- When caveats cannot be cut further, consider moving them into a table or box in the body before adding footnotes
+
 ## Tables
 
 - When a cell has two or more items, look at the cell content and the whole table and choose whichever reads more easily: bullets or a comma list
