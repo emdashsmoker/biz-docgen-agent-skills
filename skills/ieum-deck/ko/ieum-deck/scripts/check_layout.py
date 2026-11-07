@@ -23,8 +23,8 @@ LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기
 TITLE_PT = 24
 # 표 셀에 허용되는 기본 채움색 (navy 와 mono 테마 색, 틴트, 회색, 흰색). 실행 시 빌드 기록의 palette(적용한 테마 색)를 더함. 그 외 색은 시각 검수 대상
 PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2", "C9CDD8",
-           "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D", "808080", "D9D9D9", "C0392B", "8B93A7",
-           "EBEBEB", "F8F8F8", "939393"}
+           "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D", "808080", "D9D9D9", "C0392B", "52596C",
+           "EBEBEB", "F8F8F8"}
 
 def _build_record(pptx_path):
     """빌드 기록(<파일명>.build.json). pptx 와 같은 폴더에 있어야 함. 없으면 빈 기록"""

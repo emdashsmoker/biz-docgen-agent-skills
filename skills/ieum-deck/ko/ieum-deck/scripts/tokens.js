@@ -92,7 +92,7 @@ const COLOR = {
   navyPastel2: "A9B9D9",
   navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"],
   textDark: "333333",
-  textMuted: "8B93A7",
+  textMuted: "52596C",
   textGray: "595959",
   tintHead: "E9EBF0", // 머리글 틴트
   tintBg: "F7F8FA", // 배경 틴트
@@ -108,8 +108,8 @@ const COLOR = {
 // 틴트(tintHead, tintBg)와 보조 회색(textMuted)도 테마 키에 포함하여 테마를 다시 적용할 때 이전 테마 값이 남지 않게 함
 // mono 의 틴트와 보조 회색은 navy 값과 같은 휘도의 무채색 (navy 값은 청회색이라 무채색 테마에서 색이 섞여 보임)
 const THEMES = {
-  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "8B93A7" },
-  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "939393" },
+  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C" },
+  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959" },
 };
 
 // 기준 색 1개로 테마 키 전체를 계산하는 규칙. 색상(hue)은 기준 색을 유지
@@ -130,8 +130,9 @@ const PASTEL_CONTRAST_MIN = 3.0;
 const CONTRAST_STEP_L = 0.01; // 대비 하한 미달 시 명도를 낮추는 단위
 const DARK_TEXT_CONTRAST_MIN = 3.0; // 본문 글자색을 얹는 도식 채움(피라미드 3층, 깔때기 옅은 띠, 시장 규모 바깥 원)의 대비 하한
 const TINT_TEXT_CONTRAST_MIN = 4.5; // 본문 글자를 얹는 틴트 배경의 대비 하한 (WCAG AA 본문 기준)
-// 보조 회색은 AS-IS 머리 칸 채움(흰 글자)과 흰 바탕 위 출처, 각주, 축 양끝 표기 글자에 쓰임 (기본 8B93A7 의 흰색 대비 3.08)
-const MUTED_CONTRAST_MIN = 3.0;
+// 보조 회색은 AS-IS 머리 칸 채움(흰 글자)과 흰 바탕 위 출처, 각주, 축 양끝 표기 글자에 쓰임 (기본 52596C 의 흰색 대비 6.99, mono 595959 는 7.00)
+// 간트 막대와 AS-IS 머리 칸이 같은 키를 채움색으로 쓰므로 두 요소의 무게를 진하기 상한의 기준으로 삼음
+const MUTED_CONTRAST_MIN = 4.5;
 // 테마 색 키별 글자 대비 규칙. on 은 그 색 위에 조판하는 글자색 (white 는 흰색, textDark 는 본문 글자색)
 // 기준 색 계산값은 규칙을 충족하도록 만들어지므로 lint 가 직접 지정한 색 키만 limits.json 사본으로 검사 (미달은 WARN, 유지 사유를 적으면 통과)
 const THEME_TEXT_RULES = [

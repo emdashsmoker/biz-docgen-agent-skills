@@ -54,7 +54,7 @@
 | navyPastel2 | Pyramid 3rd tier, light funnel band, market size outer circle, 3rd chart series (navyRamp 2) | Body text color | 3.0 |
 | navyRamp 3 | 4th chart series, top funnel band | Body text color | 3.0 |
 | tintNavy, tintHead, tintBg | Pyramid tiers 4-5, header cells, background tint | Body text color | 4.5 |
-| textMuted | AS-IS head cell, schedule bars, text color of sources, footnotes and axis ends | White (on a white background when used as text color) | 3.0 |
+| textMuted | AS-IS head cell, schedule bars, text color of sources, footnotes and axis ends | White (on a white background when used as text color) | 4.5 |
 
 - The matrix focus quadrant and tint-filled grid cells with color navy put navy text on a tintHead fill
 - When navy and tintHead have a contrast below 4.5, slides that draw these two elements get a build warning (colors keep the specified values)

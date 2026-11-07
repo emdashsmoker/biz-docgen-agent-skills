@@ -23,8 +23,8 @@ LABEL_INK_RATIO = 0.3  # Overlap threshold between a label and body glyphs insid
 TITLE_PT = 24
 # Base fill colors allowed in table cells (navy and mono theme colors, tints, grays, white). At run time the palette in the build record (applied theme colors) is added. Other colors go to visual review
 PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2", "C9CDD8",
-           "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D", "808080", "D9D9D9", "C0392B", "8B93A7",
-           "EBEBEB", "F8F8F8", "939393"}
+           "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D", "808080", "D9D9D9", "C0392B", "52596C",
+           "EBEBEB", "F8F8F8"}
 
 def _build_record(pptx_path):
     """Build record (<file name>.build.json). Must be in the same folder as the pptx. Empty record if absent"""

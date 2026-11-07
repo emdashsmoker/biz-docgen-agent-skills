@@ -709,7 +709,7 @@ def format_metrics(label: str, metrics: dict) -> str:
 # finalize() adds custom theme colors read from the palette in the build record
 CELL_PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2",
                 "C9CDD8", "FFFFFF", "BFBFBF", "A6A6A6", "595959", "333333", "2B2B2B", "4D4D4D",
-                "808080", "D9D9D9", "C0392B", "8B93A7", "EBEBEB", "F8F8F8", "939393"}
+                "808080", "D9D9D9", "C0392B", "52596C", "EBEBEB", "F8F8F8"}
 
 
 TC_BLOCK = re.compile(r"<a:tc\b[^>]*>.*?</a:tc>", re.S)
