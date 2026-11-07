@@ -883,11 +883,17 @@ function headlineWithAccent(hl, phrase) {
 }
 const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a footnote
 /** Footnote list. Placed above the source line at the slide bottom. style is meta.footnoteStyle (mark: ※ on each item, number: 1) 2) numbers)
- *  Why: removing the author's ※ or number and adding the deck mark again keeps one footnote style in a deck */
-function footnotes(slide, S, items, style) {
-  const arr = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "")).filter(Boolean);
+ *  label is the label that replaces the number when the number style has one footnote (default "참조)")
+ *  Why: removing the author's ※ or number and adding the deck mark again keeps one footnote style in a deck
+ *       A single footnote has no other item to tell apart, so a content type label replaces the number */
+function footnotes(slide, S, items, style, label) {
+  const unmark = (t) => {
+    const s = String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "");
+    return label && s.startsWith(label) ? s.slice(label.length).trim() : s;
+  };
+  const arr = [].concat(items || []).map(unmark).filter(Boolean);
   if (!arr.length) return;
-  const lead = (i) => (style === "number" ? `${i + 1}) ` : "※ ");
+  const lead = (i) => (style !== "number" ? "※ " : arr.length === 1 && label ? `${label} ` : `${i + 1}) `);
   const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
   text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }

@@ -883,11 +883,17 @@ function headlineWithAccent(hl, phrase) {
 }
 const FOOTNOTE_LEAD = /^(※|\d+\))\s*/; // 작성자가 각주 앞에 직접 붙인 ※ 나 번호
 /** 각주 목록. 슬라이드 하단 출처 행 위에 배치. style 은 meta.footnoteStyle (mark: 항목마다 ※, number: 1) 2) 번호)
- *  Why: 작성자가 붙인 ※ 나 번호를 떼고 덱 기준 표기를 다시 붙여 한 덱 안의 각주 표기를 하나로 유지 */
-function footnotes(slide, S, items, style) {
-  const arr = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "")).filter(Boolean);
+ *  label 은 번호 표기에서 각주가 1개일 때 번호 대신 붙이는 라벨 (기본 "참조)")
+ *  Why: 작성자가 붙인 ※ 나 번호를 떼고 덱 기준 표기를 다시 붙여 한 덱 안의 각주 표기를 하나로 유지
+ *       각주가 1개이면 구분할 다른 항목이 없으므로 번호 대신 내용 유형 라벨을 씀 */
+function footnotes(slide, S, items, style, label) {
+  const unmark = (t) => {
+    const s = String(t == null ? "" : t).trim().replace(FOOTNOTE_LEAD, "");
+    return label && s.startsWith(label) ? s.slice(label.length).trim() : s;
+  };
+  const arr = [].concat(items || []).map(unmark).filter(Boolean);
   if (!arr.length) return;
-  const lead = (i) => (style === "number" ? `${i + 1}) ` : "※ ");
+  const lead = (i) => (style !== "number" ? "※ " : arr.length === 1 && label ? `${label} ` : `${i + 1}) `);
   const paras = arr.map((t, i) => ({ align: "left", runs: [{ t: lead(i) + t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
   text(slide, { x: S.bodyX, y: S.noteY - 0.2 * arr.length, w: S.bodyW, h: 0.2 * arr.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
 }

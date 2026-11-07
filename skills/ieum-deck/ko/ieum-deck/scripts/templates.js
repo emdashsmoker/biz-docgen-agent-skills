@@ -545,11 +545,22 @@ function noteText(v, joiner) {
   // 출처와 자료로 시작해도 ※ 를 앞에 붙임 (당구장 기호 누락 방지)
   return arr.map((x) => (/^(※|\*)/.test(x) ? x : `※ ${x}`)).join("\n");
 }
+const SOURCE_LEAD = /^(※\s*)?((출처|자료|[Ss]ources?)\s*[:：)]\s*)?/; // 작성자가 출처 앞에 쓴 ※ 와 출처 표기
+/** 번호 표기 덱의 출처 행. 항목마다 ※ 와 출처 표기를 떼고 출처 라벨 1개 뒤에 세미콜론으로 이음 (예: "출처) A; B") */
+function labeledSource(v) {
+  const label = LB.label("common", "sourceLabel");
+  const unmark = (x) => {
+    const s = String(x).trim().replace(SOURCE_LEAD, "");
+    return s.startsWith(label) ? s.slice(label.length).trim() : s;
+  };
+  return `${label} ${[].concat(v).filter(Boolean).map(unmark).filter(Boolean).join("; ")}`;
+}
 function source(ctx, slide, sb) {
-  A.footnotes(slide, ctx.S, sb.footnotes, ctx.meta && ctx.meta.footnoteStyle);
+  const style = ctx.meta && ctx.meta.footnoteStyle;
+  A.footnotes(slide, ctx.S, sb.footnotes, style, LB.label("common", "footnoteLabel"));
   if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, style === "number" ? labeledSource(sb.source) : noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative 태그: 회전 -27도 테두리 상자

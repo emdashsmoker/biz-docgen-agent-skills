@@ -546,11 +546,22 @@ function noteText(v, joiner) {
   // ※ is added even before text starting with 출처 or 자료 (prevents a missing ※ mark)
   return arr.map((x) => (/^(※|\*)/.test(x) ? x : `※ ${x}`)).join("\n");
 }
+const SOURCE_LEAD = /^(※\s*)?((출처|자료|[Ss]ources?)\s*[:：)]\s*)?/; // ※ and source mark the author wrote before a source
+/** Source line of a number-style deck. Removes ※ and the source mark from each item and joins them with semicolons after one source label (e.g. "출처) A; B") */
+function labeledSource(v) {
+  const label = LB.label("common", "sourceLabel");
+  const unmark = (x) => {
+    const s = String(x).trim().replace(SOURCE_LEAD, "");
+    return s.startsWith(label) ? s.slice(label.length).trim() : s;
+  };
+  return `${label} ${[].concat(v).filter(Boolean).map(unmark).filter(Boolean).join("; ")}`;
+}
 function source(ctx, slide, sb) {
-  A.footnotes(slide, ctx.S, sb.footnotes, ctx.meta && ctx.meta.footnoteStyle);
+  const style = ctx.meta && ctx.meta.footnoteStyle;
+  A.footnotes(slide, ctx.S, sb.footnotes, style, LB.label("common", "footnoteLabel"));
   if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, style === "number" ? labeledSource(sb.source) : noteText(sb.source, "; "), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative tag: bordered box rotated -27 degrees

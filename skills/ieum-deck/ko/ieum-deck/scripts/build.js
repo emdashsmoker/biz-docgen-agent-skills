@@ -167,8 +167,9 @@ async function main() {
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout 이 읽음)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
+  // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨 (check_layout 이 주석 줄로 인식)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel")], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

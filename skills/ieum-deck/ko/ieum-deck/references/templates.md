@@ -148,6 +148,8 @@
 |---|---|---|
 | common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | Key Point |
 | common | company (슬라이드 company 와 meta.company 가 우선) | 회사명 |
+| common | footnoteLabel (번호 표기 덱에서 각주가 1개일 때 번호 자리) | 참조) |
+| common | sourceLabel (번호 표기 덱의 출처 행 앞) | 출처) |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |
@@ -195,7 +197,7 @@
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key Point", "company": "Company name"},
+ "common": {"pointLabel": "Key Point", "company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},

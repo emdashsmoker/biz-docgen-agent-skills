@@ -167,8 +167,9 @@ async function main() {
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
+  // noteLabels holds the labels before footnotes and the source line in a number-style deck (check_layout treats those lines as notes)
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel")], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   warnings.forEach((w) => console.log("WARN " + w));

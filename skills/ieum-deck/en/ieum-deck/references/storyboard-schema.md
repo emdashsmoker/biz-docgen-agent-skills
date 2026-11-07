@@ -17,7 +17,7 @@
 | pointLabel | Label text of the Key Point band (default "Key Point"). Can also be set per slide |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
-| footnoteStyle | Footnote style. mark (※ on each item, default), number (numbers from 1) on each slide). Applies to every footnote in the deck |
+| footnoteStyle | Style of footnotes and the source line. mark (※ before footnotes and the source line, default), number (two or more footnotes numbered from 1) on each slide, a single footnote gets common.footnoteLabel, the source line gets common.sourceLabel). Applies to the whole deck |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
@@ -74,8 +74,8 @@
 | marker | Marker text. Over 30 characters (Hangul equivalent) is a lint FAIL. An empty value also omits the marker shape |
 | bandMode | Forced band mode. full (default), noMarker, headerOnly, blank |
 | slots, panels, blocks | Content per template (`references/templates.md`) |
-| source | Source line. String or array |
-| footnotes | Footnote array. Gets the ※ or number of `meta.footnoteStyle` and is placed above the source line. A ※ or number written before an item is replaced with the deck style |
+| source | Source line. String or array. In a number-style deck, the ※ and source mark (출처:, 자료:, Source:) before each item are removed and the line starts with one common.sourceLabel |
+| footnotes | Footnote array. Gets the ※, number or label of `meta.footnoteStyle` and is placed above the source line. A ※, number or label written before an item is replaced with the deck style |
 | markerNote | Subtitle to the right of the marker (unit, reference date, etc.) |
 | rfpTasks, moduleTasks, evalItems | Lists of matching IDs. lint checks full coverage and score attribution |
 | allowCount | true when the headline uses a count set by the RFP (exempt from the number declaration check) |
