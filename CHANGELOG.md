@@ -57,6 +57,7 @@ Changelog rules
 - Changed the ※ usage rule to cover note text such as evidence, sources, premises and caveats (#94)
 - Changed the note target, Key Point band content and register scope lists to example lists that end in 등 (#94)
 - Fixed the kickoff questions so that every choice item shows all of its choices, including the numbers choice of the note style question (#95)
+- Fixed the note style kickoff question so that it shows the "참조:" and "출처:" labels inside the numbers choice description (#97)
 
 * 출처, 각주, 축 양끝 표기의 보조 글자색을 흰색 대비 4.5:1 이상인 52596C(navy)와 595959(mono)로 변경 (#92)
 * 사용자 지정 textMuted 테마 색의 대비 하한을 3.0에서 4.5로 변경 (#92)
@@ -78,6 +79,7 @@ Changelog rules
 * ※ 사용 범위를 근거, 출처, 전제, 단서 등 주석 성격의 문구로 변경 (#94)
 * 주석 대상, Key Point 밴드 내용, 문체 적용 범위의 목록을 "등" 으로 끝나는 예시 목록으로 변경 (#94)
 * 주석 표기의 번호처럼 착수 질의에서 기본값 외 선택지가 빠지는 현상 수정 (#95)
+* 착수 질의 주석 표기 항목에서 "참조:" 와 "출처:" 라벨이 별도 선택지처럼 보이는 현상 수정 (#97)
 
 ### juja-builder
 - Added a rule that sources and notes cite only external material the reader can look up (#92)
