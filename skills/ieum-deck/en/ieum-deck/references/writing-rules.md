@@ -136,6 +136,7 @@
 - Write the material that figures and facts come from in `source`
 - Write each note item as a simple sentence with one subject-predicate pair and avoid complex sentences (simple refers to sentence structure, not length)
 - Merge caveats on the same target into one item
+- A note that supplements a specific word or figure names its target in the note (e.g. "TTL stands for Travel, transport, and logistics")
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body or Key Point band already says
 - Keep the number of notes per slide to the minimum the body needs
