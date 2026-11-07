@@ -59,7 +59,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | Band | The top area of a slide. Holds the section number, section title, chapter tracker and headline |
 | Headline | The one conclusion sentence in the middle of the band |
 | Marker | The subheading on the first line of the body. Typeset with a square shape |
-| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body |
 | Template | The typesetting method named by the `template` value in the storyboard |
 | Parametric template | A fixed-structure template whose layout changes with the number of items (`references/templates.md`) |
 | Recipe | A sample combination of grid and blocks for the composite template (`references/recipes.md`) |
@@ -514,7 +514,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Phrases) The lists of lint FAIL expressions and lint WARN vocabulary follow `references/writing-rules.md`
 - (Fixed wording) Keep the standard spelling of key RFP wording
 - (Figures) Mark unconfirmed figures with the `[확인 필요]` placeholder
-- (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body
     + Write one-line formulas or conditions in `footnotes` to free body height
 - lint reports writing rule violations as FAIL and WARN

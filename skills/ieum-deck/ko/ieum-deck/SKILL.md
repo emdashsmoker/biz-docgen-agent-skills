@@ -46,7 +46,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | 밴드 | 슬라이드 상단 영역. 절 번호, 절 제목, 장 추적기, 헤드라인이 놓임 |
 | 헤드라인 | 밴드 가운데의 결론 문장 1개 |
 | 마커 | 본문 첫 줄의 소제목. 정사각형 도형과 함께 조판 |
-| Key Point 밴드 | 본문 아래에 라벨 칸과 한 문장을 담은 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 표시 |
+| Key Point 밴드 | 본문 아래에 라벨 칸과 한 문장을 담은 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 표시 |
 | 템플릿 | storyboard 의 `template` 값이 가리키는 조판 방식 |
 | 파라메트릭 템플릿 | 항목 수에 따라 배치가 바뀌는 고정 구조 템플릿 (`references/templates.md`) |
 | 레시피 | composite 템플릿의 격자와 블록 조합 견본 (`references/recipes.md`) |
@@ -501,7 +501,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (어구) lint FAIL 표현과 lint WARN 어휘의 목록은 `references/writing-rules.md` 를 따름
 - (고정 워딩) RFP 핵심 워딩은 표준 표기를 유지
 - (수치) 미확인 수치는 자리 표기 `[확인 필요]` 로 표시
-- (Key Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용
+- (Key Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 담을 때만 사용
     + 헤드라인 반복이나 본문 요약만 담은 밴드는 삭제
     + 한 줄짜리 산식이나 단서는 `footnotes` 에 기재하여 본문 높이를 확보
 - lint 는 문장 규범 위반을 FAIL 과 WARN 으로 보고

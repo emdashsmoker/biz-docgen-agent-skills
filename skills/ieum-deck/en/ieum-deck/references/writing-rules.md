@@ -16,7 +16,7 @@
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
 - Polite headlines end in the formal 하십시오체 style (e.g. "수립합니다", "확보합니다", "보유하고 있습니다", "추진하겠습니다" and similar forms)
 - Body style is noun-ending regardless of the headline style
-- Headlines and body text use no colloquial or informal style (including a colloquial or informal tone in endings, words and expressions)
+- Headlines and body text use no colloquial or informal style (including a colloquial or informal tone in endings, words, expressions and similar elements)
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
@@ -80,7 +80,7 @@
 - Table cell text carries whichever of subject, criterion and figures is needed (enough to fill the column width)
 - If there is nothing to add, shrink the box and gather it to the center
 - If it still looks awkward after shrinking, change the form of expression or merge it with a neighboring box
-- Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body
+- Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 
@@ -132,14 +132,14 @@
 
 - Notes (footnotes, note slots) carry the supplementary information readers need to read or check the figures, terms, judgments, scope and similar parts of the body correctly
     + (Figures) Calculation basis such as formula, unit, reference date or conversion basis
-    + (Terms) Definitions of terms, abbreviations or symbols unfamiliar to readers
+    + (Terms) Definitions of terms, abbreviations, symbols and similar items unfamiliar to readers
     + (Judgments) Grounds such as the governing law or a higher-level guideline
     + (Scope) Conditions under which the content holds, such as assumptions, scope, exceptions, or whether figures are examples or provisional
 - Write content that forms the body message in the body
-- Write the material that figures and facts come from in `source`
+- Write the material that figures, facts and similar content come from in `source`
 - Write each note item as a simple sentence with one subject-predicate pair (judge a simple sentence by its structure regardless of length)
 - Merge caveats on the same target into one item
-- A note that supplements a specific word or figure names that target in its sentence (e.g. "TTL stands for Travel, transport, and logistics")
+- A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "TTL stands for Travel, transport, and logistics")
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs

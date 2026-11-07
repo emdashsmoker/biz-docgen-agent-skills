@@ -41,7 +41,7 @@
 | `slots.rowFlow` | true 이면 행 사이에 아래쪽 화살표 |
 | `slots.numbered` | true 이면 칸 제목 앞에 ①, ②, ③ 번호 |
 | `slots.dividers` | true 이면 칸 사이와 행 사이에 회색 구분선 (4분면 차트 배치). 행마다 같은 위치의 세로선은 한 줄로 연결 (가로선과 십자로 교차) |
-| `slots.point` | 본문 아래 Key Point 밴드 문구 (라벨은 슬라이드 `pointLabel`, `meta.pointLabel`, `meta.labels.common.pointLabel` 순). 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙을 담을 때만 사용 |
+| `slots.point` | 본문 아래 Key Point 밴드 문구 (라벨은 슬라이드 `pointLabel`, `meta.pointLabel`, `meta.labels.common.pointLabel` 순). 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 담을 때만 사용 |
 | `slots.conclusion` | 본문 아래 결론 밴드 문구 |
 
 - 칸 수와 `regions` 수가 다르면 빌드 경고

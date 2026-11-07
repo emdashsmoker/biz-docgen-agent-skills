@@ -41,7 +41,7 @@
 | `slots.rowFlow` | If true, down arrows between rows |
 | `slots.numbered` | If true, ①, ②, ③ numbers before cell titles |
 | `slots.dividers` | If true, gray divider lines between cells and rows (quadrant chart layout). Vertical lines at the same position in each row join into one line (crossing the horizontal line) |
-| `slots.point` | Key Point band text under the body (the label is the slide `pointLabel`, then `meta.pointLabel`, then `meta.labels.common.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing or principles that are not in the headline or body |
+| `slots.point` | Key Point band text under the body (the label is the slide `pointLabel`, then `meta.pointLabel`, then `meta.labels.common.pointLabel`). Use it only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body |
 | `slots.conclusion` | Conclusion band text under the body |
 
 - A build warning appears when the cell count differs from the `regions` count
