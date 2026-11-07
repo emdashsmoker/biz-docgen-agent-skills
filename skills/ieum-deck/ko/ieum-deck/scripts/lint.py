@@ -29,7 +29,7 @@
 - 표 빈 셀: 앞쪽 분류 열에 빈 셀이 2개 이상이고 merged 지정이 없으면 WARN
 - 접두 중복: steps title 에 STEP 접두, process 모듈명에 M/Module 접두가 있으면 WARN
 - 번호 표기: 번호 뒤에 공백이 없으면 WARN ("1.목차" → "1. 목차"), secNo 에 마침표가 없으면 WARN
-- 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" (meta.labels.notation.source 로 추가한 토큰 포함) 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음)
+- 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" (meta.labels.notation.source 로 추가한 토큰 포함) 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음. 슬라이드 footnoteLabel 과 sourceLabel 은 meta.labels.common 과 같은 라벨 설정값이므로 검사하지 않음)
 - 모듈 표기: 절 제목과 목차 항목이 "Module N." 형식이면 WARN ([Module N] 권장)
 - 대상 지칭어: 지칭어 혼용, 지칭어 변경 후 과업 잔존, 제안 외 산출물의 과업 라벨 잔존 시 WARN, "본 기획" 표기 시 WARN
 - 리더 호칭: 총괄 리더와 품질 리더의 호칭이 한 발표자료 안에서 섞이면 WARN
@@ -803,7 +803,9 @@ def lint(story, ledger=None, story_path=".", layout=None):
     extra_note = re.compile(r"^\s*(?:" + "|".join(re.escape(t) for t in extra) + r")\s*[:：]") if extra else None
     for sl in slides:
         for k, v in texts_of(sl):
-            if k in ("note", "notes", "source", "caption", "footnotes"): continue  # 주석 슬롯은 정상
+            # 슬라이드 footnoteLabel, sourceLabel 은 meta.labels.common 과 같은 라벨 설정값이므로 이 검사에서만 제외
+            # texts_of() 에서 빼지 않는 이유: em dash 와 자리 표기 검사는 라벨에도 적용 (label_checks 의 meta.labels em dash 검사와 같은 기준)
+            if k in ("note", "notes", "source", "caption", "footnotes", "footnoteLabel", "sourceLabel"): continue  # 주석 슬롯은 정상
             if isinstance(v, str) and (re.match(r"^\s*(※|출처\s*:|자료\s*:|[Ss]ources?\s*:|[Nn]otes?\s*:)", v) or (extra_note and extra_note.match(v))):
                 warns.append(f"[{sl.get('id')}] 본문 항목에 주석 표기 ('{v[:16]}') → note 슬롯이나 source 로 이동 권장")
                 break
