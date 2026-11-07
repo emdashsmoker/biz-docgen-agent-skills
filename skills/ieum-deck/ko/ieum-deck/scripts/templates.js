@@ -548,7 +548,7 @@ function noteText(ctx, v) {
   const { style, labels } = noteStyle(ctx);
   return A.noteLines(v, style, labels).join("\n");
 }
-/** 출처 행 문자열. ※ 기호 덱은 "※ A; B", 번호 표기 덱은 항목마다 ※ 와 출처 표기를 떼고 출처 라벨 1개 뒤에 이음 (예: "출처: A; B") */
+/** 출처 행 문자열. ※ 기호 덱은 "※ A; B", 번호 표기 덱은 항목마다 ※ 와 출처 표기를 떼고 출처 라벨 1개 뒤에 이음 (예: "Source: A; B") */
 function sourceText(ctx, v) {
   const { style, labels } = noteStyle(ctx);
   const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));

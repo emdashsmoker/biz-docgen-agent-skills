@@ -170,11 +170,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 17. (Note style) ※ mark (default) or numbers. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as mark or number
     + (※ mark) Puts ※ before each note item and the source line
-    + (Numbers) Numbers a note group with two or more items in order from 1). A note group with a single item gets "참조:" instead of a number ("출처:" for an item that starts with a source mark). The source line starts with "출처:"
-    + (Labels of the numbers choice) In the question, write "참조:" and "출처:" inside the numbers choice description together with where each label appears (e.g. "참조:" for a note group with a single item, "출처:" for the source line)
+    + (Numbers) Numbers a note group with two or more items in order from 1). A note group with a single item gets "Note:" instead of a number ("Source:" for an item that starts with a source mark). The source line starts with "Source:"
+    + (Labels of the numbers choice) In the question, write "Note:" and "Source:" inside the numbers choice description together with where each label appears (e.g. "Note:" for a note group with a single item, "Source:" for the source line)
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
-    + Change the label text (default "참조:", "출처:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or the document language (e.g. "Note:", "Source:")
-    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
+    + Change the label text (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
+    + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
 
 ## Company facts
 
@@ -543,7 +543,6 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Keep id, template, slot keys and placeholders as they are
 - Source and note lines starting with "Source:" or "Note:" are recognized the same way as "출처:" and "자료:"
     + Add note tokens of other languages in `meta.labels.notation.source` (the built-in tokens stay)
-- In a number-style deck, also set the note labels (footnoteLabel and sourceLabel in `meta.labels.common`) in English (e.g. "Note:", "Source:")
 - Headline and marker character limits are checked in Hangul-equivalent characters (about twice as many English characters fit in the same width)
 - English names and English staffing tables are recognized as described in `references/storyboard-schema.md`
 - In the visual review, check that no slide still shows a Korean default label

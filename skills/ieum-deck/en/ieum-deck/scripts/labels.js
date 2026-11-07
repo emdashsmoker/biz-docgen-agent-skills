@@ -54,7 +54,7 @@ function language() {
 }
 /** Whether the text starts with a note token added with meta.labels.notation.source ("token:" form) or a number-style label (common.footnoteLabel, sourceLabel)
  *  Each typesetting rule judges the built-in tokens (※, 출처:, 자료:, Source:, Note:)
- *  Why: in a number-style deck, a "참조:" line the author writes in a body cell or a custom slide is set as a note too */
+ *  Why: in a number-style deck, a label line the author writes in a body cell or a custom slide (e.g. a "참조:" line in a deck that set the label to "참조:") is set as a note too */
 function isExtraNote(text) {
   const t = String(text).trim();
   return (!!notePattern && notePattern.test(t)) || ["footnoteLabel", "sourceLabel"].some((k) => t.startsWith(label("common", k)));
