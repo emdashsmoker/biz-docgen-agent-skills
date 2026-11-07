@@ -477,6 +477,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - check_layout 은 헤드라인 글꼴 크기의 불일치를 보고
 - 근거, 단서, 전제 등은 `note` 나 `footnotes` 에 기재 (항목 앞의 ※, 번호, 라벨은 빌드가 `meta.footnoteStyle` 에 맞춰 붙임)
 - 출처 행과 주석에서 인용하는 자료는 독자가 직접 찾아볼 수 있는 외부 자료로 구성 (제안 대상 RFP, 입력 자료, 내부 자료, 사용자 요청, 작성 과정 등은 출처로 기재하지 않음)
+- 출처 항목은 `기관명(연도), 자료명` 형식으로 표기
 - 강조 어구 1곳은 `accent` 필드에 지정
 
 ### 대상 지칭어

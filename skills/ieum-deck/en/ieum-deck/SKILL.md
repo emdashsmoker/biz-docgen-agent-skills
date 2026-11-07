@@ -490,6 +490,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - check_layout reports inconsistent headline font sizes
 - Write grounds, conditions, assumptions and similar content in `note` or `footnotes` (the build adds ※, a number or a label before each item per `meta.footnoteStyle`)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
+- Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term

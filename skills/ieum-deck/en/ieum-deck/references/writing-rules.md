@@ -110,6 +110,7 @@
     + (Table cells) Lines that receive bullets by the comparison line condition or the whole table condition in the tables section below are an exception
     + (Module overview slides) The process, data used and deliverables boxes are an exception and take bullets (treated as a table where both conditions always hold)
 - Items in the same tier are consistent in having or not having numbers and symbols
+- Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Join several sources on one line with semicolons (a `source` array is joined automatically)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
 - Notes and sources start with the `meta.footnoteStyle` mark
