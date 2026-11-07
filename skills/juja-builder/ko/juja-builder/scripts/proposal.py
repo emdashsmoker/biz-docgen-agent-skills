@@ -249,6 +249,7 @@ VOLUME_MIN_EVIDENCE = 2     # □ 아래 하이픈+※ 합계 하한
 VOLUME_MIN_BLOCK_PER_TASK = 1   # Task 1개당 표 또는 그림 하한
 VOLUME_TASK_MIN_CHARS = 900     # Task 1개 본문 글자 수 하한 (약 1.5쪽). 통상 Task는 2-5쪽
 VOLUME_SQUARE_MIN_CHARS = 350   # □ 1개 글자 수 하한 (약 0.5쪽)
+DEFINITION_NOTE_RE = re.compile(r"^\([^()]+\)\s*\S")   # 용어 정의 부기(※ (용어) 설명). 근거 줄과 글자 수 집계에서 제외
 # 계위 개수 상한 (SKILL.md 분량 구성 단위 절). 초과는 check volume 경고이며 판정에 반영하지 않음
 SQUARE_PER_SECTION_MAX = 4       # 절(##)이나 항(###) 안의 □. 5개 이상이면 항으로 묶음
 CIRCLE_PER_SQUARE_MAX = 4        # □ 아래 ❍
@@ -1894,6 +1895,8 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
     if style is None:  # □ 제목 줄 상한과 계위 개수 경고. 기획보고서는 하한 없이 이 경고만 적용
         style = original
     for e in elems:
+        # Why: 용어 정의 ※는 주장의 근거가 아님. 필요 여부는 독자가 정함. 분량에 세면 독자가 아는 용어의 정의로 하한을 채우는 유인이 생김
+        defines_term = e.kind == "note" and DEFINITION_NOTE_RE.match(e.text) is not None
         if e.kind == "band" and e.data.get("kind") == "task":
             cur_task = {"name": e.text[:30], "blocks": 0, "chars": 0}
             tasks.append(cur_task)
@@ -1906,7 +1909,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         elif e.kind in ("circle", "dash", "dot", "note"):
             if len(e.text) > LINE_MAX[e.kind]:
                 warns.append(f"{e.kind} 항목 {len(e.text)}자 ({'1줄' if e.kind == 'note' else '2줄'} 상한 {LINE_MAX[e.kind]}자). 문장을 나누어 계위를 더하거나 표로 전환: {e.text[:24]}")
-            if cur_sq is not None:
+            if cur_sq is not None and not defines_term:
                 cur_sq["chars"] += len(e.text)
                 if e.kind == "circle":
                     cur_sq["circle"] += 1
@@ -1918,7 +1921,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
             if e.kind in ("table", "image"):
                 cur_task["blocks"] += 1
                 cur_task["chars"] += sum(len(c) for row in e.data.get("rows", []) for c in row)
-            elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            elif e.kind in ("square", "circle", "dash", "dot", "note") and not defines_term:
                 cur_task["chars"] += len(e.text)
     for s in squares:
         if s["circle"] == 0:
@@ -1932,7 +1935,7 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         if not original:
             continue
         if s["evidence"] < VOLUME_MIN_EVIDENCE:
-            warns.append(f"□ '{s['name']}' 근거 줄(하이픈, ※) {s['evidence']}개 (권장 {VOLUME_MIN_EVIDENCE} 이상). 수치, 자료명, 사례를 근거 계위에 추가")
+            warns.append(f"□ '{s['name']}' 근거 줄(하이픈, ※. 용어 정의 ※ 제외) {s['evidence']}개 (권장 {VOLUME_MIN_EVIDENCE} 이상). 수치, 자료명, 사례를 근거 계위에 추가")
         if s["chars"] < VOLUME_SQUARE_MIN_CHARS:
             warns.append(f"□ '{s['name']}' 글자 수 {s['chars']} (권장 {VOLUME_SQUARE_MIN_CHARS} 이상)")
     if style:
