@@ -605,7 +605,8 @@ class ProposalLayout:
         self.unify_table_widths(elems)
         self.last_para = None
         self._body_started = False   # whether the first body element was recorded. Used for page break decisions of divider pages
-        if getattr(self, "doc_title", None):
+        # With divider pages on, the first body page moves on to the chapter 1 divider and leaves a page with only the title line. The user did not ask for that title page, so skip it. The cover (--cover) carries the document title
+        if getattr(self, "doc_title", None) and not getattr(self, "divider", False):
             self.para("doc_title", self.doc_title)
             self._body_started = True
         skip = 0
@@ -2486,7 +2487,7 @@ def main():
     p.add_argument("output", nargs="?", help="output path (--format sets the extension)")
     p.add_argument("--profile", default=None, help="proposal | report | plan | profile JSON path (default: the workspace output type, proposal for a single manuscript)")
     p.add_argument("--format", default="hwpx", choices=["hwpx", "docx", "both"], help="output format (kickoff answer). Both formats are typeset from the same manuscripts and template definitions")
-    p.add_argument("--title", help="document title on the first line of the body (planning report)")
+    p.add_argument("--title", help="document title on the first line of the body (planning report; skipped with --divider on)")
     p.add_argument("--chapter-start", type=int, default=1, help="first chapter number (the number in the full TOC when producing only some chapters)")
     p.add_argument("--divider", choices=["on", "off"], default=None, help="chapter divider pages (default: on for pre-diagnosis reports, off for proposals and planning reports)")
     p.add_argument("--skeleton", help="skeleton hwpx (default: workspace/_양식/proposal.hwpx generated on every run)")

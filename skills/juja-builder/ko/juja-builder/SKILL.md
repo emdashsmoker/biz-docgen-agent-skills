@@ -267,7 +267,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `python3 <SKILL>/scripts/extract_images.py 원본 출력폴더 [--min-px 64] [--min-kb 2]` | RFP와 유저 제출 문헌(pdf, hwpx, pptx, docx)에서 삽입 후보 이미지와 manifest.json 추출 |
 
 - build 옵션은 `--format hwpx|docx|both`(산출 형식, 기본 hwpx), `--page-break chapter|section|none`(기본 chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3`(기본 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto`(표 폭 통일 방식, 기본 manual), `--theme navy|mono`(밴드 색 테마, 기본 navy), `--labels 파일.json`(문서 라벨, 조판 절의 문서 라벨). `--cover`와 `--header`의 값 형식은 `build --help`로 확인
-    + `--title "문서 제목"`은 본문 첫 줄의 문서 제목(기획보고서). `--chapter-start N`은 첫 장 번호(사전진단보고서의 장 단위 산출)
+    + `--title "문서 제목"`은 본문 첫 줄의 문서 제목(기획보고서. 간지를 켜면 생략). `--chapter-start N`은 첫 장 번호(사전진단보고서의 장 단위 산출)
     + `--divider on|off`는 장 간지. 기본값은 사전진단보고서 on, 제안서와 기획보고서 off
     + `--long-table`은 긴 표의 기본 처리 방식. 값은 착수 질의 답변으로 항상 지정
     + 장표 대상 표가 있는 원고에 `--long-table`을 지정하지 않으면 build가 중단. 표별 `(장표: )` 지시 줄은 `--long-table`보다 우선

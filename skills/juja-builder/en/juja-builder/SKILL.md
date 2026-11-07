@@ -276,7 +276,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `python3 <SKILL>/scripts/extract_images.py source output_folder [--min-px 64] [--min-kb 2]` | Extract candidate images for insertion and manifest.json from the RFP and user-submitted literature (pdf, hwpx, pptx, docx) |
 
 - build options are `--format hwpx|docx|both` (output format, default hwpx), `--page-break chapter|section|none` (default chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3` (default 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto` (table width unification, default manual), `--theme navy|mono` (band color theme, default navy), `--labels file.json` (document labels, Document Labels in the Typesetting section). Check the value format of `--cover` and `--header` with `build --help`
-    + `--title "document title"` is the document title on the first line of the body (planning report). `--chapter-start N` is the first chapter number (chapter-by-chapter output of the pre-diagnosis report)
+    + `--title "document title"` is the document title on the first line of the body (planning report; skipped with divider pages on). `--chapter-start N` is the first chapter number (chapter-by-chapter output of the pre-diagnosis report)
     + `--divider on|off` controls chapter divider pages. The default is on for the pre-diagnosis report and off for the proposal and the planning report
     + `--long-table` is the default handling of long tables. Always set its value from the answer to the kickoff questions
     + If a manuscript has a table subject to long-table handling and `--long-table` is not set, build stops. A per-table `(장표: )` directive line takes precedence over `--long-table`
