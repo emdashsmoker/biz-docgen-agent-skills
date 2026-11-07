@@ -884,9 +884,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Write the term in parentheses exactly as the body writes it
     + The explanation is one noun phrase that spells out the meaning. Do not repeat the defined term or use other technical terms
     + The full name given in the body on first use covers an abbreviation's full name. The ※ note gives only the meaning
-- A term definition ※ note covers a term that readers (Reader-Perspective Writing section) do not meet in their work and cannot guess the meaning of
-    + Example targets are analysis methods, industry classifications, and symbols set in the manuscript
-    + Use general terms and abbreviations readers use in their work without a ※ note. For example, RFP, consulting, participation rate
+- Use general terms and abbreviations readers use in their work (RFP, consulting, participation rate and so on) without supplementary marks such as a term definition ※ note or the full name on first use
 - Do not use exaggerating modifiers (획기적, 혁신적, 선도적) or glue expressions (이러한 맥락에서)
 
 ## Common Part
