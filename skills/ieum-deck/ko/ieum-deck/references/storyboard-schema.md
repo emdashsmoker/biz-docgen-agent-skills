@@ -17,8 +17,8 @@
 | pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
-| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. number(기본)는 작성자가 주석 앞에 쓴 라벨(예: "출처:", "산식:")을 유지하고 라벨이 없는 주석에는 common.footnoteLabel 을 붙임. number 는 같은 위치의 주석이 2개 이상이고 라벨이 같거나 모두 없으면 첫 줄에만 라벨을 쓰고 1) 부터 번호를 붙이며 2) 이하는 1) 의 시작 위치에 정렬 (출처 라벨은 번호 없이 세미콜론으로 구분). 라벨이 서로 다르면 번호 없이 줄마다 각자 라벨. number 의 출처 행은 작성자가 쓴 출처 표기(없으면 common.sourceLabel)로 시작하고 출처에는 번호를 붙이지 않음. mark 는 라벨 없는 주석 앞에 ※ 를 붙이고 출처 행과 라벨("출처:", "자료:", "산식:" 등)로 시작하는 주석은 ※ 없이 시작 (작성자가 직접 쓴 ※ 는 유지. footnoteSourceMark 참고) |
-| footnoteSourceMark | true 이면 ※ 기호 덱의 출처 행과 출처 주석 앞에도 ※ 를 붙임 (예: "※ 출처: A; B"). 기본 false (출처는 ※ 없이 출처 표기로 시작). 착수 질의에서 묻지 않고 RFP 양식 등으로 사용자가 요청한 경우에만 지정. 번호 표기 덱에는 적용하지 않음 |
+| footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. number(기본)는 라벨이 없는 주석에 common.footnoteLabel 을 붙임 (작성자가 주석 앞에 쓴 "출처:", "산식:" 등의 라벨은 유지). number 에서 같은 위치의 주석이 2개 이상이고 라벨이 같거나 모두 없으면 첫 줄 라벨 뒤에 1) 부터 번호를 붙이고 2) 이하는 1) 의 시작 위치에 정렬 (같은 출처 표기로 시작하는 주석은 번호 없이 세미콜론으로 구분). number 에서 라벨이 서로 다른 주석은 번호 없이 줄마다 각자의 라벨을 붙임. number 의 출처 행은 번호 없이 작성자가 쓴 출처 표기(없으면 common.sourceLabel)로 시작. mark 는 라벨 없는 주석 앞에 ※ 를 붙임. mark 의 출처 행과 라벨("출처:", "자료:", "산식:" 등)로 시작하는 주석은 ※ 없이 시작 (작성자가 직접 쓴 ※ 는 유지. footnoteSourceMark 참고) |
+| footnoteSourceMark | true 이면 ※ 기호 덱의 출처 행과 출처 주석 앞에도 ※ 를 붙임 (예: "※ 출처: A; B"). 기본 false (출처는 ※ 없이 출처 표기로 시작). 착수 질의에서 묻지 않음. RFP 양식 등으로 사용자가 요청한 경우에만 지정. 번호 표기 덱에는 적용하지 않음 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
@@ -30,7 +30,7 @@
 | rfp.tasks | [{id: "T1", text, module}] RFP 과업 세부내용 전수. structure 가 plan 이면 계획서 항목, sections 이면 RFP 요구 항목을 등재. ID 는 섹션대장의 내부 추적용 |
 | rfp.moduleTasks | [{id: "M1-T2", title, rfp: ["T1", "T3"], rfpNamed}] 제안사가 설계한 Task. rfpNamed 는 title 이 RFP 가 정한 명칭일 때 true (예시 모듈명 검사 예외) |
 | rfp.evalItems | [{id: "A-1", name, score, quantitative}] 세부평가항목 |
-| rfp.wording | [{standard, variants: []}] 핵심 워딩의 표준 표기와 교체 대상 변형 표기. lint 는 standard 와 정확히 일치하는 구간을 가린 뒤 문장 규범과 비선호 어휘를 검사 (명칭 밖 어휘는 기존 기준 적용) |
+| rfp.wording | [{standard, variants: []}] 핵심 워딩의 표준 표기와 교체 대상 변형 표기. lint 는 standard 와 정확히 일치하는 구간을 가린 뒤 문장 규범과 비선호 어휘를 검사 (일치 구간 밖의 어휘는 그대로 검사) |
 
 ### meta.labels
 
@@ -75,10 +75,10 @@
 | marker | 마커 텍스트. 30자(한글 환산) 초과는 lint FAIL. 값을 비우면 마커 도형도 생략 |
 | bandMode | 밴드 모드의 강제 지정. full(기본), noMarker, headerOnly, blank |
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |
-| source | 출처 행. 문자열 또는 배열 (문자열은 세미콜론 경계로 출처를 나눔). 첫 항목은 출처 표기(예: "출처:", "자료:")로 시작. 두 표기 모두 ※ 없이 첫 출처 표기 1개로 시작하여 "출처: A; B" 로 조판하고 (footnoteSourceMark 를 지정한 ※ 기호 덱은 "※ 출처: A; B") 출처 표기가 없으면 common.sourceLabel 로 시작 (둘째 항목부터 앞의 ※ 와 출처:, 자료:, Source:, `meta.labels.notation.source` 토큰 같은 출처 표기는 빌드가 삭제). 한 줄을 넘으면 출처 1개 1줄로 조판하고 둘째 출처부터 첫 출처의 시작 위치에 정렬 |
-| footnotes | 각주 배열. 출처 행 위에 배치 (출처 행이 없으면 마지막 줄이 출처 행 자리에 놓임). 빌드가 `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙임 (항목 앞에 직접 쓴 ※, *, 번호는 덱 기준 표기로 교체. 내용 유형 라벨 "출처:", "산식:" 등은 유지하며 ※ 기호 덱에서 라벨 앞에 직접 쓴 ※ 도 유지) |
+| source | 출처 행. 문자열 또는 배열 (문자열은 세미콜론 경계로 출처를 나눔). 첫 항목은 출처 표기(예: "출처:", "자료:")로 시작. 두 표기 공통으로 출처 행은 ※ 없이 첫 출처 표기 1개로 시작하여 "출처: A; B" 로 조판 (footnoteSourceMark 를 지정한 ※ 기호 덱은 "※ 출처: A; B"). 출처 표기가 없는 출처 행은 common.sourceLabel 로 시작. 둘째 항목부터는 앞의 ※ 와 출처 표기(출처:, 자료:, Source:, `meta.labels.notation.source` 토큰 등)를 빌드가 삭제. 한 줄을 넘는 출처 행은 1줄에 출처 1개로 조판 (둘째 출처부터 첫 출처의 시작 위치에 정렬) |
+| footnotes | 각주 배열. 출처 행 위에 배치 (출처 행이 없으면 마지막 줄을 출처 행 위치에 배치). 빌드가 `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙임. 항목 앞에 직접 쓴 ※, *, 번호는 덱 기준 표기로 교체. 내용 유형 라벨("출처:", "산식:" 등)은 유지 (※ 기호 덱에서 라벨 앞에 직접 쓴 ※ 도 유지) |
 | footnoteLabel, sourceLabel | 이 슬라이드의 라벨 없는 주석(번호 표기 덱)과 출처 표기 없는 출처 행(두 표기 공통)에 붙는 라벨. `meta.labels.common` 보다 우선 |
-| footnoteInline | true 이면 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀 (번호 표기 덱의 주석은 "Note: 1) A 2) B", 출처 행은 "출처: A; B". ※ 기호 덱의 주석은 줄마다 ※ 유지). 기본 false. 지정 조건은 `references/writing-rules.md` 주석 절. lint 와 build 가 INFO 로 목록 출력 |
+| footnoteInline | true 이면 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀 (예: 번호 표기 덱의 주석 "Note: 1) A 2) B", 출처 행 "출처: A; B"). ※ 기호 덱의 주석은 줄마다 ※ 를 붙이는 형태 유지. 기본 false. 지정 조건은 `references/writing-rules.md` 주석 절. lint 와 build 가 지정 슬라이드 목록을 INFO 로 출력 |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
 | rfpTasks, moduleTasks, evalItems | 대응 ID 목록. lint 가 전수 대응과 배점 귀속을 검사 |
 | allowCount | RFP 가 지정한 개수를 헤드라인에 쓸 때 true (숫자 선언 검사 예외) |
