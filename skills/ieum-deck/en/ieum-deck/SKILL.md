@@ -555,6 +555,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Symbols) Replace em dashes with commas or periods
 - (Phrases) The lists of lint FAIL expressions and lint WARN vocabulary follow `references/writing-rules.md`
 - (Fixed wording) Keep the standard spelling of key RFP wording
+    + Standard spellings are left out of the lint sentence norm checks, so register only names from the RFP text, conservatively (`references/strategy.md` Key wording)
 - (Figures) Mark unconfirmed figures with the `[확인 필요]` placeholder
 - (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body

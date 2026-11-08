@@ -49,6 +49,9 @@ Changelog rules
 - Added cash and in-kind rows and a Key Point to the R031 funding plan sample (#108)
 - Added sub-issues, hypothesis rows and a module column to the R001 issue tree sample (#108)
 - Changed the name of the ※ mark deck in the docs to the ※-style deck (#109)
+- Fixed the second and later lines of multi-line source lines and numbered notes starting at the label position in PowerPoint (#110)
+- Changed the RFP key wording guide to register only names that appear verbatim in the RFP, since registered standards skip the lint sentence checks (#110)
+- Changed the RFP key wording count from 5-15 to 15 or fewer (#110)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
@@ -69,6 +72,9 @@ Changelog rules
 * R031 재원 조달 견본의 현금과 현물 행 및 Key Point 추가 (#108)
 * R001 이슈 구조화 견본의 하위 이슈, 가설 행, 담당 모듈 열 추가 (#108)
 * 문서의 ※ 기호 덱 명칭을 ※ 표기 덱으로 변경 (#109)
+* PowerPoint 에서 여러 줄 출처 행과 번호 주석의 둘째 줄 이하가 라벨 위치에서 시작하는 현상 수정 (#110)
+* lint 문장 검사에서 빠지는 RFP 핵심 워딩의 등록 대상을 RFP 원문에 그대로 나오는 명칭으로 변경 (#110)
+* RFP 핵심 워딩의 개수 기준을 5-15개에서 15개 이내로 변경 (#110)
 
 ## 2026-11-07
 

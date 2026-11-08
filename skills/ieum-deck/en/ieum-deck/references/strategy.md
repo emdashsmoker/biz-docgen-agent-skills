@@ -17,10 +17,15 @@
 | 실행과제 | 이행과제, 세부과제 | RFP Ⅱ-3 |
 ```
 
-- Key wording is 5-15 engagement names, output names, stage names and subject names the RFP uses
+- Key wording is engagement names, output names, stage names and subject names the RFP uses (15 or fewer)
 - Register key wording in `meta.rfp.wording` of the storyboard
 - lint checks the appearance of variant spellings as FAIL
 - Use of the standard spellings is checked in the RFP response item of the in-depth review
+- Standard spellings are left out of the lint sentence norm and discouraged vocabulary checks, so decide each registration conservatively
+    + (Verbatim match) Register only names that appear letter for letter in the RFP text, and give the location in the RFP (chapter, section, page) in the Basis column
+    + (Name only) Register the name as the RFP spells it, without predicates, modifiers or particles before or after it
+    + (Not registered) General descriptive phrases, sentences, and module, Task and strategy names set by the bidder
+    + (When unsure) Do not register a phrase that may not be an RFP name just to clear a lint flag. Change the words in the sentence to pass
 - (Matching chapter) The deck chapter that carries the evaluation evidence for a detailed evaluation item
 - The matching chapter is the basis for the slide allocation per chapter
 - The score weight of a main item is the sum of its detailed item weights
