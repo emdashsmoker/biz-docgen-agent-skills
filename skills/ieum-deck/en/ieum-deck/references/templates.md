@@ -70,7 +70,7 @@
 - Row height caps: 0.5 inch for text-only single-line rows, the height holding 1.3x line spacing for multi-line rows (0.8 inch or less), 0.8 inch for tables with Harvey balls
 - Multi-line cells widen line spacing up to 1.3x as far as the row height allows
 - The header row height is 0.4 inch (or the height of a two-line header)
-- For the table and illustrative templates, when the table hits the row height cap and is shorter than the body, the title and table group are centered vertically in the body
+- For the table and illustrative templates, when the table hits the row height cap and is shorter than the body, the title and table group are centered vertically in the visual frame (Parametric templates section)
 - For rows or columns repeating the same value, decide on merging by the relation of neighboring rows
 - Merging uses `merged`. The first merged cell is `{"text": "기획", "rowspan": 3}` (`colspan` for horizontal merges), and cells hidden by the merge are `{"merged": true}`
 
@@ -78,7 +78,8 @@
 
 - The height cap of side-by-side panels (bullets, compare, conclusion, cards, the chart_text findings panel) is the height with item spacing widened up to 18pt
 - Item spacing in a bullet box widens within the spare height measured in PowerPoint line height (1.4x the font size)
-- Panel groups and the Key Point band are centered vertically in the body
+- Panel groups and the Key Point band are centered vertically in the visual frame (from the marker band bottom to the top of the bottom notes, or to the slide bottom without notes) and kept inside the body area
+    + Below the body area sits the page number row margin, so centering in the body area makes content look pushed up; the visual frame is the reference instead
 - The 14pt panel title bar (bullets, compare, conclusion, cards, chart_text findings panel, strategy pillar, features tile, staff_card role) is 0.42 inch high (0.09 inch above and below the text line)
 - The gap between the row label box (module_overview, task_multi, roadmap) and the content box is 0.14 inch
 - compare is typeset as a row-matched comparison when the gap count equals the AS-IS item count and the TO-BE item count
@@ -114,11 +115,11 @@
 | Analysis and comparison | compare | AS-IS, TO-BE, gap | asis{head, items}, tobe{head, items}, gap[], gapHead | Items 2-4. Write each item as a title (text) of about 20 characters and add 1-2 evidence sub-items (sub). Write each gap as an improvement means of about 10 characters per item and match the item count (a one-sentence gap goes in a single gap entry typeset in the strip under the two panels) |
 | Analysis and comparison | swot | SWOT | S[], W[], O[], T[], so[], wo[], st[], wt[], labels{S, W, O, T, SO, WO, ST, WT} | 1-4 per cell. The factor cell titles are labels (default "강점 (S)", "약점 (W)", "기회 (O)", "위협 (T)"). The strategy cell titles change with SO, WO, ST and WT of labels |
 | Analysis and comparison | cards | N columns of cards | cards[{title, items or text}], point | 2-8 |
-| Analysis and comparison | steps | Chevron steps with descriptions | steps[{title, items[]}], stepLabel, point | 3-5. Set the prefix with stepLabel (default STEP, "" shows the title only). Item spacing is spread to the box height automatically. The description box height is capped at 1.3x the item height. The group is centered vertically in the body |
+| Analysis and comparison | steps | Chevron steps with descriptions | steps[{title, items[]}], stepLabel, point | 3-5. Set the prefix with stepLabel (default STEP, "" shows the title only). Item spacing is spread to the box height automatically. The description box height is capped at 1.3x the item height. The group is centered vertically in the visual frame |
 | Analysis and comparison | illustrative | Output example | title, table or image, tag | The tag is tag (default Illustrative) |
 | Analysis and comparison | conclusion | Synthesis with conclusion band | panels[{head, items}], conclusion | Panels 2-4. Write panel items as judgment sentences of about 20 characters and add evidence figures as sub-items (sub) |
 | Schedule and organization | roadmap | Yearly roadmap by strategy | periods[], lanes[{title, tasks[{text, from, to}]}], laneHead, note | Lanes 2-5. The lane header text is laneHead (default "전략") |
-| Schedule and organization | gantt | Schedule | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12 months. The category column header is groupHead (default "구분"), the task column header is taskHead (default "과업"), the report row group name is reportHead (default "보고회"), and the month header is monthFormat (default "{n}M"). When the row height cap (0.32 inch) leaves spare height, the table is centered vertically in the body |
+| Schedule and organization | gantt | Schedule | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12 months. The category column header is groupHead (default "구분"), the task column header is taskHead (default "과업"), the report row group name is reportHead (default "보고회"), and the month header is monthFormat (default "{n}M"). When the row height cap (0.32 inch) leaves spare height, the table is centered vertically in the visual frame |
 | Schedule and organization | org | Project organization chart | client, clientNote, pm, pmTitle, qa, qaTitle, advisory, advisoryTitle, advisoryNote, teams[{name, members[], share}], note | Module boxes 2-8 (7 or more are placed in 2 rows automatically). Boxes show staff only |
 | Schedule and organization | staff_card | Staff cards | people[{role, name, career[], records[], photo}], recordsHead | 2-6 (used from 4 people). Without photos, the photo column is omitted. The track record strip label is recordsHead (default "주요 실적") |
 | Schedule and organization | orgchart | Company organization chart (CEO, advisory board, management support, divisions, teams, staff table, partner network) | ceo, advisory{name, note}, staff{name, note}, units[{name, teams[]}], people[{label, count, ratio}], peopleHead[], network[], leftHead, rightHead, netHead | Divisions 2-8, 1-6 teams per division. Spare height goes to box height, item spacing and connector length in that order. The group then moves down by the remaining height to sit centered vertically |

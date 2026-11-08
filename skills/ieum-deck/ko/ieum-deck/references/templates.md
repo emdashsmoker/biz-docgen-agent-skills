@@ -70,7 +70,7 @@
 - 행 높이 상한은 글자만 있는 한 줄 행 0.5인치, 여러 줄 행은 줄 간격 1.3배를 담는 높이(0.8인치 이하), 하베이 볼이 있는 표 0.8인치
 - 여러 줄 셀은 행 높이가 남는 만큼 줄 간격을 1.3배까지 넓힘
 - 머리 행 높이는 0.4인치 (머리 글이 두 줄이면 그 높이)
-- table 과 illustrative 템플릿은 표가 행 높이 상한에 걸려 본문보다 짧으면 제목과 표 묶음을 본문 세로 가운데에 배치
+- table 과 illustrative 템플릿은 표가 행 높이 상한에 걸려 본문보다 짧으면 제목과 표 묶음을 시각 틀 세로 가운데에 배치 (파라메트릭 템플릿 절)
 - 같은 값이 이어지는 행이나 열은 앞뒤 행의 관계를 보고 병합 여부를 판단
 - 병합은 `merged` 로 지정. 합치는 첫 칸은 `{"text": "기획", "rowspan": 3}` (가로 병합은 `colspan`), 합쳐져 가려지는 칸은 `{"merged": true}`
 
@@ -78,7 +78,8 @@
 
 - 나란한 패널(bullets, compare, conclusion, cards, chart_text 의 발견 패널)의 높이 상한은 항목 간격을 18pt 까지 넓힌 높이
 - 불릿 상자의 항목 간격은 PowerPoint 줄 높이(글꼴 크기의 1.4배)로 잰 남는 높이 안에서 넓힘
-- 패널 묶음과 Key Point 밴드는 본문 세로 가운데에 배치
+- 패널 묶음과 Key Point 밴드는 시각 틀(마커 밴드 아래 끝부터 하단 주석 위까지, 주석이 없으면 슬라이드 아래 끝까지) 세로 가운데에 배치하고 본문 영역 안으로 제한
+    + 본문 영역 아래에는 쪽번호 행 여백이 있어 본문 영역 가운데에 두면 내용이 위로 쏠려 보이므로 시각 틀을 기준으로 함
 - 14pt 패널 제목 바(bullets, compare, conclusion, cards, chart_text 발견 패널, strategy 기둥, features 타일, staff_card 역할)의 높이는 0.42인치 (글줄 위아래 여백 0.09인치)
 - 행 라벨 상자(module_overview, task_multi, roadmap)와 내용 상자 사이 간격은 0.14인치
 - compare 는 gap 수가 AS-IS 항목 수, TO-BE 항목 수와 같으면 행 대응 비교로 조판
@@ -114,11 +115,11 @@
 | 분석과 비교 | compare | AS-IS, TO-BE, 격차 | asis{head, items}, tobe{head, items}, gap[], gapHead | 항목 2-4. 항목은 20자 안팎의 제목(text)으로 작성하고 근거는 하위 항목(sub) 1-2개로 병기. 격차는 항목별 개선 수단을 10자 안팎으로 기재하여 항목 수와 맞춤 (격차가 한 문장이면 gap 1개로 두 패널 아래 띠에 조판) |
 | 분석과 비교 | swot | SWOT | S[], W[], O[], T[], so[], wo[], st[], wt[], labels{S, W, O, T, SO, WO, ST, WT} | 칸별 1-4. 요인 칸 제목은 labels (기본값 "강점 (S)", "약점 (W)", "기회 (O)", "위협 (T)"). 전략 칸 제목도 labels 의 SO, WO, ST, WT 로 변경 |
 | 분석과 비교 | cards | 카드 N열 | cards[{title, items 또는 text}], point | 2-8 |
-| 분석과 비교 | steps | 셰브론 단계와 설명 | steps[{title, items[]}], stepLabel, point | 3-5. 접두는 stepLabel 로 지정 (기본값 STEP, "" 이면 제목만 표기). 항목 간격은 상자 높이에 맞춰 자동 배분. 설명 상자 높이 상한은 항목 높이의 1.3배. 묶음은 본문 세로 가운데 |
+| 분석과 비교 | steps | 셰브론 단계와 설명 | steps[{title, items[]}], stepLabel, point | 3-5. 접두는 stepLabel 로 지정 (기본값 STEP, "" 이면 제목만 표기). 항목 간격은 상자 높이에 맞춰 자동 배분. 설명 상자 높이 상한은 항목 높이의 1.3배. 묶음은 시각 틀 세로 가운데 |
 | 분석과 비교 | illustrative | 산출물 예시 | title, table 또는 image, tag | 꼬리표는 tag (기본값 Illustrative) |
 | 분석과 비교 | conclusion | 종합과 결론 밴드 | panels[{head, items}], conclusion | 패널 2-4. 패널 항목은 20자 안팎의 판단 문장으로 작성하고 근거 수치는 하위 항목(sub)으로 병기 |
 | 일정과 조직 | roadmap | 전략별 연차 로드맵 | periods[], lanes[{title, tasks[{text, from, to}]}], laneHead, note | 레인 2-5. 레인 머리 칸 문구는 laneHead (기본값 "전략") |
-| 일정과 조직 | gantt | 추진일정 | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12개월. 구분 열 머리 문구는 groupHead (기본값 "구분"), 과업 열 머리 문구는 taskHead (기본값 "과업"), 보고 행 묶음 이름은 reportHead (기본값 "보고회"), 월 머리 문구는 monthFormat (기본값 "{n}M"). 행 높이 상한(0.32인치)에 걸려 높이가 남으면 표를 본문 세로 가운데에 배치 |
+| 일정과 조직 | gantt | 추진일정 | months, weeks, groups[{name, tasks[{name, from, to}]}], reports[{name, at}], groupHead, taskHead, reportHead, monthFormat | 6-12개월. 구분 열 머리 문구는 groupHead (기본값 "구분"), 과업 열 머리 문구는 taskHead (기본값 "과업"), 보고 행 묶음 이름은 reportHead (기본값 "보고회"), 월 머리 문구는 monthFormat (기본값 "{n}M"). 행 높이 상한(0.32인치)에 걸려 높이가 남으면 표를 시각 틀 세로 가운데에 배치 |
 | 일정과 조직 | org | 수행조직도 | client, clientNote, pm, pmTitle, qa, qaTitle, advisory, advisoryTitle, advisoryNote, teams[{name, members[], share}], note | 모듈 상자 2-8 (7개 이상은 2행 자동 배치). 상자에는 인력만 표기 |
 | 일정과 조직 | staff_card | 인력 카드 | people[{role, name, career[], records[], photo}], recordsHead | 2-6 (사용 기준은 4명 이상). 사진이 없으면 사진 열 생략. 실적 띠 라벨은 recordsHead (기본값 "주요 실적") |
 | 일정과 조직 | orgchart | 회사 조직도 (대표, 자문위원회, 경영지원, 본부, 팀, 인력 표, 협력 네트워크) | ceo, advisory{name, note}, staff{name, note}, units[{name, teams[]}], people[{label, count, ratio}], peopleHead[], network[], leftHead, rightHead, netHead | 본부 2-8, 본부별 팀 1-6. 남는 높이는 상자 높이, 항목 간격, 계선 길이 순으로 배분. 배분 후 남은 높이만큼 묶음을 세로 가운데로 이동 |

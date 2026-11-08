@@ -675,7 +675,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Boxes and tables with placeholders (`[회사 확인]` and so on) are excluded from the horizontal fill check
 - (Height allocation) Rows side by side (`labeled`, `vsteps`) all get the same height if the longest row fits within the average height
     + The height limit of parametric panels is the height with item spacing widened to 18pt
-    + Groups of parametric panels are centered vertically in the body
+    + Groups of parametric panels and short composite content groups are centered vertically in the visual frame (from the marker band bottom to the top of the bottom notes, or to the slide bottom without notes)
     + The spacing between row label boxes and content boxes is 0.14 inch (secured by narrowing the label box)
     + The natural height of composite text box blocks is 1.6 times the needed content height
     + The limit to which a composite block stretches to match neighboring cells is the capacity height of each block (grid section of `references/recipes.md`)

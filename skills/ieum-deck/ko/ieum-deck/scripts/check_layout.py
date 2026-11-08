@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
+NOTE_PT_MAX = 10.5  # 하단 주석 글 상자의 글자 크기 상한 (주석 10pt). 본문 아래쪽 띠(결론, Key Point)를 주석으로 보지 않기 위한 기준
 OWN_BASE_SIZE = (13.333, 7.5)  # own-deck.json 에 원본 판형(slideW, slideH)이 없을 때의 기준 판형 16:9 (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기준 (작은 쪽 글자 면적 대비)
@@ -429,15 +430,25 @@ def main():
             y, hh = sh.top / 914400, sh.height / 914400
             x, ww = sh.left / 914400, sh.width / 914400
             if y + hh < band_top + 0.08 or y > band_bottom: continue  # 마커 밴드와 구분선은 제외
-            if sh.has_text_frame and not sh.text_frame.text.strip() and not sh.has_table and not sh.has_chart: continue
+            # 글 없는 도형은 패널 테두리 같은 상자(가로세로 0.3 인치 이상)만 내용으로 봄. 구분선, 장식, 밴드 전체를 덮는 배경은 제외
+            empty = sh.has_text_frame and not sh.text_frame.text.strip() and not sh.has_table and not sh.has_chart
+            if empty and (hh < 0.3 or ww < 0.3 or (hh > (band_bottom - band_top) * 0.95 and ww > (band_right - band_left) * 0.95)): continue
             has_body = True
             top_c = min(top_c, max(y, band_top)); bot_c = max(bot_c, min(y + hh, band_bottom))
             left_c = min(left_c, max(x, band_left)); right_c = max(right_c, min(x + ww, band_right))
         band_h, band_w = band_bottom - band_top, band_right - band_left
+        # 세로 쏠림은 조판과 같은 시각 틀로 판정: 마커 밴드 아래 끝부터 하단 주석 위(주석이 없으면 슬라이드 아래 끝)까지 (templates.bodyTop)
+        notes_top = min((sh.top / 914400 for sh in slide.shapes if sh.has_text_frame and sh.text_frame.text.strip() and sh.top is not None
+                         and sh.height is not None and sh.left is not None and sh.left / 914400 < W * 0.5
+                         and (sh.top + sh.height) / 914400 >= NOTE_Y * sy - 0.01 and sh.top / 914400 < H - 0.45 and not has_fill(sh)
+                         and max((r.font.size.pt for pa in sh.text_frame.paragraphs for r in pa.runs if r.font.size), default=99) <= NOTE_PT_MAX), default=None)
+        v_top = (CONTENT_Y if has_marker else CONTENT_Y_NO_MARKER) * sy
+        v_bottom = notes_top if notes_top is not None else H
+        v_h = max(0.1, v_bottom - v_top)
         lim = LIM.get("LIMIT", {}).get("bandBottomGapMax", 0.3)
         if has_headline and has_body and band_h > 1.0:
             # 한쪽 여백만 크고 반대쪽이 작을 때만 쏠림으로 판정 (가운데 배치는 제외)
-            pairs = ((("하단", (band_bottom - bot_c) / band_h), ("상단", (top_c - band_top) / band_h)),
+            pairs = ((("하단", (v_bottom - bot_c) / v_h), ("상단", (top_c - v_top) / v_h)),
                      (("우측", (band_right - right_c) / band_w), ("좌측", (left_c - band_left) / band_w)))
             for (n1, g1), (n2, g2) in pairs:
                 big, small_gap = (n1, g1) if g1 >= g2 else (n2, g2), min(g1, g2)

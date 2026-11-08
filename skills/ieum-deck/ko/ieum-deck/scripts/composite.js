@@ -1667,11 +1667,11 @@ function planRows(spec, regions, area, rowGap, colGap, H) {
     plan.forEach((p) => { if (!p.elastic) p.h += (g * Math.max(0, p.cap - p.h)) / room; });
     freed -= g;
   }
-  // 신축 행이 없으면 남는 높이를 먼저 행 사이 간격으로 나누어 숨 쉴 여백을 두고 나머지로 묶음을 세로 가운데에 둠
+  // 신축 행이 없으면 남는 높이를 먼저 행 사이 간격으로 나누어 숨 쉴 여백을 두고 나머지(freed)는 composite 가 묶음을 시각 틀 세로 가운데에 둘 때 씀 (templates.bodyTop)
   const nGap = spec.length - 1;
   const gapExtra = nGap > 0 ? Math.min(Math.max(0, GAP_ROW_MAX - rowGap), freed / nGap) : 0;
   freed -= gapExtra * nGap;
-  return { heights: plan.map((p) => p.h), gap: rowGap + gapExtra, offset: freed / 2 };
+  return { heights: plan.map((p) => p.h), gap: rowGap + gapExtra, freed };
 }
 
 function composite(ctx, slide, sb, H) {
@@ -1696,8 +1696,9 @@ function composite(ctx, slide, sb, H) {
   const spec = gridSpec(s, regions.length);
   const slots = spec.reduce((a, r) => a + r.cols.length, 0);
   if (slots !== regions.length) ctx.warn(`composite 격자 칸 ${slots}개와 영역 ${regions.length}개 불일치`);
-  const { heights, gap, offset } = planRows(spec, regions, area, rowGap, colGap, H);
-  let y = area.y + offset, idx = 0;
+  const { heights, gap, freed } = planRows(spec, regions, area, rowGap, colGap, H);
+  // 남는 높이가 있으면 격자와 아래 띠 묶음을 시각 틀 가운데에 둠 (templates.bodyTop)
+  let y = H.bodyTop(ctx, sb, b, b.h - freed), idx = 0;
   const rowBoxes = [];
   const divV = []; // 행별 세로 구분선 {x, y1, y2}
   // 내용 가로 범위: 칸 제목이 없는 칸은 블록이 돌려준 그린 범위, 그 외는 칸 폭. 아래 띠(결론, Key Point)의 좌우 끝을 이 범위에 맞춤

@@ -26,9 +26,22 @@ function body(ctx, sb) {
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
   // 하단 주석(각주, 출처 행)이 있으면 본문을 그 위에서 끝냄 (noteRows: 출처 행 첫 줄 자리 위로 쌓이는 높이)
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
-  const bottom = noteLines || srcLines ? S.noteY - 0.12 - noteRows(ctx, sb) : S.contentBottom;
+  const bottom = noteLines || srcLines ? S.noteY - BODY_NOTE_GAP - noteRows(ctx, sb) : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
+}
+const BODY_NOTE_GAP = 0.12; // 본문 하단과 하단 주석(각주, 출처 행) 사이 간격 (인치)
+/** 본문보다 낮은 내용 묶음(높이 contentH)의 위쪽 y. 마커 밴드 아래 끝부터 하단 주석 위(주석이 없으면 슬라이드 아래 끝)까지의 시각 틀 가운데에 두고 본문 영역 안으로 제한
+ *  Why: 본문 영역 아래에는 쪽번호 행 여백(16:9 기준 0.58 인치)이 있고 위에는 0.1 인치 여백만 있어 본문 영역 가운데에 두면
+ *       내용 아래 빈 공간이 마커 아래 공간의 2배 가까이 되어 위로 쏠려 보임 (견본 R043 시스템 구성: 마커 아래 0.43, 내용 아래 0.87 인치)
+ *       하단 주석이 있으면 주석이 틀의 아래 끝이 되어 본문 영역 가운데와 거의 같은 자리 */
+function bodyTop(ctx, sb, b, contentH) {
+  const S = ctx.S;
+  const frameTop = sb.marker ? S.contentY : S.contentYNoMarker;
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  const frameBottom = noteLines || srcLines ? b.y + b.h + BODY_NOTE_GAP : S.layout.H;
+  const y = (frameTop + frameBottom - contentH) / 2;
+  return Math.min(Math.max(b.y, y), b.y + Math.max(0, b.h - contentH));
 }
 function cols(box, n, gap) {
   const g = gap != null ? gap : T.PANEL.GAP;
@@ -1001,9 +1014,9 @@ function bulletsT(ctx, slide, sb) {
   const gw0 = pw0 * n + gap * (n - 1);
   const gw = point ? calloutW(ctx, point, gw0, b.w) : gw0;
   const pw = gw === gw0 ? pw0 : Math.min(full[0].w, (gw - gap * (n - 1)) / n), x0 = b.x + (b.w - gw) / 2;
-  // 패널 높이는 내용 높이 기준으로 두고 패널과 Key Point 묶음을 본문 세로 가운데에 둠
+  // 패널 높이는 내용 높이 기준으로 두고 패널과 Key Point 묶음을 시각 틀 세로 가운데에 둠 (bodyTop)
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
-  const top = b.y + (b.h - gh - ptH) / 2;
+  const top = bodyTop(ctx, sb, b, gh + ptH);
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
   const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: psz, subSz: ssz } : null));
   const pgap = panelsGap(pboxes, pps); // 나란한 패널은 문단 간격도 하나로 맞춤
@@ -1046,10 +1059,10 @@ function panelBodyH(widths, lists, sz, avail, subSz) {
 function table(ctx, slide, sb) {
   const s = sb.slots || sb, b = body(ctx, sb);
   const titleH = s.title ? T.PANEL.SUBHEAD_H : 0, legH = s.legend ? 0.3 : 0, ptH = s.point ? 0.7 : 0;
-  // 행 높이 상한에 걸려 표가 본문보다 짧으면 제목, 표, Key Point 묶음을 본문 세로 가운데에 둠 (각주 높이는 body() 가 이미 제외)
+  // 행 높이 상한에 걸려 표가 본문보다 짧으면 제목, 표, Key Point 묶음을 시각 틀 세로 가운데에 둠 (bodyTop) (각주 높이는 body() 가 이미 제외)
   const availT = b.h - titleH - legH - ptH;
-  const shift = Math.max(0, (availT - tableLayout(s, b.w, availT).total) / 2);
-  const g = { x: b.x, y: b.y + shift, w: b.w, h: b.h - 2 * shift };
+  const used0 = b.h - Math.max(0, availT - tableLayout(s, b.w, availT).total);
+  const g = { x: b.x, y: bodyTop(ctx, sb, b, used0), w: b.w, h: used0 };
   let box = s.title ? subhead(ctx, slide, g, s.title) : g;
   // 범례는 표 위 우측에 한 줄로 배치 (하베이 볼 등)
   if (s.legend) {
@@ -1132,7 +1145,7 @@ function comparePaired(ctx, slide, s, b) {
   }
   if (lay.total > b.h) ctx.warn(`compare 행 높이 합 ${lay.total.toFixed(2)} > 본문 ${b.h.toFixed(2)}in (항목이나 근거 축약)`);
   const gwTot = 2 * lay.w + lay.gw + 2 * CMP_COL_GAP;
-  const x0 = b.x + (b.w - gwTot) / 2, y0 = b.y + Math.max(0, (b.h - lay.total) / 2);
+  const x0 = b.x + (b.w - gwTot) / 2, y0 = bodyTop(ctx, ctx.sb, b, lay.total);
   const xs = [x0, x0 + lay.w + CMP_COL_GAP, x0 + lay.w + lay.gw + 2 * CMP_COL_GAP];
   const ws = [lay.w, lay.gw, lay.w];
   // 열 제목은 현행 회색, 격차 연한 네이비, 개선 네이비로 두어 왼쪽에서 오른쪽으로 진해지게 함
@@ -1159,9 +1172,9 @@ function compare(ctx, slide, sb) {
   if (nA && Array.isArray(s.gap) && s.gap.length === nA && (s.tobe && s.tobe.items || []).length === nA) { comparePaired(ctx, slide, s, b); source(ctx, slide, sb); return; }
   const gh = s.gap ? 1.0 : 0;
   const pw = cols({ x: b.x, y: b.y, w: b.w, h: 1 }, 2, 0.8)[0].w;
-  // 패널 높이는 내용 높이 기준으로 두고 대비 패널과 GAP 띠 묶음을 본문 세로 가운데에 둠
+  // 패널 높이는 내용 높이 기준으로 두고 대비 패널과 GAP 띠 묶음을 시각 틀 세로 가운데에 둠 (bodyTop)
   const ph = T.PANEL.TITLE_H + panelBodyH([pw, pw], [(s.asis && s.asis.items) || [], (s.tobe && s.tobe.items) || []], T.SIZE.body, b.h - gh - T.PANEL.TITLE_H);
-  const top = b.y + (b.h - ph - gh) / 2;
+  const top = bodyTop(ctx, sb, b, ph + gh);
   const cb = { x: b.x, y: top, w: b.w, h: ph };
   const [L, R] = cols(cb, 2, 0.8);
   const lp = { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true };
@@ -1239,8 +1252,8 @@ function gantt(ctx, slide, sb) {
     for (let i = 2; i < colw.length; i++) colw[i] = wk;
   }
   const mk = (c, head) => ({ fill: head ? T.COLOR.navy : (c && c.fill) || undefined, colspan: c && c.colspan, rowspan: c && c.rowspan, merged: c && c.merged, paras: [{ align: "center", runs: [{ t: typeof c === "string" ? c : (c && c.text) || "", sz: T.SIZE.tableDense, b: head, color: head ? T.COLOR.white : T.COLOR.textDark }] }] });
-  // 행 높이 상한에 걸려 본문 높이가 남으면 표를 본문 세로 가운데에 둠
-  A.table(slide, { x: b.x, y: b.y + Math.max(0, (b.h - rh * nrow) / 2), w: b.w, h: rh * nrow, table: { colw, rowh: Array(nrow).fill(rh), rows: [head1.map((c) => mk(c, true)), head2.map((c) => mk(c, true)), ...rowsOut.map((r) => r.map((c) => mk(c, false)))] } }, { sz: T.SIZE.tableDense });
+  // 행 높이 상한에 걸려 본문 높이가 남으면 표를 시각 틀 세로 가운데에 둠 (bodyTop)
+  A.table(slide, { x: b.x, y: bodyTop(ctx, sb, b, rh * nrow), w: b.w, h: rh * nrow, table: { colw, rowh: Array(nrow).fill(rh), rows: [head1.map((c) => mk(c, true)), head2.map((c) => mk(c, true)), ...rowsOut.map((r) => r.map((c) => mk(c, false)))] } }, { sz: T.SIZE.tableDense });
   source(ctx, slide, sb);
 }
 /** 수행 조직도: 발주기관, PM, 품질관리, 자문, 모듈 팀. slots: {client, pm, qa, advisory, teams:[{name, members:[], share}], note} */
@@ -1413,11 +1426,11 @@ function cards(ctx, slide, sb) {
   const gw0 = cw0 * ncol + T.PANEL.GAP * (ncol - 1);
   const gw = s.point ? calloutW(ctx, s.point, gw0, b.w) : gw0;
   const cw = gw === gw0 ? cw0 : Math.min(full[0].w, (gw - T.PANEL.GAP * (ncol - 1)) / ncol), x0 = b.x + (b.w - gw) / 2;
-  // 카드 높이는 내용 높이 기준으로 두고 카드와 Key Point 묶음을 본문 세로 가운데에 둠
+  // 카드 높이는 내용 높이 기준으로 두고 카드와 Key Point 묶음을 시각 틀 세로 가운데에 둠 (bodyTop)
   const rowAvail = full[0].h - T.PANEL.TITLE_H;
   const ch = T.PANEL.TITLE_H + panelBodyH(cd.map(() => cw), lists, csz, rowAvail, ssz);
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);
-  const top = b.y + (b.h - gridH - ptH) / 2;
+  const top = bodyTop(ctx, sb, b, gridH + ptH);
   const cboxes = rows({ x: x0, y: top, w: gw, h: gridH }, nrow).flatMap((r) => cols(r, ncol));
   const cps = cboxes.map((c, k) => (cd[k] ? { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz } : null));
   const cgap = panelsGap(cboxes, cps); // 카드는 문단 간격도 하나로 맞춤
@@ -1436,8 +1449,8 @@ function steps(ctx, slide, sb) {
   // 항목이 적으면 상자를 항목 높이의 1.3배까지만 두고 묶음 전체를 본문 가운데로 모아 상하 여백을 균등 분배
   const bodyH = Math.min(availH, need * 1.3);
   const groupH = 0.7 + bodyH + (s.point ? 0.75 : 0);
-  // body() 가 출처 행과 각주 높이를 이미 제외하므로 본문 높이 안에서 가운데 정렬
-  const shift = Math.max(0, (b.h - groupH) / 2);
+  // body() 가 출처 행과 각주 높이를 이미 제외하므로 본문 높이 안에서 시각 틀 세로 가운데에 둠 (bodyTop)
+  const shift = bodyTop(ctx, sb, b, groupH) - b.y;
   // 셰브론 접두는 stepLabel 로 조정하며 빈 문자열이면 제목만 표기
   const lab = LB.labelKeep("steps", "stepLabel", s.stepLabel);
   const chev = { x: b.x, y: b.y + shift, w: b.w, h: 0.55 };
@@ -1565,10 +1578,11 @@ function orgchart(ctx, slide, sb) {
 /** 산출물 예시(Illustrative 태그) : 전폭 표 또는 이미지. slots: {title, table|image} */
 function illustrative(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
-  // 표가 행 높이 상한에 걸려 짧으면 제목과 표 묶음을 본문 세로 가운데에 둠
-  const shift = s.table ? Math.max(0, (b.h - 0.45 - tableLayout(s.table, b.w, b.h - 0.45).total) / 2) : 0;
+  // 표가 행 높이 상한에 걸려 짧으면 제목과 표 묶음을 시각 틀 세로 가운데에 둠 (bodyTop)
+  const tableH = s.table ? Math.min(tableLayout(s.table, b.w, b.h - 0.45).total, b.h - 0.45) : b.h - 0.45;
+  const shift = s.table ? bodyTop(ctx, sb, b, 0.45 + tableH) - b.y : 0;
   A.text(slide, { x: b.x, y: b.y + shift, w: b.w, h: 0.35 }, LB.label("illustrative", "title", s.title), { sz: T.SIZE.panelHead, align: "center" });
-  const box = { x: b.x, y: b.y + 0.45 + shift, w: b.w, h: b.h - 0.45 - 2 * shift };
+  const box = { x: b.x, y: b.y + 0.45 + shift, w: b.w, h: tableH };
   if (s.table) tableBlock(ctx, slide, box, s.table); else A.image(ctx.pres, slide, box, s.image, { label: "산출물 화면" });
   tag(ctx, slide, { x: b.x + 0.05, y: b.y + 0.05 + shift }, LB.label("illustrative", "tag", s.tag));
   source(ctx, slide, sb);
@@ -1586,9 +1600,9 @@ function conclusion(ctx, slide, sb) {
   const needW = Math.max(...lists.map((l) => itemsNeedW(l, CONC_ITEM_SZ, CONC_SUB_SZ))) + 2 * T.PANEL.INSET + FIT_W_SLACK;
   const pw = Math.min((b.w - gap * (n - 1)) / n, needW);
   const gw = pw * n + gap * (n - 1), x0 = b.x + (b.w - gw) / 2;
-  // 패널 높이는 내용 높이 기준으로 두고 패널과 결론 밴드 묶음을 본문 세로 가운데에 둠
+  // 패널 높이는 내용 높이 기준으로 두고 패널과 결론 밴드 묶음을 시각 틀 세로 가운데에 둠 (bodyTop)
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, CONC_ITEM_SZ, b.h - bandH - bandGap - T.PANEL.TITLE_H, CONC_SUB_SZ);
-  const top = b.y + (b.h - gh - bandGap - bandH) / 2;
+  const top = bodyTop(ctx, sb, b, gh + bandGap + bandH);
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
   const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true } : null));
   const pgap = panelsGap(pboxes, pps); // 나란한 패널은 문단 간격도 하나로 맞춤
@@ -1631,6 +1645,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows, bodyTop };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };
