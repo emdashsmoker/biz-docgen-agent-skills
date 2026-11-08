@@ -820,6 +820,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (표기) 헤드라인 글꼴 일관성, 11pt 미만 본문, 강조색 2곳 이상, 다중 줄 불릿 누락, 표 정렬 혼재
 - (시각 검수) `scripts/render.sh` 로 PNG 를 만들어 전량 열람
 - 열람은 3-6장 단위 시트(`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)로 수행
+- 차트가 든 슬라이드는 dpi 120 단독 PNG(`bash scripts/render.sh out.pptx png_chart 120`)로 차트 안 글자의 겹침을 재확인 (시트 크기에서는 글자가 읽기 어려울 만큼 축소)
 - 열람한 시트 파일명은 완료 보고에 나열
 - (시각 검수 질문) 슬라이드마다 확인하는 질문
     + 헤드라인을 가려도 본문만으로 같은 결론에 도달하는가
@@ -851,7 +852,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 상자끼리 겹치거나 연결선이 상자를 관통하는가
 - 로드맵과 간트의 막대가 레인 구분선이나 옆 막대에 닿는가
 - 연결선과 화살표가 상자에서 떨어져 떠 있는가
-- 차트 레이블이 링, 막대, 다른 레이블과 겹치는가
+- 차트 레이블이 차트 요소나 다른 레이블과 겹치는가
+- 차트에 표시된 수치가 storyboard 값과 일치하는가 (나란히 붙은 레이블은 한 수치처럼 보임)
 
 #### 배치
 

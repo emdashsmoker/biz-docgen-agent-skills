@@ -55,6 +55,9 @@ Changelog rules
 - Fixed the second and later lines of wrapped notes in ※-style decks starting under the ※ (#111)
 - Changed the note guides to keep the note label and the source mark in one language pair across a deck, such as Note: with Source: or 참조: with 출처: (#111)
 - Changed the source mark of the number card samples and the ko demo from 출처: to Source: (#111)
+- Added a visual review step that re-checks text inside charts on single 120 DPI PNGs (#112)
+- Changed the chart label overlap question to cover all chart elements (#112)
+- Added a visual review question that cross-checks the numbers shown in charts against the storyboard values (#112)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
@@ -81,6 +84,9 @@ Changelog rules
 * ※ 표기 덱에서 줄을 넘긴 주석의 둘째 줄 이하가 ※ 아래 위치에서 시작하는 현상 수정 (#111)
 * 주석 라벨과 출처 표기의 지침을 덱 전체의 같은 언어 짝(Note: 와 Source:, 참조: 와 출처:) 기준으로 변경 (#111)
 * 수치 카드 견본과 ko 데모의 출처 표기를 출처: 에서 Source: 로 변경 (#111)
+* 차트가 든 슬라이드의 120 DPI 단독 PNG 재확인 절차 추가 (#112)
+* 차트 레이블 겹침 질문의 대상을 차트 요소 전체로 변경 (#112)
+* 차트 표시 수치와 storyboard 값의 대조 질문 추가 (#112)
 
 ## 2026-11-07
 
