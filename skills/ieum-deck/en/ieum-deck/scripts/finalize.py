@@ -12,7 +12,7 @@ HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml fi
         replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak),
         write marL and indent on note and source paragraphs that hang after a label (other paragraphs without bullets in the same box get 0),
         restore the tab stop of hanging paragraphs that re-serialization set to 0 back to marL,
-        write the series label settings of the build record (chartLabels) as point labels (once, before re-serialization)
+        write the series label settings of the build record (chartLabels) as point labels (once before and once after re-serialization)
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -72,7 +72,8 @@ GROUPING_CHART_TAGS = (
 # Data label position removed from stacked charts
 FORBIDDEN_STACKED_LABEL_POSITION = "outEnd"
 
-# Values of the series label settings (build record chartLabels). none hides the label, the rest are ECMA-376 data label positions
+# Point values of the series label settings (build record chartLabels) {pos, x, y}. pos none hides the label, the rest are ECMA-376 data label positions
+# x and y are the distance to move from the default position (ratio of the chart width and height, c:manualLayout)
 # lint.py checks which positions each chart type allows. This file only checks that the value can go into an XML attribute
 LABEL_HIDDEN = "none"
 LABEL_POSITIONS = (LABEL_HIDDEN, "bestFit", "b", "ctr", "inBase", "inEnd", "l", "outEnd", "r", "t")
@@ -82,6 +83,7 @@ SERIES_PATTERN = re.compile(r"<c:ser>.*?</c:ser>", re.S)
 SERIES_LABELS_PATTERN = re.compile(r"<c:dLbls>(.*?)</c:dLbls>", re.S)
 POINT_LABEL_PATTERN = re.compile(r'<c:dLbl>\s*<c:idx val="(\d+)"/>(.*?)</c:dLbl>', re.S)
 LABEL_POSITION_PATTERN = re.compile(r'<c:dLblPos val="[^"]*"/>')
+LABEL_LAYOUT_PATTERN = re.compile(r"<c:layout>.*?</c:layout>", re.S)
 # Elements allowed only in a series label group. Left out when the series format is copied to a point label
 SERIES_ONLY_LABEL_PATTERN = re.compile(r"<c:showLeaderLines[^>]*/>|<c:leaderLines>.*?</c:leaderLines>|<c:extLst>.*?</c:extLst>", re.S)
 
@@ -933,15 +935,19 @@ def restore_hole_sizes(data: bytes, holes: dict) -> bytes:
     return write_package(fixed)
 
 
-def point_label(index: int, template: str, position: str) -> str:
-    """Data label of one point (c:dLbl). none hides it, any other value keeps the template format and changes only the position"""
-    if position == LABEL_HIDDEN:
+def point_label(index: int, template: str, label: dict) -> str:
+    """Data label of one point (c:dLbl). pos none hides it, otherwise the template format is kept and only the position and move distance change"""
+    if label["pos"] == LABEL_HIDDEN:
         return f'<c:dLbl><c:idx val="{index}"/><c:delete val="1"/></c:dLbl>'
-    tag = f'<c:dLblPos val="{position}"/>'
-    if LABEL_POSITION_PATTERN.search(template):
-        body = LABEL_POSITION_PATTERN.sub(tag, template)
-    else:  # series without a position (clustered bars) get it before showLegendKey, following the schema order
-        body = template.replace("<c:showLegendKey", tag + "<c:showLegendKey", 1)
+    body = LABEL_LAYOUT_PATTERN.sub("", template)  # a move distance left by an earlier pass or by soffice is replaced with the build record value
+    if label["pos"]:
+        tag = f'<c:dLblPos val="{label["pos"]}"/>'
+        if LABEL_POSITION_PATTERN.search(body):
+            body = LABEL_POSITION_PATTERN.sub(tag, body)
+        else:  # series without a position (clustered bars) get it before showLegendKey, following the schema order
+            body = body.replace("<c:showLegendKey", tag + "<c:showLegendKey", 1)
+    if label["x"] or label["y"]:  # in the schema order c:layout comes right after idx
+        body = f'<c:layout><c:manualLayout><c:x val="{label["x"]}"/><c:y val="{label["y"]}"/></c:manualLayout></c:layout>' + body
     return f'<c:dLbl><c:idx val="{index}"/>{body}</c:dLbl>'
 
 
@@ -959,11 +965,11 @@ def set_series_labels(series_xml: str, positions: list) -> tuple[str, int]:
     series_format = SERIES_ONLY_LABEL_PATTERN.sub("", rest)
     labels = {i: m.group(0) for i, m in points.items()}
     changed = 0
-    for index, position in enumerate(positions):
-        if position is None:
+    for index, label in enumerate(positions):
+        if label is None:
             continue
         template = points[index].group(2) if index in points else series_format
-        labels[index] = point_label(index, template, position)
+        labels[index] = point_label(index, template, label)
         changed += 1
     # In the schema order point labels (c:dLbl) come before the series format
     new_body = "".join(labels[i] for i in sorted(labels)) + rest
@@ -994,9 +1000,18 @@ def apply_label_overrides(data: bytes, chart_labels: dict) -> tuple[bytes, int]:
     return write_package(fixed), total
 
 
+def valid_label(label) -> dict | None:
+    """One point setting of the build record. {pos, x, y} when the position is an allowed value and the move distances are numbers, otherwise None"""
+    if not isinstance(label, dict):
+        return None
+    pos, x, y = label.get("pos"), label.get("x", 0), label.get("y", 0)
+    numbers = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y))
+    return {"pos": pos, "x": x, "y": y} if numbers and (pos is None or pos in LABEL_POSITIONS) else None
+
+
 def record_chart_labels(pptx_path: Path) -> dict:
     """Series label settings (chartLabels) of the build record (<file name>.build.json). Chart file name -> per-series point setting arrays
-    Values that cannot go into an XML attribute become unset (None) and their count is printed"""
+    Values that cannot go into the XML become unset (None) and their count is printed"""
     record = pptx_path.with_suffix(".build.json")
     if not record.is_file():
         return {}
@@ -1013,7 +1028,7 @@ def record_chart_labels(pptx_path: Path) -> dict:
         out[part] = []
         for positions in series:
             positions = positions if isinstance(positions, list) else []
-            valid = [p if p in LABEL_POSITIONS else None for p in positions]
+            valid = [valid_label(p) for p in positions]
             dropped += sum(1 for p, v in zip(positions, valid) if p is not None and v is None)
             out[part].append(valid)
     if dropped:
@@ -1065,8 +1080,9 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     data = pptx_path.read_bytes()
     data, _ = normalize_package(data)
     data, _ = fix_package_xml(data)
-    # Series label settings are written once into the pptxgenjs XML, whose structure is fixed. soffice re-serialization writes the same settings back in standard form (hidden labels as showVal 0)
-    data, labeled = apply_label_overrides(data, record_chart_labels(pptx_path))
+    # Series label settings are written before re-serialization and again after it (soffice saves pie labels without their move distance)
+    chart_labels = record_chart_labels(pptx_path)
+    data, labeled = apply_label_overrides(data, chart_labels)
     if labeled:
         print(f"[finalize] {labeled} chart point label settings written (build record chartLabels)")
     pptx_path.write_bytes(data)
@@ -1081,6 +1097,7 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
             data, _ = normalize_package(data)
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
+            data, _ = apply_label_overrides(data, chart_labels)
             data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:

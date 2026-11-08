@@ -811,19 +811,28 @@ function chart(pres, slide, box, spec) {
   }
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // 레이블이 선과 겹치지 않도록 표식 위에 배치
   slide.addChart(ctype, series, opt);
-  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length); // 도넛은 레이블을 그리지 않음
+  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length, box); // 도넛은 레이블을 그리지 않음
 }
 
 // 차트 파일 이름별 계열 레이블 지정 (storyboard series[].labelPos)
 // WHY: pptxgenjs 는 레이블 위치와 표시 여부를 모든 계열과 항목에 같게 기록. 계열별, 항목별 지정은 build.js 가 빌드 기록(chartLabels)에 남기고
-//      finalize.py 가 soffice 재직렬화 전에 차트 XML 의 항목 레이블(c:dLbl)로 기록
+//      finalize.py 가 차트 XML 의 항목 레이블(c:dLbl)로 기록
 const CHART_LABELS = {};
+const PT_PER_IN = 72;
+/** 항목 1개의 레이블 지정을 빌드 기록 형식 {pos, x, y} 로 변환. 문자열은 위치, 객체는 위치(pos)와 pt 이동 거리(dx, dy)
+ *  x, y 는 OOXML 수동 배치(c:manualLayout)의 단위인 차트 폭과 높이 대비 비율 */
+function labelSpec(p, box) {
+  if (p == null) return null;
+  if (typeof p !== "object") return { pos: p, x: 0, y: 0 };
+  const ratio = (pt, size) => +((pt || 0) / PT_PER_IN / size).toFixed(4);
+  return { pos: p.pos == null ? null : p.pos, x: ratio(p.dx, box.w), y: ratio(p.dy, box.h) };
+}
 /** 계열별 labelPos 를 항목 수 길이 배열로 펼쳐 기록. 지정이 없는 계열과 항목은 null (빌더 기본 레이블 유지) */
-function recordLabelPos(slide, labelPos, n) {
+function recordLabelPos(slide, labelPos, n, box) {
   if (!labelPos.some((p) => p != null)) return;
   // pptxgenjs 3.12.0 은 차트 파일 이름을 슬라이드의 차트 관계 목록(_relsChart)에만 보관 (공개 API 없음. 버전을 올리면 확인 필요)
   const rel = slide._relsChart[slide._relsChart.length - 1];
-  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => (Array.isArray(p) ? p[i] ?? null : p))));
+  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => labelSpec(Array.isArray(p) ? p[i] : p, box))));
 }
 /** 빌드 기록용 계열 레이블 지정 (build.js 가 읽음) */
 function chartLabels() { return CHART_LABELS; }

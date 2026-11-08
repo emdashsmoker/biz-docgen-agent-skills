@@ -61,7 +61,8 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
 FOOTNOTE_STYLES = ("number", "mark")  # Footnote style (meta.footnoteStyle). The first value is the default. Same list as NOTE_STYLES in atoms.js
-# Chart series label settings (series[].labelPos). none hides the label. Positions are the values ECMA-376 and MS-OI29500 allow per chart type
+# Chart series label settings (series[].labelPos). A string is a position, an object is a position (pos) and a move distance in pt (dx, dy). none hides the label
+# Positions are the values ECMA-376 and MS-OI29500 allow per chart type
 # (stacked bars do not allow outEnd, area charts allow no position). Doughnuts are not in the table because the builder draws no labels on them
 LABEL_HIDDEN = "none"
 LABEL_POSITIONS = {
@@ -71,6 +72,7 @@ LABEL_POSITIONS = {
     "pie": ("outEnd", "inEnd", "ctr", "bestFit"),
     "area": (),
 }
+LABEL_OBJECT_KEYS = ("pos", "dx", "dy")
 HANGUL_RE = re.compile(r"[가-힣]")
 # Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
 # Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
@@ -457,6 +459,21 @@ def label_kind(spec):
     return "stacked" if spec.get("grouping") in ("stacked", "percentStacked") else "bar"
 
 
+def label_point_problem(p, allowed):
+    """Problem of one labelPos point. None when there is no problem (null keeps the builder default label)"""
+    if p is None:
+        return None
+    if not isinstance(p, dict):
+        return None if p in allowed else str(p)
+    extra = sorted(set(p) - set(LABEL_OBJECT_KEYS))
+    if extra:
+        return f"key {', '.join(extra)}"
+    if p.get("pos") is not None and p["pos"] not in allowed:
+        return f"pos {p['pos']}"
+    not_number = [k for k in ("dx", "dy") if k in p and (isinstance(p[k], bool) or not isinstance(p[k], (int, float)))]
+    return f"non-numeric {', '.join(not_number)}" if not_number else None
+
+
 def label_pos_checks(sid, spec):
     """Check series[].labelPos. Values outside the allowed values and arrays whose length differs from values are FAIL, ignored settings are WARN"""
     fails, warns = [], []
@@ -474,10 +491,9 @@ def label_pos_checks(sid, spec):
         n_values = len(s.get("values") or [])
         if isinstance(pos, list) and len(pos) != n_values:
             fails.append(f"[{sid}] labelPos array of series {name} has {len(pos)} items but values has {n_values}")
-        # null inside an array keeps the builder default label
-        bad = sorted({str(p) for p in (pos if isinstance(pos, list) else [pos]) if not (p in allowed or (p is None and isinstance(pos, list)))})
+        bad = sorted({e for e in (label_point_problem(p, allowed) for p in (pos if isinstance(pos, list) else [pos])) if e})
         if bad:
-            fails.append(f"[{sid}] labelPos {', '.join(bad)} of series {name} is not allowed in a {kind} chart. Allowed values: {', '.join(allowed)}")
+            fails.append(f"[{sid}] labelPos error in series {name} ({'; '.join(bad)}). Positions allowed in a {kind} chart: {', '.join(allowed)}. Object keys: pos, dx, dy (dx and dy are numbers in pt)")
     return fails, warns
 
 

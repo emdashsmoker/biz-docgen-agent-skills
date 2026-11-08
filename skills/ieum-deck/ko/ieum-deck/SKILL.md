@@ -711,7 +711,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 항목 비교는 가로 막대 내림차순
     + 시계열은 세로 막대나 선
     + 데이터 레이블 표시
-    + 레이블이 겹치거나 잘리면 계열의 `labelPos` 로 위치를 바꾸거나 숨김 (형식별 대응과 숨긴 수치의 표기 경로는 `references/recipes.md` chart 레이블 조정 절)
+    + 레이블이 겹치거나 잘리면 계열의 `labelPos` 로 위치를 바꾸거나 옮기고 숨김은 마지막에 사용 (형식별 대응과 숨긴 수치의 표기 경로는 `references/recipes.md` chart 레이블 조정 절)
     + 격자선 미사용
     + 범례는 다계열 차트에만 표시
     + 차트 색은 테마 색의 파스텔 계열
@@ -790,6 +790,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py 는 표 셀 위아래 여백을 셀 속성(marT, marB)에 복원하여 PowerPoint 의 기본 여백 적용으로 표가 넘치는 현상을 방지
 - finalize.py 는 차트 글자(범주, 범례, 데이터 레이블)에 나눔고딕을 동아시아 글꼴로 지정하여 차트 한글이 테마 기본 글꼴로 바뀌는 현상을 방지
 - finalize.py 는 빌드 기록의 계열 레이블 지정(`series[].labelPos`)을 차트 XML 의 항목 레이블로 기록 (build.js 만 실행한 PPTX 에는 반영되지 않음)
+    + soffice 재저장이 원형 레이블의 이동 거리를 지우므로 재직렬화 후에 다시 기록
 - finalize.py 는 한글이 든 글자 조각의 언어를 ko-KR 로 기록하여 LibreOffice 재저장이 실행 환경 로캘에 따라 한글을 다른 언어(zh-CN 등)로 저장하는 현상을 방지
 - finalize.py 는 줄표 불릿("-")이 본문 글꼴을 따르게 하여 PowerPoint 의 불릿 빈 네모 표시를 방지
 - finalize.py 는 soffice 재직렬화가 가로선 높이와 세로선 폭에 남기는 0.01mm(360 EMU)를 0 으로 되돌려 PowerPoint 의 직선 기울어짐을 방지

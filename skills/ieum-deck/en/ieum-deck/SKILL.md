@@ -724,7 +724,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Item comparison uses horizontal bars in descending order
     + Time series use vertical bars or lines
     + Show data labels
-    + When labels overlap or are clipped, move or hide them with `labelPos` on the series (responses per chart type and paths for hidden figures are in the chart label adjustment section of `references/recipes.md`)
+    + When labels overlap or are clipped, change their position or move them with `labelPos` on the series, and hide them only as the last step (responses per chart type and paths for hidden figures are in the chart label adjustment section of `references/recipes.md`)
     + No gridlines
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color
@@ -804,6 +804,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py restores the top and bottom margins of table cells in the cell properties (marT, marB) to prevent tables from overflowing when PowerPoint applies default margins
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
 - finalize.py writes the series label settings of the build record (`series[].labelPos`) as point labels in the chart XML (a PPTX from build.js alone does not show them)
+    + soffice re-saving drops the move distance of pie labels, so they are written again after re-serialization
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
 - finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
 - finalize.py resets the 0.01 mm (360 EMU) that soffice reserialization leaves as the height of horizontal lines and the width of vertical lines back to 0, so PowerPoint draws these lines straight

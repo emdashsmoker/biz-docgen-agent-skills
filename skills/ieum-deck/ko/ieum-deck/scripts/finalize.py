@@ -12,7 +12,7 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
         OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak),
         주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록),
         재직렬화가 0 으로 바꾼 내어쓰기 문단의 탭 위치를 marL 로 복원,
-        빌드 기록의 계열 레이블 지정(chartLabels)을 항목 레이블로 기록 (재직렬화 전 1회)
+        빌드 기록의 계열 레이블 지정(chartLabels)을 항목 레이블로 기록 (재직렬화 전후 각 1회)
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -72,7 +72,8 @@ GROUPING_CHART_TAGS = (
 # 누적 차트에서 제거할 데이터 레이블 위치값
 FORBIDDEN_STACKED_LABEL_POSITION = "outEnd"
 
-# 계열 레이블 지정(빌드 기록 chartLabels)의 값. none 은 숨김, 나머지는 ECMA-376 데이터 레이블 위치
+# 계열 레이블 지정(빌드 기록 chartLabels)의 항목 값 {pos, x, y}. pos 의 none 은 숨김, 나머지는 ECMA-376 데이터 레이블 위치
+# x, y 는 기본 위치에서 옮길 거리 (차트 폭과 높이 대비 비율, c:manualLayout)
 # 차트 형식별 허용 여부는 lint.py 가 검사하고 여기서는 XML 속성에 넣을 수 있는 값인지만 확인
 LABEL_HIDDEN = "none"
 LABEL_POSITIONS = (LABEL_HIDDEN, "bestFit", "b", "ctr", "inBase", "inEnd", "l", "outEnd", "r", "t")
@@ -82,6 +83,7 @@ SERIES_PATTERN = re.compile(r"<c:ser>.*?</c:ser>", re.S)
 SERIES_LABELS_PATTERN = re.compile(r"<c:dLbls>(.*?)</c:dLbls>", re.S)
 POINT_LABEL_PATTERN = re.compile(r'<c:dLbl>\s*<c:idx val="(\d+)"/>(.*?)</c:dLbl>', re.S)
 LABEL_POSITION_PATTERN = re.compile(r'<c:dLblPos val="[^"]*"/>')
+LABEL_LAYOUT_PATTERN = re.compile(r"<c:layout>.*?</c:layout>", re.S)
 # 계열 레이블 묶음에만 허용되는 요소. 계열 서식을 항목 레이블에 복사할 때 제외
 SERIES_ONLY_LABEL_PATTERN = re.compile(r"<c:showLeaderLines[^>]*/>|<c:leaderLines>.*?</c:leaderLines>|<c:extLst>.*?</c:extLst>", re.S)
 
@@ -933,15 +935,19 @@ def restore_hole_sizes(data: bytes, holes: dict) -> bytes:
     return write_package(fixed)
 
 
-def point_label(index: int, template: str, position: str) -> str:
-    """항목 1개의 데이터 레이블(c:dLbl). none 은 숨김, 그 밖은 template 서식에 위치만 바꿔 기록"""
-    if position == LABEL_HIDDEN:
+def point_label(index: int, template: str, label: dict) -> str:
+    """항목 1개의 데이터 레이블(c:dLbl). pos 가 none 이면 숨김, 그 밖은 template 서식에 위치와 이동 거리만 바꿔 기록"""
+    if label["pos"] == LABEL_HIDDEN:
         return f'<c:dLbl><c:idx val="{index}"/><c:delete val="1"/></c:dLbl>'
-    tag = f'<c:dLblPos val="{position}"/>'
-    if LABEL_POSITION_PATTERN.search(template):
-        body = LABEL_POSITION_PATTERN.sub(tag, template)
-    else:  # 위치를 생략한 계열(묶은 막대)은 스키마 순서상 showLegendKey 앞에 위치를 넣음
-        body = template.replace("<c:showLegendKey", tag + "<c:showLegendKey", 1)
+    body = LABEL_LAYOUT_PATTERN.sub("", template)  # 이전 기록이나 soffice 가 남긴 이동 거리는 빌드 기록 값으로 교체
+    if label["pos"]:
+        tag = f'<c:dLblPos val="{label["pos"]}"/>'
+        if LABEL_POSITION_PATTERN.search(body):
+            body = LABEL_POSITION_PATTERN.sub(tag, body)
+        else:  # 위치를 생략한 계열(묶은 막대)은 스키마 순서상 showLegendKey 앞에 위치를 넣음
+            body = body.replace("<c:showLegendKey", tag + "<c:showLegendKey", 1)
+    if label["x"] or label["y"]:  # 스키마 순서상 c:layout 은 idx 바로 뒤
+        body = f'<c:layout><c:manualLayout><c:x val="{label["x"]}"/><c:y val="{label["y"]}"/></c:manualLayout></c:layout>' + body
     return f'<c:dLbl><c:idx val="{index}"/>{body}</c:dLbl>'
 
 
@@ -959,11 +965,11 @@ def set_series_labels(series_xml: str, positions: list) -> tuple[str, int]:
     series_format = SERIES_ONLY_LABEL_PATTERN.sub("", rest)
     labels = {i: m.group(0) for i, m in points.items()}
     changed = 0
-    for index, position in enumerate(positions):
-        if position is None:
+    for index, label in enumerate(positions):
+        if label is None:
             continue
         template = points[index].group(2) if index in points else series_format
-        labels[index] = point_label(index, template, position)
+        labels[index] = point_label(index, template, label)
         changed += 1
     # 스키마 순서상 항목 레이블(c:dLbl)이 계열 서식보다 앞
     new_body = "".join(labels[i] for i in sorted(labels)) + rest
@@ -994,9 +1000,18 @@ def apply_label_overrides(data: bytes, chart_labels: dict) -> tuple[bytes, int]:
     return write_package(fixed), total
 
 
+def valid_label(label) -> dict | None:
+    """빌드 기록의 항목 지정 1개. 위치가 허용 값이고 이동 거리가 숫자이면 {pos, x, y}, 아니면 None"""
+    if not isinstance(label, dict):
+        return None
+    pos, x, y = label.get("pos"), label.get("x", 0), label.get("y", 0)
+    numbers = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y))
+    return {"pos": pos, "x": x, "y": y} if numbers and (pos is None or pos in LABEL_POSITIONS) else None
+
+
 def record_chart_labels(pptx_path: Path) -> dict:
     """빌드 기록(<파일명>.build.json)의 계열 레이블 지정(chartLabels). 차트 파일 이름 -> 계열별 항목 지정 배열
-    XML 속성에 넣을 수 없는 값은 지정 없음(None)으로 바꾸고 개수를 출력"""
+    XML 에 넣을 수 없는 값은 지정 없음(None)으로 바꾸고 개수를 출력"""
     record = pptx_path.with_suffix(".build.json")
     if not record.is_file():
         return {}
@@ -1013,7 +1028,7 @@ def record_chart_labels(pptx_path: Path) -> dict:
         out[part] = []
         for positions in series:
             positions = positions if isinstance(positions, list) else []
-            valid = [p if p in LABEL_POSITIONS else None for p in positions]
+            valid = [valid_label(p) for p in positions]
             dropped += sum(1 for p, v in zip(positions, valid) if p is not None and v is None)
             out[part].append(valid)
     if dropped:
@@ -1065,8 +1080,9 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     data = pptx_path.read_bytes()
     data, _ = normalize_package(data)
     data, _ = fix_package_xml(data)
-    # 계열 레이블 지정은 구조가 정해진 pptxgenjs XML 에 1회 기록. soffice 재직렬화는 같은 지정을 표준 형식(숨김은 showVal 0)으로 다시 기록
-    data, labeled = apply_label_overrides(data, record_chart_labels(pptx_path))
+    # 계열 레이블 지정은 재직렬화 전에 기록하고 재직렬화 후에 다시 기록 (soffice 는 원형 레이블의 이동 거리를 지우고 저장)
+    chart_labels = record_chart_labels(pptx_path)
+    data, labeled = apply_label_overrides(data, chart_labels)
     if labeled:
         print(f"[finalize] 차트 항목 레이블 지정 {labeled}개 기록 (빌드 기록 chartLabels)")
     pptx_path.write_bytes(data)
@@ -1081,6 +1097,7 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
             data, _ = normalize_package(data)
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
+            data, _ = apply_label_overrides(data, chart_labels)
             data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:

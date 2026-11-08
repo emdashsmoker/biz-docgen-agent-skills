@@ -811,19 +811,28 @@ function chart(pres, slide, box, spec) {
   }
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
   slide.addChart(ctype, series, opt);
-  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length); // doughnuts draw no labels
+  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length, box); // doughnuts draw no labels
 }
 
 // Series label settings per chart file name (storyboard series[].labelPos)
 // WHY: pptxgenjs writes the same label position and visibility for every series and point. build.js records per-series and per-point settings
-//      in the build record (chartLabels) and finalize.py writes them as point labels (c:dLbl) in the chart XML before soffice re-serialization
+//      in the build record (chartLabels) and finalize.py writes them as point labels (c:dLbl) in the chart XML
 const CHART_LABELS = {};
+const PT_PER_IN = 72;
+/** Convert the label setting of one point to the build record form {pos, x, y}. A string is a position, an object is a position (pos) and a move distance in pt (dx, dy)
+ *  x and y are ratios of the chart width and height, the unit of OOXML manual layout (c:manualLayout) */
+function labelSpec(p, box) {
+  if (p == null) return null;
+  if (typeof p !== "object") return { pos: p, x: 0, y: 0 };
+  const ratio = (pt, size) => +((pt || 0) / PT_PER_IN / size).toFixed(4);
+  return { pos: p.pos == null ? null : p.pos, x: ratio(p.dx, box.w), y: ratio(p.dy, box.h) };
+}
 /** Expand each series labelPos to an array as long as the point count. Series and points without a setting are null (builder default label) */
-function recordLabelPos(slide, labelPos, n) {
+function recordLabelPos(slide, labelPos, n, box) {
   if (!labelPos.some((p) => p != null)) return;
   // pptxgenjs 3.12.0 keeps the chart file name only in the slide chart relationship list (_relsChart, no public API. Recheck after a version upgrade)
   const rel = slide._relsChart[slide._relsChart.length - 1];
-  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => (Array.isArray(p) ? p[i] ?? null : p))));
+  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => labelSpec(Array.isArray(p) ? p[i] : p, box))));
 }
 /** Series label settings for the build record (read by build.js) */
 function chartLabels() { return CHART_LABELS; }

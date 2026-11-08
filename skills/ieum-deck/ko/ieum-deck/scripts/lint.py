@@ -60,7 +60,8 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
 FOOTNOTE_STYLES = ("number", "mark")  # 각주 표기(meta.footnoteStyle). 첫 값이 기본. atoms.js 의 NOTE_STYLES 와 같은 목록
-# 차트 계열 레이블 지정(series[].labelPos). none 은 숨김. 위치는 ECMA-376 과 MS-OI29500 의 차트 형식별 허용 값
+# 차트 계열 레이블 지정(series[].labelPos). 문자열은 위치, 객체는 위치(pos)와 pt 이동 거리(dx, dy). none 은 숨김
+# 위치는 ECMA-376 과 MS-OI29500 의 차트 형식별 허용 값
 # (누적 막대는 outEnd 불가, 영역형은 위치 지정 불가). 도넛은 빌더가 레이블을 그리지 않으므로 표에 없음
 LABEL_HIDDEN = "none"
 LABEL_POSITIONS = {
@@ -70,6 +71,7 @@ LABEL_POSITIONS = {
     "pie": ("outEnd", "inEnd", "ctr", "bestFit"),
     "area": (),
 }
+LABEL_OBJECT_KEYS = ("pos", "dx", "dy")
 HANGUL_RE = re.compile(r"[가-힣]")
 # 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 빌더(atoms.js 의 playOwn, shape, fitParas)가 정할 문단 간격과 글꼴 크기를 같은 규칙으로 계산한 뒤 렌더 높이로 잼
 # 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn, fitParas)와 tokens.js 의 값
@@ -455,6 +457,21 @@ def label_kind(spec):
     return "stacked" if spec.get("grouping") in ("stacked", "percentStacked") else "bar"
 
 
+def label_point_problem(p, allowed):
+    """labelPos 항목 1개의 오류 내용. 오류가 없으면 None (null 은 빌더 기본 레이블 유지)"""
+    if p is None:
+        return None
+    if not isinstance(p, dict):
+        return None if p in allowed else str(p)
+    extra = sorted(set(p) - set(LABEL_OBJECT_KEYS))
+    if extra:
+        return f"키 {', '.join(extra)}"
+    if p.get("pos") is not None and p["pos"] not in allowed:
+        return f"pos {p['pos']}"
+    not_number = [k for k in ("dx", "dy") if k in p and (isinstance(p[k], bool) or not isinstance(p[k], (int, float)))]
+    return f"숫자가 아닌 {', '.join(not_number)}" if not_number else None
+
+
 def label_pos_checks(sid, spec):
     """series[].labelPos 검사. 허용 값 밖의 값과 values 와 길이가 다른 배열은 FAIL, 무시되는 지정은 WARN"""
     fails, warns = [], []
@@ -472,10 +489,9 @@ def label_pos_checks(sid, spec):
         n_values = len(s.get("values") or [])
         if isinstance(pos, list) and len(pos) != n_values:
             fails.append(f"[{sid}] 계열 {name} labelPos 배열 {len(pos)}개가 values {n_values}개와 다름")
-        # 배열 안의 null 은 빌더 기본 레이블 유지
-        bad = sorted({str(p) for p in (pos if isinstance(pos, list) else [pos]) if not (p in allowed or (p is None and isinstance(pos, list)))})
+        bad = sorted({e for e in (label_point_problem(p, allowed) for p in (pos if isinstance(pos, list) else [pos])) if e})
         if bad:
-            fails.append(f"[{sid}] 계열 {name} labelPos {', '.join(bad)} 는 {kind} 차트에 쓸 수 없음. 허용 값: {', '.join(allowed)}")
+            fails.append(f"[{sid}] 계열 {name} labelPos 오류 ({'; '.join(bad)}). {kind} 차트 허용 위치: {', '.join(allowed)}. 객체 키: pos, dx, dy (dx, dy 는 pt 숫자)")
     return fails, warns
 
 
