@@ -122,7 +122,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 5 lint                                      python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → exit code 0 is the condition for building
 6 Build                                     node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
 7 Structural check                          python3 scripts/check_layout.py out.pptx → in-depth review (references/review.md) → fix → rebuild
-8 Visual review and delivery                bash scripts/render.sh out.pptx png_dir 60 → view all PNGs → fix → bash scripts/topdf.sh out.pptx (when the PDF is included)
+8 Visual review and delivery                bash scripts/render.sh out.pptx png_dir 60 → view all PNGs → fix, rebuild, view again (repeat until no defects remain) → bash scripts/topdf.sh out.pptx (when the PDF is included)
 ```
 
 - Check dependencies with `python3 scripts/setup_deps.py --check` before any other step
@@ -135,8 +135,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + When re-presenting, deliver only the changed files
     + With a tool that delivers only files from a designated folder, place a copy in that folder and deliver it (the reference version is the original in the work folder)
     + In runtime environments without a delivery tool, give the file path
-- Deliver the delivery files (PPTX, and the PDF when included) after viewing all PNGs
-- The completion report lists file paths, viewed contact sheet file names, unresolved issues and remaining user confirmation items
+- Deliver the delivery files (PPTX, and the PDF when included) after all completion conditions are met
+- The completion report lists file paths, viewed contact sheet file names and remaining user confirmation items
 - When slides run notes and the source line on (`footnoteInline`), the completion report lists the INFO output of lint and build
 - When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
 - Record the progress point in `state.json` for session handover
@@ -827,7 +827,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 ## Review system
 
-- Completion is judged from the record of viewing the rendered PNGs
+- Completion is judged from the record of viewing the rendered PNGs and the results of fixing defects
 - (lint) Checks of `scripts/lint.py` (remaining WARNs are a failure)
     + (Structure) Schema, full Task coverage, section ledger consistency, score attribution, volume limits, page size names and paths of page-size-specific text (`byLayout`)
     + (Notation) Writing rules, RFP wording, subject term, section numbers, ※ notes, duplicated prefixes, text contrast on theme colors
@@ -937,7 +937,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - The criterion is whether a practitioner would be called out for it when submitting the deck
 - Choose the fix among storyboard edits, layout type changes, emptying slots and splitting slides
 - Reproduce defects with unknown causes by building the slide alone
-- Record the grounds for fixes and remaining defects in the completion report
+- Record the grounds for fixes in the completion report
 
 ### Visual adjustment discretion
 
@@ -964,6 +964,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Zero build warnings
 - finalize.py and validate.py pass
 - A record of viewing all PNGs
+- Every defect noticed during the work fixed (WARNs of lint and check_layout follow the WARN rule below)
+- Fixes confirmed on PNGs rendered from the rebuilt deck
+- Writing a defect in the completion report does not replace fixing it
 - 100% coverage in the section ledger (RFP work items, Tasks, slides)
 - Placeholders in company facts resolved
 - A WARN passes only when it is fixed or `--allow-warn "reason for keeping"` is added
