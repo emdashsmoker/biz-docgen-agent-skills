@@ -317,12 +317,13 @@ def set_hanging_indent(xml: str) -> tuple[str, int]:
 
 
 def restore_hanging_tab_stop(xml: str) -> tuple[str, int]:
-    """내어쓰기 문단(불릿 없음, marL 이 M, indent 가 -M)의 유일한 탭 위치가 pos="0" 이면 pos="M" 으로 되돌림
+    """내어쓰기 문단(불릿 없음, marL 이 M, indent 가 -M)의 유일한 탭 위치를 pos="0" 에서 pos="M" 으로 복원
 
-    WHY: soffice 재직렬화는 marL 기준인 LibreOffice 내부 탭 위치(0)를 글 상자 왼쪽 기준으로 바꾸지 않고 pos="0" 으로 기록.
-         PowerPoint 는 탭 위치를 글 상자 왼쪽에서 재므로 첫 줄이 0 에서 시작하는 "<탭>내용" 문단(출처 행과 번호 주석의 둘째 줄 이후)의
-         탭이 0 위치에서 멈춰 내용이 라벨 자리에 붙음. 라벨 뒤 탭(첫 줄)은 PowerPoint 도 marL 로 보내므로 정상.
-         LibreOffice 는 두 경우 모두 marL 에 맞추므로 검수 PDF 에서는 드러나지 않음
+    WHY: soffice 재직렬화는 LibreOffice 내부의 marL 기준 탭 위치(0)를 글 상자 왼쪽 기준으로 변환하지 않은 채 pos="0" 으로 기록.
+         PowerPoint 는 탭 위치를 글 상자 왼쪽 끝에서 측정.
+         첫 줄이 0 에서 시작하는 "<탭>내용" 문단(출처 행과 번호 주석의 둘째 줄 이후)은 0 위치의 탭에서 이동이 없으므로 내용이 라벨 위치에서 시작.
+         라벨 뒤 탭(첫 줄)은 PowerPoint 에서도 marL 까지 이동하므로 첫 줄의 내용 위치는 정상.
+         LibreOffice 는 두 경우 모두 marL 에 맞추므로 검수 PDF 에는 이 결함이 나타나지 않음
     """
     count = 0
 

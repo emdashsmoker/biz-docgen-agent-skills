@@ -543,7 +543,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (기호) em dash 자리는 쉼표나 마침표로 대체
 - (어구) lint FAIL 표현과 lint WARN 어휘의 목록은 `references/writing-rules.md` 를 따름
 - (고정 워딩) RFP 핵심 워딩은 표준 표기를 유지
-    + 표준 표기는 lint 문장 규범 검사에서 빠지므로 RFP 원문 명칭만 보수적으로 등록 (`references/strategy.md` 핵심 워딩)
+    + 표준 표기는 lint 문장 규범 검사에서 제외되므로 RFP 원문에 나오는 명칭만 등록 (`references/strategy.md` 핵심 워딩)
 - (수치) 미확인 수치는 자리 표기 `[확인 필요]` 로 표시
 - (Key Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 담을 때만 사용
     + 헤드라인 반복이나 본문 요약만 담은 밴드는 삭제
