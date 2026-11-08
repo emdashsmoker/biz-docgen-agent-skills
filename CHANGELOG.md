@@ -34,11 +34,17 @@ Changelog rules
 - Fixed Background 1 fills and default shape text in custom slides turning from white to black when the source theme stores Background 1 as a system color (#106)
 - Added an extraction warning that lists the theme colors without a resolvable color code (#106)
 - Action needed: extract custom slides again if own-deck.json contains the color name window or windowText (#106)
+- Fixed custom slides from A4, 10.83 and 4:3 sources playing back with shifted positions and sizes even on a deck of the same page size (#107)
+- Fixed the lint slot text overflow warning for custom slides from A4, 10.83 and 4:3 sources using the 16:9 scale (#107)
+- Fixed lint failing RFP names registered as meta.rfp.wording standard on internal evaluation vocabulary such as 귀속 inside the name (#107)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
 * 색상 코드로 해소하지 못한 테마 색의 커스텀 슬라이드 추출 경고 추가 (#106)
 * window 또는 windowText 색 이름이 기록된 own-deck.json 의 커스텀 슬라이드 재추출 필요 (#106)
+* A4, 10.83, 4:3 원본에서 추출한 커스텀 슬라이드의 도형 위치와 크기가 같은 판형 덱에서도 어긋나는 현상 수정 (#107)
+* A4, 10.83, 4:3 원본 커스텀 슬라이드의 치환 문구 넘침을 lint 가 16:9 배율로 판정하는 현상 수정 (#107)
+* meta.rfp.wording 의 standard 로 등록한 RFP 명칭 안의 "귀속" 같은 평가 내부 어휘를 lint 가 FAIL 로 판정하는 현상 수정 (#107)
 
 ## 2026-11-07
 
