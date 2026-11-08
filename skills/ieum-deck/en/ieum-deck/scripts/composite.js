@@ -1718,18 +1718,20 @@ function composite(ctx, slide, sb, H) {
       else if (rg.caption) box = caption(slide, cell, rg.caption);
       if (rg.noteH) box = { ...box, h: box.h - rg.noteH - 0.04 };
       const blocks = (rg.blocks || (rg.block ? [rg.block] : [])).slice();
+      if (rg.valign && rg.valign !== "top" && rg.valign !== "middle") ctx.warn(`composite cell '${rg.title || rg.caption || ""}' valign '${rg.valign}' is not supported (use top or middle)`);
       // Block heights: if all blocks are measurable, set natural heights first and share leftover height up to capacity heights; otherwise share by the set weights (h)
       const needs = blocks.map((k) => blockNeed(k, box.w, H));
       const measured = needs.every((v) => v != null);
       const caps = measured ? blocks.map((k) => blockCap(k, box.w, H)) : null;
       const bGaps = GAP_BLOCK * (blocks.length - 1);
-      // A cell with less capacity height than its neighbors grows only to its capacity height and sits vertically centered in the height left under the cell title
+      // A cell with less capacity height than its neighbors grows only to its capacity height and sits vertically centered in the height left under the cell title (right under the cell title when valign is top)
+      // Why: tables whose rows grow with real data, such as company history or financial status, must stay attached to the cell title to match the grown shape
       // A cell holding one table, short by CELL_SNAP or less, stretches the row height slightly so its top and bottom edges match the neighbors
       if (measured) {
         const capH = caps.reduce((a, v) => a + v, 0) + bGaps;
         const snap = blocks.length === 1 && blocks[0].kind === "table" && box.h - capH <= CELL_SNAP;
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
-        else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
+        else if (capH < box.h) box = { ...box, y: rg.valign === "top" ? box.y : box.y + (box.h - capH) / 2, h: capH };
       }
       if (rg.note) H.drawNote(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: rg.noteH }, H.boxNote(rg.note, box.w), { align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;

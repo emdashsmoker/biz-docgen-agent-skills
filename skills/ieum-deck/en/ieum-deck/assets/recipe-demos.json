@@ -8012,6 +8012,7 @@
      },
      {
       "title": "주요 연혁",
+      "valign": "top",
       "block": {
        "kind": "table",
        "head": [
@@ -8059,6 +8060,7 @@
     "regions": [
      {
       "title": "재무 현황 (단위 천원)",
+      "valign": "top",
       "block": {
        "kind": "table",
        "head": [
