@@ -25,7 +25,7 @@
     + (Verbatim match) Register only names that appear letter for letter in the RFP text, and give the location in the RFP (chapter, section, page) in the Basis column
     + (Name only) Register the name as the RFP spells it, without predicates, modifiers or particles before or after it
     + (Not registered) General descriptive phrases, sentences, and module, Task and strategy names set by the bidder
-    + (When unsure) Do not register a phrase that may not be a name, even when lint flags it, and rewrite the sentence to pass
+    + (When unsure) Do not register a phrase that may not be an RFP name just to clear a lint flag. Change the words in the sentence to pass
 - (Matching chapter) The deck chapter that carries the evaluation evidence for a detailed evaluation item
 - The matching chapter is the basis for the slide allocation per chapter
 - The score weight of a main item is the sum of its detailed item weights
