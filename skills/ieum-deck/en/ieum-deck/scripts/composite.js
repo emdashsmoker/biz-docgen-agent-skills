@@ -1667,11 +1667,11 @@ function planRows(spec, regions, area, rowGap, colGap, H) {
     plan.forEach((p) => { if (!p.elastic) p.h += (g * Math.max(0, p.cap - p.h)) / room; });
     freed -= g;
   }
-  // Without elastic rows, first share leftover height into the row gaps for breathing room; composite uses the rest (freed) to center the group vertically in the visual frame (templates.bodyTop)
+  // Without elastic rows, first share leftover height into the row gaps for breathing room, then use the rest to center the group vertically
   const nGap = spec.length - 1;
   const gapExtra = nGap > 0 ? Math.min(Math.max(0, GAP_ROW_MAX - rowGap), freed / nGap) : 0;
   freed -= gapExtra * nGap;
-  return { heights: plan.map((p) => p.h), gap: rowGap + gapExtra, freed };
+  return { heights: plan.map((p) => p.h), gap: rowGap + gapExtra, offset: freed / 2 };
 }
 
 function composite(ctx, slide, sb, H) {
@@ -1696,9 +1696,8 @@ function composite(ctx, slide, sb, H) {
   const spec = gridSpec(s, regions.length);
   const slots = spec.reduce((a, r) => a + r.cols.length, 0);
   if (slots !== regions.length) ctx.warn(`composite grid has ${slots} cells but ${regions.length} regions`);
-  const { heights, gap, freed } = planRows(spec, regions, area, rowGap, colGap, H);
-  // With leftover height, center the grid plus bottom band group in the visual frame (templates.bodyTop)
-  let y = H.bodyTop(ctx, sb, b, b.h - freed), idx = 0;
+  const { heights, gap, offset } = planRows(spec, regions, area, rowGap, colGap, H);
+  let y = area.y + offset, idx = 0;
   const rowBoxes = [];
   const divV = []; // per-row vertical dividers {x, y1, y2}
   // Content horizontal range: the drawn range a block returns for cells without a title, the cell width otherwise. The bands below (conclusion, Key Point) align their left and right ends to this range

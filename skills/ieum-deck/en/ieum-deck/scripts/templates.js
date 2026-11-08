@@ -26,22 +26,9 @@ function body(ctx, sb) {
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
   // With bottom notes (footnotes, source line), the body ends above them (noteRows: height stacked above the first source line spot)
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
-  const bottom = noteLines || srcLines ? S.noteY - BODY_NOTE_GAP - noteRows(ctx, sb) : S.contentBottom;
+  const bottom = noteLines || srcLines ? S.noteY - 0.12 - noteRows(ctx, sb) : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
-}
-const BODY_NOTE_GAP = 0.12; // Gap between the body bottom and the bottom notes (footnotes, source line) (inches)
-/** Top y of a content group (height contentH) shorter than the body. Centers it in the visual frame, from the marker band bottom to the top of the bottom notes (the slide bottom without notes), clamped inside the body box
- *  Why: below the body box sits the page number row margin (0.58 in on 16:9) while above it there is only 0.1 in, so centering in the body box
- *       leaves nearly twice as much blank space below the content as below the marker and the content looks pushed up (sample R043 system layout: 0.43 in below the marker, 0.87 in below the content)
- *       With bottom notes the notes become the frame bottom, which lands almost where the body box center would */
-function bodyTop(ctx, sb, b, contentH) {
-  const S = ctx.S;
-  const frameTop = sb.marker ? S.contentY : S.contentYNoMarker;
-  const { noteLines, srcLines } = bottomNotes(ctx, sb);
-  const frameBottom = noteLines || srcLines ? b.y + b.h + BODY_NOTE_GAP : S.layout.H;
-  const y = (frameTop + frameBottom - contentH) / 2;
-  return Math.min(Math.max(b.y, y), b.y + Math.max(0, b.h - contentH));
 }
 function cols(box, n, gap) {
   const g = gap != null ? gap : T.PANEL.GAP;
@@ -1015,9 +1002,9 @@ function bulletsT(ctx, slide, sb) {
   const gw0 = pw0 * n + gap * (n - 1);
   const gw = point ? calloutW(ctx, point, gw0, b.w) : gw0;
   const pw = gw === gw0 ? pw0 : Math.min(full[0].w, (gw - gap * (n - 1)) / n), x0 = b.x + (b.w - gw) / 2;
-  // Base panel height on content height and center the panels plus Key Point group vertically in the visual frame (bodyTop)
+  // Base panel height on content height and center the panels plus Key Point group vertically in the body
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, psz, b.h - ptH - T.PANEL.TITLE_H, ssz);
-  const top = bodyTop(ctx, sb, b, gh + ptH);
+  const top = b.y + (b.h - gh - ptH) / 2;
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
   const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: psz, subSz: ssz } : null));
   const pgap = panelsGap(pboxes, pps); // side-by-side panels also share one paragraph spacing
@@ -1060,10 +1047,10 @@ function panelBodyH(widths, lists, sz, avail, subSz) {
 function table(ctx, slide, sb) {
   const s = sb.slots || sb, b = body(ctx, sb);
   const titleH = s.title ? T.PANEL.SUBHEAD_H : 0, legH = s.legend ? 0.3 : 0, ptH = s.point ? 0.7 : 0;
-  // If the row height cap leaves the table shorter than the body, center the title, table and Key Point group vertically in the visual frame (bodyTop) (body() already excludes the footnote height)
+  // If the row height cap leaves the table shorter than the body, center the title, table and Key Point group vertically (body() already excludes the footnote height)
   const availT = b.h - titleH - legH - ptH;
-  const used0 = b.h - Math.max(0, availT - tableLayout(s, b.w, availT).total);
-  const g = { x: b.x, y: bodyTop(ctx, sb, b, used0), w: b.w, h: used0 };
+  const shift = Math.max(0, (availT - tableLayout(s, b.w, availT).total) / 2);
+  const g = { x: b.x, y: b.y + shift, w: b.w, h: b.h - 2 * shift };
   let box = s.title ? subhead(ctx, slide, g, s.title) : g;
   // Place the legend on one line at the top right of the table (Harvey balls and the like)
   if (s.legend) {
@@ -1146,7 +1133,7 @@ function comparePaired(ctx, slide, s, b) {
   }
   if (lay.total > b.h) ctx.warn(`compare total row height ${lay.total.toFixed(2)} > body ${b.h.toFixed(2)}in (shorten items or evidence)`);
   const gwTot = 2 * lay.w + lay.gw + 2 * CMP_COL_GAP;
-  const x0 = b.x + (b.w - gwTot) / 2, y0 = bodyTop(ctx, ctx.sb, b, lay.total);
+  const x0 = b.x + (b.w - gwTot) / 2, y0 = b.y + Math.max(0, (b.h - lay.total) / 2);
   const xs = [x0, x0 + lay.w + CMP_COL_GAP, x0 + lay.w + lay.gw + 2 * CMP_COL_GAP];
   const ws = [lay.w, lay.gw, lay.w];
   // Column titles go gray for current, light navy for gap and navy for improved, so they darken from left to right
@@ -1173,9 +1160,9 @@ function compare(ctx, slide, sb) {
   if (nA && Array.isArray(s.gap) && s.gap.length === nA && (s.tobe && s.tobe.items || []).length === nA) { comparePaired(ctx, slide, s, b); source(ctx, slide, sb); return; }
   const gh = s.gap ? 1.0 : 0;
   const pw = cols({ x: b.x, y: b.y, w: b.w, h: 1 }, 2, 0.8)[0].w;
-  // Base panel height on content and center the contrast panels plus GAP band group vertically in the visual frame (bodyTop)
+  // Base panel height on content and center the contrast panels plus GAP band group vertically in the body
   const ph = T.PANEL.TITLE_H + panelBodyH([pw, pw], [(s.asis && s.asis.items) || [], (s.tobe && s.tobe.items) || []], T.SIZE.body, b.h - gh - T.PANEL.TITLE_H);
-  const top = bodyTop(ctx, sb, b, ph + gh);
+  const top = b.y + (b.h - ph - gh) / 2;
   const cb = { x: b.x, y: top, w: b.w, h: ph };
   const [L, R] = cols(cb, 2, 0.8);
   const lp = { head: LB.label("compare", "asis.head", s.asis && s.asis.head), items: s.asis && s.asis.items, headFill: T.COLOR.textMuted, noWarn: true };
@@ -1253,8 +1240,8 @@ function gantt(ctx, slide, sb) {
     for (let i = 2; i < colw.length; i++) colw[i] = wk;
   }
   const mk = (c, head) => ({ fill: head ? T.COLOR.navy : (c && c.fill) || undefined, colspan: c && c.colspan, rowspan: c && c.rowspan, merged: c && c.merged, paras: [{ align: "center", runs: [{ t: typeof c === "string" ? c : (c && c.text) || "", sz: T.SIZE.tableDense, b: head, color: head ? T.COLOR.white : T.COLOR.textDark }] }] });
-  // If the row height cap leaves body height unused, center the table vertically in the visual frame (bodyTop)
-  A.table(slide, { x: b.x, y: bodyTop(ctx, sb, b, rh * nrow), w: b.w, h: rh * nrow, table: { colw, rowh: Array(nrow).fill(rh), rows: [head1.map((c) => mk(c, true)), head2.map((c) => mk(c, true)), ...rowsOut.map((r) => r.map((c) => mk(c, false)))] } }, { sz: T.SIZE.tableDense });
+  // If the row height cap leaves body height unused, center the table vertically in the body
+  A.table(slide, { x: b.x, y: b.y + Math.max(0, (b.h - rh * nrow) / 2), w: b.w, h: rh * nrow, table: { colw, rowh: Array(nrow).fill(rh), rows: [head1.map((c) => mk(c, true)), head2.map((c) => mk(c, true)), ...rowsOut.map((r) => r.map((c) => mk(c, false)))] } }, { sz: T.SIZE.tableDense });
   source(ctx, slide, sb);
 }
 /** Project organization chart: client agency, PM, quality control, advisory, module teams. slots: {client, pm, qa, advisory, teams:[{name, members:[], share}], note} */
@@ -1427,11 +1414,11 @@ function cards(ctx, slide, sb) {
   const gw0 = cw0 * ncol + T.PANEL.GAP * (ncol - 1);
   const gw = s.point ? calloutW(ctx, s.point, gw0, b.w) : gw0;
   const cw = gw === gw0 ? cw0 : Math.min(full[0].w, (gw - T.PANEL.GAP * (ncol - 1)) / ncol), x0 = b.x + (b.w - gw) / 2;
-  // Base card height on content height and center the cards plus Key Point group vertically in the visual frame (bodyTop)
+  // Base card height on content height and center the cards plus Key Point group vertically in the body
   const rowAvail = full[0].h - T.PANEL.TITLE_H;
   const ch = T.PANEL.TITLE_H + panelBodyH(cd.map(() => cw), lists, csz, rowAvail, ssz);
   const gridH = ch * nrow + T.PANEL.GAP * (nrow - 1);
-  const top = bodyTop(ctx, sb, b, gridH + ptH);
+  const top = b.y + (b.h - gridH - ptH) / 2;
   const cboxes = rows({ x: x0, y: top, w: gw, h: gridH }, nrow).flatMap((r) => cols(r, ncol));
   const cps = cboxes.map((c, k) => (cd[k] ? { head: cd[k].title, items: cd[k].items, text: cd[k].text, noWarn: true, sz: csz, subSz: ssz } : null));
   const cgap = panelsGap(cboxes, cps); // cards also share one paragraph spacing
@@ -1450,8 +1437,8 @@ function steps(ctx, slide, sb) {
   // With few items, cap boxes at 1.3x the item height and center the whole group in the body so top and bottom margins are equal
   const bodyH = Math.min(availH, need * 1.3);
   const groupH = 0.7 + bodyH + (s.point ? 0.75 : 0);
-  // body() already excludes the source line and footnote height, so center within the body height in the visual frame (bodyTop)
-  const shift = bodyTop(ctx, sb, b, groupH) - b.y;
+  // body() already excludes the source line and footnote height, so center within the body height
+  const shift = Math.max(0, (b.h - groupH) / 2);
   // stepLabel sets the chevron prefix; an empty string shows the title only
   const lab = LB.labelKeep("steps", "stepLabel", s.stepLabel);
   const chev = { x: b.x, y: b.y + shift, w: b.w, h: 0.55 };
@@ -1579,11 +1566,10 @@ function orgchart(ctx, slide, sb) {
 /** Output example (Illustrative tag): full-width table or image. slots: {title, table|image} */
 function illustrative(ctx, slide, sb) {
   const s = sb.slots || {}, b = body(ctx, sb);
-  // If the row height cap leaves the table short, center the title and table group vertically in the visual frame (bodyTop)
-  const tableH = s.table ? Math.min(tableLayout(s.table, b.w, b.h - 0.45).total, b.h - 0.45) : b.h - 0.45;
-  const shift = s.table ? bodyTop(ctx, sb, b, 0.45 + tableH) - b.y : 0;
+  // If the row height cap leaves the table short, center the title and table group vertically in the body
+  const shift = s.table ? Math.max(0, (b.h - 0.45 - tableLayout(s.table, b.w, b.h - 0.45).total) / 2) : 0;
   A.text(slide, { x: b.x, y: b.y + shift, w: b.w, h: 0.35 }, LB.label("illustrative", "title", s.title), { sz: T.SIZE.panelHead, align: "center" });
-  const box = { x: b.x, y: b.y + 0.45 + shift, w: b.w, h: tableH };
+  const box = { x: b.x, y: b.y + 0.45 + shift, w: b.w, h: b.h - 0.45 - 2 * shift };
   if (s.table) tableBlock(ctx, slide, box, s.table); else A.image(ctx.pres, slide, box, s.image, { label: "산출물 화면" });
   tag(ctx, slide, { x: b.x + 0.05, y: b.y + 0.05 + shift }, LB.label("illustrative", "tag", s.tag));
   source(ctx, slide, sb);
@@ -1601,9 +1587,9 @@ function conclusion(ctx, slide, sb) {
   const needW = Math.max(...lists.map((l) => itemsNeedW(l, CONC_ITEM_SZ, CONC_SUB_SZ))) + 2 * T.PANEL.INSET + FIT_W_SLACK;
   const pw = Math.min((b.w - gap * (n - 1)) / n, needW);
   const gw = pw * n + gap * (n - 1), x0 = b.x + (b.w - gw) / 2;
-  // Base panel height on content height and center the panels plus conclusion band group vertically in the visual frame (bodyTop)
+  // Base panel height on content height and center the panels plus conclusion band group vertically in the body
   const gh = T.PANEL.TITLE_H + panelBodyH(pn.map(() => pw), lists, CONC_ITEM_SZ, b.h - bandH - bandGap - T.PANEL.TITLE_H, CONC_SUB_SZ);
-  const top = bodyTop(ctx, sb, b, gh + bandGap + bandH);
+  const top = b.y + (b.h - gh - bandGap - bandH) / 2;
   const pboxes = cols({ x: x0, y: top, w: gw, h: gh }, n, gap);
   const pps = pboxes.map((c, i) => (pn[i] ? { ...pn[i], sz: CONC_ITEM_SZ, subSz: CONC_SUB_SZ, noWarn: true } : null));
   const pgap = panelsGap(pboxes, pps); // side-by-side panels also share one paragraph spacing
@@ -1646,6 +1632,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows, bodyTop };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

@@ -73,7 +73,7 @@
 - A cell holding only one table is extended to match the top and bottom of neighboring cells when it is at most 0.3 inch shorter than the row height
 - The cell note (`note`) sits right under the cell content
 - When a row has a cell with a note, every cell in the row raises its content bottom by the tallest note height of the row so the cell bottoms line up (a note is 0.26 inch for one line plus 0.2 inch for each further line at the cell width)
-- Spare height goes to diagram rows, block holding heights, gaps between rows (capped at 0.55 inch) and vertical centering margins, in that order (vertical centering uses the visual frame; see the Parametric templates section of `references/templates.md`)
+- Spare height goes to diagram rows, block holding heights, gaps between rows (capped at 0.55 inch) and vertical centering margins, in that order
 - When a diagram block and a text box block are stacked in one cell, the text box block gets its content height first and the diagram block gets the rest
 - When a cell is shorter than the height its block content needs, the build warns of overflow risk (fix by cutting items or adjusting the grid)
 - When large spare height makes the group look small, add elements that carry more information, such as a weight column or a Harvey ball column

@@ -17,7 +17,6 @@ HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
-NOTE_PT_MAX = 10.5  # Upper font size of bottom note text boxes (notes are 10pt). Keeps bands at the body bottom (conclusion, Key Point) from reading as notes
 OWN_BASE_SIZE = (13.333, 7.5)  # Base page size 16:9 when own-deck.json has no source page size (slideW, slideH) (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # Overlap threshold between a label and body glyphs inside a box (relative to the smaller glyph area)
@@ -430,25 +429,15 @@ def main():
             y, hh = sh.top / 914400, sh.height / 914400
             x, ww = sh.left / 914400, sh.width / 914400
             if y + hh < band_top + 0.08 or y > band_bottom: continue  # Marker band and divider lines are skipped
-            # Empty shapes count as content only when they are boxes such as panel frames (0.3 in or more each way). Dividers, decorations and backgrounds covering the whole band are skipped
-            empty = sh.has_text_frame and not sh.text_frame.text.strip() and not sh.has_table and not sh.has_chart
-            if empty and (hh < 0.3 or ww < 0.3 or (hh > (band_bottom - band_top) * 0.95 and ww > (band_right - band_left) * 0.95)): continue
+            if sh.has_text_frame and not sh.text_frame.text.strip() and not sh.has_table and not sh.has_chart: continue
             has_body = True
             top_c = min(top_c, max(y, band_top)); bot_c = max(bot_c, min(y + hh, band_bottom))
             left_c = min(left_c, max(x, band_left)); right_c = max(right_c, min(x + ww, band_right))
         band_h, band_w = band_bottom - band_top, band_right - band_left
-        # Vertical crowding is judged in the same visual frame as the layout: from the marker band bottom to the top of the bottom notes (the slide bottom without notes) (templates.bodyTop)
-        notes_top = min((sh.top / 914400 for sh in slide.shapes if sh.has_text_frame and sh.text_frame.text.strip() and sh.top is not None
-                         and sh.height is not None and sh.left is not None and sh.left / 914400 < W * 0.5
-                         and (sh.top + sh.height) / 914400 >= NOTE_Y * sy - 0.01 and sh.top / 914400 < H - 0.45 and not has_fill(sh)
-                         and max((r.font.size.pt for pa in sh.text_frame.paragraphs for r in pa.runs if r.font.size), default=99) <= NOTE_PT_MAX), default=None)
-        v_top = (CONTENT_Y if has_marker else CONTENT_Y_NO_MARKER) * sy
-        v_bottom = notes_top if notes_top is not None else H
-        v_h = max(0.1, v_bottom - v_top)
         lim = LIM.get("LIMIT", {}).get("bandBottomGapMax", 0.3)
         if has_headline and has_body and band_h > 1.0:
             # Flag crowding only when one margin is large and the opposite one small (centered layouts are skipped)
-            pairs = ((("bottom", (v_bottom - bot_c) / v_h), ("top", (top_c - v_top) / v_h)),
+            pairs = ((("bottom", (band_bottom - bot_c) / band_h), ("top", (top_c - band_top) / band_h)),
                      (("right", (band_right - right_c) / band_w), ("left", (left_c - band_left) / band_w)))
             for (n1, g1), (n2, g2) in pairs:
                 big, small_gap = (n1, g1) if g1 >= g2 else (n2, g2), min(g1, g2)
