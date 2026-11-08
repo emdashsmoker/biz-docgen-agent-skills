@@ -731,7 +731,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Chart labels) Resolve label overlaps and clipping in the order below (methods and responses per chart type are in the chart label adjustment section of `references/recipes.md`)
     + (Chart design) First design a chart that needs no label adjustment, with the type, point count and series count that fit its one message
     + (Position adjustment) Clear the remaining overlaps and clipping with the position codes and move distances of `labelPos` on the series
-    + (Hiding) Among labels that still overlap after moving, hide only those the message does not need, and keep their figures in the body, a note or the legend
+    + (Hiding) Among labels that still overlap after moving, hide only those the message does not need (keep hidden figures in at least one of the body, a note, the legend or another series label showing the same value)
     + (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
 - (Images) Set a path or data URI in `src` of image blocks in composite and free
     + Without a logo, use the company name as text
@@ -808,7 +808,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - finalize.py restores the top and bottom margins of table cells in the cell properties (marT, marB) to prevent tables from overflowing when PowerPoint applies default margins
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
 - finalize.py writes the series label settings of the build record (`series[].labelPos`) as point labels in the chart XML (a PPTX from build.js alone does not show them)
-    + soffice re-saving drops the move distance of pie labels, so they are written again after re-serialization
+    + They are written once before and once after soffice re-serialization (re-serialization drops the move distance of pie labels)
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
 - finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
 - finalize.py resets the 0.01 mm (360 EMU) that soffice reserialization leaves as the height of horizontal lines and the width of vertical lines back to 0, so PowerPoint draws these lines straight
@@ -842,7 +842,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - On slides with charts, re-check text overlaps inside the chart on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_chart 120` (contact sheets shrink this text below legible size)
-    + Adjust label overlaps in the chart label resolution order of the design system, then rebuild and re-check
+    + Adjust label overlaps in the chart label resolution order of the design system (rebuild and re-check after adjusting)
 - List the viewed contact sheet file names in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
@@ -876,7 +876,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
 - Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
-- Do the figures of hidden labels (`labelPos` none) appear in the body, a note or the legend (switch to a table when figures the message needs are missing)?
+- Do the figures of hidden labels (`labelPos` none) appear in at least one of the body, a note, the legend or another series label showing the same value (switch to a table when figures the message needs are missing)?
 
 #### Placement
 

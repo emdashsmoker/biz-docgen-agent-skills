@@ -60,7 +60,7 @@ Changelog rules
 - Added a visual review question that cross-checks the numbers shown in charts against the storyboard values (#112)
 - Added labelPos on chart series to move, offset or hide data labels per series or per point (#113)
 - Added lint checks that fail on labelPos positions a chart type does not allow, unknown object keys, non-numeric offsets and arrays whose length differs from values (#113)
-- Added a chart label resolution order to the guides that puts chart design first, then position codes and offsets, then hiding, and a table when hiding would drop figures the message needs (#113)
+- Added a chart label resolution order to the guides that puts chart design first, then position codes and offsets, then hiding, and a table when hiding would drop figures the message needs (#113, #114)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
@@ -87,12 +87,12 @@ Changelog rules
 * ※ 표기 덱에서 줄을 넘긴 주석의 둘째 줄 이하가 ※ 아래 위치에서 시작하는 현상 수정 (#111)
 * 주석 라벨과 출처 표기의 지침을 덱 전체의 같은 언어 짝(Note: 와 Source:, 참조: 와 출처:) 기준으로 변경 (#111)
 * 수치 카드 견본과 ko 데모의 출처 표기를 출처: 에서 Source: 로 변경 (#111)
-* 차트가 든 슬라이드의 120 DPI 단독 PNG 재확인 절차 추가 (#112)
+* 차트를 포함한 슬라이드의 120 DPI 단독 PNG 재확인 절차 추가 (#112)
 * 차트 레이블 겹침 질문의 대상을 차트 요소 전체로 변경 (#112)
 * 차트 표시 수치와 storyboard 값의 대조 질문 추가 (#112)
 * 차트 데이터 레이블을 계열별, 항목별로 옮기거나 숨기는 labelPos 추가 (#113)
 * 차트 형식에 맞지 않는 labelPos 위치, 정의되지 않은 객체 키, 숫자가 아닌 이동 거리, values 와 길이가 다른 배열의 lint 검사 추가 (#113)
-* 차트 설계, 위치 조정, 숨김, 표 전환 순서의 차트 레이블 해결 지침 추가 (#113)
+* 차트 설계, 위치 조정, 숨김, 표 전환 순서의 차트 레이블 해결 지침 추가 (#113, #114)
 
 ## 2026-11-07
 

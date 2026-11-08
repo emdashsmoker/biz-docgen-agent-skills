@@ -214,9 +214,10 @@
     + Keep only the points and series the one message needs
     + When so many categories make labels overlap, keep the top 4-5 and merge the rest into Other (Other comes last, pies have six slices or fewer)
     + When so many periods make labels overlap, keep the latest 12 or only the span the message needs
-    + Present item comparisons with long category names as horizontal bars, and split crowded lines and clustered bars into two charts by series
+    + Present item comparisons with long category names as horizontal bars
+    + Split lines and clustered bars with so many series that labels overlap into two charts by series
 - (Position adjustment) Move overlaps and clipping that chart design cannot clear with labelPos
-    + Put labels on the side where they do not overlap with position codes
+    + First put labels on the side where they do not overlap, with position codes
     + Move overlaps that position codes cannot clear with dx and dy
     + Keep moved labels close to their marker, bar or slice so that it is clear which point the value belongs to
 - (Hiding) Among labels that still overlap after moving, hide only those the message does not need with none (on lines, keep the labels of points the message refers to, such as the start, the end and crossings)
@@ -235,21 +236,29 @@
 
 - `labelPos` on a series (`series[]`) sets the position, move distance or hiding of data labels
 - It applies to chart blocks, chart_text, chart_two, task samples and chart slots of custom slides
-- (Value form) A single value applies to the whole series, an array in the same order as values applies to each point
-    + A string is a position code, and "none" hides the label
-    + An object `{"pos": "l", "dx": 0, "dy": 4}` gives a position code and a move distance (without pos the label moves from the builder default position)
-    + dx is positive to the right, dy is positive downward, in pt (judge distances against the 11pt label font size)
+- (Value count) labelPos takes a single value or an array in the same order as values
+    + A single value applies to the whole series
+    + An array applies each value to the point in the same position
     + null inside an array keeps the builder default label
     + When horizontal bars are sorted in descending order, the array is sorted with values
+- (Value form) Each labelPos value is a string or an object
+    + A string is a position code ("none" hides the label)
+    + An object `{"pos": "l", "dx": 0, "dy": 4}` gives a position code and a move distance (without pos the label moves from the builder default position)
+    + dx and dy are in pt (dx is positive to the right, dy is positive downward)
+    + Set move distances against the 11pt label font size
 - (Positions per type) Each chart type allows different position codes
     + Bars allow outEnd, inEnd, ctr, inBase
     + Stacked bars allow inEnd, ctr, inBase
     + Lines allow t (top), b (bottom), l (left), r (right), ctr
     + Pies allow outEnd, inEnd, ctr, bestFit
-- lint reports positions outside the allowed values, object keys other than pos, dx and dy, non-numeric dx and dy, and arrays whose length differs from values as FAIL
-- lint reports labelPos on doughnut series and chart-level labelPos as ignored settings (WARN)
-- finalize.py writes the settings of the build record into the chart XML, so a PPTX from build.js alone does not show them
-- Font size is not adjustable (data labels are typeset at the 11pt body minimum, so adjust position and move distance instead)
+- lint reports the settings below as FAIL
+    + Positions outside the allowed values of the chart type
+    + Object keys other than pos, dx and dy
+    + Non-numeric dx and dy
+    + Arrays whose length differs from values
+- lint reports labelPos on doughnut series and chart-level labelPos, which the builder ignores, as WARN
+- finalize.py writes the labelPos settings of the build record into the chart XML (a PPTX from build.js alone does not show them)
+- Data label font size stays at the 11pt body minimum (labels are adjusted by position and move distance)
 - Move distances are tuned on the LibreOffice rendering (PowerPoint places default labels differently and can be off by a few pt)
 
 #### Responses per chart type
