@@ -314,23 +314,40 @@ function lineOpt(ln, fallbackPt) {
 }
 
 // ---------------------------------------------------------------- Text run list conversion
-let NOTE_STYLE = null; // { labels } in a number-style deck (set by build.js from meta.footnoteStyle). null in a ※ mark deck
-/** Sets the deck note style. With number, runsOf turns the ※ the author wrote into number-style marks */
-function setNoteStyle(style, labels) { NOTE_STYLE = style === "number" ? { labels } : null; }
+// meta.footnoteStyle choices. The first value is the default (same list as FOOTNOTE_STYLES in lint.py)
+const NOTE_STYLES = ["number", "mark"];
+let NOTES = null; // Note style of the slide being set { style, labels: { note, source }, inline }. build.js sets it per slide
+/** Sets the slide note style. style is meta.footnoteStyle, labels are the note and source labels, inline is the slide footnoteInline
+ *  With number, runsOf turns the ※ the author wrote into number-style marks */
+function setNoteStyle(style, labels, inline) {
+  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline };
+}
+/** Note style of the current slide. Called outside build.js without a setting, it is the default style with default labels */
+function noteState() {
+  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false };
+}
 const LEAD_MARK = /^\s*※/;
-/** Paragraph conversion for a number-style deck. Consecutive paragraphs starting with ※ are a note group and get the noteLines marks; a ※ inside a sentence is removed (e.g. "(※ 시안)" → "(시안)")
+/** Paragraph conversion for a number-style deck. Consecutive paragraphs starting with ※ are a note group and get the noteBlock marks; a ※ inside a sentence is removed (e.g. "(※ 시안)" → "(시안)")
+ *  A multi-line group hangs after the label. The box width is unknown, so only a single-item group joins the label and the text with a space
  *  Why: makes ※ that does not pass through the note functions (custom slide text, notes written in body cells, draft marks in titles) follow the style chosen at kickoff */
-function numberStyleParas(paras, labels) {
+function numberStyleParas(paras) {
   const textOf = (p) => (p.runs || []).filter((r) => !r.br).map((r) => r.t).join("");
-  const out = paras.map((p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) }));
-  for (let i = 0; i < out.length;) {
-    if (!LEAD_MARK.test(textOf(out[i]))) { i += 1; continue; }
+  const copy = (p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) });
+  const out = [];
+  for (let i = 0; i < paras.length;) {
+    if (!LEAD_MARK.test(textOf(paras[i]))) { out.push(copy(paras[i])); i += 1; continue; }
     let j = i;
-    while (j < out.length && LEAD_MARK.test(textOf(out[j]))) j += 1;
-    const group = out.slice(i, j);
-    const lines = noteLines(group.map(textOf), "number", labels);
-    // If an empty ※ paragraph changes the line count, only the ※ removal below applies instead of group numbering
-    if (lines.length === group.length) group.forEach((p, k) => { const r0 = p.runs.find((r) => !r.br) || {}; p.runs = [{ ...r0, t: lines[k] }]; });
+    while (j < paras.length && LEAD_MARK.test(textOf(paras[j]))) j += 1;
+    const group = paras.slice(i, j).map(copy);
+    const block = noteBlock(group.map(textOf));
+    // A group with an empty ※ paragraph keeps its paragraph count, so only the ※ removal below applies
+    if (block.items !== group.length) out.push(...group);
+    else {
+      const r0 = group[0].runs.find((r) => !r.br) || {};
+      const plan = block.items === 1 ? { hang: 0, texts: [`${block.lead} ${block.lines[0]}`] } : hangPlan(block, r0.sz || T.SIZE.body, r0.b);
+      // The label marks the items, so the source bullet is dropped; paragraph properties follow the source paragraph at the same position
+      plan.texts.forEach((t, k) => out.push({ ...group[Math.min(k, group.length - 1)], bullet: false, hang: plan.hang || undefined, runs: [{ ...r0, t }] }));
+    }
     i = j;
   }
   out.forEach((p) => p.runs.forEach((r) => { if (r.t) r.t = r.t.replace(/※\s*/g, ""); }));
@@ -343,7 +360,7 @@ function numberStyleParas(paras, labels) {
 function runsOf(paras, defaults) {
   const out = [];
   const d = defaults || {};
-  const src = NOTE_STYLE ? numberStyleParas(paras, NOTE_STYLE.labels) : paras;
+  const src = NOTES && NOTES.style === "number" ? numberStyleParas(paras) : paras;
   src.forEach((p, pi) => {
     const last = pi === src.length - 1;
     const pOpt = {};
@@ -353,6 +370,10 @@ function runsOf(paras, defaults) {
       if (p.buNum) pOpt.bullet = { type: "number", style: p.buNum, indent };
       else pOpt.bullet = { code: p.buChar ? p.buChar.codePointAt(0).toString(16).toUpperCase().padStart(4, "0") : "2022", indent };
       pOpt.indentLevel = p.lvl || 0;
+    } else if (p.hang) {
+      // Hanging indent after a label (inches). pptxgenjs writes only marL and indent of 0 for paragraphs without bullets, so the hanging position is passed as
+      // the paragraph's only tab stop and finalize.py (set_hanging_indent) writes marL and a negative indent from it. The tab after the label moves to the hanging position
+      pOpt.tabStops = [{ position: p.hang }];
     } else if (p.marL) {
       // Indents without bullets are approximated with indentLevel
       pOpt.indentLevel = Math.min(4, Math.round(p.marL / 0.25));
@@ -904,32 +925,94 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-const NOTE_LEAD = /^(※|\d+\))\s*/; // ※ or a number the author put before a note
+const NOTE_LEAD = /^(※|\*|\d+\))\s*/; // ※, * or a number the author put before a note. All are removed and the deck mark is added
 const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // source mark the author wrote before a source
-/** Lines of one note group. Shared by slide footnotes, notes under boxes and number card notes
- *  style is meta.footnoteStyle. mark puts ※ on each item (a line starting with * is kept as the author's mark paired with a spot in the body)
- *  number numbers two or more items 1) 2) and gives a single item labels.note (labels.source when it starts with a source mark)
- *  Why: removing the author's ※, number or label and adding the deck mark again keeps one note style in a deck wherever the note sits
+/** The source mark a text starts with, or null. Recognizes the default marks (SOURCE_MARK) and tokens added with meta.labels.notation.source ("token:") */
+function sourceMark(t) {
+  const m = SOURCE_MARK.exec(t) || LB.notationMatch(t);
+  return m ? m[0] : null;
+}
+/** Marks of one note group { lead, lines, items }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
+ *  mark has no lead and puts ※ on each item. number gives a single item the note label as lead (the source label when it starts with a source mark);
+ *  two or more items get the note label as lead and 1) 2) on each item, one item per line (with the slide footnoteInline, the numbered items run on in one line)
+ *  The lead goes only before the first line (notePlan). items is the number of items with text
+ *  Why: removing the author's ※, *, number or label and adding the deck mark again keeps one note style in a deck wherever the note sits
  *       A single item has no other item to tell apart, so a content type label replaces the number */
-function noteLines(items, style, labels) {
-  const lb = labels || {};
+function noteBlock(items, state) {
+  const ns = state || noteState();
+  const lb = ns.labels;
   const unmark = (t) => {
     const s = t.replace(NOTE_LEAD, "");
     return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
   };
-  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
-  if (style !== "number") return raw.map((t) => (t.startsWith("*") ? t : unmark(t))).filter(Boolean).map((t) => (t.startsWith("*") ? t : `※ ${t}`));
-  const arr = raw.map(unmark).filter(Boolean);
-  if (arr.length !== 1) return arr.map((t, i) => `${i + 1}) ${t}`);
-  const src = arr[0].match(SOURCE_MARK);
-  return [src ? `${lb.source} ${arr[0].slice(src[0].length)}` : `${lb.note} ${arr[0]}`];
+  const arr = [].concat(items || []).map((t) => unmark(String(t == null ? "" : t).trim())).filter(Boolean);
+  if (ns.style === "mark") return { lead: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
+  if (arr.length === 1) {
+    const src = sourceMark(arr[0]);
+    return { lead: src ? lb.source : lb.note, lines: [src ? arr[0].slice(src.length).trim() : arr[0]], items: 1 };
+  }
+  const nums = arr.map((t, i) => `${i + 1}) ${t}`);
+  return { lead: lb.note, lines: ns.inline && nums.length ? [nums.join(" ")] : nums, items: arr.length };
 }
-/** Footnote list. Placed above the source line at the slide bottom (marks follow noteLines) */
-function footnotes(slide, S, items, style, labels) {
-  const lines = noteLines(items, style, labels);
-  if (!lines.length) return;
-  const paras = lines.map((t) => ({ align: "left", runs: [{ t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
-  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * lines.length, w: S.bodyW, h: 0.2 * lines.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
+/** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
+ *  The lead is the source label in number style; in mark style it is "※" with the first source mark the author wrote (e.g. "※ Source:"), or "※" without a source mark
+ *  When the lead and the joined sources fit one line of width w, or the slide sets footnoteInline, the line is "A; B"; otherwise one source per line (the semicolon stays at the line end)
+ *  Why: joined sources that pass the line end break inside a material name and blur where a source ends. Breaking at source boundaries and aligning to the first source start (notePlan) keeps them apart */
+function sourceBlock(items, w, sz, state) {
+  const ns = state || noteState();
+  const lb = ns.labels;
+  let mark = null;
+  const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
+    let s = x.trim().replace(/^※\s*/, "");
+    const m = sourceMark(s);
+    if (m) { if (mark == null) mark = m.trim(); s = s.slice(m.length); }
+    if (lb.source && s.startsWith(lb.source)) s = s.slice(lb.source.length);
+    return s.trim();
+  }).filter(Boolean);
+  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : lb.source;
+  if (!parts.length) return { lead, lines: [], items: 0 };
+  const one = parts.join("; ");
+  const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
+  return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };
+}
+/** Hanging indent position after a label (inches). The label and one space measured with the conservative width (lineWidthIn)
+ *  Why: when the real label is wider than this position, the tab after the label jumps to the next default tab stop and misses the second line, so the estimate errs wide */
+function hangWidthIn(lead, sz, bold) {
+  return +lineWidthIn(`${lead} `, sz, bold).toFixed(3);
+}
+/** Hanging paragraphs { hang, texts }. The first paragraph is "lead<tab>line", later paragraphs "<tab>line". Every paragraph hangs at hang (runsOf, finalize) */
+function hangPlan(block, sz, bold) {
+  return { hang: hangWidthIn(block.lead, sz, bold), texts: block.lines.map((t, i) => `${i ? "" : block.lead}\t${t}`) };
+}
+/** Paragraphs and line count of a note group { hang, texts, lines } for a box of width w. lines includes wrapped lines
+ *  A group without lead (※ mark notes) keeps its lines, a one-paragraph group that fits one line is "lead text", any other group hangs after the lead (hangPlan) */
+function notePlan(block, w, sz, bold) {
+  const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
+  if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
+  if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
+  const one = `${block.lead} ${block.lines[0]}`;
+  if (block.lines.length === 1 && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
+  const plan = hangPlan(block, sz, bold);
+  return { ...plan, lines: count(block.lines, w - plan.hang) };
+}
+/** Paragraph list of a notePlan. opt: { sz, color, align } */
+function noteParas(plan, opt) {
+  const o = opt || {};
+  return plan.texts.map((t) => ({ align: o.align || "left", hang: plan.hang || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
+}
+/** Placement of a note in a centered spot { box, align }. A hanging group becomes left-aligned paragraphs in a sub-box of the estimated width (side margins padX included) centered in the box. Others stay centered
+ *  Why: centering hanging paragraphs centers each line and breaks the alignment after the label */
+function centerNoteBox(box, plan, sz, padX) {
+  if (!plan.hang) return { box, align: "center" };
+  const textW = Math.max(...plan.texts.map((t) => lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
+  const w = Math.min(box.w, plan.hang + textW + 2 * (padX || 0));
+  return { box: { ...box, x: +(box.x + (box.w - w) / 2).toFixed(3), w: +w.toFixed(3) }, align: "left" };
+}
+/** Slide footnotes. The bottom edge sits at bottomY (top of the source line). plan is a notePlan at the body width */
+function footnotes(slide, S, plan, bottomY) {
+  if (!plan.lines) return;
+  const h = T.BAND.NOTE_LINE_H * plan.lines;
+  text(slide, { x: S.bodyX, y: bottomY - h, w: S.bodyW, h }, noteParas(plan, { sz: T.SIZE.note, color: T.COLOR.textMuted }), { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {
   text(slide, S.pageNo, String(n), { sz: T.SIZE.pageNo, color: T.COLOR.textGray, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
@@ -1385,7 +1468,7 @@ function substitute(paras, value) {
     const r0 = src.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     // A ※ paragraph in the source is an example note position, so follow the writer's choice
     const srcText = src.runs.map((r) => r.t).join("").trim();
-    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
+    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
       // Text that is not a note takes the format of the bullet paragraph right above and reads as a normal item
       const prev = base.slice(0, Math.min(i, base.length - 1)).reverse().find((p) => p.bullet);
       if (prev) {
@@ -1397,4 +1480,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteLines, SOURCE_MARK, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

@@ -3,7 +3,7 @@
 Usage: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "reason for keeping"]
 The text checks target Korean deck text, and their word lists and patterns are Korean
 Checks
-- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char), footnote style (meta.footnoteStyle: mark | number) (FAIL)
+- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char), footnote style (meta.footnoteStyle: number | mark), slide note run-on (footnoteInline: true | false) (FAIL)
 - Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
@@ -32,6 +32,7 @@ Checks
 - Duplicate prefixes: WARN for a STEP prefix in steps titles or an M/Module prefix in process module names
 - Number notation: WARN without a space after the number ("1.목차" → "1. 목차"), WARN if secNo has no period
 - Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:", "Note:" or a token added with meta.labels.notation.source (※ on note-type slots and source is added by the build, so they are not checked. The slide footnoteLabel and sourceLabel are label settings like meta.labels.common, so they are not checked)
+- Note run-on: prints the slides that use footnoteInline as INFO (not part of the verdict; reported for the user to check)
 - Module notation: WARN if section titles and contents items use the "Module N." format ([Module N] recommended)
 - Subject term: WARN for mixed subject terms, 과업 left after changing the subject term, engagement labels left in non-proposal outputs, and "본 기획"
 - Leader titles: WARN if the titles of the overall leader and quality leader are mixed within one deck
@@ -59,7 +60,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
-FOOTNOTE_STYLES = ("mark", "number")  # Footnote style (meta.footnoteStyle). Same list as FOOTNOTE_STYLES in build.js
+FOOTNOTE_STYLES = ("number", "mark")  # Footnote style (meta.footnoteStyle). The first value is the default. Same list as NOTE_STYLES in atoms.js
 HANGUL_RE = re.compile(r"[가-힣]")
 # Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
 # Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
@@ -594,6 +595,9 @@ def lint(story, ledger=None, story_path=".", layout=None):
         fails.append(f"meta.lineBreak is {' or '.join(LINE_BREAKS)}. Input: {meta.get('lineBreak')}")
     if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
         fails.append(f"meta.footnoteStyle is {' or '.join(FOOTNOTE_STYLES)}. Input: {meta.get('footnoteStyle')}")
+    for s in story.get("slides", []):
+        if "footnoteInline" in s and not isinstance(s["footnoteInline"], bool):
+            fails.append(f"[{s.get('id')}] footnoteInline is true or false. Input: {s['footnoteInline']}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
@@ -1084,6 +1088,12 @@ def lint(story, ledger=None, story_path=".", layout=None):
     return fails, warns
 
 
+def inline_slides(story):
+    """Slides whose notes and source line run on (footnoteInline). List of slide number(id)
+    WHY: running on is the exception to the line-broken form, so the slides the writing model chose are reported for the user to check"""
+    return [f"{i}({s.get('id') or '-'})" for i, s in enumerate(story.get("slides", []), 1) if s.get("footnoteInline") is True]
+
+
 def main():
     args = sys.argv[1:]
     if not args: raise SystemExit(__doc__)
@@ -1093,9 +1103,11 @@ def main():
     fails, warns = lint(story, ledger, args[0], layout)
     for f in fails: print("FAIL", f)
     for w in warns: print("WARN", w)
+    inline = inline_slides(story)
+    if inline: print(f"INFO Notes run on in {len(inline)} slide(s): {', '.join(inline)} (footnoteInline. Include in the report for the user to check)")
     print(f"lint: FAIL {len(fails)} WARN {len(warns)} slides {len(story.get('slides', []))}")
     if "--report" in args:
-        json.dump({"fails": fails, "warns": warns}, open(args[args.index("--report") + 1], "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        json.dump({"fails": fails, "warns": warns, "footnoteInline": inline}, open(args[args.index("--report") + 1], "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     # Warnings also fail by default. To pass with a stated reason, add --allow-warn "reason"
     allow = args[args.index("--allow-warn") + 1] if "--allow-warn" in args else None
     if fails:

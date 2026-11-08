@@ -807,11 +807,13 @@ BLOCKS.numbers = (ctx, H, slide, box, k) => {
     const it = its[i];
     H.frame(ctx, slide, c);
     const vh = Math.min(0.6, c.h * 0.45);
-    const block = vh + 0.32 + (it.note ? 0.26 : 0);
+    const note = H.boxNote(it.note, c.w - 0.12);
+    const noteH = H.boxNoteH(note, NOTE_H);
+    const block = vh + 0.32 + noteH;
     const y = c.y + Math.max(0.04, (c.h - block) / 2);
     A.text(slide, { x: c.x, y, w: c.w, h: vh }, String(it.value || ""), { sz: vsz, bold: true, color: T.COLOR.navy, align: "center", mg: [0, 0, 0, 0] });
     A.text(slide, { x: c.x + 0.06, y: y + vh, w: c.w - 0.12, h: 0.32 }, it.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, H.noteText(ctx, it.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
+    H.drawNote(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: noteH }, note, { align: "center", mg: [0, 0, 0, 0] });
   });
 };
 
@@ -1489,7 +1491,12 @@ const MEASURE = {
     const cs = H.chevronCols({ x: 0, y: 0, w, h: 0.55 }, st.length, 0, 1);
     return 0.55 + 0.12 + Math.max(0.5, ...st.map((s, i) => grow(needH(itemsOf(s), cs[i].w, T.SIZE.body, true), 0.5)));
   },
-  numbers: (k) => 1.0 + ((k.items || []).some((it) => it.note) ? 0.26 : 0),
+  // Notes take their height from the line count at the tile width (same tile width as BLOCKS.numbers)
+  numbers: (k, w, H) => {
+    const its = k.items || [];
+    const cw = (w - sumGap(its.length, 0.16)) / Math.max(1, its.length);
+    return 1.0 + Math.max(0, ...its.map((it) => H.boxNoteH(H.boxNote(it.note, cw - 0.12), NOTE_H)));
+  },
   // Tables share the per-row needed height from templates.tableMetrics (drawing and measuring follow the same rule)
   table: (k, w, H) => {
     if (!(k.rows || []).length) return TABLE_ROW_FIT;
@@ -1592,7 +1599,7 @@ function regionNeed(rg, w, H, mode) {
   const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : mode === "keep" ? blockKeep : blockNeed;
   const needs = blocks.map((k) => measure(k, w, H));
   if (!blocks.length || needs.some((v) => v == null)) return null;
-  return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.note || rg.noteBand ? NOTE_H + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
+  return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.noteH ? rg.noteH + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
 }
 
 // ---------------------------------------------------------------- Grid
@@ -1671,21 +1678,24 @@ function composite(ctx, slide, sb, H) {
   const s = sb.slots || {};
   const b = H.body(ctx, sb);
   const spec0 = gridSpec(s, (s.regions || []).length);
-  // If a row has a cell with a note, raise the content bottom of its neighbors by the note height so the cells in the row share one bottom edge (the note text shows only in its own cell)
+  const bottom = (s.point ? BOTTOM_BAND_H + BOTTOM_GAP : 0) + (s.conclusion ? BOTTOM_BAND_H + BOTTOM_GAP : 0); // body() excludes the footnote height
+  const area = { x: b.x, y: b.y, w: b.w, h: b.h - bottom };
+  const rowGap = s.rowFlow ? GAP_ROW_FLOW : s.dividers ? GAP_ROW_DIV : GAP_ROW;
+  const colGap = s.flow ? GAP_COL_FLOW : s.dividers ? GAP_COL_DIV : GAP_COL;
+  // If a row has a cell with a note, raise the content bottom of every cell in the row by the tallest note height of the row (noteH) so the cells share one bottom edge (the note text shows only in its own cell)
+  // A note height is NOTE_H for one line plus NOTE_LINE_H for each further line at the cell width
   const regions = (s.regions || []).slice();
   let ri0 = 0;
   spec0.forEach((r) => {
     const n = r.cols.length;
-    if (regions.slice(ri0, ri0 + n).some((g) => g && g.note)) for (let j = ri0; j < ri0 + n; j++) if (regions[j] && !regions[j].note) regions[j] = { ...regions[j], noteBand: true };
+    const ws = rowWidths(r, area.w, colGap);
+    const bandH = Math.max(0, ...regions.slice(ri0, ri0 + n).map((g, j) => (g && g.note ? H.boxNoteH(H.boxNote(g.note, ws[j]), NOTE_H) : 0)));
+    if (bandH) for (let j = ri0; j < ri0 + n; j++) if (regions[j]) regions[j] = { ...regions[j], noteH: bandH };
     ri0 += n;
   });
-  const bottom = (s.point ? BOTTOM_BAND_H + BOTTOM_GAP : 0) + (s.conclusion ? BOTTOM_BAND_H + BOTTOM_GAP : 0); // body() excludes the footnote height
-  const area = { x: b.x, y: b.y, w: b.w, h: b.h - bottom };
   const spec = gridSpec(s, regions.length);
   const slots = spec.reduce((a, r) => a + r.cols.length, 0);
   if (slots !== regions.length) ctx.warn(`composite grid has ${slots} cells but ${regions.length} regions`);
-  const rowGap = s.rowFlow ? GAP_ROW_FLOW : s.dividers ? GAP_ROW_DIV : GAP_ROW;
-  const colGap = s.flow ? GAP_COL_FLOW : s.dividers ? GAP_COL_DIV : GAP_COL;
   const { heights, gap, offset } = planRows(spec, regions, area, rowGap, colGap, H);
   let y = area.y + offset, idx = 0;
   const rowBoxes = [];
@@ -1706,7 +1716,7 @@ function composite(ctx, slide, sb, H) {
       if (rg.title || rg.caption) extend(cell.x, cell.w);
       if (rg.title) box = H.subhead(ctx, slide, cell, s.numbered ? `${CIRCLED[idx - 1] || idx} ${rg.title}` : rg.title);
       else if (rg.caption) box = caption(slide, cell, rg.caption);
-      if (rg.note || rg.noteBand) box = { ...box, h: box.h - NOTE_H - 0.04 };
+      if (rg.noteH) box = { ...box, h: box.h - rg.noteH - 0.04 };
       const blocks = (rg.blocks || (rg.block ? [rg.block] : [])).slice();
       // Block heights: if all blocks are measurable, set natural heights first and share leftover height up to capacity heights; otherwise share by the set weights (h)
       const needs = blocks.map((k) => blockNeed(k, box.w, H));
@@ -1721,7 +1731,7 @@ function composite(ctx, slide, sb, H) {
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
         else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
       }
-      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, H.noteText(ctx, rg.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+      if (rg.note) H.drawNote(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: rg.noteH }, H.boxNote(rg.note, box.w), { align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;
       const nSum = measured ? needs.reduce((a, v) => a + v, 0) : 0;
       const growSum = measured ? caps.reduce((a, v, j) => a + Math.max(0, v - needs[j]), 0) : 0;

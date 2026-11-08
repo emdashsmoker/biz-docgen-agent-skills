@@ -39,6 +39,8 @@ const BAND = {
   CONTENT_Y_NO_MARKER: 2.07, // Body top for layouts without a marker band (3_blank screen)
   PAGENO: { x: 10.33, y: 7.1, w: 3.0, h: 0.4 }, // Page number 11pt right-aligned
   NOTE_Y: 6.78, // Baseline of the footnote and source row
+  NOTE_LINE_H: 0.2, // Height of one footnote or source line (10pt line height 0.167 inch plus line gap)
+  SOURCE_H: 0.24, // Height of a one-line source box. Each extra line adds NOTE_LINE_H upward
   BODY_X: 0.98, // Left start of the body group (indented by the marker symbol width to set it apart from the headline band)
   BODY_RIGHT: 12.36, // Right end of the body group (symmetric side margins)
   EDGE_MIN: 0.42, // Minimum slide edge margin (check_layout check value)

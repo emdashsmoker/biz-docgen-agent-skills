@@ -107,6 +107,18 @@ def token_splits(paras, inner):
     return out
 
 
+def hanging_runs(runs):
+    """라벨 뒤 내어쓰기 문단의 조각 목록에서 첫 탭까지(라벨과 탭)를 뺀 조각 목록"""
+    out, cut = [], False
+    for txt, pt, b in runs:
+        if not cut and "\t" in txt:
+            txt, cut = txt.split("\t", 1)[1], True
+        elif not cut:
+            continue
+        out.append((txt, pt, b))
+    return out or runs
+
+
 def overflow_estimate(sh):
     """텍스트 상자의 추정 소요 높이와 상자 높이 비교. (need_in, avail_in, wrap) 반환"""
     tf = sh.text_frame
@@ -125,9 +137,13 @@ def overflow_estimate(sh):
         # 불릿 문단은 들여쓰기만큼 폭이 줄어드는 점을 반영
         pxml = p._p.xml
         indent = 0.0
+        pr = p._p.find(NSA + "pPr")
         if "buChar" in pxml or "buAutoNum" in pxml:
-            pr = p._p.find(NSA + "pPr")
             indent = int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
+        elif pr is not None and pr.get("marL") and int(pr.get("indent") or 0) < 0:
+            # 라벨 뒤 내어쓰기 문단 (주석과 출처 행): 첫 탭 앞 라벨은 내어쓴 자리에 놓이므로 탭 뒤 글을 marL 오른쪽 폭으로 잼
+            indent = int(pr.get("marL")) / 914400
+            runs = hanging_runs(runs)
         eff_w = max(0.1, inner_w - indent)
         lines = wrap_lines(runs, eff_w)[0] if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
@@ -218,8 +234,9 @@ def main():
                     bulleted = any(p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buChar") is not None or p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buAutoNum") is not None for p in paras)
                     # 모든 줄이 가운데 정렬이면 목록이 아닌 라벨(역할과 이름, 제목과 부제)로 보고 제외
                     label_like = len(paras) <= 3 and all(p.alignment is not None and int(p.alignment) == 2 for p in paras)
-                    # 각주(1), 2))와 ※ 주석은 번호나 기호가 불릿 역할을 하므로 제외
-                    note_like = all(re.match(r"^\s*(\d+\)|※)", p.text or "") for p in paras if (p.text or "").strip())
+                    # 각주(1), 2)), ※ 주석, 라벨(Note: 등)로 시작하는 주석 묶음은 번호나 기호나 라벨이 불릿 역할을 하므로 제외
+                    # 라벨 뒤 내어쓰기 묶음의 둘째 문단부터는 탭으로 시작 (각주 2) 이하, 출처 행의 둘째 출처 이하)
+                    note_like = all(re.match(r"^(\t|\s*(\d+\)|※))", p.text or "") or bool(note_labels and (p.text or "").startswith(note_labels)) for p in paras if (p.text or "").strip())
                     # 표지 2줄 제목처럼 제목 크기 글은 목록이 아님
                     title_like = all(r.font.size is not None and r.font.size.pt >= TITLE_PT for p in paras for r in p.runs if r.text.strip())
                     # 모든 줄이 번호(1., 1-1.)로 시작하면 번호가 불릿을 대신하는 목록 (grid 칸 numbered)
@@ -497,7 +514,7 @@ def main():
             lv = {}
             for pa in sh.text_frame.paragraphs:  # 불릿이 붙은 문단만 비교 (제목 줄과 주석은 제외)
                 txt = "".join(r.text for r in pa.runs).strip()
-                if not txt or re.match(r"^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])", txt): continue
+                if not txt or re.match(r"^\s*(※|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])", txt): continue
                 xml = pa._p.xml
                 if "buChar" not in xml and "buAutoNum" not in xml: continue
                 sz = max((r.font.size.pt for r in pa.runs if r.font.size), default=None)

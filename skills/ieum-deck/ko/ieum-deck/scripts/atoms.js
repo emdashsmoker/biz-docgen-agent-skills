@@ -314,23 +314,40 @@ function lineOpt(ln, fallbackPt) {
 }
 
 // ---------------------------------------------------------------- 텍스트 실행 목록 변환
-let NOTE_STYLE = null; // 번호 표기 덱이면 { labels } (build.js 가 meta.footnoteStyle 로 설정). ※ 기호 덱은 null
-/** 덱의 주석 표기 지정. number 이면 runsOf 가 작성자가 직접 쓴 ※ 를 번호 표기로 바꿈 */
-function setNoteStyle(style, labels) { NOTE_STYLE = style === "number" ? { labels } : null; }
+// meta.footnoteStyle 선택지. 첫 값이 기본 (lint.py 의 FOOTNOTE_STYLES 와 같은 목록)
+const NOTE_STYLES = ["number", "mark"];
+let NOTES = null; // 조판 중인 슬라이드의 주석 표기 { style, labels: { note, source }, inline }. build.js 가 슬라이드마다 설정
+/** 슬라이드의 주석 표기 지정. style 은 meta.footnoteStyle, labels 는 주석 라벨과 출처 라벨, inline 은 슬라이드 footnoteInline
+ *  number 이면 runsOf 가 작성자가 직접 쓴 ※ 를 번호 표기로 바꿈 */
+function setNoteStyle(style, labels, inline) {
+  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline };
+}
+/** 현재 슬라이드의 주석 표기. build.js 밖에서 불러 지정이 없으면 기본 표기와 기본 라벨 */
+function noteState() {
+  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false };
+}
 const LEAD_MARK = /^\s*※/;
-/** 번호 표기 덱의 문단 변환. ※ 로 시작하는 연속 문단은 주석 묶음으로 보고 noteLines 표기를 붙이고, 문장 중간의 ※ 는 뺌 (예: "(※ 시안)" → "(시안)")
+/** 번호 표기 덱의 문단 변환. ※ 로 시작하는 연속 문단은 주석 묶음으로 보고 noteBlock 표기를 붙이고, 문장 중간의 ※ 는 뺌 (예: "(※ 시안)" → "(시안)")
+ *  여러 줄 묶음은 라벨 뒤 위치에 맞춰 내어 씀. 상자 폭을 모르므로 1항목 묶음만 라벨과 내용을 공백으로 이음
  *  Why: 커스텀 슬라이드 원문, 본문 칸에 직접 쓴 주석, 제목의 시안 표시처럼 주석 함수를 거치지 않는 ※ 도 착수 질의에서 고른 표기를 따르게 함 */
-function numberStyleParas(paras, labels) {
+function numberStyleParas(paras) {
   const textOf = (p) => (p.runs || []).filter((r) => !r.br).map((r) => r.t).join("");
-  const out = paras.map((p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) }));
-  for (let i = 0; i < out.length;) {
-    if (!LEAD_MARK.test(textOf(out[i]))) { i += 1; continue; }
+  const copy = (p) => ({ ...p, runs: (p.runs || []).map((r) => ({ ...r })) });
+  const out = [];
+  for (let i = 0; i < paras.length;) {
+    if (!LEAD_MARK.test(textOf(paras[i]))) { out.push(copy(paras[i])); i += 1; continue; }
     let j = i;
-    while (j < out.length && LEAD_MARK.test(textOf(out[j]))) j += 1;
-    const group = out.slice(i, j);
-    const lines = noteLines(group.map(textOf), "number", labels);
-    // 내용 없는 ※ 문단이 섞여 줄 수가 달라지면 묶음 번호 대신 아래의 ※ 제거만 적용
-    if (lines.length === group.length) group.forEach((p, k) => { const r0 = p.runs.find((r) => !r.br) || {}; p.runs = [{ ...r0, t: lines[k] }]; });
+    while (j < paras.length && LEAD_MARK.test(textOf(paras[j]))) j += 1;
+    const group = paras.slice(i, j).map(copy);
+    const block = noteBlock(group.map(textOf));
+    // 내용 없는 ※ 문단이 섞인 묶음은 문단 수를 유지하도록 아래의 ※ 제거만 적용
+    if (block.items !== group.length) out.push(...group);
+    else {
+      const r0 = group[0].runs.find((r) => !r.br) || {};
+      const plan = block.items === 1 ? { hang: 0, texts: [`${block.lead} ${block.lines[0]}`] } : hangPlan(block, r0.sz || T.SIZE.body, r0.b);
+      // 라벨이 항목 표지이므로 원문 불릿을 떼고 문단 속성은 같은 순번의 원문 문단을 따름
+      plan.texts.forEach((t, k) => out.push({ ...group[Math.min(k, group.length - 1)], bullet: false, hang: plan.hang || undefined, runs: [{ ...r0, t }] }));
+    }
     i = j;
   }
   out.forEach((p) => p.runs.forEach((r) => { if (r.t) r.t = r.t.replace(/※\s*/g, ""); }));
@@ -343,7 +360,7 @@ function numberStyleParas(paras, labels) {
 function runsOf(paras, defaults) {
   const out = [];
   const d = defaults || {};
-  const src = NOTE_STYLE ? numberStyleParas(paras, NOTE_STYLE.labels) : paras;
+  const src = NOTES && NOTES.style === "number" ? numberStyleParas(paras) : paras;
   src.forEach((p, pi) => {
     const last = pi === src.length - 1;
     const pOpt = {};
@@ -353,6 +370,10 @@ function runsOf(paras, defaults) {
       if (p.buNum) pOpt.bullet = { type: "number", style: p.buNum, indent };
       else pOpt.bullet = { code: p.buChar ? p.buChar.codePointAt(0).toString(16).toUpperCase().padStart(4, "0") : "2022", indent };
       pOpt.indentLevel = p.lvl || 0;
+    } else if (p.hang) {
+      // 라벨 뒤 내어쓰기(인치). pptxgenjs 는 불릿 없는 문단의 marL, indent 를 0 으로만 기록하므로 내어쓰기 위치를 문단의 유일한 탭 위치로 넘기고
+      // finalize.py(set_hanging_indent)가 이 탭 위치로 marL 과 음수 indent 를 기록. 라벨 뒤 탭은 내어쓰기 위치로 이동
+      pOpt.tabStops = [{ position: p.hang }];
     } else if (p.marL) {
       // 불릿 없는 들여쓰기는 indentLevel 로 근사
       pOpt.indentLevel = Math.min(4, Math.round(p.marL / 0.25));
@@ -904,32 +925,94 @@ function headlineWithAccent(hl, phrase) {
     { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
   ] }];
 }
-const NOTE_LEAD = /^(※|\d+\))\s*/; // 작성자가 주석 앞에 직접 붙인 ※ 나 번호
+const NOTE_LEAD = /^(※|\*|\d+\))\s*/; // 작성자가 주석 앞에 직접 붙인 ※, *, 번호. 모두 떼고 덱 기준 표기를 붙임
 const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // 작성자가 출처 앞에 쓴 출처 표기
-/** 주석 묶음 1개의 줄 목록. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석이 공통으로 사용
- *  style 은 meta.footnoteStyle. mark 는 항목마다 ※ (* 로 시작하는 줄은 작성자가 본문 위치와 짝지은 표기로 보고 유지)
- *  number 는 항목이 2개 이상이면 1) 2), 1개이면 labels.note (출처 표기로 시작하면 labels.source)
- *  Why: 작성자가 붙인 ※, 번호, 라벨을 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
+/** 출처 표기로 시작하면 그 표기 문자열, 아니면 null. 기본 표기(SOURCE_MARK)와 meta.labels.notation.source 로 추가한 토큰("토큰:")을 인식 */
+function sourceMark(t) {
+  const m = SOURCE_MARK.exec(t) || LB.notationMatch(t);
+  return m ? m[0] : null;
+}
+/** 주석 묶음 1개의 표기 { lead, lines, items }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
+ *  mark 는 lead 없이 항목마다 ※. number 는 항목이 1개이면 lead 가 주석 라벨 (출처 표기로 시작하면 출처 라벨),
+ *  2개 이상이면 lead 가 주석 라벨이고 항목마다 1) 2) 를 붙여 1줄에 1항목 (슬라이드 footnoteInline 이면 번호 항목을 1줄로 이어 씀)
+ *  lead 는 첫 줄 앞에만 붙음 (notePlan). items 는 내용 있는 항목 수
+ *  Why: 작성자가 붙인 ※, *, 번호, 라벨을 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
  *       항목이 1개이면 구분할 다른 항목이 없으므로 번호 대신 내용 유형 라벨을 씀 */
-function noteLines(items, style, labels) {
-  const lb = labels || {};
+function noteBlock(items, state) {
+  const ns = state || noteState();
+  const lb = ns.labels;
   const unmark = (t) => {
     const s = t.replace(NOTE_LEAD, "");
     return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
   };
-  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
-  if (style !== "number") return raw.map((t) => (t.startsWith("*") ? t : unmark(t))).filter(Boolean).map((t) => (t.startsWith("*") ? t : `※ ${t}`));
-  const arr = raw.map(unmark).filter(Boolean);
-  if (arr.length !== 1) return arr.map((t, i) => `${i + 1}) ${t}`);
-  const src = arr[0].match(SOURCE_MARK);
-  return [src ? `${lb.source} ${arr[0].slice(src[0].length)}` : `${lb.note} ${arr[0]}`];
+  const arr = [].concat(items || []).map((t) => unmark(String(t == null ? "" : t).trim())).filter(Boolean);
+  if (ns.style === "mark") return { lead: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
+  if (arr.length === 1) {
+    const src = sourceMark(arr[0]);
+    return { lead: src ? lb.source : lb.note, lines: [src ? arr[0].slice(src.length).trim() : arr[0]], items: 1 };
+  }
+  const nums = arr.map((t, i) => `${i + 1}) ${t}`);
+  return { lead: lb.note, lines: ns.inline && nums.length ? [nums.join(" ")] : nums, items: arr.length };
 }
-/** 각주 목록. 슬라이드 하단 출처 행 위에 배치 (표기 규칙은 noteLines) */
-function footnotes(slide, S, items, style, labels) {
-  const lines = noteLines(items, style, labels);
-  if (!lines.length) return;
-  const paras = lines.map((t) => ({ align: "left", runs: [{ t, sz: T.SIZE.note, color: T.COLOR.textMuted }] }));
-  text(slide, { x: S.bodyX, y: S.noteY - 0.2 * lines.length, w: S.bodyW, h: 0.2 * lines.length }, paras, { valign: "top", mg: [0, 0, 0, 0] });
+/** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)
+ *  lead 는 number 이면 출처 라벨, mark 이면 "※" 와 작성자가 쓴 첫 출처 표기 (예: "※ 출처:"), 출처 표기가 없으면 "※"
+ *  lead 와 이은 출처가 폭 w 의 1줄에 들어가거나 슬라이드 footnoteInline 이면 "A; B" 1줄, 넘치면 1줄에 출처 1개 (세미콜론은 줄 끝에 남김)
+ *  Why: 이은 출처가 줄 끝을 넘으면 자료명 중간에서 줄이 바뀌어 출처 경계가 흐려짐. 출처 경계에서 줄을 바꾸고 첫 출처의 시작 위치에 맞춰 정렬 (notePlan) */
+function sourceBlock(items, w, sz, state) {
+  const ns = state || noteState();
+  const lb = ns.labels;
+  let mark = null;
+  const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
+    let s = x.trim().replace(/^※\s*/, "");
+    const m = sourceMark(s);
+    if (m) { if (mark == null) mark = m.trim(); s = s.slice(m.length); }
+    if (lb.source && s.startsWith(lb.source)) s = s.slice(lb.source.length);
+    return s.trim();
+  }).filter(Boolean);
+  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : lb.source;
+  if (!parts.length) return { lead, lines: [], items: 0 };
+  const one = parts.join("; ");
+  const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
+  return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };
+}
+/** 라벨 뒤 내어쓰기 위치(인치). 라벨과 공백 1개의 폭을 보수적 폭(lineWidthIn)으로 잡음
+ *  Why: 실제 라벨 폭이 이 위치보다 넓으면 라벨 뒤 탭이 다음 기본 탭 위치로 넘어가 둘째 줄과 어긋나므로 넓은 쪽으로 추정 */
+function hangWidthIn(lead, sz, bold) {
+  return +lineWidthIn(`${lead} `, sz, bold).toFixed(3);
+}
+/** 내어쓰기 문단 구성 { hang, texts }. 첫 문단은 "lead<탭>줄", 이후 문단은 "<탭>줄". 모든 문단을 hang 위치까지 내어 씀 (runsOf, finalize) */
+function hangPlan(block, sz, bold) {
+  return { hang: hangWidthIn(block.lead, sz, bold), texts: block.lines.map((t, i) => `${i ? "" : block.lead}\t${t}`) };
+}
+/** 주석 묶음의 문단 구성과 줄 수 { hang, texts, lines }. 폭 w 상자 기준이며 lines 는 줄바꿈을 포함한 줄 수
+ *  lead 없는 묶음(※ 기호 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음은 "lead 내용", 그 밖은 lead 뒤 위치에 맞춰 내어 씀 (hangPlan) */
+function notePlan(block, w, sz, bold) {
+  const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
+  if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
+  if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
+  const one = `${block.lead} ${block.lines[0]}`;
+  if (block.lines.length === 1 && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
+  const plan = hangPlan(block, sz, bold);
+  return { ...plan, lines: count(block.lines, w - plan.hang) };
+}
+/** notePlan 의 문단 목록. opt: { sz, color, align } */
+function noteParas(plan, opt) {
+  const o = opt || {};
+  return plan.texts.map((t) => ({ align: o.align || "left", hang: plan.hang || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
+}
+/** 가운데 정렬 자리의 주석 배치 { box, align }. 내어쓰기 묶음은 왼쪽 정렬 문단 묶음을 추정 폭(좌우 여백 padX 포함)으로 상자 가운데에 둠. 그 밖은 가운데 정렬
+ *  Why: 내어쓰기 문단을 가운데 정렬하면 줄마다 가운데로 모여 라벨 뒤 정렬이 깨짐 */
+function centerNoteBox(box, plan, sz, padX) {
+  if (!plan.hang) return { box, align: "center" };
+  const textW = Math.max(...plan.texts.map((t) => lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
+  const w = Math.min(box.w, plan.hang + textW + 2 * (padX || 0));
+  return { box: { ...box, x: +(box.x + (box.w - w) / 2).toFixed(3), w: +w.toFixed(3) }, align: "left" };
+}
+/** 슬라이드 하단 각주. 아래 끝을 bottomY(출처 행 위 끝)에 맞춤. plan 은 본문 폭 기준 notePlan 결과 */
+function footnotes(slide, S, plan, bottomY) {
+  if (!plan.lines) return;
+  const h = T.BAND.NOTE_LINE_H * plan.lines;
+  text(slide, { x: S.bodyX, y: bottomY - h, w: S.bodyW, h }, noteParas(plan, { sz: T.SIZE.note, color: T.COLOR.textMuted }), { valign: "top", mg: [0, 0, 0, 0] });
 }
 function pageNo(slide, S, n) {
   text(slide, S.pageNo, String(n), { sz: T.SIZE.pageNo, color: T.COLOR.textGray, align: "right", valign: "middle", mg: [0, 0, 0, 0] });
@@ -1385,7 +1468,7 @@ function substitute(paras, value) {
     const r0 = src.runs.find((r) => !r.br) || { sz: T.SIZE.body };
     // 원본의 ※ 문단은 예시 주석 자리이므로 작성자의 선택을 따름
     const srcText = src.runs.map((r) => r.t).join("").trim();
-    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
+    if (/^※/.test(srcText) && ln.trim() && !/^\s*(※|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(ln) && !LB.isExtraNote(ln)) {
       // 주석이 아닌 문구를 넣으면 바로 위 불릿 문단의 서식으로 맞춰 일반 항목으로 표기
       const prev = base.slice(0, Math.min(i, base.length - 1)).reverse().find((p) => p.bullet);
       if (prev) {
@@ -1397,4 +1480,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteLines, SOURCE_MARK, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

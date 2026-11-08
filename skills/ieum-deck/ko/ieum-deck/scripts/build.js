@@ -19,8 +19,7 @@ const LB = require("./labels.js");
 const OWN_ENV = "IEUM_DECK_OWN";
 // 줄바꿈 단위(meta.lineBreak). word 는 단어 단위(기본), char 는 글자 단위. finalize.py 가 빌드 기록을 읽어 모든 문단 속성에 기록
 const LINE_BREAKS = ["word", "char"];
-// 각주 표기(meta.footnoteStyle). mark 는 항목마다 ※ (기본), number 는 슬라이드마다 1) 부터 번호
-const FOOTNOTE_STYLES = ["mark", "number"];
+// 각주 표기(meta.footnoteStyle)는 atoms.NOTE_STYLES. number(기본)는 주석 라벨과 출처 라벨을 붙이고 주석이 2개 이상이면 라벨 뒤에 1) 부터 번호, mark 는 항목마다 ※
 
 function parseArgs(argv) {
   const o = { layout: null, digest: false, marker: null, theme: null, args: [] };
@@ -58,9 +57,10 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const slide = pres.addSlide();
   const tpl = sb.template || sb.type || "free";
   const ctx = { pres, S, T, A, own, meta, sb, index, warn: (m) => warnings.push(`[${sb.id || index}] ${m}`) };
-  // 번호 표기 덱은 남은 ※ 를 이 슬라이드의 주석 라벨로 변환 (슬라이드 footnoteLabel, sourceLabel 이 덱 라벨보다 우선)
+  // 이 슬라이드의 주석 표기 등록. 번호 표기 덱은 남은 ※ 를 이 슬라이드의 주석 라벨로 변환 (슬라이드 footnoteLabel, sourceLabel 이 덱 라벨보다 우선)
+  // footnoteInline 은 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀
   const ns = TEMPLATES.helpers.noteStyle(ctx);
-  A.setNoteStyle(ns.style, ns.labels);
+  A.setNoteStyle(ns.style, ns.labels, ns.inline);
   // 절 번호는 "1." 형태로 정규화 (01, 1 처럼 마침표가 없으면 붙이고 앞의 0 은 제거)
   const secNo = sb.secNo == null ? sb.secNo : String(sb.secNo).trim().replace(/^0+(\d)/, "$1").replace(/^([\dIVXivx①-⑮]+)$/, "$1.");
   const band = { secNo, secTitle: sb.section, tracker: sb.tracker || sb.chapter, headline: sb.headline, marker: sb.marker, markerNote: sb.markerNote };
@@ -142,7 +142,7 @@ async function main() {
   if (!T.THEMES[theme] && !meta.themeColors) throw new Error(`색 테마 ${theme} 미정의. 선택: ${Object.keys(T.THEMES).join(", ")} 또는 meta.themeColors 지정`);
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`줄바꿈 단위 ${lineBreak} 미정의. 선택: ${LINE_BREAKS.join(", ")}`);
-  if (meta.footnoteStyle != null && !FOOTNOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`각주 표기 ${meta.footnoteStyle} 미정의. 선택: ${FOOTNOTE_STYLES.join(", ")}`);
+  if (meta.footnoteStyle != null && !A.NOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`각주 표기 ${meta.footnoteStyle} 미정의. 선택: ${A.NOTE_STYLES.join(", ")}`);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);
@@ -173,10 +173,13 @@ async function main() {
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
   // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨. 슬라이드에서 지정한 라벨 포함 (check_layout 이 주석 줄로 인식)
+  // footnoteInline 은 주석과 출처 행을 이어 쓴 슬라이드 번호와 id (사용자 확인용 보고)
+  const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
+  if (inline.length) console.log(`INFO 주석 이어 쓰기 슬라이드 ${inline.length}장: ${inline.join(", ")} (footnoteInline. 보고에 포함하여 사용자 확인)`);
   warnings.forEach((w) => console.log("WARN " + w));
 }
 

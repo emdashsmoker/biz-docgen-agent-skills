@@ -24,8 +24,8 @@ const SPEC = {
 function body(ctx, sb) {
   const S = ctx.S;
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
-  // 출처 행이 있으면 본문을 그 위에서 끝내고 각주가 있으면 각주 줄 수만큼 더 올림
-  const nFoot = noteRows(sb);
+  // 출처 행이 있으면 본문을 그 위에서 끝내고 각주가 있거나 출처 행이 여러 줄이면 그 줄 수만큼 더 올림
+  const nFoot = noteRows(ctx, sb);
   const bottom = sb.source || nFoot ? S.noteY - 0.12 - nFoot : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
@@ -503,9 +503,17 @@ function chevronRow(ctx, slide, box, steps, opt) {
 }
 /** 결론 상자: 좌측 네이비 라벨 + 우측 틴트 메시지 */
 /** 결론 밴드 라벨. 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값 순 */
-/** 각주 줄 수에 해당하는 높이 (인치) */
-function noteRows(sb) {
-  return 0.2 * [].concat((sb && sb.footnotes) || []).filter(Boolean).length;
+/** 슬라이드 하단 주석 영역의 표기와 줄 수 { notes, src, noteLines, srcLines }. 본문 하단(body)과 조판(source)이 같은 계산을 씀 */
+function bottomNotes(ctx, sb) {
+  const S = ctx.S, sz = T.SIZE.note;
+  const notes = A.notePlan(A.noteBlock(sb.footnotes), S.bodyW, sz);
+  const src = sb.source ? A.notePlan(A.sourceBlock(sb.source, S.bodyW, sz), S.bodyW, sz) : { texts: [], lines: 0 };
+  return { notes, src, noteLines: notes.lines, srcLines: src.lines };
+}
+/** 출처 행 첫 줄 위쪽에 쌓이는 높이 (인치). 각주 줄 수와 출처 행의 둘째 줄 이후 줄 수 */
+function noteRows(ctx, sb) {
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  return T.BAND.NOTE_LINE_H * (noteLines + Math.max(0, srcLines - 1));
 }
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
@@ -538,33 +546,37 @@ function calloutW(ctx, text, w0, maxW) {
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
   return w;
 }
-/** 덱의 주석 표기(meta.footnoteStyle)와 번호 표기 라벨. 라벨은 슬라이드 footnoteLabel, sourceLabel, meta.labels.common, 기본값 순 */
+/** 슬라이드의 주석 표기. style 은 meta.footnoteStyle (미지정이면 number), 라벨은 슬라이드 footnoteLabel, sourceLabel, meta.labels.common, 기본값 순
+ *  inline 은 슬라이드 footnoteInline (주석과 출처 행을 1문단으로 이어 씀). build.js 가 슬라이드마다 atoms.setNoteStyle 로 등록 */
 function noteStyle(ctx) {
   const sb = ctx.sb || {};
-  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) } };
+  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true };
 }
-/** 상자 아래 주석 문자열. 덱의 주석 표기를 붙여 줄바꿈으로 이음 (표기 규칙은 atoms.noteLines) */
-function noteText(ctx, v) {
-  const { style, labels } = noteStyle(ctx);
-  return A.noteLines(v, style, labels).join("\n");
+/** 상자 아래 주석의 문단 구성과 줄 수 (atoms.noteBlock, notePlan). w 는 주석 상자 폭 */
+function boxNote(v, w) {
+  return A.notePlan(A.noteBlock(v), w, T.SIZE.note);
 }
-/** 출처 행 문자열. ※ 기호 덱은 "※ A; B", 번호 표기 덱은 항목마다 ※ 와 출처 표기를 떼고 출처 라벨 1개 뒤에 이음 (예: "Source: A; B") */
-function sourceText(ctx, v) {
-  const { style, labels } = noteStyle(ctx);
-  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));
-  if (style !== "number") return `※ ${arr.join("; ")}`;
-  const unmark = (x) => {
-    const s = x.replace(A.SOURCE_MARK, "");
-    return s.startsWith(labels.source) ? s.slice(labels.source.length).trim() : s;
-  };
-  return `${labels.source} ${arr.map(unmark).filter(Boolean).join("; ")}`;
+/** 상자 아래 주석 높이(인치). 1줄 상자 높이 h1 에 둘째 줄부터 NOTE_LINE_H 를 더함. 주석이 없으면 0 */
+function boxNoteH(plan, h1) {
+  return plan && plan.lines ? h1 + T.BAND.NOTE_LINE_H * (plan.lines - 1) : 0;
 }
+/** 상자 아래 주석 조판. opt 는 A.text 옵션이며 align 이 center 이면 내어쓰기 묶음을 상자 가운데에 둠 (atoms.centerNoteBox) */
+function drawNote(slide, box, plan, opt) {
+  if (!plan || !plan.lines) return;
+  const o = { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", ...opt };
+  const c = o.align === "center" ? A.centerNoteBox(box, plan, o.sz, (o.mg || A.TEXT_MG_IN)[0]) : { box, align: o.align };
+  A.text(slide, c.box, A.noteParas(plan, { sz: o.sz, color: o.color, align: c.align }), { ...o, align: c.align });
+}
+/** 슬라이드 하단 주석 영역. 출처 행은 1줄 자리(noteY)에서 위로 늘고 각주는 출처 행 위에 쌓임 (표기 규칙은 atoms.noteBlock, sourceBlock) */
 function source(ctx, slide, sb) {
-  const { style, labels } = noteStyle(ctx);
-  A.footnotes(slide, ctx.S, sb.footnotes, style, labels);
-  if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, sourceText(ctx, sb.source), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  const { notes, src, srcLines } = bottomNotes(ctx, sb);
+  const extra = T.BAND.NOTE_LINE_H * Math.max(0, srcLines - 1);
+  const top = S.noteY - extra;
+  A.footnotes(slide, S, notes, top);
+  if (!srcLines) return;
+  A.text(slide, { x: S.bodyX, y: top, w: S.bodyW, h: T.BAND.SOURCE_H + extra }, A.noteParas(src, { sz: T.SIZE.note, color: T.COLOR.textMuted }),
+    { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative 태그: 회전 -27도 테두리 상자
@@ -642,7 +654,7 @@ function purpose(ctx, slide, sb) {
     const th0 = A.estimateLines(ld.title, twAll - 0.1, T.SIZE.panelHead, true) > 1 ? 0.55 : 0.4;
     const subs0 = (ld.sub || []).filter(Boolean);
     const subH = subs0.reduce((a, t) => a + Math.max(1, A.estimateLines(typeof t === "string" ? t : t.text, twAll - T.PARA.bulletIndentIn, T.SIZE.body)) * A.lineHeightIn(T.SIZE.body) + 0.045, 0);
-    const noteH0 = 0.2 * [].concat(ld.note || []).filter(Boolean).length;
+    const noteH0 = T.BAND.NOTE_LINE_H * boxNote(ld.note, twAll).lines;
     return th0 + 0.12 + subH + noteH0 + 0.12;
   });
   const sum = need.reduce((a, b) => a + b, 0) || 1;
@@ -660,8 +672,8 @@ function purpose(ctx, slide, sb) {
     const th = A.estimateLines(ld.title, tw - 0.1, T.SIZE.panelHead, true) > 1 ? 0.55 : 0.4;
     // 리드의 근거는 불릿, 주석(note)은 ※ 로 시작하는 작은 회색 줄
     const subs = (ld.sub || []).filter((x) => x != null);
-    const notes = [].concat(ld.note || []).filter(Boolean);
-    const noteH = notes.length ? 0.2 * notes.length : 0;
+    const notes = boxNote(ld.note, tw);
+    const noteH = T.BAND.NOTE_LINE_H * notes.lines;
     return { ld, y, rh, th, subs, notes, noteH, sbox: { x: L.x + 0.8, y: y + th + 0.1, w: tw, h: rh - th - 0.15 - noteH } };
   });
   // 근거 불릿은 같은 계층이므로 리드 칸마다 맞춘 크기 중 가장 작은 값을 모든 리드에 적용
@@ -681,9 +693,7 @@ function purpose(ctx, slide, sb) {
     // 주석은 근거 불릿 상자 바로 아래에 둠 (불릿은 남는 높이를 항목 간격으로 나누어 상자를 채우므로 항목 수 기준 고정 오프셋이면 겹침)
     // 근거 상자는 주석 높이(noteH)를 뺀 높이로 잡았으므로 주석은 리드 칸 안에 들어감
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
-    if (notes.length) A.text(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH },
-      noteText(ctx, notes),
-      { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+    drawNote(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH }, notes, { valign: "top", mg: [0, 0, 0, 0] });
   });
   label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, LB.label("purpose", "purposeHead", s.purposeHead), { sz: T.SIZE.body });
   const pb = { x: R.x, y: R.y + T.PANEL.HEAD_H, w: R.w, h: 1.05 };
@@ -1169,7 +1179,10 @@ function roadmap(ctx, slide, sb) {
   const gx = b.x + lw + 0.1, gw = b.w - lw - 0.1, pw = gw / Math.max(periods.length, 1);
   label(ctx, slide, { x: b.x, y: b.y, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: 0.35 }, LB.label("roadmap", "laneHead", s.laneHead), { sz: T.SIZE.body });
   periods.forEach((p, i) => label(ctx, slide, { x: gx + i * pw, y: b.y, w: pw - 0.02, h: 0.35 }, p, { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body }));
-  const lh = (b.h - 0.45 - (s.note ? 0.4 : 0)) / Math.max(lanes.length, 1);
+  // 주석 자리는 1줄 0.4 인치에 둘째 줄부터 NOTE_LINE_H 를 더함
+  const note = boxNote(s.note, b.w - 2 * A.TEXT_MG_IN[0]); // 기본 여백 상자의 안쪽 폭
+  const noteExtra = boxNoteH(note, 0);
+  const lh = (b.h - 0.45 - boxNoteH(note, 0.4)) / Math.max(lanes.length, 1);
   lanes.forEach((ln, i) => {
     const y = b.y + 0.45 + i * lh;
     label(ctx, slide, { x: b.x, y: y + 0.05, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: lh - 0.1 }, `${i + 1}  ${ln.title}`, { sz: T.SIZE.body });
@@ -1184,7 +1197,7 @@ function roadmap(ctx, slide, sb) {
       slide.addText(A.runsOf(A.parasFromString(t.text, { sz: T.SIZE.tableDense, color: T.COLOR.textDark, align: "left" })), { ...bx, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: 0.5 }, valign: "middle", margin: A.boxMargin([0.06, 0.01, 0.06, 0.01]), isTextBox: true, autoFit: false });
     });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
+  drawNote(slide, { x: b.x, y: b.y + b.h - 0.35 - noteExtra, w: b.w, h: 0.3 + noteExtra }, note, { align: "center" });
   source(ctx, slide, sb);
 }
 /** 간트: 구분, 과업 열 + 월별 주 격자. slots: {months:N, weeks:4, groups:[{name, tasks:[{name, from, to}]}], reports:[{name, at}], groupHead, taskHead, reportHead} */
@@ -1275,7 +1288,8 @@ function org(ctx, slide, sb) {
   const rowN = n > 6 ? 2 : 1;
   const perRow = Math.ceil(n / rowN);
   const gap = perRow >= 5 ? 0.12 : perRow >= 4 ? 0.18 : 0.22;
-  const areaH = b.y + b.h - y - 0.22 - (s.note ? 0.32 : 0);
+  const note = boxNote(s.note, b.w - 2 * A.TEXT_MG_IN[0]); // 기본 여백 상자의 안쪽 폭
+  const areaH = b.y + b.h - y - 0.22 - boxNoteH(note, 0.32);
   const rowGap = rowN > 1 ? 0.45 : 0.25; // 2행 배치는 행 사이에 계선이 보이도록 간격 확보
   const rowH = (areaH - (rowN - 1) * rowGap) / rowN;
   const tc = [];
@@ -1313,7 +1327,8 @@ function org(ctx, slide, sb) {
     // 분담 문구는 본문 정보이므로 본문 하한(11pt)으로 조판 (10pt 는 check_layout 이 주석 크기로 판정)
     if (t.share) A.text(slide, { x: c.x, y: bd.y + bd.h, w: c.w, h: 0.28 }, t.share, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "center" });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
+  const noteH = boxNoteH(note, 0.28);
+  drawNote(slide, { x: b.x, y: b.y + b.h - noteH, w: b.w, h: noteH }, note, { align: "left" });
   source(ctx, slide, sb);
 }
 
@@ -1615,6 +1630,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, noteStyle, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

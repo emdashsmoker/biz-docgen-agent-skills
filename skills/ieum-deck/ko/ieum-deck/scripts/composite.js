@@ -807,11 +807,13 @@ BLOCKS.numbers = (ctx, H, slide, box, k) => {
     const it = its[i];
     H.frame(ctx, slide, c);
     const vh = Math.min(0.6, c.h * 0.45);
-    const block = vh + 0.32 + (it.note ? 0.26 : 0);
+    const note = H.boxNote(it.note, c.w - 0.12);
+    const noteH = H.boxNoteH(note, NOTE_H);
+    const block = vh + 0.32 + noteH;
     const y = c.y + Math.max(0.04, (c.h - block) / 2);
     A.text(slide, { x: c.x, y, w: c.w, h: vh }, String(it.value || ""), { sz: vsz, bold: true, color: T.COLOR.navy, align: "center", mg: [0, 0, 0, 0] });
     A.text(slide, { x: c.x + 0.06, y: y + vh, w: c.w - 0.12, h: 0.32 }, it.label || "", { sz: T.SIZE.body, bold: true, align: "center", mg: [0, 0, 0, 0] });
-    if (it.note) A.text(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: 0.26 }, H.noteText(ctx, it.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center", mg: [0, 0, 0, 0] });
+    H.drawNote(slide, { x: c.x + 0.06, y: y + vh + 0.32, w: c.w - 0.12, h: noteH }, note, { align: "center", mg: [0, 0, 0, 0] });
   });
 };
 
@@ -1489,7 +1491,12 @@ const MEASURE = {
     const cs = H.chevronCols({ x: 0, y: 0, w, h: 0.55 }, st.length, 0, 1);
     return 0.55 + 0.12 + Math.max(0.5, ...st.map((s, i) => grow(needH(itemsOf(s), cs[i].w, T.SIZE.body, true), 0.5)));
   },
-  numbers: (k) => 1.0 + ((k.items || []).some((it) => it.note) ? 0.26 : 0),
+  // 주석은 타일 폭 기준 줄 수로 높이를 잡음 (BLOCKS.numbers 와 같은 타일 폭)
+  numbers: (k, w, H) => {
+    const its = k.items || [];
+    const cw = (w - sumGap(its.length, 0.16)) / Math.max(1, its.length);
+    return 1.0 + Math.max(0, ...its.map((it) => H.boxNoteH(H.boxNote(it.note, cw - 0.12), NOTE_H)));
+  },
   // 표는 templates.tableMetrics 의 행별 필요 높이를 공유 (그리기와 측정이 같은 규칙)
   table: (k, w, H) => {
     if (!(k.rows || []).length) return TABLE_ROW_FIT;
@@ -1592,7 +1599,7 @@ function regionNeed(rg, w, H, mode) {
   const measure = mode === "cap" ? blockCap : mode === "min" ? blockMin : mode === "keep" ? blockKeep : blockNeed;
   const needs = blocks.map((k) => measure(k, w, H));
   if (!blocks.length || needs.some((v) => v == null)) return null;
-  return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.note || rg.noteBand ? NOTE_H + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
+  return (rg.title ? T.PANEL.SUBHEAD_H : rg.caption ? CAPTION_H : 0) + (rg.noteH ? rg.noteH + 0.04 : 0) + needs.reduce((a, v) => a + v, 0) + sumGap(blocks.length, GAP_BLOCK);
 }
 
 // ---------------------------------------------------------------- 격자
@@ -1671,21 +1678,24 @@ function composite(ctx, slide, sb, H) {
   const s = sb.slots || {};
   const b = H.body(ctx, sb);
   const spec0 = gridSpec(s, (s.regions || []).length);
-  // 같은 행에 주석 칸이 있으면 이웃 칸도 주석 높이만큼 내용 하단을 올려 행 안 칸들의 하단을 맞춤 (주석 문구는 해당 칸에만 표기)
+  const bottom = (s.point ? BOTTOM_BAND_H + BOTTOM_GAP : 0) + (s.conclusion ? BOTTOM_BAND_H + BOTTOM_GAP : 0); // 각주 높이는 body() 가 제외
+  const area = { x: b.x, y: b.y, w: b.w, h: b.h - bottom };
+  const rowGap = s.rowFlow ? GAP_ROW_FLOW : s.dividers ? GAP_ROW_DIV : GAP_ROW;
+  const colGap = s.flow ? GAP_COL_FLOW : s.dividers ? GAP_COL_DIV : GAP_COL;
+  // 같은 행에 주석 칸이 있으면 이웃 칸도 그 행의 가장 높은 주석 높이(noteH)만큼 내용 하단을 올려 행 안 칸들의 하단을 맞춤 (주석 문구는 해당 칸에만 표기)
+  // 주석 높이는 1줄 NOTE_H 에 칸 폭 기준 둘째 줄부터 NOTE_LINE_H 를 더함
   const regions = (s.regions || []).slice();
   let ri0 = 0;
   spec0.forEach((r) => {
     const n = r.cols.length;
-    if (regions.slice(ri0, ri0 + n).some((g) => g && g.note)) for (let j = ri0; j < ri0 + n; j++) if (regions[j] && !regions[j].note) regions[j] = { ...regions[j], noteBand: true };
+    const ws = rowWidths(r, area.w, colGap);
+    const bandH = Math.max(0, ...regions.slice(ri0, ri0 + n).map((g, j) => (g && g.note ? H.boxNoteH(H.boxNote(g.note, ws[j]), NOTE_H) : 0)));
+    if (bandH) for (let j = ri0; j < ri0 + n; j++) if (regions[j]) regions[j] = { ...regions[j], noteH: bandH };
     ri0 += n;
   });
-  const bottom = (s.point ? BOTTOM_BAND_H + BOTTOM_GAP : 0) + (s.conclusion ? BOTTOM_BAND_H + BOTTOM_GAP : 0); // 각주 높이는 body() 가 제외
-  const area = { x: b.x, y: b.y, w: b.w, h: b.h - bottom };
   const spec = gridSpec(s, regions.length);
   const slots = spec.reduce((a, r) => a + r.cols.length, 0);
   if (slots !== regions.length) ctx.warn(`composite 격자 칸 ${slots}개와 영역 ${regions.length}개 불일치`);
-  const rowGap = s.rowFlow ? GAP_ROW_FLOW : s.dividers ? GAP_ROW_DIV : GAP_ROW;
-  const colGap = s.flow ? GAP_COL_FLOW : s.dividers ? GAP_COL_DIV : GAP_COL;
   const { heights, gap, offset } = planRows(spec, regions, area, rowGap, colGap, H);
   let y = area.y + offset, idx = 0;
   const rowBoxes = [];
@@ -1706,7 +1716,7 @@ function composite(ctx, slide, sb, H) {
       if (rg.title || rg.caption) extend(cell.x, cell.w);
       if (rg.title) box = H.subhead(ctx, slide, cell, s.numbered ? `${CIRCLED[idx - 1] || idx} ${rg.title}` : rg.title);
       else if (rg.caption) box = caption(slide, cell, rg.caption);
-      if (rg.note || rg.noteBand) box = { ...box, h: box.h - NOTE_H - 0.04 };
+      if (rg.noteH) box = { ...box, h: box.h - rg.noteH - 0.04 };
       const blocks = (rg.blocks || (rg.block ? [rg.block] : [])).slice();
       // 블록 높이: 모두 측정 가능하면 자연 높이를 먼저 두고 남는 높이를 수용 높이까지 배분, 아니면 지정 가중치(h) 비율로 배분
       const needs = blocks.map((k) => blockNeed(k, box.w, H));
@@ -1721,7 +1731,7 @@ function composite(ctx, slide, sb, H) {
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
         else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
       }
-      if (rg.note) A.text(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: NOTE_H }, H.noteText(ctx, rg.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "middle", mg: [0, 0, 0, 0] });
+      if (rg.note) H.drawNote(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: rg.noteH }, H.boxNote(rg.note, box.w), { align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;
       const nSum = measured ? needs.reduce((a, v) => a + v, 0) : 0;
       const growSum = measured ? caps.reduce((a, v, j) => a + Math.max(0, v - needs[j]), 0) : 0;

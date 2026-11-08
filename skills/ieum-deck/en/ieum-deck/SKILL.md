@@ -137,6 +137,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In runtime environments without a delivery tool, give the file path
 - Deliver the delivery files (PPTX, and the PDF when included) after viewing all PNGs
 - The completion report lists file paths, viewed contact sheet file names, unresolved issues and remaining user confirmation items
+- When slides run notes and the source line on, the completion report lists the INFO output of lint and build (`footnoteInline`)
 - When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
 - Record the progress point in `state.json` for session handover
 
@@ -168,10 +169,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 16. (Line break unit) Word-level (default) or character-level. Record the choice in `meta.lineBreak` as word or char
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
-17. (Note style) ※ mark (default) or numbers. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as mark or number
+17. (Note style) Numbers (default) or ※ mark. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as number or mark (number when unset)
+    + (Numbers) A note group with a single item gets "Note:" ("Source:" for an item that starts with a source mark). A note group with two or more items writes "Note:" on the first line only and numbers the items from 1); items from 2) onward align with the start of 1). The source line starts with "Source:" and sources get no numbers
     + (※ mark) Puts ※ before each note item and the source line. Write the source mark (e.g. "Source:", "출처:", "자료:") in the storyboard yourself (the build adds only ※; typeset example: "※ Source: organization (year), material name")
-    + (Numbers) Numbers a note group with two or more items in order from 1). A note group with a single item gets "Note:" instead of a number ("Source:" for an item that starts with a source mark). The source line starts with "Source:"
-    + (Labels of the numbers choice) In the question, write "Note:" and "Source:" inside the numbers choice description together with where each label appears (e.g. "Note:" for a note group with a single item, "Source:" for the source line)
+    + (Labels of the numbers choice) In the question, write "Note:" and "Source:" inside the numbers choice description together with where each label appears (e.g. "Note:" for a note group with a single item and for the first line of a group with two or more items, "Source:" for the source line)
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the label text (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
     + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
@@ -492,6 +493,19 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:"). In a ※ mark deck the build adds only ※, so write the source mark yourself (details in the notation section of `references/writing-rules.md`)
+- Notes and the source line are set in the line-broken form by default
+    + (Notes of a number-style deck) Two or more items take one line each, and items from 2) onward align with the start of 1)
+    + (Source line) Sources that fit one line are joined with semicolons; otherwise one source per line. The second source onward aligns with the start of the first source (both styles)
+- Run-on is set with `footnoteInline: true` on the slide (the build never switches the line-broken form to run-on by itself)
+- Set run-on only on a slide that still meets every condition below after the minimum note count and the source citation rules are applied
+    + (Body fit) On the slide built in the line-broken form, the body overflows or overlaps (confirm with a check_layout FAIL or the PNG)
+    + (Line saving) Running on removes two or more lines from the bottom notes and source line together (confirm with the build; do not set it when short items keep the same line count)
+- Run-on layout
+    + (Notes of a number-style deck) "Note: 1) A 2) B 3) C" runs on in one paragraph
+    + (Source line) "Source: A; B; C" or "※ Source: A; B; C" runs on in one paragraph
+    + (Notes of a ※ mark deck) No run-on; each line keeps its ※
+    + A run-on paragraph that passes the line end aligns its second line onward after the label
+- Keep run-on slides an exception across the deck (when several slides meet the conditions, review the amount of notes and sources in the deck)
 - Set one emphasized phrase in the `accent` field
 
 ### Subject term
@@ -848,6 +862,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### Notation
 
 - Is the purpose of text smaller than the body clear (grounds, sources, assumptions and similar text carry the ※, number or label of `meta.footnoteStyle`)?
+- Does the second line of a multi-line note or source line start at the position where the first line's text starts (after the label)?
+- Do the run-on slides (INFO list of lint and build) meet the conditions for run-on?
 - Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
