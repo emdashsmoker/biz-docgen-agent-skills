@@ -724,11 +724,15 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Item comparison uses horizontal bars in descending order
     + Time series use vertical bars or lines
     + Show data labels
-    + When labels overlap or are clipped, change their position or move them with `labelPos` on the series, and hide them only as the last step (responses per chart type and paths for hidden figures are in the chart label adjustment section of `references/recipes.md`)
     + No gridlines
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color
     + For bar charts with negative values, the builder typesets a zero baseline and room for figures below negative bars
+- (Chart labels) Resolve label overlaps and clipping in the order below (methods and responses per chart type are in the chart label adjustment section of `references/recipes.md`)
+    + (Chart design) First design a chart that needs no label adjustment, with the type, point count and series count that fit its one message
+    + (Position adjustment) Clear the remaining overlaps and clipping with the position codes and move distances of `labelPos` on the series
+    + (Hiding) Among labels that still overlap after moving, hide only those the message does not need, and keep their figures in the body, a note or the legend
+    + (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
 - (Images) Set a path or data URI in `src` of image blocks in composite and free
     + Without a logo, use the company name as text
     + An image block without `src` is typeset as a dashed placeholder box
@@ -838,7 +842,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - On slides with charts, re-check text overlaps inside the chart on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_chart 120` (contact sheets shrink this text below legible size)
-    + Adjust label overlaps with `labelPos` on the series, then rebuild and re-check
+    + Adjust label overlaps in the chart label resolution order of the design system, then rebuild and re-check
 - List the viewed contact sheet file names in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
@@ -872,7 +876,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
 - Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
-- Do the figures of hidden labels (`labelPos` none) appear in the body, a note or the legend?
+- Do the figures of hidden labels (`labelPos` none) appear in the body, a note or the legend (switch to a table when figures the message needs are missing)?
 
 #### Placement
 

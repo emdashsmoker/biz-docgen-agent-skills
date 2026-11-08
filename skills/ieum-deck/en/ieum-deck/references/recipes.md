@@ -207,7 +207,33 @@
 
 ### chart label adjustment
 
-- When data labels overlap or are clipped, move or hide them with `labelPos` on the series (`series[]`)
+#### Resolution order
+
+- Find data label overlaps and clipping on the single 120 dpi PNG and resolve them in the order below (rebuild and re-check after each step)
+- (Chart design) Before using labelPos, design a chart that needs no label adjustment
+    + Keep only the points and series the one message needs
+    + When so many categories make labels overlap, keep the top 4-5 and merge the rest into Other (Other comes last, pies have six slices or fewer)
+    + When so many periods make labels overlap, keep the latest 12 or only the span the message needs
+    + Present item comparisons with long category names as horizontal bars, and split crowded lines and clustered bars into two charts by series
+- (Position adjustment) Move overlaps and clipping that chart design cannot clear with labelPos
+    + Put labels on the side where they do not overlap with position codes
+    + Move overlaps that position codes cannot clear with dx and dy
+    + Keep moved labels close to their marker, bar or slice so that it is clear which point the value belongs to
+- (Hiding) Among labels that still overlap after moving, hide only those the message does not need with none (on lines, keep the labels of points the message refers to, such as the start, the end and crossings)
+- Keep the figures of hidden labels in at least one of the paths below
+    + (Body) items of chart_two, findings of chart_text and other text on the same slide
+    + (Note) slide footnotes
+    + (Legend) a value range next to the hidden series name (e.g. "Other (1-2%)")
+    + (Same-value label) another series label shows the same value, as at a crossing point
+- (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
+    + Switch to a table when a figure cited in the headline or body would be hidden
+    + Switch to a table when figures of the points the message compares would be hidden
+    + Switch to a table when so many figures are hidden that the body, notes and legend cannot carry them
+    + Typeset the table with the table template or a composite table block, following the Tables section of `references/writing-rules.md`
+
+#### labelPos settings
+
+- `labelPos` on a series (`series[]`) sets the position, move distance or hiding of data labels
 - It applies to chart blocks, chart_text, chart_two, task samples and chart slots of custom slides
 - (Value form) A single value applies to the whole series, an array in the same order as values applies to each point
     + A string is a position code, and "none" hides the label
@@ -225,17 +251,8 @@
 - finalize.py writes the settings of the build record into the chart XML, so a PPTX from build.js alone does not show them
 - Font size is not adjustable (data labels are typeset at the 11pt body minimum, so adjust position and move distance instead)
 - Move distances are tuned on the LibreOffice rendering (PowerPoint places default labels differently and can be off by a few pt)
-- (Adjustment order) Look at the single 120 dpi PNG and adjust in this order
-    + Put labels on the side where they do not overlap with position codes
-    + Move overlaps that position codes cannot clear with dx and dy
-    + Keep moved labels close to their marker, bar or slice so that it is clear which point the value belongs to
-    + Hide only labels that still overlap after moving or that the message does not need
-    + Rebuild and re-check on the 120 dpi PNG
-- Keep the figures of hidden labels in at least one of the paths below
-    + (Body) items of chart_two, findings of chart_text and other text on the same slide
-    + (Note) slide footnotes
-    + (Legend) a value range next to the hidden series name (e.g. "Other (1-2%)")
-    + (Same-value label) another series label shows the same value, as at a crossing point
+
+#### Responses per chart type
 
 | Issue | Bar | Stacked bar | Line | Pie |
 |---|---|---|---|---|
