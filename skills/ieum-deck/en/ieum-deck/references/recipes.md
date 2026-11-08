@@ -37,7 +37,6 @@
 | `regions[].blocks` | Array of blocks stacked top to bottom in the cell. `h` per block is the height ratio (default 1) |
 | `block.caption` | Caption above a block. Used as a per-block title when several blocks are stacked in one cell (the caption of an `image` block is typeset as a description under the image) |
 | `regions[].note` | Note under the cell. The builder adds the ※, number or label of `meta.footnoteStyle` |
-| `regions[].valign` | Vertical position when the cell content is shorter than the row. `"top"` puts it right under the cell title; the default `"middle"` centers it in the height left under the title. Tables whose rows grow with real data (company history, financial status and similar) use `"top"` and take more rows |
 | `slots.flow` | If true, right arrows between cells in the same row |
 | `slots.rowFlow` | If true, down arrows between rows |
 | `slots.numbered` | If true, ①, ②, ③ numbers before cell titles |
@@ -70,7 +69,7 @@
     + `pyramid` and `cycle` up to the shape size
     + Other text box blocks up to 1.2x the natural height
 - A row grows only to the height all its cells can fill (the minimum of the cells' holding heights)
-- A cell whose holding height is below the row height is centered vertically in the height left under the cell title (right under the cell title when `valign` is `"top"`)
+- A cell whose holding height is below the row height is centered vertically in the height left under the cell title
 - A cell holding only one table is extended to match the top and bottom of neighboring cells when it is at most 0.3 inch shorter than the row height
 - The cell note (`note`) sits right under the cell content
 - When a row has a cell with a note, every cell in the row raises its content bottom by the tallest note height of the row so the cell bottoms line up (a note is 0.26 inch for one line plus 0.2 inch for each further line at the cell width)

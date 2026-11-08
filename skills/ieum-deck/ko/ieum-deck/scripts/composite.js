@@ -1718,20 +1718,18 @@ function composite(ctx, slide, sb, H) {
       else if (rg.caption) box = caption(slide, cell, rg.caption);
       if (rg.noteH) box = { ...box, h: box.h - rg.noteH - 0.04 };
       const blocks = (rg.blocks || (rg.block ? [rg.block] : [])).slice();
-      if (rg.valign && rg.valign !== "top" && rg.valign !== "middle") ctx.warn(`composite 칸 '${rg.title || rg.caption || ""}' valign '${rg.valign}' 미지원 (top, middle 중 지정)`);
       // 블록 높이: 모두 측정 가능하면 자연 높이를 먼저 두고 남는 높이를 수용 높이까지 배분, 아니면 지정 가중치(h) 비율로 배분
       const needs = blocks.map((k) => blockNeed(k, box.w, H));
       const measured = needs.every((v) => v != null);
       const caps = measured ? blocks.map((k) => blockCap(k, box.w, H)) : null;
       const bGaps = GAP_BLOCK * (blocks.length - 1);
-      // 이웃 칸보다 수용 높이가 작은 칸은 수용 높이까지만 늘리고 칸 제목 아래 남는 높이의 세로 가운데에 둠 (valign 이 top 이면 칸 제목 바로 아래)
-      // Why: 연혁, 재무 현황처럼 실제 자료에서 행이 늘어나는 표는 칸 제목에 붙어 있어야 늘어난 모양과 맞음
+      // 이웃 칸보다 수용 높이가 작은 칸은 수용 높이까지만 늘리고 칸 제목 아래 남는 높이의 세로 가운데에 둠
       // 표 한 개만 담은 칸은 부족분이 CELL_SNAP 이하이면 행 높이를 조금 늘려 이웃 칸과 위아래 끝을 맞춤
       if (measured) {
         const capH = caps.reduce((a, v) => a + v, 0) + bGaps;
         const snap = blocks.length === 1 && blocks[0].kind === "table" && box.h - capH <= CELL_SNAP;
         if (snap && capH < box.h) blocks[0] = { ...blocks[0], _fill: true };
-        else if (capH < box.h) box = { ...box, y: rg.valign === "top" ? box.y : box.y + (box.h - capH) / 2, h: capH };
+        else if (capH < box.h) box = { ...box, y: box.y + (box.h - capH) / 2, h: capH };
       }
       if (rg.note) H.drawNote(slide, { x: box.x, y: box.y + box.h + 0.04, w: box.w, h: rg.noteH }, H.boxNote(rg.note, box.w), { align: "left", valign: "middle", mg: [0, 0, 0, 0] });
       const bAvail = box.h - bGaps;
