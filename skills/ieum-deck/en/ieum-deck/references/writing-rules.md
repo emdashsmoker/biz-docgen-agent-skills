@@ -120,7 +120,7 @@
     + The build adds the ※, the number and the number-style label to note-type slots, footnotes and source
     + Notes written directly in body cells get ※ by hand
     + In a number-style deck, the build turns a ※ added by hand into the deck mark
-    + (Labels in a number-style deck) A label the author wrote (출처:, 산식:, 범례: etc.) is typeset as is; an item without one gets the note label (footnoteLabel)
+    + (Labels in a number-style deck) A label the author wrote (출처:, 산식: etc.) is typeset as is; an item without one gets the note label (footnoteLabel)
     + (Notes with two or more items in a number-style deck) With the same label or none, the label goes on the first line only and 1) 2) tell the items apart; items from 2) onward align with the start of 1) (a source label gets no numbers and separates the items with semicolons). With different labels, each line keeps its own label without numbers
     + The build removes a ※, * or number written before an item and adds the deck mark (superscript numbers or * marks paired with spots in the body are not supported)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:")
@@ -157,12 +157,10 @@
     + Write the explanation as one noun phrase that spells out the meaning (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
     + Do not repeat the defined term or use other technical terms in the explanation
     + For an abbreviation, add the full name in parentheses at the end of the explanation. When the full name already gives the meaning, write the full name alone (e.g. "(TTL) Travel, transport, and logistics")
-- Start a note item with a content type label when its type is clear (a label is one word without spaces followed by a colon)
-    + (Source:) Cited material, written as `organization (year), material name`
-    + (Formula:) The calculation behind a figure
-    + (Legend:) The meaning of symbols, colors, lines or shading
-    + (Basis:) The basis of a rating, count or point in time
-    + When types are mixed, split the note into items and label each item. Write a general caveat that no label fits without a label (in a number-style deck the build adds the note label)
+- Write note items without a label by default (in a number-style deck the build adds the note label, so legends, bases and caveats share one style; an item that cites a source follows the source mark rule)
+- Start an explanation that sits inside a box right under a figure or item name with a content label (a label is one word without spaces followed by a colon)
+    + (Where) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
+    + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs

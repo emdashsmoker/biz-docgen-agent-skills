@@ -170,9 +170,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Word-level keeps Korean words and English words whole at line ends
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 17. (Note style) Numbers (default) or ※ mark. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as number or mark (number when unset)
-    + (Numbers) Keeps the label the author wrote before a note (e.g. "Source:", "Formula:", "Legend:") and gives a note without one "Note:". When a spot has two or more notes with the same label or none, the label goes on the first line only and the items are numbered from 1); items from 2) onward align with the start of 1). Notes with different labels keep their own labels line by line without numbers. The source line starts with the source mark the author wrote ("Source:" without one) and sources get no numbers
+    + (Numbers) Keeps the label the author wrote before a note (e.g. "Source:", "Formula:") and gives a note without one "Note:". When a spot has two or more notes with the same label or none, the label goes on the first line only and the items are numbered from 1); items from 2) onward align with the start of 1). Notes with different labels keep their own labels line by line without numbers. The source line starts with the source mark the author wrote ("Source:" without one) and sources get no numbers
     + (※ mark) Puts ※ before each note item and the source line. Write the source mark (e.g. "Source:", "출처:", "자료:") in the storyboard yourself (the build adds only ※; typeset example: "※ Source: organization (year), material name")
-    + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes start with a fitting "Source:", "Formula:", "Legend:" and so on, a note without a label gets "Note:", a source line without a source mark gets "Source:")
+    + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes get "Note:", an explanation inside a box such as a number card starts with a content label such as "Formula:" or "Source:", a source line without a source mark gets "Source:")
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the labels added to notes without a label and to source lines without a source mark (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
     + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
@@ -490,12 +490,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Shorten the text to fit a headline on one line
 - check_layout reports inconsistent headline font sizes
 - Write grounds, conditions, assumptions and similar content in `note` or `footnotes` (the build adds ※, a number, and the label of a note without one, per `meta.footnoteStyle`)
-- Start a note item with a content type label when its type is clear (a label is one word without spaces followed by a colon)
-    + (Source:) Cited material, written as `organization (year), material name`
-    + (Formula:) The calculation behind a figure
-    + (Legend:) The meaning of symbols, colors, lines or shading
-    + (Basis:) The basis of a rating, count or point in time
-    + When types are mixed, split the note into items and label each item. Write a general caveat that no label fits without a label (in a number-style deck the build adds the note label)
+- Write note items without a label by default (in a number-style deck the build adds the note label, so legends, bases and caveats share one style; an item that cites a source follows the source mark rule)
+- Start an explanation that sits inside a box right under a figure or item name with a content label (a label is one word without spaces followed by a colon)
+    + (Where) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
+    + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:"). In a ※ mark deck the build adds only ※, so write the source mark yourself (details in the notation section of `references/writing-rules.md`)
