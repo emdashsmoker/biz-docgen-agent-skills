@@ -731,7 +731,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Chart labels) Resolve label overlaps and clipping in the order below (methods and responses per chart type are in the chart label adjustment section of `references/recipes.md`)
     + (Chart design) First design a chart that needs no label adjustment, with the type, point count and series count that fit its one message
     + (Position adjustment) Clear the remaining overlaps and clipping with the position codes and move distances of `labelPos` on the series
-    + (Hiding) Among labels that still overlap after moving, hide only those the message does not need (keep hidden figures in at least one of the body, a note or the legend)
+    + (Hiding) Among labels that still overlap after moving, hide only those the message does not need (keep hidden figures in at least one of the body, a note, the legend or another series label showing the same value)
     + (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
 - (Images) Set a path or data URI in `src` of image blocks in composite and free
     + Without a logo, use the company name as text
@@ -876,7 +876,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
 - Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
-- Do the figures of hidden labels (`labelPos` none) appear in at least one of the body, a note or the legend (switch to a table when figures the message needs are missing)?
+- Do the figures of hidden labels (`labelPos` none) appear in at least one of the body, a note, the legend or another series label showing the same value (switch to a table when figures the message needs are missing)?
 
 #### Placement
 
