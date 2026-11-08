@@ -114,7 +114,7 @@
 | `funnel` | Funnel (stage-by-stage selection from candidates to the final set) | `stages[{label, value, cells[] or items}]` (from the top stage), `head[]` (description column titles, optional), `funnelHead` (funnel column title, optional). The band holds the stage name and target count, and the cells on the right hold per-stage descriptions. With `head`, `cells` are typeset in column order |
 | `governance` | Governance chart (central management chain with review and partner bodies on both sides) | `spine[]` (bodies in the order R&D funds flow), `sides[{at, side, text, dash}]`. `at` is the index (from 0) of the chain body to connect, the `side` value is left or right, and `dash` true gives a dashed line (partnership) |
 | `numbers` | Key figure tiles | `items[{value, label, note}]`. note gets the same mark as a cell note. Start an explanation of the figure with a content label such as "Formula:" or with the deck source mark (Notes section of writing-rules.md) |
-| `chart` | Native chart | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` is the number format of data labels and the value axis (e.g. "0.0" shows one decimal place. If unset, bar and line charts round to integers) |
+| `chart` | Native chart | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` is the number format of data labels and the value axis (e.g. "0.0" shows one decimal place. If unset, bar and line charts round to integers). `labelPos` on a series sets the data label position, move distance or hiding (chart label adjustment section below) |
 | `image` | Image or placeholder box | `src` (path or data URI), `caption` (description under the image), `label` (placeholder box text) |
 
 - Set deck-wide values of block labels (the label fields of valuechain and porter, and labels of goalsystem, house, logicmodel and canvas) under the block name keys of `meta.labels` (label slots section of `references/templates.md`)
@@ -204,6 +204,62 @@
     + Short text adds subject, criterion and figures
     + Long text splits into two items
 - If a box text fill warning comes from the cell width, reduce the `cols` ratio or add cells
+
+### chart label adjustment
+
+#### Resolution order
+
+- Find data label overlaps and clipping on the single 120 dpi PNG and resolve them in the order below (rebuild and re-check after each step)
+- (Chart design) Before using labelPos, design a chart that needs no label adjustment
+    + Keep only the points and series the one message needs
+    + When so many categories make labels overlap, keep the top 4-5 and merge the rest into Other (Other comes last, pies have six slices or fewer)
+    + When so many periods make labels overlap, keep the latest 12 or only the span the message needs
+    + Present item comparisons with long category names as horizontal bars, and split crowded lines and clustered bars into two charts by series
+- (Position adjustment) Move overlaps and clipping that chart design cannot clear with labelPos
+    + Put labels on the side where they do not overlap with position codes
+    + Move overlaps that position codes cannot clear with dx and dy
+    + Keep moved labels close to their marker, bar or slice so that it is clear which point the value belongs to
+- (Hiding) Among labels that still overlap after moving, hide only those the message does not need with none (on lines, keep the labels of points the message refers to, such as the start, the end and crossings)
+- Keep the figures of hidden labels in at least one of the paths below
+    + (Body) items of chart_two, findings of chart_text and other text on the same slide
+    + (Note) slide footnotes
+    + (Legend) a value range next to the hidden series name (e.g. "Other (1-2%)")
+    + (Same-value label) another series label shows the same value, as at a crossing point
+- (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
+    + Switch to a table when a figure cited in the headline or body would be hidden
+    + Switch to a table when figures of the points the message compares would be hidden
+    + Switch to a table when so many figures are hidden that the body, notes and legend cannot carry them
+    + Typeset the table with the table template or a composite table block, following the Tables section of `references/writing-rules.md`
+
+#### labelPos settings
+
+- `labelPos` on a series (`series[]`) sets the position, move distance or hiding of data labels
+- It applies to chart blocks, chart_text, chart_two, task samples and chart slots of custom slides
+- (Value form) A single value applies to the whole series, an array in the same order as values applies to each point
+    + A string is a position code, and "none" hides the label
+    + An object `{"pos": "l", "dx": 0, "dy": 4}` gives a position code and a move distance (without pos the label moves from the builder default position)
+    + dx is positive to the right, dy is positive downward, in pt (judge distances against the 11pt label font size)
+    + null inside an array keeps the builder default label
+    + When horizontal bars are sorted in descending order, the array is sorted with values
+- (Positions per type) Each chart type allows different position codes
+    + Bars allow outEnd, inEnd, ctr, inBase
+    + Stacked bars allow inEnd, ctr, inBase
+    + Lines allow t (top), b (bottom), l (left), r (right), ctr
+    + Pies allow outEnd, inEnd, ctr, bestFit
+- lint reports positions outside the allowed values, object keys other than pos, dx and dy, non-numeric dx and dy, and arrays whose length differs from values as FAIL
+- lint reports labelPos on doughnut series and chart-level labelPos as ignored settings (WARN)
+- finalize.py writes the settings of the build record into the chart XML, so a PPTX from build.js alone does not show them
+- Font size is not adjustable (data labels are typeset at the 11pt body minimum, so adjust position and move distance instead)
+- Move distances are tuned on the LibreOffice rendering (PowerPoint places default labels differently and can be off by a few pt)
+
+#### Responses per chart type
+
+| Issue | Bar | Stacked bar | Line | Pie |
+|---|---|---|---|---|
+| Overlap | When labels of neighboring bars touch, raise the label of the longer bar of each point with dy so the heights alternate | Position codes inside the segment cannot clear labels of thin segments, so give each series dy in opposite directions to move them above and below the bar | Split t and b by series and move the remaining overlaps with l, r or dx, dy | Stagger the labels of small slices at different heights with dx and dy |
+| Clipping | When clipped at the cell edge, keep the label inside with inEnd or dx | Not applicable because labels sit inside segments | When clipped at the chart edge, set r on the first point and l on the last point | When many small slices cause clipping, merge them into Other |
+| Missing | Not supported. The builder draws missing values (null) as 0 bars with a "0" label, so drop the point or present a table | Same as bars | Not supported. Missing values are drawn as a line dropping to 0, so drop the point or present a table | Leave out points whose value is 0 |
+| Hard to read | When rounding makes different values look equal, set decimals with numFmt. Inside positions on dark bars (inEnd, ctr, inBase) have low text contrast | When it is unclear which series a label moved outside the bar belongs to, state the series name and value in the body | When labels of the same value stack, move one series to b | Label text has one color for the whole chart, so use inEnd and ctr only on light slices |
 
 ## Recipe list
 

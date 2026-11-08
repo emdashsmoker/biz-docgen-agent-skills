@@ -61,6 +61,18 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
 FOOTNOTE_STYLES = ("number", "mark")  # Footnote style (meta.footnoteStyle). The first value is the default. Same list as NOTE_STYLES in atoms.js
+# Chart series label settings (series[].labelPos). A string is a position, an object is a position (pos) and a move distance in pt (dx, dy). none hides the label
+# Positions are the values ECMA-376 and MS-OI29500 allow per chart type
+# (stacked bars do not allow outEnd, area charts allow no position). Doughnuts are not in the table because the builder draws no labels on them
+LABEL_HIDDEN = "none"
+LABEL_POSITIONS = {
+    "bar": ("outEnd", "inEnd", "ctr", "inBase"),
+    "stacked": ("inEnd", "ctr", "inBase"),
+    "line": ("t", "b", "l", "r", "ctr"),
+    "pie": ("outEnd", "inEnd", "ctr", "bestFit"),
+    "area": (),
+}
+LABEL_OBJECT_KEYS = ("pos", "dx", "dy")
 HANGUL_RE = re.compile(r"[가-힣]")
 # Overflow check for substituted custom slide text. Computes the paragraph spacing and font size the builder (playOwn, shape, fitParas in atoms.js) will set with the same rules, then measures the rendered height
 # Box typesetting values are those of the build (shape, mgPt, playOwn, fitParas in atoms.js) and tokens.js
@@ -427,6 +439,64 @@ def own_overflows(own_slide, slots, layout, geo=None):
     return out
 
 
+def chart_specs(v):
+    """Chart specs in a slide. Objects with a series array (chart slots, chart blocks, chart slots of custom slides)"""
+    if isinstance(v, dict):
+        if isinstance(v.get("series"), list):
+            yield v
+        for x in v.values():
+            yield from chart_specs(x)
+    elif isinstance(v, list):
+        for x in v:
+            yield from chart_specs(x)
+
+
+def label_kind(spec):
+    """Chart type for the labelPos allowed values. An undefined type counts as a bar, as in the builder (atoms.chart)"""
+    t = spec.get("type")
+    if t in ("line", "pie", "doughnut", "area"):
+        return t
+    return "stacked" if spec.get("grouping") in ("stacked", "percentStacked") else "bar"
+
+
+def label_point_problem(p, allowed):
+    """Problem of one labelPos point. None when there is no problem (null keeps the builder default label)"""
+    if p is None:
+        return None
+    if not isinstance(p, dict):
+        return None if p in allowed else str(p)
+    extra = sorted(set(p) - set(LABEL_OBJECT_KEYS))
+    if extra:
+        return f"key {', '.join(extra)}"
+    if p.get("pos") is not None and p["pos"] not in allowed:
+        return f"pos {p['pos']}"
+    not_number = [k for k in ("dx", "dy") if k in p and (isinstance(p[k], bool) or not isinstance(p[k], (int, float)))]
+    return f"non-numeric {', '.join(not_number)}" if not_number else None
+
+
+def label_pos_checks(sid, spec):
+    """Check series[].labelPos. Values outside the allowed values and arrays whose length differs from values are FAIL, ignored settings are WARN"""
+    fails, warns = [], []
+    if "labelPos" in spec:
+        warns.append(f"[{sid}] chart-level labelPos is ignored. Set labelPos on each series item")
+    kind = label_kind(spec)
+    for s in spec.get("series") or []:
+        if not isinstance(s, dict) or "labelPos" not in s:
+            continue
+        pos, name = s["labelPos"], s.get("name", "")
+        if kind == "doughnut":
+            warns.append(f"[{sid}] labelPos of series {name} is ignored (doughnuts show a center figure without data labels)")
+            continue
+        allowed = (LABEL_HIDDEN,) + LABEL_POSITIONS[kind]
+        n_values = len(s.get("values") or [])
+        if isinstance(pos, list) and len(pos) != n_values:
+            fails.append(f"[{sid}] labelPos array of series {name} has {len(pos)} items but values has {n_values}")
+        bad = sorted({e for e in (label_point_problem(p, allowed) for p in (pos if isinstance(pos, list) else [pos])) if e})
+        if bad:
+            fails.append(f"[{sid}] labelPos error in series {name} ({'; '.join(bad)}). Positions allowed in a {kind} chart: {', '.join(allowed)}. Object keys: pos, dx, dy (dx and dy are numbers in pt)")
+    return fails, warns
+
+
 def blocks_of(sl):
     regs = ((sl.get("slots") or {}).get("regions")) or []
     return [b for r in regs for b in (r.get("blocks") or ([r["block"]] if r.get("block") else []))]
@@ -624,6 +694,9 @@ def lint(story, ledger=None, story_path=".", layout=None):
         else: run_tpl, run_n = key, 1
         if run_n == L.get("sameTemplateRun", 3) + 1: warns.append(f"[{sid}] same structure {key} {run_n} slides in a row (monotonous rhythm)")
         if tpl == "free": free_n += 1
+        for spec in chart_specs(s):
+            cf, cw = label_pos_checks(sid, spec)
+            fails.extend(cf); warns.extend(cw)
         hl = s.get("headline", "")
         # bandMode blank draws no band, so there is no headline position
         if tpl not in BAND_TEMPLATES and not tpl.startswith("own:") and s.get("bandMode") != "blank" and not hl:

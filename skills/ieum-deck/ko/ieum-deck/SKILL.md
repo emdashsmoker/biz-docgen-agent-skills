@@ -715,6 +715,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 범례는 다계열 차트에만 표시
     + 차트 색은 테마 색의 파스텔 계열
     + 음수 값이 있는 막대 차트는 빌더가 0 기준선과 음수 막대 아래 수치 자리를 조판
+- (차트 레이블) 레이블 겹침과 잘림은 아래 순서로 해결 (세부 방법과 형식별 대응은 `references/recipes.md` chart 레이블 조정 절)
+    + (차트 설계) 메시지 1개에 맞는 형식, 항목 수, 계열 수로 레이블 조정이 필요 없는 차트를 먼저 설계
+    + (위치 조정) 남은 겹침과 잘림은 계열의 `labelPos` 위치 코드와 이동 거리로 해소
+    + (숨김) 옮겨도 풀리지 않는 레이블 가운데 메시지와 무관한 레이블만 숨기고 그 수치는 본문, 주석, 범례에 남김
+    + (표 전환) 숨김으로 메시지에 필요한 수치가 빠지면 차트 대신 표로 제시
 - (이미지) composite 와 free 의 image 블록 `src` 에 경로나 data URI 를 지정
     + 로고가 없으면 회사명 텍스트로 대체
     + src 를 적지 않은 image 블록은 점선 자리 상자로 조판
@@ -788,6 +793,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 처리 후 줄바꿈 단위 미기록 문단이 남으면 finalize.py 가 종료 코드 1 로 실패
 - finalize.py 는 표 셀 위아래 여백을 셀 속성(marT, marB)에 복원하여 PowerPoint 의 기본 여백 적용으로 표가 넘치는 현상을 방지
 - finalize.py 는 차트 글자(범주, 범례, 데이터 레이블)에 나눔고딕을 동아시아 글꼴로 지정하여 차트 한글이 테마 기본 글꼴로 바뀌는 현상을 방지
+- finalize.py 는 빌드 기록의 계열 레이블 지정(`series[].labelPos`)을 차트 XML 의 항목 레이블로 기록 (build.js 만 실행한 PPTX 에는 반영되지 않음)
+    + soffice 재저장이 원형 레이블의 이동 거리를 지우므로 재직렬화 후에 다시 기록
 - finalize.py 는 한글이 든 글자 조각의 언어를 ko-KR 로 기록하여 LibreOffice 재저장이 실행 환경 로캘에 따라 한글을 다른 언어(zh-CN 등)로 저장하는 현상을 방지
 - finalize.py 는 줄표 불릿("-")이 본문 글꼴을 따르게 하여 PowerPoint 의 불릿 빈 네모 표시를 방지
 - finalize.py 는 soffice 재직렬화가 가로선 높이와 세로선 폭에 남기는 0.01mm(360 EMU)를 0 으로 되돌려 PowerPoint 의 직선 기울어짐을 방지
@@ -821,6 +828,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (시각 검수) `scripts/render.sh` 로 PNG 를 만들어 전량 열람
 - 열람은 3-6장 단위 시트(`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)로 수행
 - 차트가 든 슬라이드는 dpi 120 단독 PNG(`bash scripts/render.sh out.pptx png_chart 120`)로 차트 안 글자의 겹침을 재확인 (시트 크기에서는 글자가 읽기 어려울 만큼 축소)
+    + 레이블 겹침은 디자인 시스템의 차트 레이블 해결 순서로 조정한 뒤 다시 빌드하여 재확인
 - 열람한 시트 파일명은 완료 보고에 나열
 - (시각 검수 질문) 슬라이드마다 확인하는 질문
     + 헤드라인을 가려도 본문만으로 같은 결론에 도달하는가
@@ -854,6 +862,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 연결선과 화살표가 상자에서 떨어져 떠 있는가
 - 차트 레이블이 차트 요소나 다른 레이블과 겹치는가
 - 차트에 표시된 수치가 storyboard 값과 일치하는가 (나란히 붙은 레이블은 한 수치처럼 보임)
+- 숨긴 레이블(`labelPos` none)의 수치가 본문, 주석, 범례 가운데 한 곳에 있는가 (메시지에 필요한 수치가 빠졌으면 표로 전환)
 
 #### 배치
 
