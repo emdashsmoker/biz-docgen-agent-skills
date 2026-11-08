@@ -952,8 +952,10 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
   const sl = slots || {};
   const ids = { texts: [], tables: [], images: [], charts: [] };
   let tk = 0, bk = 0, ik = 0, ck = 0;
-  const sx = ctx && ctx.S ? ctx.S.sx : 1;
-  const sy = ctx && ctx.S ? ctx.S.sy : 1;
+  // Source coordinates are relative to the source page size, so the scale is deck page size ÷ source page size (ctx.S.sx, sy scale the 16:9 token coordinates)
+  const src = (ctx && ctx.own && ctx.own.__slideSize) || { W: T.BASE_W, H: T.BASE_H };
+  const sx = ctx && ctx.S ? ctx.S.layout.W / src.W : 1;
+  const sy = ctx && ctx.S ? ctx.S.layout.H / src.H : 1;
   const sc = (a) => (sx === 1 && sy === 1 ? a : { ...a, x: +(a.x * sx).toFixed(3), y: +(a.y * sy).toFixed(3), w: +(a.w * sx).toFixed(3), h: +(a.h * sy).toFixed(3) });
   // Pre-pass: minimum shrink ratio per group of equal source font sizes (keeps sibling boxes at matching sizes). Substituted slot text is approximated from the source
   const ratioBySize = {};

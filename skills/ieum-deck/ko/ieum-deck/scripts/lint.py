@@ -11,6 +11,7 @@
 - 문체: 헤드라인 문체(meta.headlineStyle: noun | polite), 본문 명사형(존댓말 종결 금지). 한글이 없는 헤드라인(영문 발표자료)은 문체 검사를 건너뜀
 - 문장 규범: em dash, 대비 구문, 숫자 선언, 의미 공백, 과장, 메타 서술, 내부 어휘, 연결어 (FAIL) / 비선호 어휘 (WARN)
   출처 문자열(source, factSource)은 문헌 제목을 인용하므로 em dash 를 뺀 문장 규범, 비선호 어휘, 문체, RFP 워딩, 제도 워딩 검사에서 제외
+  RFP 등록 명칭(meta.rfp.wording 의 standard)과 정확히 일치하는 구간은 가린 뒤 문장 규범과 비선호 어휘를 검사 (명칭 밖 어휘는 기존 기준 적용)
 - RFP 워딩: meta.rfp.wording[{standard, variants[]}] 변형 출현 FAIL
 - 배점 귀속: meta.rfp.evalItems[{id, name, score, quantitative}] 비정량 전건 귀속 FAIL, 비중 편차 WARN
 - 적용 범위: meta.kind 가 proposal 계열이거나 meta.rfp 가 있으면 제안 검사 전부 적용. 일반 기획 PPT 는 RFP·배점 검사를 건너뜀
@@ -264,13 +265,16 @@ def own_slot_value(slots, slot_id, text):
     return next((v for k, v in slots.items() if k.startswith("~") and len(k) > 1 and cur.startswith(norm_ws(k[1:]))), None)
 
 
-def layout_scale(layout):
-    """판형의 가로와 세로 배율 (16:9 기준). 빌더는 커스텀 슬라이드 좌표에 이 배율을 곱해 재생"""
+def layout_scale(layout, geo=None):
+    """판형의 가로와 세로 배율 (커스텀 슬라이드 원본 판형 기준). 빌더는 커스텀 슬라이드 좌표에 이 배율을 곱해 재생
+    원본 판형은 own-deck.json 의 slideW, slideH 이며 값이 없는 이전 추출본은 16:9 기준으로 간주 (atoms.js playOwn 과 같은 규칙)"""
     lays = LIMITS.get("LAYOUTS", {})
     base, cur = lays.get(BASE_LAYOUT), lays.get(layout)
     if not base or not cur:
         return 1.0, 1.0
-    return cur["W"] / base["W"], cur["H"] / base["H"]
+    src_w = (geo or {}).get("slideW") or base["W"]
+    src_h = (geo or {}).get("slideH") or base["H"]
+    return cur["W"] / src_w, cur["H"] / src_h
 
 
 def own_icon_width(atoms, a, slots):
@@ -400,9 +404,10 @@ def overflow_in(need, h, top, bottom, va):
     return (need - (h - top - bottom)) / 2 - min(top, bottom)
 
 
-def own_overflows(own_slide, slots, layout):
-    """치환 문구가 상자를 넘치는 원자 [(원문, 줄 수)]. 빌더와 같은 슬롯 대응, 상자 여백, 아이콘 겹침, 판형 배율, 간격 조정, 글꼴 축소로 잼 (세로 쓰기 상자는 제외)"""
-    sx, sy = layout_scale(layout)
+def own_overflows(own_slide, slots, layout, geo=None):
+    """치환 문구가 상자를 넘치는 원자 [(원문, 줄 수)]. 빌더와 같은 슬롯 대응, 상자 여백, 아이콘 겹침, 판형 배율, 간격 조정, 글꼴 축소로 잼 (세로 쓰기 상자는 제외)
+    geo 는 own-deck.json 전체 (원본 판형 slideW, slideH 를 배율 계산에 씀)"""
+    sx, sy = layout_scale(layout, geo)
     atoms = own_slide.get("atoms", [])
     out = []
     for slot_id, a in own_text_atoms(own_slide):
@@ -472,6 +477,16 @@ TRACK_TERMS = {
 CITATION_KEYS = ("source", "factSource")
 # 출처 문자열에도 적용하는 문장 규범. 문장 부호는 인용 뜻을 바꾸지 않고 교체할 수 있음
 CITATION_CHECKED = ("em dash 사용",)
+# RFP 등록 명칭(meta.rfp.wording 의 standard) 구간을 문장 규범과 비선호 어휘 검사 전에 바꿔 넣는 문자
+# Why: RFP 성과품명처럼 바꿀 수 없는 명칭 안의 어휘("귀속" 등)는 오탐. 글자와 공백이 아닌 문자로 가려 명칭 앞뒤 글자가 이어져 새 어휘로 읽히지 않게 함
+STANDARD_MASK = "\ufffc"
+
+
+def mask_standards(tx, standards):
+    """RFP 등록 명칭과 정확히 일치하는 구간을 가린 문구. standards 는 긴 명칭부터 정렬 (다른 명칭을 품은 명칭을 통째로 가림)"""
+    for std in standards:
+        tx = tx.replace(std, STANDARD_MASK)
+    return tx
 # 비R&D 트랙에서 그대로 복제하면 결함인 methods 예시 모듈명
 METHODS_EXAMPLE_MODULES = ["대내외 환경분석", "내부현황과 사례분석", "시사점과 전략체계", "실행계획", "정책과 환경 분석", "기존 사업과 사례 분석", "목표 체계와 논리모형", "타당성 확보", "현황 진단", "갭 분석", "개선안 도출", "환경분석", "현황분석", "목표모델 수립", "이행계획"]
 
@@ -583,6 +598,7 @@ def lint(story, ledger=None, story_path=".", layout=None):
     style = meta.get("headlineStyle", "noun")
     track = meta.get("track", "general")
     rfp = meta.get("rfp", {})
+    standards = sorted({wd.get("standard") for wd in rfp.get("wording", []) if isinstance(wd.get("standard"), str) and wd.get("standard")}, key=len, reverse=True)
     ids = [s.get("id") for s in slides]
     for i in ids:
         if ids.count(i) > 1: fails.append(f"[{i}] id 중복")
@@ -628,13 +644,14 @@ def lint(story, ledger=None, story_path=".", layout=None):
                 if ph in tx:
                     (fails if meta.get("final") else warns).append(f"[{sid}] 사용자 확인 대기 항목 '{ph}': {tx[:30]}")
             cited = key in CITATION_KEYS
+            norm_tx = mask_standards(tx, standards)  # 문장 규범과 비선호 어휘는 RFP 등록 명칭을 가린 문구로 검사 (보고 문구는 원문)
             for pat, name in FAIL_PATTERNS:
                 if cited and name not in CITATION_CHECKED: continue
                 if name.startswith("숫자 선언") and s.get("allowCount"): continue  # RFP 지정 개수는 allowCount: true 로 예외
-                if re.search(pat, tx): fails.append(f"[{sid}] {name}: {tx[:40]}")
+                if re.search(pat, norm_tx): fails.append(f"[{sid}] {name}: {tx[:40]}")
             if cited: continue
             for w in WARN_WORDS:
-                if re.search(r"(?<![가-힣])" + w + r"(?![가-힣])", tx): warns.append(f"[{sid}] 비선호 어휘 '{w}': {tx[:30]}")
+                if re.search(r"(?<![가-힣])" + w + r"(?![가-힣])", norm_tx): warns.append(f"[{sid}] 비선호 어휘 '{w}': {tx[:30]}")
             if key != "headline" and tpl not in BAND_TEMPLATES and POLITE_END.search(tx): fails.append(f"[{sid}] 본문 존댓말 종결: {tx[:30]}")
             for wd in rfp.get("wording", []):
                 for v in wd.get("variants", []):
@@ -848,7 +865,7 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not tpl.startswith("own:") or not isinstance(sl.get("slots"), dict): continue
             own = own_n.get(int(tpl.split(":")[1]))
             if not own: continue
-            over = [f"{t.replace(chr(10), ' ')[:10]}→{n}줄" for t, n in own_overflows(own, sl["slots"], layout)]
+            over = [f"{t.replace(chr(10), ' ')[:10]}→{n}줄" for t, n in own_overflows(own, sl["slots"], layout, geo)]
             if over:
                 warns.append(f"[{sl.get('id')}] {tpl} 치환 문구가 상자 용량 초과 {over[:3]} (글자 수를 줄이거나 항목 수를 줄일 것. 글꼴 축소로 대응하지 않음)")
 

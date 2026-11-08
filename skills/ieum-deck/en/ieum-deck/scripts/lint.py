@@ -12,6 +12,7 @@ Checks
 - Style: headline style (meta.headlineStyle: noun | polite), noun-ending body text (no polite endings). Headlines without Hangul (English decks) skip the style check
 - Sentence norms: em dash, contrast constructions, number declarations, empty filler, exaggeration, meta narration, internal vocabulary, connectives (FAIL) / discouraged vocabulary (WARN)
   Source strings (source, factSource) quote document titles, so they skip sentence norms other than em dash, discouraged vocabulary, style, RFP wording and institutional wording checks
+  Spans that exactly match a registered RFP name (standard in meta.rfp.wording) are masked before the sentence norm and discouraged vocabulary checks (words outside the name are checked as before)
 - RFP wording: appearance of variants from meta.rfp.wording[{standard, variants[]}] is a FAIL
 - Score attribution: every non-quantitative item of meta.rfp.evalItems[{id, name, score, quantitative}] attributed (FAIL), share deviation (WARN)
 - Scope: if meta.kind is a proposal kind or meta.rfp exists, all proposal checks apply. General planning PPTs skip the RFP and score checks
@@ -266,13 +267,16 @@ def own_slot_value(slots, slot_id, text):
     return next((v for k, v in slots.items() if k.startswith("~") and len(k) > 1 and cur.startswith(norm_ws(k[1:]))), None)
 
 
-def layout_scale(layout):
-    """Horizontal and vertical scale of the page size (relative to 16:9). The builder multiplies custom slide coordinates by this scale"""
+def layout_scale(layout, geo=None):
+    """Horizontal and vertical scale of the page size (relative to the custom slide source page size). The builder multiplies custom slide coordinates by this scale
+    The source page size is slideW, slideH in own-deck.json. Older extracts without them are treated as 16:9 (same rule as atoms.js playOwn)"""
     lays = LIMITS.get("LAYOUTS", {})
     base, cur = lays.get(BASE_LAYOUT), lays.get(layout)
     if not base or not cur:
         return 1.0, 1.0
-    return cur["W"] / base["W"], cur["H"] / base["H"]
+    src_w = (geo or {}).get("slideW") or base["W"]
+    src_h = (geo or {}).get("slideH") or base["H"]
+    return cur["W"] / src_w, cur["H"] / src_h
 
 
 def own_icon_width(atoms, a, slots):
@@ -402,9 +406,10 @@ def overflow_in(need, h, top, bottom, va):
     return (need - (h - top - bottom)) / 2 - min(top, bottom)
 
 
-def own_overflows(own_slide, slots, layout):
-    """Atoms whose substituted text overflows the box [(original text, line count)]. Uses the builder's slot matching, box insets, icon overlap, page size scale, spacing adjustment and font shrinking (vertical text boxes are skipped)"""
-    sx, sy = layout_scale(layout)
+def own_overflows(own_slide, slots, layout, geo=None):
+    """Atoms whose substituted text overflows the box [(original text, line count)]. Uses the builder's slot matching, box insets, icon overlap, page size scale, spacing adjustment and font shrinking (vertical text boxes are skipped)
+    geo is the whole own-deck.json (its source page size slideW, slideH feeds the scale)"""
+    sx, sy = layout_scale(layout, geo)
     atoms = own_slide.get("atoms", [])
     out = []
     for slot_id, a in own_text_atoms(own_slide):
@@ -474,6 +479,16 @@ TRACK_TERMS = {
 CITATION_KEYS = ("source", "factSource")
 # Sentence norms that also apply to source strings. Punctuation can be replaced without changing what is quoted
 CITATION_CHECKED = ("em dash used",)
+# Character that replaces registered RFP name spans (standard in meta.rfp.wording) before the sentence norm and discouraged vocabulary checks
+# Why: words inside a fixed name such as an RFP deliverable title ("귀속" and so on) are false positives. A character that is neither a letter nor a space keeps the letters around the name from joining into a new word
+STANDARD_MASK = "\ufffc"
+
+
+def mask_standards(tx, standards):
+    """Text with spans that exactly match a registered RFP name masked. standards is sorted longest first (a name containing another name is masked whole)"""
+    for std in standards:
+        tx = tx.replace(std, STANDARD_MASK)
+    return tx
 # methods sample module names that are a defect when copied as is in non-R&D tracks
 METHODS_EXAMPLE_MODULES = ["대내외 환경분석", "내부현황과 사례분석", "시사점과 전략체계", "실행계획", "정책과 환경 분석", "기존 사업과 사례 분석", "목표 체계와 논리모형", "타당성 확보", "현황 진단", "갭 분석", "개선안 도출", "환경분석", "현황분석", "목표모델 수립", "이행계획"]
 
@@ -585,6 +600,7 @@ def lint(story, ledger=None, story_path=".", layout=None):
     style = meta.get("headlineStyle", "noun")
     track = meta.get("track", "general")
     rfp = meta.get("rfp", {})
+    standards = sorted({wd.get("standard") for wd in rfp.get("wording", []) if isinstance(wd.get("standard"), str) and wd.get("standard")}, key=len, reverse=True)
     ids = [s.get("id") for s in slides]
     for i in ids:
         if ids.count(i) > 1: fails.append(f"[{i}] duplicate id")
@@ -630,13 +646,14 @@ def lint(story, ledger=None, story_path=".", layout=None):
                 if ph in tx:
                     (fails if meta.get("final") else warns).append(f"[{sid}] item awaiting user confirmation '{ph}': {tx[:30]}")
             cited = key in CITATION_KEYS
+            norm_tx = mask_standards(tx, standards)  # Sentence norms and discouraged vocabulary are checked on text with registered RFP names masked (reports quote the original)
             for pat, name in FAIL_PATTERNS:
                 if cited and name not in CITATION_CHECKED: continue
                 if name.startswith("number declaration") and s.get("allowCount"): continue  # Counts set by the RFP are exempt with allowCount: true
-                if re.search(pat, tx): fails.append(f"[{sid}] {name}: {tx[:40]}")
+                if re.search(pat, norm_tx): fails.append(f"[{sid}] {name}: {tx[:40]}")
             if cited: continue
             for w in WARN_WORDS:
-                if re.search(r"(?<![가-힣])" + w + r"(?![가-힣])", tx): warns.append(f"[{sid}] discouraged word '{w}': {tx[:30]}")
+                if re.search(r"(?<![가-힣])" + w + r"(?![가-힣])", norm_tx): warns.append(f"[{sid}] discouraged word '{w}': {tx[:30]}")
             if key != "headline" and tpl not in BAND_TEMPLATES and POLITE_END.search(tx): fails.append(f"[{sid}] polite ending in body text: {tx[:30]}")
             for wd in rfp.get("wording", []):
                 for v in wd.get("variants", []):
@@ -850,7 +867,7 @@ def lint(story, ledger=None, story_path=".", layout=None):
             if not tpl.startswith("own:") or not isinstance(sl.get("slots"), dict): continue
             own = own_n.get(int(tpl.split(":")[1]))
             if not own: continue
-            over = [f"{t.replace(chr(10), ' ')[:10]}→{n} lines" for t, n in own_overflows(own, sl["slots"], layout)]
+            over = [f"{t.replace(chr(10), ' ')[:10]}→{n} lines" for t, n in own_overflows(own, sl["slots"], layout, geo)]
             if over:
                 warns.append(f"[{sl.get('id')}] {tpl} substituted text exceeds box capacity {over[:3]} (cut characters or items. Font shrinking is not used)")
 

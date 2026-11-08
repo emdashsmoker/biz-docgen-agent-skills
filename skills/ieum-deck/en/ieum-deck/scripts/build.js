@@ -48,6 +48,8 @@ function loadOwn(p) {
   const byN = {};
   d.slides.forEach((s) => (byN[s.n] = s));
   byN.__colorMap = d.colorMap || {};
+  // Source page size (inches). Denominator of the custom slide playback scale. Older extracts without slideW, slideH are treated as 16:9
+  byN.__slideSize = { W: d.slideW || T.BASE_W, H: d.slideH || T.BASE_H };
   return byN;
 }
 

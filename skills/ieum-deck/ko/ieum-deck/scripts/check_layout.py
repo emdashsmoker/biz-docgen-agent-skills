@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
+OWN_BASE_SIZE = (13.333, 7.5)  # own-deck.json 에 원본 판형(slideW, slideH)이 없을 때의 기준 판형 16:9 (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기준 (작은 쪽 글자 면적 대비)
 # 이 크기 이상인 글은 제목으로 보고 불릿 없는 여러 줄 판정에서 제외 (표지 제목 40pt 를 축소 하한 0.6배로 줄여도 24pt, 본문 계열 상한은 목차 항목 20pt)
@@ -37,21 +38,23 @@ def _build_record(pptx_path):
 
 
 def _own_small_boxes(record):
-    """커스텀 슬라이드 원문에서 본문 하한보다 작은 글꼴로 조판된 도형의 좌표 집합.
+    """커스텀 슬라이드 원문에서 본문 하한보다 작은 글꼴로 조판된 도형의 좌표 집합과 원본 판형 (폭, 높이).
 
     커스텀 슬라이드 재생은 원본 글꼴 크기를 따르므로 본문 하한 검사에서 제외한다.
     슬롯을 치환해도 좌표는 원본 그대로이므로 좌표로 식별한다. 커스텀 슬라이드 미등록이면 빈 집합.
+    원본 판형은 own-deck.json 의 slideW, slideH 이며 값이 없는 이전 추출본은 16:9 기준 (빌드 atoms.js playOwn 과 같은 규칙).
     """
     f = record.get("ownDeck")
-    if not f or not Path(f).exists(): return set()
+    if not f or not Path(f).exists(): return set(), OWN_BASE_SIZE
     out = set()
-    for sl in json.load(open(f, encoding="utf-8")).get("slides", []):
+    geo = json.load(open(f, encoding="utf-8"))
+    for sl in geo.get("slides", []):
         for a in sl.get("atoms", []):
             for para in a.get("paras", []) or []:
                 if any((r.get("sz") or 18) < BODY_MIN for r in para.get("runs", []) or []):
                     out.add((round(a.get("x", 0), 2), round(a.get("y", 0), 2), round(a.get("w", 0), 2), round(a.get("h", 0), 2)))
                     break
-    return out
+    return out, (geo.get("slideW") or OWN_BASE_SIZE[0], geo.get("slideH") or OWN_BASE_SIZE[1])
 
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
@@ -160,7 +163,7 @@ def main():
     record = _build_record(args[0])
     own_slides = set(record.get("ownSlides") or [])
     note_labels = tuple(str(t) for t in record.get("noteLabels") or [] if str(t).strip())  # 번호 표기 덱의 각주와 출처 행 앞 라벨 (build.json noteLabels)
-    OWN_SMALL = _own_small_boxes(record)
+    OWN_SMALL, own_size = _own_small_boxes(record)
     # 빌드 기록의 테마 색(사용자 지정 테마 포함)을 표 셀 허용 색에 더함
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
     # 글자 단위 줄바꿈(meta.lineBreak=char)은 사용자가 단어 중간 줄바꿈을 허용한 덱이므로 어절 중간 줄바꿈 추정을 생략
@@ -168,6 +171,7 @@ def main():
     W, H = inch(prs.slide_width), inch(prs.slide_height)
     sy = H / 7.5
     sx = W / 13.333  # 16:9 기준 대비 가로 배율
+    own_sx, own_sy = W / own_size[0], H / own_size[1]  # 커스텀 슬라이드 원본 판형 대비 배율 (OWN_SMALL 좌표 대조용, 빌드 playOwn 과 같은 값)
     fails, warns, headline_pts = [], [], []
     for n, slide in enumerate(prs.slides, start=1):
         rects, texts, icons, ink, ink_lines = [], [], [], [], []
@@ -198,7 +202,7 @@ def main():
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # ※ 로 시작하면 주석 표기가 이미 붙어 있으므로 용도 확인 대상이 아님
                         note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # 각주 번호 1) 2) 와 번호 표기 덱의 라벨(Note: 등) 포함
-                        own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
+                        own_origin = n in own_slides or struct_label or note_marked or (round(x / own_sx, 2), round(y / own_sy, 2), round(w / own_sx, 2), round(h / own_sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True
                             # 본문보다 작은 글씨는 주석으로 읽히므로 ※ 표기를 확인
