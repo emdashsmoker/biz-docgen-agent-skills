@@ -24,9 +24,9 @@ const SPEC = {
 function body(ctx, sb) {
   const S = ctx.S;
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
-  // With a source line, the body ends above it, and footnotes raise it by their line count
-  const nFoot = noteRows(sb);
-  const bottom = sb.source || nFoot ? S.noteY - 0.12 - nFoot : S.contentBottom;
+  // With bottom notes (footnotes, source line), the body ends above them (noteRows: height stacked above the first source line spot)
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  const bottom = noteLines || srcLines ? S.noteY - 0.12 - noteRows(ctx, sb) : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
 }
@@ -504,9 +504,18 @@ function chevronRow(ctx, slide, box, steps, opt) {
 }
 /** Conclusion box: navy label on the left + tinted message on the right */
 /** Conclusion band label. Slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default */
-/** Height (inches) for the footnote line count */
-function noteRows(sb) {
-  return 0.2 * [].concat((sb && sb.footnotes) || []).filter(Boolean).length;
+/** Marks and line counts of the slide bottom notes { notes, src, noteLines, srcLines }. The body bottom (body) and the setting (source) share this calculation */
+function bottomNotes(ctx, sb) {
+  const S = ctx.S, sz = T.SIZE.note;
+  const notes = A.notePlan(A.noteBlock(sb.footnotes), S.bodyW, sz);
+  const src = sb.source ? A.notePlan(A.sourceBlock(sb.source, S.bodyW, sz), S.bodyW, sz) : { texts: [], lines: 0 };
+  return { notes, src, noteLines: notes.lines, srcLines: src.lines };
+}
+/** Height (inches) stacked above the first source line spot: the footnote lines and the source lines after the first with a source line; without one, the footnote lines after the first
+ *  Why: on a slide without a source line, the last footnote line takes the empty source line spot so the body does not sit high with an empty band below */
+function noteRows(ctx, sb) {
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  return T.BAND.NOTE_LINE_H * (srcLines ? noteLines + srcLines - 1 : Math.max(0, noteLines - 1));
 }
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
@@ -539,33 +548,37 @@ function calloutW(ctx, text, w0, maxW) {
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
   return w;
 }
-/** Note style of the deck (meta.footnoteStyle) and the number-style labels. Labels come from the slide footnoteLabel and sourceLabel, meta.labels.common, then the defaults */
+/** Note style of the slide. style is meta.footnoteStyle (number when unset); labels come from the slide footnoteLabel and sourceLabel, meta.labels.common, then the defaults
+ *  inline is the slide footnoteInline (notes and the source line run on in one paragraph), markSource is meta.footnoteSourceMark (※ on sources in a ※ mark deck). build.js registers it per slide with atoms.setNoteStyle */
 function noteStyle(ctx) {
   const sb = ctx.sb || {};
-  return { style: ctx.meta && ctx.meta.footnoteStyle, labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) } };
+  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true, markSource: !!(ctx.meta && ctx.meta.footnoteSourceMark) };
 }
-/** Note string under a box. Adds the deck note marks and joins the lines with line breaks (marks follow atoms.noteLines) */
-function noteText(ctx, v) {
-  const { style, labels } = noteStyle(ctx);
-  return A.noteLines(v, style, labels).join("\n");
+/** Paragraphs and line count of a note under a box (atoms.noteBlock, notePlan). w is the note box width */
+function boxNote(v, w) {
+  return A.notePlan(A.noteBlock(v), w, T.SIZE.note);
 }
-/** Source line string. "※ A; B" in a ※ mark deck; in a number-style deck, removes ※ and the source mark from each item and joins them after one source label (e.g. "Source: A; B") */
-function sourceText(ctx, v) {
-  const { style, labels } = noteStyle(ctx);
-  const arr = [].concat(v).filter(Boolean).map((x) => String(x).trim().replace(/^※\s*/, ""));
-  if (style !== "number") return `※ ${arr.join("; ")}`;
-  const unmark = (x) => {
-    const s = x.replace(A.SOURCE_MARK, "");
-    return s.startsWith(labels.source) ? s.slice(labels.source.length).trim() : s;
-  };
-  return `${labels.source} ${arr.map(unmark).filter(Boolean).join("; ")}`;
+/** Height (inches) of a note under a box. The one-line height h1 plus NOTE_LINE_H for each line after the first. 0 without a note */
+function boxNoteH(plan, h1) {
+  return plan && plan.lines ? h1 + T.BAND.NOTE_LINE_H * (plan.lines - 1) : 0;
 }
+/** Sets a note under a box. opt holds A.text options; with align center, a hanging group sits in the middle of the box (atoms.centerNoteBox) */
+function drawNote(slide, box, plan, opt) {
+  if (!plan || !plan.lines) return;
+  const o = { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", ...opt };
+  const c = o.align === "center" ? A.centerNoteBox(box, plan, o.sz, (o.mg || A.TEXT_MG_IN)[0]) : { box, align: o.align };
+  A.text(slide, c.box, A.noteParas(plan, { sz: o.sz, color: o.color, align: c.align }), { ...o, align: c.align });
+}
+/** Slide bottom notes. The source line grows upward from its one-line spot (noteY) and footnotes stack above it; without a source line, the last footnote line sits in the source line spot (marks follow atoms.noteBlock and sourceBlock) */
 function source(ctx, slide, sb) {
-  const { style, labels } = noteStyle(ctx);
-  A.footnotes(slide, ctx.S, sb.footnotes, style, labels);
-  if (!sb.source) return;
   const S = ctx.S;
-  A.text(slide, { x: S.bodyX, y: S.noteY, w: S.bodyW, h: 0.24 }, sourceText(ctx, sb.source), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+  const { notes, src, srcLines } = bottomNotes(ctx, sb);
+  const extra = T.BAND.NOTE_LINE_H * Math.max(0, srcLines - 1);
+  const top = S.noteY - extra;
+  A.footnotes(slide, S, notes, srcLines ? top : S.noteY + T.BAND.NOTE_LINE_H);
+  if (!srcLines) return;
+  A.text(slide, { x: S.bodyX, y: top, w: S.bodyW, h: T.BAND.SOURCE_H + extra }, A.noteParas(src, { sz: T.SIZE.note, color: T.COLOR.textMuted }),
+    { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
 }
 function tag(ctx, slide, box, text) {
   // Sample, Illustrative tag: bordered box rotated -27 degrees
@@ -643,7 +656,7 @@ function purpose(ctx, slide, sb) {
     const th0 = A.estimateLines(ld.title, twAll - 0.1, T.SIZE.panelHead, true) > 1 ? 0.55 : 0.4;
     const subs0 = (ld.sub || []).filter(Boolean);
     const subH = subs0.reduce((a, t) => a + Math.max(1, A.estimateLines(typeof t === "string" ? t : t.text, twAll - T.PARA.bulletIndentIn, T.SIZE.body)) * A.lineHeightIn(T.SIZE.body) + 0.045, 0);
-    const noteH0 = 0.2 * [].concat(ld.note || []).filter(Boolean).length;
+    const noteH0 = T.BAND.NOTE_LINE_H * boxNote(ld.note, twAll).lines;
     return th0 + 0.12 + subH + noteH0 + 0.12;
   });
   const sum = need.reduce((a, b) => a + b, 0) || 1;
@@ -661,8 +674,8 @@ function purpose(ctx, slide, sb) {
     const th = A.estimateLines(ld.title, tw - 0.1, T.SIZE.panelHead, true) > 1 ? 0.55 : 0.4;
     // Lead evidence is bullets; a note is a small gray line starting with ※
     const subs = (ld.sub || []).filter((x) => x != null);
-    const notes = [].concat(ld.note || []).filter(Boolean);
-    const noteH = notes.length ? 0.2 * notes.length : 0;
+    const notes = boxNote(ld.note, tw);
+    const noteH = T.BAND.NOTE_LINE_H * notes.lines;
     return { ld, y, rh, th, subs, notes, noteH, sbox: { x: L.x + 0.8, y: y + th + 0.1, w: tw, h: rh - th - 0.15 - noteH } };
   });
   // Evidence bullets are one level, so every lead uses the smallest of the sizes fitted per lead cell
@@ -682,9 +695,7 @@ function purpose(ctx, slide, sb) {
     // The note sits right below the evidence bullet box (bullets spread leftover height into item gaps and fill the box, so a fixed per-item offset overlaps)
     // The evidence box height already excludes the note height (noteH), so the note stays inside the lead cell
     const noteY = subs.length ? sbox.y + sbox.h : y + th + 0.12 + Math.min(rh - th - 0.17 - noteH, 0.02);
-    if (notes.length) A.text(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH },
-      noteText(ctx, notes),
-      { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
+    drawNote(slide, { x: L.x + 0.8, y: noteY, w: tw, h: noteH }, notes, { valign: "top", mg: [0, 0, 0, 0] });
   });
   label(ctx, slide, { x: R.x, y: R.y, w: R.w, h: T.PANEL.HEAD_H }, LB.label("purpose", "purposeHead", s.purposeHead), { sz: T.SIZE.body });
   const pb = { x: R.x, y: R.y + T.PANEL.HEAD_H, w: R.w, h: 1.05 };
@@ -1170,7 +1181,10 @@ function roadmap(ctx, slide, sb) {
   const gx = b.x + lw + 0.1, gw = b.w - lw - 0.1, pw = gw / Math.max(periods.length, 1);
   label(ctx, slide, { x: b.x, y: b.y, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: 0.35 }, LB.label("roadmap", "laneHead", s.laneHead), { sz: T.SIZE.body });
   periods.forEach((p, i) => label(ctx, slide, { x: gx + i * pw, y: b.y, w: pw - 0.02, h: 0.35 }, p, { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body }));
-  const lh = (b.h - 0.45 - (s.note ? 0.4 : 0)) / Math.max(lanes.length, 1);
+  // The note takes 0.4 inch for one line plus NOTE_LINE_H for each further line
+  const note = boxNote(s.note, b.w - 2 * A.TEXT_MG_IN[0]); // inner width of a box with default margins
+  const noteExtra = boxNoteH(note, 0);
+  const lh = (b.h - 0.45 - boxNoteH(note, 0.4)) / Math.max(lanes.length, 1);
   lanes.forEach((ln, i) => {
     const y = b.y + 0.45 + i * lh;
     label(ctx, slide, { x: b.x, y: y + 0.05, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: lh - 0.1 }, `${i + 1}  ${ln.title}`, { sz: T.SIZE.body });
@@ -1185,7 +1199,7 @@ function roadmap(ctx, slide, sb) {
       slide.addText(A.runsOf(A.parasFromString(t.text, { sz: T.SIZE.tableDense, color: T.COLOR.textDark, align: "left" })), { ...bx, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: 0.5 }, valign: "middle", margin: A.boxMargin([0.06, 0.01, 0.06, 0.01]), isTextBox: true, autoFit: false });
     });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.35, w: b.w, h: 0.3 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "center" });
+  drawNote(slide, { x: b.x, y: b.y + b.h - 0.35 - noteExtra, w: b.w, h: 0.3 + noteExtra }, note, { align: "center" });
   source(ctx, slide, sb);
 }
 /** Gantt: category and task columns + weekly grid by month. slots: {months:N, weeks:4, groups:[{name, tasks:[{name, from, to}]}], reports:[{name, at}], groupHead, taskHead, reportHead} */
@@ -1276,7 +1290,8 @@ function org(ctx, slide, sb) {
   const rowN = n > 6 ? 2 : 1;
   const perRow = Math.ceil(n / rowN);
   const gap = perRow >= 5 ? 0.12 : perRow >= 4 ? 0.18 : 0.22;
-  const areaH = b.y + b.h - y - 0.22 - (s.note ? 0.32 : 0);
+  const note = boxNote(s.note, b.w - 2 * A.TEXT_MG_IN[0]); // inner width of a box with default margins
+  const areaH = b.y + b.h - y - 0.22 - boxNoteH(note, 0.32);
   const rowGap = rowN > 1 ? 0.45 : 0.25; // two-row layouts leave room so the reporting line shows between rows
   const rowH = (areaH - (rowN - 1) * rowGap) / rowN;
   const tc = [];
@@ -1314,7 +1329,8 @@ function org(ctx, slide, sb) {
     // The share text is body information, so it uses the body floor (11pt); check_layout reads 10pt as note size
     if (t.share) A.text(slide, { x: c.x, y: bd.y + bd.h, w: c.w, h: 0.28 }, t.share, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "center" });
   });
-  if (s.note) A.text(slide, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, noteText(ctx, s.note), { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left" });
+  const noteH = boxNoteH(note, 0.28);
+  drawNote(slide, { x: b.x, y: b.y + b.h - noteH, w: b.w, h: noteH }, note, { align: "left" });
   source(ctx, slide, sb);
 }
 
@@ -1616,6 +1632,6 @@ function digest(ctx, slide, sb) {
   A.text(slide, { x: S.bodyX, y: S.contentY, w: S.bodyW, h: 1.0 }, `[${sb.digestOf}] ${sb.digest || ""}`, { sz: T.SIZE.body, color: T.COLOR.textMuted, valign: "top", align: "left" });
 }
 
-const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, noteText, noteStyle, pointLabel, noteRows };
+const HELPERS = { body, cols, rows, label, frame, subhead, bulletsBlock: bullets, groupGap, panel, tableBlock, tableLayout, tableMetrics, chevronRow, chevronCols, callout, tag, source, boxNote, boxNoteH, drawNote, noteStyle, pointLabel, noteRows };
 module.exports = { SPEC, cover, contents, divider, end, digest, free, purpose, scope, features, strategy, process, module_overview, task, task_multi, bullets: bulletsT, table, chart_text, chart_two, compare, roadmap, gantt, org, orgchart, staff_card, swot, cards, steps, illustrative, conclusion, composite: compositeT,
   helpers: HELPERS };

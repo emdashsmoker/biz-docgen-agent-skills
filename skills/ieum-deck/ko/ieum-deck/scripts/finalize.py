@@ -9,7 +9,8 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
         실재하지 않는 부품의 Override 제거, 내장 xlsx에 재귀 적용
      2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, run 과 차트의 언어 태그 지정(meta.labels.language),
         핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제,
-        OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak)
+        OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak),
+        주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록)
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -283,6 +284,75 @@ def use_text_font_for_opensymbol_bullets(xml: str) -> tuple[str, int]:
 
 PARA_PATTERN = re.compile(r"<a:p>(.*?)</a:p>", re.S)
 PPR_PATTERN = re.compile(r"<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>", re.S)
+PPR_WITH_BODY_PATTERN = re.compile(r"<a:pPr\b([^>]*)>(.*?)</a:pPr>", re.S)
+TAB_STOP_PATTERN = re.compile(r'<a:tab\b[^>]*\bpos="(\d+)"[^>]*/>')
+
+
+def set_hanging_indent(xml: str) -> tuple[str, int]:
+    """라벨 뒤 내어쓰기 문단의 marL 과 indent 기록. 불릿 없는 문단(buNone)이 pptxgenjs 기본값 marL="0" indent="0" 이고
+    탭 위치가 1개(0 보다 큼)이면 marL 을 그 탭 위치로, indent 를 음수 탭 위치로 바꿈
+
+    WHY: 주석과 출처 행의 여러 줄 묶음은 "라벨<탭>내용" 첫 줄 뒤의 줄을 라벨 뒤 위치에 맞춰야 함 (atoms.hangPlan).
+         pptxgenjs 는 불릿 없는 문단에 marL="0" indent="0" 만 기록하므로 build.js 가 내어쓰기 위치를 문단의 유일한 탭 위치로 넘김.
+         LibreOffice 24.2 는 탭 위치만 있는 문단의 탭을 기본 탭 간격(1인치)으로 보내고, 내어쓰기 문단은 첫 줄 탭과 둘째 줄 이후를 marL 에 맞춤.
+         soffice 재직렬화본은 0 인 marL, indent 를 기록하지 않고 탭 위치를 pos="0" 으로 남기므로 재적용 단계에서 다른 문단은 바뀌지 않음
+    """
+    count = 0
+
+    def fix(m: re.Match) -> str:
+        nonlocal count
+        attrs, body = m.group(1), m.group(2)
+        tabs = TAB_STOP_PATTERN.findall(body)
+        if "<a:buNone/>" not in body or len(tabs) != 1 or int(tabs[0]) <= 0:
+            return m.group(0)
+        if not (re.search(r'\smarL="0"', attrs) and re.search(r'\sindent="0"', attrs)):
+            return m.group(0)
+        count += 1
+        pos = tabs[0]
+        attrs = re.sub(r'\smarL="0"', f' marL="{pos}"', re.sub(r'\sindent="0"', f' indent="-{pos}"', attrs))
+        return f"<a:pPr{attrs}>{body}</a:pPr>"
+
+    return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
+
+
+TXBODY_PATTERN = re.compile(r"<(p|a):txBody>(.*?)</\1:txBody>", re.S)
+PPR_OPEN_TAG_PATTERN = re.compile(r"<a:pPr\b[^>]*?(/?)>")
+
+
+def pin_indent_after_hanging(xml: str) -> tuple[str, int]:
+    """내어쓰기 문단이 있는 글 상자에서 marL 이 없는 불릿 없는 문단에 marL="0" indent="0" 을 기록
+
+    WHY: soffice 재직렬화본은 0 인 marL, indent 를 기록하지 않음. LibreOffice 24.2 는 marL 이 없는 문단을 가져올 때
+         앞 문단의 왼쪽 여백을 이어받으므로 내어쓰기 묶음 뒤의 일반 문단(커스텀 슬라이드 원문의 ※ 묶음 뒤 본문)이 들여 써짐.
+         불릿 문단의 여백은 목록 수준 속성이라 이어받지 않으므로 불릿 없는 내어쓰기 문단이 있는 상자에만 적용
+    """
+    count = 0
+
+    def is_hanging(para: str) -> bool:
+        m = PPR_OPEN_TAG_PATTERN.search(para)
+        if not m or "<a:buChar" in para or "<a:buAutoNum" in para:
+            return False
+        marl, ind = re.search(r'\smarL="(\d+)"', m.group(0)), re.search(r'\sindent="-(\d+)"', m.group(0))
+        return bool(marl and ind and int(marl.group(1)) > 0)
+
+    def pin(para: str) -> str:
+        nonlocal count
+        m = PPR_OPEN_TAG_PATTERN.search(para)
+        if not m or "marL=" in m.group(0) or "<a:buChar" in para or "<a:buAutoNum" in para:
+            return para
+        count += 1
+        tag = m.group(0)
+        fixed = tag[:len("<a:pPr")] + ' marL="0" indent="0"' + tag[len("<a:pPr"):]
+        return para[:m.start()] + fixed + para[m.end():]
+
+    def fix_body(m: re.Match) -> str:
+        body = m.group(2)
+        paras = PARA_PATTERN.findall(body)
+        if not any(is_hanging(p) for p in paras):
+            return m.group(0)
+        return m.group(0).replace(body, PARA_PATTERN.sub(lambda pm: "<a:p>" + pin(pm.group(1)) + "</a:p>", body), 1)
+
+    return TXBODY_PATTERN.sub(fix_body, xml), count
 
 
 def strip_duplicate_paragraph_props(xml: str) -> tuple[str, int]:
@@ -521,6 +591,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["renumbered_ids"] = changed
         xml, dup = strip_duplicate_paragraph_props(xml)
         stats["duplicate_ppr"] = dup
+        xml, _ = set_hanging_indent(xml)
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)
@@ -530,6 +601,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
         stats["opensymbol_bullets"] = bf
         xml, _ = set_paragraph_line_break(xml)
+        xml, _ = pin_indent_after_hanging(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang

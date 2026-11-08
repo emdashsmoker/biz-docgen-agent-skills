@@ -60,4 +60,10 @@ function isExtraNote(text) {
   return (!!notePattern && notePattern.test(t)) || ["footnoteLabel", "sourceLabel"].some((k) => t.startsWith(label("common", k)));
 }
 
-module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote };
+/** Match for a token added with meta.labels.notation.source ("token:") at the start (group 0 runs from leading spaces to the colon), or null
+ *  The source line and single-item notes read it as a source mark the author wrote (atoms.sourceMark) */
+function notationMatch(text) {
+  return notePattern ? notePattern.exec(String(text)) : null;
+}
+
+module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote, notationMatch };

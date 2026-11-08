@@ -60,4 +60,10 @@ function isExtraNote(text) {
   return (!!notePattern && notePattern.test(t)) || ["footnoteLabel", "sourceLabel"].some((k) => t.startsWith(label("common", k)));
 }
 
-module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote };
+/** meta.labels.notation.source 로 추가한 토큰("토큰:" 형태)으로 시작하면 일치 결과(0번은 앞 공백부터 콜론까지), 아니면 null
+ *  출처 행과 1항목 주석이 작성자가 쓴 출처 표기로 인식 (atoms.sourceMark) */
+function notationMatch(text) {
+  return notePattern ? notePattern.exec(String(text)) : null;
+}
+
+module.exports = { DEFAULTS, useDeck, label, labelKeep, labels, format, language, isExtraNote, notationMatch };

@@ -107,6 +107,18 @@ def token_splits(paras, inner):
     return out
 
 
+def hanging_runs(runs):
+    """Runs of a paragraph hanging after a label, without the part up to the first tab (the label and the tab)"""
+    out, cut = [], False
+    for txt, pt, b in runs:
+        if not cut and "\t" in txt:
+            txt, cut = txt.split("\t", 1)[1], True
+        elif not cut:
+            continue
+        out.append((txt, pt, b))
+    return out or runs
+
+
 def overflow_estimate(sh):
     """Compares the estimated needed height of a text box with the box height. Returns (need_in, avail_in, wrap)"""
     tf = sh.text_frame
@@ -125,9 +137,13 @@ def overflow_estimate(sh):
         # Bulleted paragraphs lose width by their indent
         pxml = p._p.xml
         indent = 0.0
+        pr = p._p.find(NSA + "pPr")
         if "buChar" in pxml or "buAutoNum" in pxml:
-            pr = p._p.find(NSA + "pPr")
             indent = int(pr.get("marL")) / 914400 if pr is not None and pr.get("marL") else 0.28
+        elif pr is not None and pr.get("marL") and int(pr.get("indent") or 0) < 0:
+            # Paragraph hanging after a label (notes and the source line): the label before the first tab sits in the hanging space, so the text after the tab is measured at the width right of marL
+            indent = int(pr.get("marL")) / 914400
+            runs = hanging_runs(runs)
         eff_w = max(0.1, inner_w - indent)
         lines = wrap_lines(runs, eff_w)[0] if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
@@ -218,8 +234,9 @@ def main():
                     bulleted = any(p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buChar") is not None or p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buAutoNum") is not None for p in paras)
                     # If every line is centered, treat it as a label (role and name, title and subtitle) and skip it
                     label_like = len(paras) <= 3 and all(p.alignment is not None and int(p.alignment) == 2 for p in paras)
-                    # Footnotes (1), 2)) and ※ notes are skipped because the number or symbol acts as the bullet
-                    note_like = all(re.match(r"^\s*(\d+\)|※)", p.text or "") for p in paras if (p.text or "").strip())
+                    # Footnotes (1), 2)), ※ notes and note groups starting with a label (Note: etc.) are skipped because the number, symbol or label acts as the bullet
+                    # In a group that hangs after a label, paragraphs after the first start with a tab (footnote 2) onward, the second source onward)
+                    note_like = all(re.match(r"^(\t|\s*(\d+\)|※))", p.text or "") or bool(note_labels and (p.text or "").startswith(note_labels)) for p in paras if (p.text or "").strip())
                     # Title-size text such as a two-line cover title is not a list
                     title_like = all(r.font.size is not None and r.font.size.pt >= TITLE_PT for p in paras for r in p.runs if r.text.strip())
                     # When every line starts with a number (1., 1-1.), the number replaces the bullet (grid cell numbered)
@@ -497,7 +514,7 @@ def main():
             lv = {}
             for pa in sh.text_frame.paragraphs:  # Compare only bulleted paragraphs (title lines and notes excluded)
                 txt = "".join(r.text for r in pa.runs).strip()
-                if not txt or re.match(r"^\s*(※|\*|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])", txt): continue
+                if not txt or re.match(r"^\s*(※|출처|자료|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])", txt): continue
                 xml = pa._p.xml
                 if "buChar" not in xml and "buAutoNum" not in xml: continue
                 sz = max((r.font.size.pt for r in pa.runs if r.font.size), default=None)

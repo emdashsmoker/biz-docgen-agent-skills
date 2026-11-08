@@ -2,7 +2,7 @@
 """lint.py: storyboard.json 검사. FAIL 0건이 빌드 착수 조건.
 사용: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "유지 사유"]
 검사 항목
-- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char), 각주 표기(meta.footnoteStyle: mark | number) (FAIL)
+- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char), 각주 표기(meta.footnoteStyle: number | mark), ※ 기호 덱 출처의 ※ (meta.footnoteSourceMark: true | false), 슬라이드 주석 이어 쓰기(footnoteInline: true | false) (FAIL)
 - 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
@@ -31,6 +31,7 @@
 - 접두 중복: steps title 에 STEP 접두, process 모듈명에 M/Module 접두가 있으면 WARN
 - 번호 표기: 번호 뒤에 공백이 없으면 WARN ("1.목차" → "1. 목차"), secNo 에 마침표가 없으면 WARN
 - 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" (meta.labels.notation.source 로 추가한 토큰 포함) 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음. 슬라이드 footnoteLabel 과 sourceLabel 은 meta.labels.common 과 같은 라벨 설정값이므로 검사하지 않음)
+- 주석 이어 쓰기: footnoteInline 을 쓴 슬라이드 목록을 INFO 로 출력 (판정에 넣지 않음. 사용자 확인용 보고)
 - 모듈 표기: 절 제목과 목차 항목이 "Module N." 형식이면 WARN ([Module N] 권장)
 - 대상 지칭어: 지칭어 혼용, 지칭어 변경 후 과업 잔존, 제안 외 산출물의 과업 라벨 잔존 시 WARN, "본 기획" 표기 시 WARN
 - 리더 호칭: 총괄 리더와 품질 리더의 호칭이 한 발표자료 안에서 섞이면 WARN
@@ -58,7 +59,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
-FOOTNOTE_STYLES = ("mark", "number")  # 각주 표기(meta.footnoteStyle). build.js 의 FOOTNOTE_STYLES 와 같은 목록
+FOOTNOTE_STYLES = ("number", "mark")  # 각주 표기(meta.footnoteStyle). 첫 값이 기본. atoms.js 의 NOTE_STYLES 와 같은 목록
 HANGUL_RE = re.compile(r"[가-힣]")
 # 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 빌더(atoms.js 의 playOwn, shape, fitParas)가 정할 문단 간격과 글꼴 크기를 같은 규칙으로 계산한 뒤 렌더 높이로 잼
 # 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn, fitParas)와 tokens.js 의 값
@@ -592,6 +593,11 @@ def lint(story, ledger=None, story_path=".", layout=None):
         fails.append(f"meta.lineBreak 는 {' 또는 '.join(LINE_BREAKS)}. 입력값: {meta.get('lineBreak')}")
     if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
         fails.append(f"meta.footnoteStyle 는 {' 또는 '.join(FOOTNOTE_STYLES)}. 입력값: {meta.get('footnoteStyle')}")
+    if "footnoteSourceMark" in meta and not isinstance(meta["footnoteSourceMark"], bool):
+        fails.append(f"meta.footnoteSourceMark 는 true 또는 false. 입력값: {meta['footnoteSourceMark']}")
+    for s in story.get("slides", []):
+        if "footnoteInline" in s and not isinstance(s["footnoteInline"], bool):
+            fails.append(f"[{s.get('id')}] footnoteInline 은 true 또는 false. 입력값: {s['footnoteInline']}")
     lf, lw = label_checks(meta.get("labels"))
     fails.extend(lf); warns.extend(lw)
     slides = [apply_layout_patch(s, layout, fails) for s in story.get("slides", [])]
@@ -1082,6 +1088,12 @@ def lint(story, ledger=None, story_path=".", layout=None):
     return fails, warns
 
 
+def inline_slides(story):
+    """주석과 출처 행을 이어 쓴 슬라이드 (footnoteInline). 슬라이드 번호(id) 목록
+    WHY: 이어 쓰기는 줄 나눔 형태의 예외이므로 작성 모델이 고른 슬라이드를 사용자가 확인할 수 있게 보고"""
+    return [f"{i}({s.get('id') or '-'})" for i, s in enumerate(story.get("slides", []), 1) if s.get("footnoteInline") is True]
+
+
 def main():
     args = sys.argv[1:]
     if not args: raise SystemExit(__doc__)
@@ -1091,9 +1103,11 @@ def main():
     fails, warns = lint(story, ledger, args[0], layout)
     for f in fails: print("FAIL", f)
     for w in warns: print("WARN", w)
+    inline = inline_slides(story)
+    if inline: print(f"INFO 주석 이어 쓰기 슬라이드 {len(inline)}장: {', '.join(inline)} (footnoteInline. 보고에 포함하여 사용자 확인)")
     print(f"lint: FAIL {len(fails)} WARN {len(warns)} slides {len(story.get('slides', []))}")
     if "--report" in args:
-        json.dump({"fails": fails, "warns": warns}, open(args[args.index("--report") + 1], "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        json.dump({"fails": fails, "warns": warns, "footnoteInline": inline}, open(args[args.index("--report") + 1], "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     # 경고도 기본은 실패로 처리. 사유를 적어 통과시키려면 --allow-warn "사유" 를 붙임
     allow = args[args.index("--allow-warn") + 1] if "--allow-warn" in args else None
     if fails:

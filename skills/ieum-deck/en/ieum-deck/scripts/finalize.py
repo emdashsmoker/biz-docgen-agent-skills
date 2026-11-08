@@ -9,7 +9,8 @@ HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml fi
         remove Overrides for missing parts, apply recursively to embedded xlsx
      2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language tags of runs and charts (meta.labels.language),
         correct the core properties relationship type, clear the application name, remove the document language and presentation format name,
-        replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak)
+        replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak),
+        write marL and indent on note and source paragraphs that hang after a label (other paragraphs without bullets in the same box get 0)
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -283,6 +284,75 @@ def use_text_font_for_opensymbol_bullets(xml: str) -> tuple[str, int]:
 
 PARA_PATTERN = re.compile(r"<a:p>(.*?)</a:p>", re.S)
 PPR_PATTERN = re.compile(r"<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>", re.S)
+PPR_WITH_BODY_PATTERN = re.compile(r"<a:pPr\b([^>]*)>(.*?)</a:pPr>", re.S)
+TAB_STOP_PATTERN = re.compile(r'<a:tab\b[^>]*\bpos="(\d+)"[^>]*/>')
+
+
+def set_hanging_indent(xml: str) -> tuple[str, int]:
+    """Writes marL and indent of paragraphs that hang after a label. When a paragraph without bullets (buNone) has the pptxgenjs defaults
+    marL="0" indent="0" and one tab stop (above 0), marL becomes that tab position and indent its negative
+
+    WHY: multi-line note and source groups must align the lines after the first "label<tab>text" line to the position after the label (atoms.hangPlan).
+         pptxgenjs writes only marL="0" indent="0" on paragraphs without bullets, so build.js passes the hanging position as the paragraph's only tab stop.
+         LibreOffice 24.2 sends the tab of a paragraph with only a tab stop to the default tab interval (1 inch) and aligns a hanging paragraph's first-line tab and later lines to marL.
+         The soffice re-serialized package writes no marL or indent of 0 and keeps tab stops as pos="0", so the reapplication pass leaves other paragraphs unchanged
+    """
+    count = 0
+
+    def fix(m: re.Match) -> str:
+        nonlocal count
+        attrs, body = m.group(1), m.group(2)
+        tabs = TAB_STOP_PATTERN.findall(body)
+        if "<a:buNone/>" not in body or len(tabs) != 1 or int(tabs[0]) <= 0:
+            return m.group(0)
+        if not (re.search(r'\smarL="0"', attrs) and re.search(r'\sindent="0"', attrs)):
+            return m.group(0)
+        count += 1
+        pos = tabs[0]
+        attrs = re.sub(r'\smarL="0"', f' marL="{pos}"', re.sub(r'\sindent="0"', f' indent="-{pos}"', attrs))
+        return f"<a:pPr{attrs}>{body}</a:pPr>"
+
+    return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
+
+
+TXBODY_PATTERN = re.compile(r"<(p|a):txBody>(.*?)</\1:txBody>", re.S)
+PPR_OPEN_TAG_PATTERN = re.compile(r"<a:pPr\b[^>]*?(/?)>")
+
+
+def pin_indent_after_hanging(xml: str) -> tuple[str, int]:
+    """Writes marL="0" indent="0" on paragraphs without bullets and without marL in text boxes that hold a hanging paragraph
+
+    WHY: the soffice re-serialized package writes no marL or indent of 0. When LibreOffice 24.2 imports a paragraph without marL it keeps
+         the left margin of the previous paragraph, so plain paragraphs after a hanging group (body text after a ※ group in custom slide text) get indented.
+         Bullet paragraph margins are list level properties and are not carried over, so only boxes with a hanging paragraph without bullets are changed
+    """
+    count = 0
+
+    def is_hanging(para: str) -> bool:
+        m = PPR_OPEN_TAG_PATTERN.search(para)
+        if not m or "<a:buChar" in para or "<a:buAutoNum" in para:
+            return False
+        marl, ind = re.search(r'\smarL="(\d+)"', m.group(0)), re.search(r'\sindent="-(\d+)"', m.group(0))
+        return bool(marl and ind and int(marl.group(1)) > 0)
+
+    def pin(para: str) -> str:
+        nonlocal count
+        m = PPR_OPEN_TAG_PATTERN.search(para)
+        if not m or "marL=" in m.group(0) or "<a:buChar" in para or "<a:buAutoNum" in para:
+            return para
+        count += 1
+        tag = m.group(0)
+        fixed = tag[:len("<a:pPr")] + ' marL="0" indent="0"' + tag[len("<a:pPr"):]
+        return para[:m.start()] + fixed + para[m.end():]
+
+    def fix_body(m: re.Match) -> str:
+        body = m.group(2)
+        paras = PARA_PATTERN.findall(body)
+        if not any(is_hanging(p) for p in paras):
+            return m.group(0)
+        return m.group(0).replace(body, PARA_PATTERN.sub(lambda pm: "<a:p>" + pin(pm.group(1)) + "</a:p>", body), 1)
+
+    return TXBODY_PATTERN.sub(fix_body, xml), count
 
 
 def strip_duplicate_paragraph_props(xml: str) -> tuple[str, int]:
@@ -521,6 +591,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         stats["renumbered_ids"] = changed
         xml, dup = strip_duplicate_paragraph_props(xml)
         stats["duplicate_ppr"] = dup
+        xml, _ = set_hanging_indent(xml)
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)
@@ -530,6 +601,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, bf = use_text_font_for_opensymbol_bullets(xml)
         stats["opensymbol_bullets"] = bf
         xml, _ = set_paragraph_line_break(xml)
+        xml, _ = pin_indent_after_hanging(xml)
         xml, _ = set_latin_language(xml)
         xml, lang = set_hangul_run_language(xml)
         stats["hangul_lang"] = lang
