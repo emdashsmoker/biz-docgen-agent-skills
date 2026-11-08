@@ -954,8 +954,8 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** Marks of one note group { lead, leads, lines, items, join }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
- *  mark has no lead and puts ※ on each item without a label. An item that starts with a label (출처:, 산식: etc.) starts with the label without ※
- *    (※ stays on an item where the author wrote ※ before the label and on source items of a deck with meta.footnoteSourceMark)
+ *  mark has no lead and keeps a mark for each line in leads. An item without a label gets ※, and an item that starts with a label (출처:, 산식: etc.) gets the label without ※
+ *    (an item where the author wrote ※ before the label and a source item of a deck with meta.footnoteSourceMark get "※ label")
  *  number keeps the author's label (출처:, 산식:, 범례: etc.) and gives an item without one the note label (footnoteLabel)
  *    + One item: the label, then the text
  *    + Two or more items with the same label: the label on the first line only and 1) 2) on each item, one item per line (a source label gets no numbers and separates the items with semicolons like the source line)
@@ -972,17 +972,17 @@ function noteBlock(items, state) {
   const raw = src0.map((t) => t.replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
     // The label already tells what the line is, so no ※ is stacked on it. When a client template needs ※, the ※ the author wrote is kept
-    const lines = src0.map((t0) => {
+    const rows = src0.map((t0) => {
       let t = t0.replace(NOTE_LEAD, "");
       if (lb.note && t.startsWith(lb.note)) t = t.slice(lb.note.length).trim();
       if (!t) return null;
       const { label, text } = splitLabel(t, lb);
-      if (!label || !text) return `※ ${t}`;
-      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return `※ ${label} ${text}`;
+      if (!label || !text) return { lead: "※", text: t };
+      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return { lead: `※ ${label}`, text };
       USED_LEADS.add(label);
-      return `${label} ${text}`;
+      return { lead: label, text };
     }).filter(Boolean);
-    return { lead: null, leads: null, lines, items: lines.length };
+    return { lead: null, leads: rows.map((r) => r.lead), lines: rows.map((r) => r.text), items: rows.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -1040,12 +1040,21 @@ function hangPlan(block, sz, bold) {
   const hang = Math.max(...leads.filter(Boolean).map((l) => hangWidthIn(l, sz, bold)));
   return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
-/** Paragraphs and line count of a note group { hang, texts, lines } for a box of width w. lines includes wrapped lines
- *  A group without lead (※-style notes) keeps its lines, a one-paragraph group that fits one line (including a source label group run on) is "lead text", any other group hangs after the labels (hangPlan) */
+/** Paragraphs and line count of a note group { hang, hangs, texts, lines } for a box of width w. lines includes wrapped lines
+ *  A one-paragraph group that fits one line (including a source label group run on) is "lead text"
+ *  A group without lead (※-style notes) hangs each paragraph after its own mark (※ or label) (hangs holds the hang of each paragraph, hang the largest)
+ *  Any other group hangs after the widest label (hangPlan)
+ *  Why: each ※-style note line is a separate item, so the text starts are not gathered in one column. The second line of each paragraph aligns with the text start of its first line */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
-  if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
+  if (!block.lead) {
+    const texts = block.lines.map((t, i) => `${block.leads[i]} ${t}`);
+    if (texts.length === 1 && estimateLines(texts[0], w, sz, bold) <= 1) return { hang: 0, texts, lines: 1 };
+    const hangs = block.leads.map((l) => hangWidthIn(l, sz, bold));
+    const lines = block.lines.reduce((n, t, i) => n + Math.max(1, estimateLines(t, w - hangs[i], sz, bold)), 0);
+    return { hang: Math.max(...hangs), hangs, texts: block.lines.map((t, i) => `${block.leads[i]}\t${t}`), lines };
+  }
   const one = `${block.lead} ${block.join || block.lines[0]}`;
   if ((block.join || block.lines.length === 1) && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
   const plan = hangPlan(block, sz, bold);
@@ -1054,14 +1063,14 @@ function notePlan(block, w, sz, bold) {
 /** Paragraph list of a notePlan. opt: { sz, color, align } */
 function noteParas(plan, opt) {
   const o = opt || {};
-  return plan.texts.map((t) => ({ align: o.align || "left", hang: plan.hang || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
+  return plan.texts.map((t, i) => ({ align: o.align || "left", hang: (plan.hangs ? plan.hangs[i] : plan.hang) || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
 }
 /** Placement of a note in a centered spot { box, align }. A hanging group becomes left-aligned paragraphs in a sub-box of the estimated width (side margins padX included) centered in the box. Others stay centered
  *  Why: centering hanging paragraphs centers each line and breaks the alignment after the label */
 function centerNoteBox(box, plan, sz, padX) {
   if (!plan.hang) return { box, align: "center" };
-  const textW = Math.max(...plan.texts.map((t) => lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
-  const w = Math.min(box.w, plan.hang + textW + 2 * (padX || 0));
+  const blockW = Math.max(...plan.texts.map((t, i) => (plan.hangs ? plan.hangs[i] : plan.hang) + lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
+  const w = Math.min(box.w, blockW + 2 * (padX || 0));
   return { box: { ...box, x: +(box.x + (box.w - w) / 2).toFixed(3), w: +w.toFixed(3) }, align: "left" };
 }
 /** Slide footnotes. The bottom edge sits at bottomY (top of the source line). plan is a notePlan at the body width */

@@ -515,6 +515,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Notes and the source line are set in the line-broken form (default)
     + (Same-label notes of a number-style deck) Two or more notes with the same label or none take one line each, told apart by 1) 2) after the label on the first line (from the second number on, items align with the start of the first)
     + (Different-label notes of a number-style deck) With different labels, each item takes one line with its own label (the texts start in one column)
+    + (Notes of a ※-style deck) Each item takes one line (an item that passes one line aligns its second line onward after its own ※ or label)
     + (Source line) Only a source line that passes one line is set one source per line (both styles)
     + (Alignment of the source line) The second source onward aligns with the start of the first source
 - Run-on is set with `footnoteInline: true` on the slide (the build never switches the line-broken form to run-on by itself)
@@ -885,7 +886,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 #### Notation
 
 - Is the purpose of text smaller than the body clear (grounds, sources, assumptions and similar text carry the ※, number or label of `meta.footnoteStyle`)?
-- Does the second line of a multi-line note or source line start at the position where the first line's text starts (after the label)?
+- Does the second line of a multi-line note or source line start at the position where the first line's text starts (after the ※ or label)?
 - Do the run-on slides (INFO list of lint and build) meet the conditions for run-on?
 - Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
