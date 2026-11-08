@@ -24,9 +24,9 @@ const SPEC = {
 function body(ctx, sb) {
   const S = ctx.S;
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
-  // 출처 행이 있으면 본문을 그 위에서 끝내고 각주가 있거나 출처 행이 여러 줄이면 그 줄 수만큼 더 올림
-  const nFoot = noteRows(ctx, sb);
-  const bottom = sb.source || nFoot ? S.noteY - 0.12 - nFoot : S.contentBottom;
+  // 하단 주석(각주, 출처 행)이 있으면 본문을 그 위에서 끝냄 (noteRows: 출처 행 첫 줄 자리 위로 쌓이는 높이)
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  const bottom = noteLines || srcLines ? S.noteY - 0.12 - noteRows(ctx, sb) : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
 }
@@ -510,10 +510,11 @@ function bottomNotes(ctx, sb) {
   const src = sb.source ? A.notePlan(A.sourceBlock(sb.source, S.bodyW, sz), S.bodyW, sz) : { texts: [], lines: 0 };
   return { notes, src, noteLines: notes.lines, srcLines: src.lines };
 }
-/** 출처 행 첫 줄 위쪽에 쌓이는 높이 (인치). 각주 줄 수와 출처 행의 둘째 줄 이후 줄 수 */
+/** 출처 행 첫 줄 자리 위로 쌓이는 높이 (인치). 출처 행이 있으면 각주 줄 수와 출처 행의 둘째 줄 이후 줄 수, 없으면 각주의 둘째 줄 이후 줄 수
+ *  Why: 출처 행이 없는 슬라이드는 각주 마지막 줄이 빈 출처 행 자리를 쓰게 하여 본문이 위로 쏠리고 하단에 빈 띠가 남지 않게 함 */
 function noteRows(ctx, sb) {
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
-  return T.BAND.NOTE_LINE_H * (noteLines + Math.max(0, srcLines - 1));
+  return T.BAND.NOTE_LINE_H * (srcLines ? noteLines + srcLines - 1 : Math.max(0, noteLines - 1));
 }
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
@@ -567,13 +568,13 @@ function drawNote(slide, box, plan, opt) {
   const c = o.align === "center" ? A.centerNoteBox(box, plan, o.sz, (o.mg || A.TEXT_MG_IN)[0]) : { box, align: o.align };
   A.text(slide, c.box, A.noteParas(plan, { sz: o.sz, color: o.color, align: c.align }), { ...o, align: c.align });
 }
-/** 슬라이드 하단 주석 영역. 출처 행은 1줄 자리(noteY)에서 위로 늘고 각주는 출처 행 위에 쌓임 (표기 규칙은 atoms.noteBlock, sourceBlock) */
+/** 슬라이드 하단 주석 영역. 출처 행은 1줄 자리(noteY)에서 위로 늘고 각주는 출처 행 위에 쌓임. 출처 행이 없으면 각주 마지막 줄이 출처 행 자리에 놓임 (표기 규칙은 atoms.noteBlock, sourceBlock) */
 function source(ctx, slide, sb) {
   const S = ctx.S;
   const { notes, src, srcLines } = bottomNotes(ctx, sb);
   const extra = T.BAND.NOTE_LINE_H * Math.max(0, srcLines - 1);
   const top = S.noteY - extra;
-  A.footnotes(slide, S, notes, top);
+  A.footnotes(slide, S, notes, srcLines ? top : S.noteY + T.BAND.NOTE_LINE_H);
   if (!srcLines) return;
   A.text(slide, { x: S.bodyX, y: top, w: S.bodyW, h: T.BAND.SOURCE_H + extra }, A.noteParas(src, { sz: T.SIZE.note, color: T.COLOR.textMuted }),
     { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });

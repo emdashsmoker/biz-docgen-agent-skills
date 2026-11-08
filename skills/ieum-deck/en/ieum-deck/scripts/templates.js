@@ -24,9 +24,9 @@ const SPEC = {
 function body(ctx, sb) {
   const S = ctx.S;
   const top = sb.marker ? S.contentY : S.contentYNoMarker;
-  // With a source line, the body ends above it, and footnotes or a multi-line source line raise it by their line count
-  const nFoot = noteRows(ctx, sb);
-  const bottom = sb.source || nFoot ? S.noteY - 0.12 - nFoot : S.contentBottom;
+  // With bottom notes (footnotes, source line), the body ends above them (noteRows: height stacked above the first source line spot)
+  const { noteLines, srcLines } = bottomNotes(ctx, sb);
+  const bottom = noteLines || srcLines ? S.noteY - 0.12 - noteRows(ctx, sb) : S.contentBottom;
   const pad = T.BAND.BODY_PAD * S.sy;
   return { x: S.bodyX, y: top + pad, w: S.bodyW, h: bottom - top - pad };
 }
@@ -511,10 +511,11 @@ function bottomNotes(ctx, sb) {
   const src = sb.source ? A.notePlan(A.sourceBlock(sb.source, S.bodyW, sz), S.bodyW, sz) : { texts: [], lines: 0 };
   return { notes, src, noteLines: notes.lines, srcLines: src.lines };
 }
-/** Height (inches) stacked above the first source line: the footnote lines and the source lines after the first */
+/** Height (inches) stacked above the first source line spot: the footnote lines and the source lines after the first with a source line; without one, the footnote lines after the first
+ *  Why: on a slide without a source line, the last footnote line takes the empty source line spot so the body does not sit high with an empty band below */
 function noteRows(ctx, sb) {
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
-  return T.BAND.NOTE_LINE_H * (noteLines + Math.max(0, srcLines - 1));
+  return T.BAND.NOTE_LINE_H * (srcLines ? noteLines + srcLines - 1 : Math.max(0, noteLines - 1));
 }
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
@@ -568,13 +569,13 @@ function drawNote(slide, box, plan, opt) {
   const c = o.align === "center" ? A.centerNoteBox(box, plan, o.sz, (o.mg || A.TEXT_MG_IN)[0]) : { box, align: o.align };
   A.text(slide, c.box, A.noteParas(plan, { sz: o.sz, color: o.color, align: c.align }), { ...o, align: c.align });
 }
-/** Slide bottom notes. The source line grows upward from its one-line spot (noteY) and footnotes stack above it (marks follow atoms.noteBlock and sourceBlock) */
+/** Slide bottom notes. The source line grows upward from its one-line spot (noteY) and footnotes stack above it; without a source line, the last footnote line sits in the source line spot (marks follow atoms.noteBlock and sourceBlock) */
 function source(ctx, slide, sb) {
   const S = ctx.S;
   const { notes, src, srcLines } = bottomNotes(ctx, sb);
   const extra = T.BAND.NOTE_LINE_H * Math.max(0, srcLines - 1);
   const top = S.noteY - extra;
-  A.footnotes(slide, S, notes, top);
+  A.footnotes(slide, S, notes, srcLines ? top : S.noteY + T.BAND.NOTE_LINE_H);
   if (!srcLines) return;
   A.text(slide, { x: S.bodyX, y: top, w: S.bodyW, h: T.BAND.SOURCE_H + extra }, A.noteParas(src, { sz: T.SIZE.note, color: T.COLOR.textMuted }),
     { sz: T.SIZE.note, color: T.COLOR.textMuted, align: "left", valign: "top", mg: [0, 0, 0, 0] });
