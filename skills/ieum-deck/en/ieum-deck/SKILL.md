@@ -178,12 +178,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Number-style source line) The source line starts without numbers, with the source mark the author wrote ("Source:" without one)
     + (※-style notes) A note without a label gets ※ before it (typeset example: "※ caveat text")
     + (※-style labels) The source line and notes that start with a label (e.g. "Source:", "출처:", "Formula:") start without ※, with the label written in the storyboard (typeset example: "Source: organization (year), material name")
-    + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes get "Note:", an explanation inside a box such as a number card starts with a content label such as "Formula:" or "Source:", a source line without a source mark gets "Source:")
+    + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes get "Note:", sources get "Source:", an explanation inside a box such as a number card starts with a content label such as "Formula:")
     + (※ typed directly) In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places
     + (※ at line start) A line starting with ※ gets the number or label above in place of the ※
     + (※ in mid-sentence) A ※ in mid-sentence is removed (e.g. "(※ 시안)" becomes "(시안)")
-    + (Deck labels) Change the labels added to notes without a label and to source lines without a source mark (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
-    + (Slide labels) When only some slides need other labels, set footnoteLabel and sourceLabel on those slides, which take precedence over the deck labels (e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
+    + (Deck labels) Change the labels added to notes without a label and to source lines without a source mark (default "Note:", "Source:") as a pair, with footnoteLabel and sourceLabel in `meta.labels.common`, to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
+    + (Slide labels) When only some slides need other labels, set footnoteLabel and sourceLabel on those slides, which take precedence over the deck labels (e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
     + (※ on labeled notes) When a labeled note in a ※-style deck needs ※, the author writes ※ before that item (the build keeps it)
     + (※ on sources) ※ before sources ("※ Source:") is not asked at kickoff (when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` of a ※-style deck to true)
 
@@ -505,13 +505,14 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Items citing a source) An item that cites a source follows the source mark rule
 - Starting with a content label is recommended for an explanation that sits inside a box right under a figure or item name (a label is one word without spaces followed by a colon)
     + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), which does not suit the footnote label "Note:"
-    + (Label examples) "Formula:" (the calculation of a figure), "Source:" (the material a figure comes from), "Basis:" (the reference point of a figure) and similar labels
+    + (Label examples) "Formula:" (the calculation of a figure), "Basis:" (the reference point of a figure) and similar labels (the material a figure comes from starts with the deck source mark)
 - In a ※-style deck, the build adds no ※ to a note that starts with a label
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
-- Start the first source item and any note item that cites a source with a source mark the author writes (e.g. "Source:", "출처:", "자료:"; details in the notation section of `references/writing-rules.md`)
+- Start the first source item and any note item that cites a source with the same source mark as the deck sourceLabel ("Source:" in a default deck; details in the notation section of `references/writing-rules.md`)
+- Keep the note label and the source mark in one language pair across the deck (e.g. "Note:" with "Source:", "참조:" with "출처:")
 - Notes and the source line are set in the line-broken form (default)
     + (Same-label notes of a number-style deck) Two or more notes with the same label or none take one line each, told apart by 1) 2) after the label on the first line (from the second number on, items align with the start of the first)
     + (Different-label notes of a number-style deck) With different labels, each item takes one line with its own label (the texts start in one column)
@@ -887,6 +888,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - Is the purpose of text smaller than the body clear (grounds, sources, assumptions and similar text carry the ※, number or label of `meta.footnoteStyle`)?
 - Does the second line of a multi-line note or source line start at the position where the first line's text starts (after the ※ or label)?
+- Are the note label and the source mark kept in one language pair across the deck (e.g. "Note:" with "Source:", "참조:" with "출처:")?
 - Do the run-on slides (INFO list of lint and build) meet the conditions for run-on?
 - Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?

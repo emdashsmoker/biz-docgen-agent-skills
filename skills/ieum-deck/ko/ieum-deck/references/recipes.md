@@ -113,7 +113,7 @@
 | `timeline` | 시간축과 시점별 사건 상자 (추진 경과, 연혁) | `events[{when, title, items 또는 text, mark}]`. `mark` 가 true 인 사건(현재 시점)은 채운 표식과 틴트 상자 |
 | `funnel` | 깔때기 (후보에서 최종까지 단계별 선별) | `stages[{label, value, cells[] 또는 items}]` (위 단계부터), `head[]`(설명 열 제목, 선택), `funnelHead`(깔때기 열 제목, 선택). 띠 안에 단계 이름과 대상 수, 오른쪽 칸에 단계별 설명. `head` 가 있으면 `cells` 를 열 순서대로 조판 |
 | `governance` | 추진체계도 (가운데 관리 계선과 좌우 심의, 협력 주체) | `spine[]`(연구개발비 전달 순서의 주체), `sides[{at, side, text, dash}]`. `at` 은 연결할 계선 주체 순번(0부터), `side` 값은 left 또는 right, `dash` 가 true 이면 점선(협력) |
-| `numbers` | 핵심 수치 타일 | `items[{value, label, note}]`. note 표기는 칸 주석과 같음. 수치 설명은 "산식:", "출처:" 같은 내용 라벨로 시작 (writing-rules.md 주석 절) |
+| `numbers` | 핵심 수치 타일 | `items[{value, label, note}]`. note 표기는 칸 주석과 같음. 수치 설명은 "산식:" 같은 내용 라벨이나 덱의 출처 표기로 시작 (writing-rules.md 주석 절) |
 | `chart` | 네이티브 차트 | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` 는 데이터 레이블과 값 축의 숫자 서식 (예: "0.0" 은 소수 첫째 자리까지. 지정하지 않으면 막대와 선 차트는 정수로 반올림하여 표시) |
 | `image` | 이미지 또는 자리 상자 | `src`(경로 또는 data URI), `caption`(이미지 아래 설명), `label`(자리 상자 문구) |
 
