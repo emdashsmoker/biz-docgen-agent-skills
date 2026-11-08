@@ -954,7 +954,8 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** Marks of one note group { lead, leads, lines, items, join }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
- *  mark has no lead and puts ※ on each item (an author label stays after the ※). An item that starts with a source mark starts with that mark without ※ (meta.footnoteSourceMark adds ※)
+ *  mark has no lead and puts ※ on each item without a label. An item that starts with a label (출처:, 산식: etc.) starts with the label without ※
+ *    (※ stays on an item where the author wrote ※ before the label and on source items of a deck with meta.footnoteSourceMark)
  *  number keeps the author's label (출처:, 산식:, 범례: etc.) and gives an item without one the note label (footnoteLabel)
  *    + One item: the label, then the text
  *    + Two or more items with the same label: the label on the first line only and 1) 2) on each item, one item per line (a source label gets no numbers and separates the items with semicolons like the source line)
@@ -967,16 +968,21 @@ function noteLeads() {
 function noteBlock(items, state) {
   const ns = state || noteState();
   const lb = ns.labels;
-  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
+  const src0 = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
+  const raw = src0.map((t) => t.replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
-    const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
-    const line = (t) => {
-      const src = ns.markSource ? null : sourceMark(t);
-      if (!src) return `※ ${t}`;
-      USED_LEADS.add(tidyLabel(src));
-      return `${tidyLabel(src)} ${t.slice(src.length).trim()}`;
-    };
-    return { lead: null, leads: null, lines: arr.map(line), items: arr.length };
+    // The label already tells what the line is, so no ※ is stacked on it. When a client template needs ※, the ※ the author wrote is kept
+    const lines = src0.map((t0) => {
+      let t = t0.replace(NOTE_LEAD, "");
+      if (lb.note && t.startsWith(lb.note)) t = t.slice(lb.note.length).trim();
+      if (!t) return null;
+      const { label, text } = splitLabel(t, lb);
+      if (!label || !text) return `※ ${t}`;
+      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return `※ ${label} ${text}`;
+      USED_LEADS.add(label);
+      return `${label} ${text}`;
+    }).filter(Boolean);
+    return { lead: null, leads: null, lines, items: lines.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -998,7 +1004,7 @@ function noteBlock(items, state) {
 }
 /** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
  *  The lead is the first source mark the author wrote (e.g. "출처:", the source label without one), without ※ in both styles
- *  Only a ※ mark deck with meta.footnoteSourceMark uses "※" with the first source mark (e.g. "※ Source:", "※" without a source mark)
+ *  Only a ※ mark deck with meta.footnoteSourceMark, or where the author wrote ※ before the first source, uses "※" with the first source mark (e.g. "※ Source:", "※" without a source mark)
  *  Why: "Source:" already tells what the line is, so no ※ is stacked on it. ※ is added only as an option for an RFP template that asks for "※ 출처:"
  *  When the lead and the joined sources fit one line of width w, or the slide sets footnoteInline, the line is "A; B"; otherwise one source per line (the semicolon stays at the line end)
  *  Why: joined sources that pass the line end break inside a material name and blur where a source ends. Breaking at source boundaries and aligning to the first source start (notePlan) keeps them apart */
@@ -1006,6 +1012,8 @@ function sourceBlock(items, w, sz, state) {
   const ns = state || noteState();
   const lb = ns.labels;
   let mark = null;
+  // In a ※ mark deck, ※ the author wrote before the first source adds ※ as footnoteSourceMark does
+  const authorMark = /^\s*※/.test(String([].concat(items || [])[0] || ""));
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
     const m = sourceMark(s);
@@ -1013,7 +1021,7 @@ function sourceBlock(items, w, sz, state) {
     else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" && ns.markSource ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
+  const lead = ns.style === "mark" && (ns.markSource || authorMark) ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
   if (!lead.startsWith("※")) USED_LEADS.add(lead);
   const one = parts.join("; ");

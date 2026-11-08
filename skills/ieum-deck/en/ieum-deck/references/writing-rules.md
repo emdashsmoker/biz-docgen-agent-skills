@@ -118,16 +118,16 @@
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
 - Notes and sources start with the `meta.footnoteStyle` mark
     + The build adds the ※, the number and the number-style label to note-type slots, footnotes and source
-    + Notes written directly in body cells get ※ by hand (a source starts with its source mark without ※)
+    + Notes written directly in body cells get ※ by hand (a note that starts with a label such as a source or formula starts with the label without ※)
     + In a number-style deck, the build turns a ※ added by hand into the deck mark
     + (Labels in a number-style deck) A label the author wrote (출처:, 산식: etc.) is typeset as is; an item without one gets the note label (footnoteLabel)
     + (Notes with two or more items in a number-style deck) With the same label or none, the label goes on the first line only and 1) 2) tell the items apart; items from 2) onward align with the start of 1) (a source label gets no numbers and separates the items with semicolons). With different labels, each line keeps its own label without numbers
     + The build removes a ※, * or number written before an item and adds the deck mark (superscript numbers or * marks paired with spots in the body are not supported)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:")
     + (Both styles) The source mark you write is typeset as is, without ※ (e.g. "Source: organization (year), material name; organization (year), material name"; the build adds sourceLabel to a source line without a source mark)
-    + (※ on sources) A ※ mark deck with `meta.footnoteSourceMark` true adds ※, as in "※ Source:" (when the user asks for it, for example to follow an RFP template)
+    + (※ on sources) A ※ mark deck with `meta.footnoteSourceMark` true adds ※, as in "※ Source:" (when the user asks for it, for example to follow an RFP template; ※ the author wrote before a source is also kept)
     + (source array) Write the source mark on the first item only (the build separates the items with semicolons)
-- Use ※ only for note text such as evidence, premises and caveats (a source starts with its source mark)
+- Use ※ only for note text such as evidence, premises and caveats (a note that starts with a label such as a source or formula starts with the label)
 - Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
@@ -161,6 +161,7 @@
 - An explanation that sits inside a box right under a figure or item name usually reads better with a content label (a label is one word without spaces followed by a colon)
     + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
     + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure, and similar labels
+- (Labeled notes in a ※ mark deck) The label already tells what a labeled note is, so the build adds no ※ to it. When ※ is needed, for example by a client template, write ※ before that item yourself and the build keeps it (customization)
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs

@@ -171,12 +171,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Character-level breaks at the last character on the line, so mid-word breaks are allowed
 17. (Note style) Numbers (default) or ※ mark. Applies across the deck to footnotes, notes under boxes, source lines and similar text. Record the choice in `meta.footnoteStyle` as number or mark (number when unset)
     + (Numbers) Keeps the label the author wrote before a note (e.g. "Source:", "Formula:") and gives a note without one "Note:". When a spot has two or more notes with the same label or none, the label goes on the first line only and the items are numbered from 1); items from 2) onward align with the start of 1). Notes with different labels keep their own labels line by line without numbers. The source line starts with the source mark the author wrote ("Source:" without one) and sources get no numbers
-    + (※ mark) Puts ※ before each note item. The source line and notes that cite a source start without ※, with the source mark written in the storyboard (e.g. "Source:", "출처:", "자료:"; typeset examples: "※ caveat text", "Source: organization (year), material name")
+    + (※ mark) Puts ※ before each note without a label. The source line and notes that start with a label (e.g. "Source:", "출처:", "Formula:") start without ※, with the label written in the storyboard (typeset examples: "※ caveat text", "Source: organization (year), material name")
     + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes get "Note:", an explanation inside a box such as a number card starts with a content label such as "Formula:" or "Source:", a source line without a source mark gets "Source:")
     + In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places (a line starting with ※ gets the number or label above. A ※ in mid-sentence is removed. e.g. "(※ 시안)" becomes "(시안)")
     + Change the labels added to notes without a label and to source lines without a source mark (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
     + When only some slides need other labels, set footnoteLabel and sourceLabel on those slides (they take precedence over the deck labels; e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
-    + (※ on sources) The form that also puts ※ before sources ("※ Source:") is not asked at kickoff. When the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` to true (applies to ※ mark decks only)
+    + (※ on labeled notes) When a labeled note needs ※, the author writes ※ before that item (the build keeps it). The form that puts ※ before every source ("※ Source:") is not asked at kickoff; when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` to true (applies to ※ mark decks only)
 
 ## Company facts
 
@@ -495,6 +495,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - An explanation that sits inside a box right under a figure or item name usually reads better with a content label (a label is one word without spaces followed by a colon)
     + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
     + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure, and similar labels
+- (Labeled notes in a ※ mark deck) The label already tells what a labeled note is, so the build adds no ※ to it. When ※ is needed, for example by a client template, write ※ before that item yourself and the build keeps it (customization)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:"). Write the source mark yourself (details in the notation section of `references/writing-rules.md`)

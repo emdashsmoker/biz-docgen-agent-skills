@@ -954,7 +954,8 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** 주석 묶음 1개의 표기 { lead, leads, lines, items, join }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
- *  mark 는 lead 없이 항목마다 ※ (작성자 라벨은 ※ 뒤에 그대로 남음). 출처 표기로 시작하는 항목은 ※ 없이 출처 표기로 시작 (meta.footnoteSourceMark 이면 ※ 를 붙임)
+ *  mark 는 lead 없이 라벨 없는 항목마다 ※. 라벨(출처:, 산식: 등)로 시작하는 항목은 ※ 없이 라벨로 시작
+ *    (작성자가 라벨 앞에 ※ 를 직접 쓴 항목과 meta.footnoteSourceMark 덱의 출처 항목은 ※ 유지)
  *  number 는 작성자 라벨(출처:, 산식:, 범례: 등)을 그대로 쓰고 라벨이 없는 항목은 주석 라벨(footnoteLabel)을 씀
  *    + 항목 1개: 라벨 뒤에 내용
  *    + 라벨이 모두 같은 2개 이상: 첫 줄에만 라벨을 쓰고 항목마다 1) 2) 를 붙여 1줄에 1항목 (출처 라벨이면 번호 없이 출처 행처럼 세미콜론으로 구분)
@@ -967,16 +968,21 @@ function noteLeads() {
 function noteBlock(items, state) {
   const ns = state || noteState();
   const lb = ns.labels;
-  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
+  const src0 = [].concat(items || []).map((t) => String(t == null ? "" : t).trim()).filter(Boolean);
+  const raw = src0.map((t) => t.replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
-    const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
-    const line = (t) => {
-      const src = ns.markSource ? null : sourceMark(t);
-      if (!src) return `※ ${t}`;
-      USED_LEADS.add(tidyLabel(src));
-      return `${tidyLabel(src)} ${t.slice(src.length).trim()}`;
-    };
-    return { lead: null, leads: null, lines: arr.map(line), items: arr.length };
+    // 라벨이 줄의 성격을 이미 나타내므로 ※ 를 겹쳐 붙이지 않음. 발주기관 양식 등으로 ※ 가 필요하면 작성자가 직접 붙인 ※ 를 유지
+    const lines = src0.map((t0) => {
+      let t = t0.replace(NOTE_LEAD, "");
+      if (lb.note && t.startsWith(lb.note)) t = t.slice(lb.note.length).trim();
+      if (!t) return null;
+      const { label, text } = splitLabel(t, lb);
+      if (!label || !text) return `※ ${t}`;
+      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return `※ ${label} ${text}`;
+      USED_LEADS.add(label);
+      return `${label} ${text}`;
+    }).filter(Boolean);
+    return { lead: null, leads: null, lines, items: lines.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -998,7 +1004,7 @@ function noteBlock(items, state) {
 }
 /** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)
  *  lead 는 작성자가 쓴 첫 출처 표기 (예: "출처:", 없으면 출처 라벨). 두 표기 공통이며 ※ 를 붙이지 않음
- *  meta.footnoteSourceMark 를 지정한 ※ 기호 덱만 "※" 와 첫 출처 표기 (예: "※ 출처:", 출처 표기가 없으면 "※")
+ *  meta.footnoteSourceMark 를 지정하거나 작성자가 첫 출처 앞에 ※ 를 쓴 ※ 기호 덱만 "※" 와 첫 출처 표기 (예: "※ 출처:", 출처 표기가 없으면 "※")
  *  Why: "출처:" 가 이미 줄의 성격을 나타내므로 ※ 를 겹쳐 붙이지 않음. RFP 양식이 "※ 출처:" 를 요구하는 경우에만 옵션으로 붙임
  *  lead 와 이은 출처가 폭 w 의 1줄에 들어가거나 슬라이드 footnoteInline 이면 "A; B" 1줄, 넘치면 1줄에 출처 1개 (세미콜론은 줄 끝에 남김)
  *  Why: 이은 출처가 줄 끝을 넘으면 자료명 중간에서 줄이 바뀌어 출처 경계가 흐려짐. 출처 경계에서 줄을 바꾸고 첫 출처의 시작 위치에 맞춰 정렬 (notePlan) */
@@ -1006,6 +1012,8 @@ function sourceBlock(items, w, sz, state) {
   const ns = state || noteState();
   const lb = ns.labels;
   let mark = null;
+  // ※ 기호 덱에서 작성자가 첫 출처 앞에 ※ 를 직접 쓰면 footnoteSourceMark 와 같이 ※ 를 붙임
+  const authorMark = /^\s*※/.test(String([].concat(items || [])[0] || ""));
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
     const m = sourceMark(s);
@@ -1013,7 +1021,7 @@ function sourceBlock(items, w, sz, state) {
     else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" && ns.markSource ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
+  const lead = ns.style === "mark" && (ns.markSource || authorMark) ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
   if (!lead.startsWith("※")) USED_LEADS.add(lead);
   const one = parts.join("; ");
