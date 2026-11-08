@@ -148,8 +148,8 @@
 |---|---|---|
 | common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | Key Point |
 | common | company (the slide company and meta.company take precedence) | 회사명 |
-| common | footnoteLabel (note label of a number-style deck. A note group with one item gets the label only; a group with two or more items gets 1) 2) after the label on the first line; the slide footnoteLabel takes precedence) | Note: |
-| common | sourceLabel (before the source line of a number-style deck and a single note item that starts with a source mark. In the line-broken form, the second source onward aligns after this label; the slide sourceLabel takes precedence) | Source: |
+| common | footnoteLabel (label a number-style deck adds to a note the author wrote without a label. Two or more such notes at one spot get 1) 2) after the label on the first line; the slide footnoteLabel takes precedence) | Note: |
+| common | sourceLabel (label before a source line of a number-style deck that starts without a source mark. In the line-broken form, the second source onward aligns after the source label; the slide sourceLabel takes precedence) | Source: |
 | cover | label | 제안발표자료 |
 | contents | title | 목차 |
 | end | title | 감사합니다 |

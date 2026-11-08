@@ -932,30 +932,65 @@ function sourceMark(t) {
   const m = SOURCE_MARK.exec(t) || LB.notationMatch(t);
   return m ? m[0] : null;
 }
-/** 주석 묶음 1개의 표기 { lead, lines, items }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
- *  mark 는 lead 없이 항목마다 ※. number 는 항목이 1개이면 lead 가 주석 라벨 (출처 표기로 시작하면 출처 라벨),
- *  2개 이상이면 lead 가 주석 라벨이고 항목마다 1) 2) 를 붙여 1줄에 1항목 (슬라이드 footnoteInline 이면 번호 항목을 1줄로 이어 씀)
- *  lead 는 첫 줄 앞에만 붙음 (notePlan). items 는 내용 있는 항목 수
- *  Why: 작성자가 붙인 ※, *, 번호, 라벨을 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
- *       항목이 1개이면 구분할 다른 항목이 없으므로 번호 대신 내용 유형 라벨을 씀 */
+// 작성자가 주석 앞에 쓴 내용 유형 라벨 (예: "산식:", "범례:", "기준:"). 공백 없는 한 단어 뒤 콜론과 공백
+// 콜론 뒤 공백을 요구하여 "10:30" 같은 시각과 "http://" 를 라벨로 보지 않음
+const AUTHOR_LABEL = /^([^\s:：]{1,10})\s*([:：])(?=\s|$)/;
+const USED_LEADS = new Set(); // 번호 표기 덱에서 실제로 붙인 라벨 (build.json noteLabels 로 넘겨 check_layout 이 주석 줄로 인식)
+/** 라벨 문자열 정리. 콜론 앞 공백을 뺌 (예: "출처 :" → "출처:") */
+function tidyLabel(s) {
+  return s.trim().replace(/\s+([:：)])$/, "$1");
+}
+/** 주석 항목 1개의 라벨과 내용 { label, text }. 라벨은 덱 주석 라벨이나 출처 라벨, 출처 표기, 작성자 라벨 순으로 인식하며 없으면 null */
+function splitLabel(t, lb) {
+  for (const own of [lb.note, lb.source]) if (own && t.startsWith(own)) return { label: own, text: t.slice(own.length).trim() };
+  const src = sourceMark(t);
+  if (src) return { label: tidyLabel(src), text: t.slice(src.length).trim() };
+  const m = AUTHOR_LABEL.exec(t);
+  return m ? { label: m[1] + m[2], text: t.slice(m[0].length).trim() } : { label: null, text: t };
+}
+/** 번호 표기 덱에서 붙인 라벨 목록 (build.json noteLabels) */
+function noteLeads() {
+  return [...USED_LEADS];
+}
+/** 주석 묶음 1개의 표기 { lead, leads, lines, items, join }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
+ *  mark 는 lead 없이 항목마다 ※ (작성자 라벨은 ※ 뒤에 그대로 남음)
+ *  number 는 작성자 라벨(출처:, 산식:, 범례: 등)을 그대로 쓰고 라벨이 없는 항목은 주석 라벨(footnoteLabel)을 씀
+ *    + 항목 1개: 라벨 뒤에 내용
+ *    + 라벨이 모두 같은 2개 이상: 첫 줄에만 라벨을 쓰고 항목마다 1) 2) 를 붙여 1줄에 1항목 (출처 라벨이면 번호 없이 출처 행처럼 세미콜론으로 구분)
+ *    + 라벨이 서로 다른 2개 이상: 번호 없이 줄마다 각자 라벨
+ *    + 슬라이드 footnoteInline 이면 위 줄들을 1줄로 이어 씀
+ *  leads 는 줄마다 앞에 붙는 라벨 (빈 칸은 앞줄 라벨 뒤 위치에 정렬, notePlan). lead 는 첫 줄 라벨. items 는 내용 있는 항목 수
+ *  join 은 출처 라벨 묶음을 1줄로 이은 문구 (notePlan 이 폭에 들어가면 사용)
+ *  Why: 작성자가 붙인 ※, *, 번호를 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
+ *       라벨은 주석의 내용 유형을 아는 작성자가 정하며 빌드는 라벨이 없는 항목에만 덱 주석 라벨을 붙임 */
 function noteBlock(items, state) {
   const ns = state || noteState();
   const lb = ns.labels;
-  const unmark = (t) => {
-    const s = t.replace(NOTE_LEAD, "");
-    return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
-  };
-  const arr = [].concat(items || []).map((t) => unmark(String(t == null ? "" : t).trim())).filter(Boolean);
-  if (ns.style === "mark") return { lead: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
-  if (arr.length === 1) {
-    const src = sourceMark(arr[0]);
-    return { lead: src ? lb.source : lb.note, lines: [src ? arr[0].slice(src.length).trim() : arr[0]], items: 1 };
+  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
+  if (ns.style === "mark") {
+    const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
+    return { lead: null, leads: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
   }
-  const nums = arr.map((t, i) => `${i + 1}) ${t}`);
-  return { lead: lb.note, lines: ns.inline && nums.length ? [nums.join(" ")] : nums, items: arr.length };
+  const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
+  if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
+  rows.forEach((r) => USED_LEADS.add(r.label));
+  const labels = rows.map((r) => r.label);
+  const lead = labels[0];
+  const block = (leads, lines, join) => ({ lead, leads, lines, items: rows.length, join });
+  if (rows.length === 1) return block([lead], [rows[0].text]);
+  if (labels.every((l) => l === lead)) {
+    if (sourceMark(lead)) {
+      const one = rows.map((r) => r.text).join("; ");
+      return ns.inline ? block([lead], [one]) : block([lead], rows.map((r, i) => (i < rows.length - 1 ? `${r.text};` : r.text)), one);
+    }
+    const nums = rows.map((r, i) => `${i + 1}) ${r.text}`);
+    return block([lead], ns.inline ? [nums.join(" ")] : nums);
+  }
+  if (ns.inline) return block([lead], [rows.map((r, i) => (i ? `${r.label} ${r.text}` : r.text)).join(" ")]);
+  return block(labels, rows.map((r) => r.text));
 }
 /** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)
- *  lead 는 number 이면 출처 라벨, mark 이면 "※" 와 작성자가 쓴 첫 출처 표기 (예: "※ 출처:"), 출처 표기가 없으면 "※"
+ *  lead 는 number 이면 작성자가 쓴 첫 출처 표기 (예: "출처:", 없으면 출처 라벨), mark 이면 "※" 와 작성자가 쓴 첫 출처 표기 (예: "※ 출처:"), 출처 표기가 없으면 "※"
  *  lead 와 이은 출처가 폭 w 의 1줄에 들어가거나 슬라이드 footnoteInline 이면 "A; B" 1줄, 넘치면 1줄에 출처 1개 (세미콜론은 줄 끝에 남김)
  *  Why: 이은 출처가 줄 끝을 넘으면 자료명 중간에서 줄이 바뀌어 출처 경계가 흐려짐. 출처 경계에서 줄을 바꾸고 첫 출처의 시작 위치에 맞춰 정렬 (notePlan) */
 function sourceBlock(items, w, sz, state) {
@@ -965,12 +1000,13 @@ function sourceBlock(items, w, sz, state) {
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
     const m = sourceMark(s);
-    if (m) { if (mark == null) mark = m.trim(); s = s.slice(m.length); }
-    if (lb.source && s.startsWith(lb.source)) s = s.slice(lb.source.length);
+    if (m) { if (mark == null) mark = tidyLabel(m); s = s.slice(m.length); }
+    else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : lb.source;
+  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
+  if (ns.style !== "mark") USED_LEADS.add(lead);
   const one = parts.join("; ");
   const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
   return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };
@@ -980,18 +1016,21 @@ function sourceBlock(items, w, sz, state) {
 function hangWidthIn(lead, sz, bold) {
   return +lineWidthIn(`${lead} `, sz, bold).toFixed(3);
 }
-/** 내어쓰기 문단 구성 { hang, texts }. 첫 문단은 "lead<탭>줄", 이후 문단은 "<탭>줄". 모든 문단을 hang 위치까지 내어 씀 (runsOf, finalize) */
+/** 내어쓰기 문단 구성 { hang, texts }. 문단마다 "라벨<탭>줄" (라벨이 없는 줄은 "<탭>줄"). 모든 문단을 가장 넓은 라벨 뒤 위치(hang)까지 내어 씀 (runsOf, finalize)
+ *  줄마다 라벨이 다른 묶음도 내용 시작 위치가 한 열로 맞음 */
 function hangPlan(block, sz, bold) {
-  return { hang: hangWidthIn(block.lead, sz, bold), texts: block.lines.map((t, i) => `${i ? "" : block.lead}\t${t}`) };
+  const leads = block.leads || [block.lead];
+  const hang = Math.max(...leads.filter(Boolean).map((l) => hangWidthIn(l, sz, bold)));
+  return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
 /** 주석 묶음의 문단 구성과 줄 수 { hang, texts, lines }. 폭 w 상자 기준이며 lines 는 줄바꿈을 포함한 줄 수
- *  lead 없는 묶음(※ 기호 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음은 "lead 내용", 그 밖은 lead 뒤 위치에 맞춰 내어 씀 (hangPlan) */
+ *  lead 없는 묶음(※ 기호 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음(이어 쓴 출처 라벨 묶음 포함)은 "lead 내용", 그 밖은 라벨 뒤 위치에 맞춰 내어 씀 (hangPlan) */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
   if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
-  const one = `${block.lead} ${block.lines[0]}`;
-  if (block.lines.length === 1 && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
+  const one = `${block.lead} ${block.join || block.lines[0]}`;
+  if ((block.join || block.lines.length === 1) && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
   const plan = hangPlan(block, sz, bold);
   return { ...plan, lines: count(block.lines, w - plan.hang) };
 }
@@ -1480,4 +1519,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

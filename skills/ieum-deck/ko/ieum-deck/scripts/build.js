@@ -172,11 +172,11 @@ async function main() {
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout 이 읽음)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
-  // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨. 슬라이드에서 지정한 라벨 포함 (check_layout 이 주석 줄로 인식)
+  // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨. 슬라이드에서 지정한 라벨과 작성자가 쓴 라벨(산식:, 범례: 등) 포함 (check_layout 이 주석 줄로 인식)
   // footnoteInline 은 주석과 출처 행을 이어 쓴 슬라이드 번호와 id (사용자 확인용 보고)
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   if (inline.length) console.log(`INFO 주석 이어 쓰기 슬라이드 ${inline.length}장: ${inline.join(", ")} (footnoteInline. 보고에 포함하여 사용자 확인)`);

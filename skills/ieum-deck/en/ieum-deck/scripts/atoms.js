@@ -932,30 +932,65 @@ function sourceMark(t) {
   const m = SOURCE_MARK.exec(t) || LB.notationMatch(t);
   return m ? m[0] : null;
 }
-/** Marks of one note group { lead, lines, items }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
- *  mark has no lead and puts ※ on each item. number gives a single item the note label as lead (the source label when it starts with a source mark);
- *  two or more items get the note label as lead and 1) 2) on each item, one item per line (with the slide footnoteInline, the numbered items run on in one line)
- *  The lead goes only before the first line (notePlan). items is the number of items with text
- *  Why: removing the author's ※, *, number or label and adding the deck mark again keeps one note style in a deck wherever the note sits
- *       A single item has no other item to tell apart, so a content type label replaces the number */
+// Content type label the author wrote before a note (e.g. "산식:", "범례:", "Formula:"). One word without spaces, then a colon and a space
+// Requiring a space after the colon keeps times such as "10:30" and "http://" from reading as labels
+const AUTHOR_LABEL = /^([^\s:：]{1,10})\s*([:：])(?=\s|$)/;
+const USED_LEADS = new Set(); // Labels actually set in a number-style deck (passed as build.json noteLabels so check_layout reads those lines as notes)
+/** Tidies a label. Removes spaces before the colon (e.g. "출처 :" becomes "출처:") */
+function tidyLabel(s) {
+  return s.trim().replace(/\s+([:：)])$/, "$1");
+}
+/** Label and text of one note item { label, text }. Reads the deck note or source label, a source mark, then an author label; label is null without one */
+function splitLabel(t, lb) {
+  for (const own of [lb.note, lb.source]) if (own && t.startsWith(own)) return { label: own, text: t.slice(own.length).trim() };
+  const src = sourceMark(t);
+  if (src) return { label: tidyLabel(src), text: t.slice(src.length).trim() };
+  const m = AUTHOR_LABEL.exec(t);
+  return m ? { label: m[1] + m[2], text: t.slice(m[0].length).trim() } : { label: null, text: t };
+}
+/** Labels set in a number-style deck (build.json noteLabels) */
+function noteLeads() {
+  return [...USED_LEADS];
+}
+/** Marks of one note group { lead, leads, lines, items, join }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
+ *  mark has no lead and puts ※ on each item (an author label stays after the ※)
+ *  number keeps the author's label (출처:, 산식:, 범례: etc.) and gives an item without one the note label (footnoteLabel)
+ *    + One item: the label, then the text
+ *    + Two or more items with the same label: the label on the first line only and 1) 2) on each item, one item per line (a source label gets no numbers and separates the items with semicolons like the source line)
+ *    + Two or more items with different labels: no numbers, each line with its own label
+ *    + With the slide footnoteInline, these lines run on in one line
+ *  leads holds the label before each line (an empty slot aligns after the label above, notePlan). lead is the first line's label. items is the number of items with text
+ *  join is a source label group run on in one line (notePlan uses it when it fits the width)
+ *  Why: removing the author's ※, * or number and adding the deck mark again keeps one note style in a deck wherever the note sits
+ *       The author, who knows the content type of a note, sets the label; the build adds the deck note label only to items without one */
 function noteBlock(items, state) {
   const ns = state || noteState();
   const lb = ns.labels;
-  const unmark = (t) => {
-    const s = t.replace(NOTE_LEAD, "");
-    return lb.note && s.startsWith(lb.note) ? s.slice(lb.note.length).trim() : s;
-  };
-  const arr = [].concat(items || []).map((t) => unmark(String(t == null ? "" : t).trim())).filter(Boolean);
-  if (ns.style === "mark") return { lead: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
-  if (arr.length === 1) {
-    const src = sourceMark(arr[0]);
-    return { lead: src ? lb.source : lb.note, lines: [src ? arr[0].slice(src.length).trim() : arr[0]], items: 1 };
+  const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
+  if (ns.style === "mark") {
+    const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
+    return { lead: null, leads: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
   }
-  const nums = arr.map((t, i) => `${i + 1}) ${t}`);
-  return { lead: lb.note, lines: ns.inline && nums.length ? [nums.join(" ")] : nums, items: arr.length };
+  const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
+  if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
+  rows.forEach((r) => USED_LEADS.add(r.label));
+  const labels = rows.map((r) => r.label);
+  const lead = labels[0];
+  const block = (leads, lines, join) => ({ lead, leads, lines, items: rows.length, join });
+  if (rows.length === 1) return block([lead], [rows[0].text]);
+  if (labels.every((l) => l === lead)) {
+    if (sourceMark(lead)) {
+      const one = rows.map((r) => r.text).join("; ");
+      return ns.inline ? block([lead], [one]) : block([lead], rows.map((r, i) => (i < rows.length - 1 ? `${r.text};` : r.text)), one);
+    }
+    const nums = rows.map((r, i) => `${i + 1}) ${r.text}`);
+    return block([lead], ns.inline ? [nums.join(" ")] : nums);
+  }
+  if (ns.inline) return block([lead], [rows.map((r, i) => (i ? `${r.label} ${r.text}` : r.text)).join(" ")]);
+  return block(labels, rows.map((r) => r.text));
 }
 /** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
- *  The lead is the source label in number style; in mark style it is "※" with the first source mark the author wrote (e.g. "※ Source:"), or "※" without a source mark
+ *  The lead is the first source mark the author wrote in number style (e.g. "출처:", the source label without one); in mark style it is "※" with the first source mark (e.g. "※ Source:"), or "※" without a source mark
  *  When the lead and the joined sources fit one line of width w, or the slide sets footnoteInline, the line is "A; B"; otherwise one source per line (the semicolon stays at the line end)
  *  Why: joined sources that pass the line end break inside a material name and blur where a source ends. Breaking at source boundaries and aligning to the first source start (notePlan) keeps them apart */
 function sourceBlock(items, w, sz, state) {
@@ -965,12 +1000,13 @@ function sourceBlock(items, w, sz, state) {
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
     const m = sourceMark(s);
-    if (m) { if (mark == null) mark = m.trim(); s = s.slice(m.length); }
-    if (lb.source && s.startsWith(lb.source)) s = s.slice(lb.source.length);
+    if (m) { if (mark == null) mark = tidyLabel(m); s = s.slice(m.length); }
+    else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : lb.source;
+  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
+  if (ns.style !== "mark") USED_LEADS.add(lead);
   const one = parts.join("; ");
   const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
   return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };
@@ -980,18 +1016,21 @@ function sourceBlock(items, w, sz, state) {
 function hangWidthIn(lead, sz, bold) {
   return +lineWidthIn(`${lead} `, sz, bold).toFixed(3);
 }
-/** Hanging paragraphs { hang, texts }. The first paragraph is "lead<tab>line", later paragraphs "<tab>line". Every paragraph hangs at hang (runsOf, finalize) */
+/** Hanging paragraphs { hang, texts }. Each paragraph is "label<tab>line" ("<tab>line" for a line without label). Every paragraph hangs at the position after the widest label (hang) (runsOf, finalize)
+ *  A group with a different label on each line still starts its text in one column */
 function hangPlan(block, sz, bold) {
-  return { hang: hangWidthIn(block.lead, sz, bold), texts: block.lines.map((t, i) => `${i ? "" : block.lead}\t${t}`) };
+  const leads = block.leads || [block.lead];
+  const hang = Math.max(...leads.filter(Boolean).map((l) => hangWidthIn(l, sz, bold)));
+  return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
 /** Paragraphs and line count of a note group { hang, texts, lines } for a box of width w. lines includes wrapped lines
- *  A group without lead (※ mark notes) keeps its lines, a one-paragraph group that fits one line is "lead text", any other group hangs after the lead (hangPlan) */
+ *  A group without lead (※ mark notes) keeps its lines, a one-paragraph group that fits one line (including a source label group run on) is "lead text", any other group hangs after the labels (hangPlan) */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
   if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
-  const one = `${block.lead} ${block.lines[0]}`;
-  if (block.lines.length === 1 && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
+  const one = `${block.lead} ${block.join || block.lines[0]}`;
+  if ((block.join || block.lines.length === 1) && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
   const plan = hangPlan(block, sz, bold);
   return { ...plan, lines: count(block.lines, w - plan.hang) };
 }
@@ -1480,4 +1519,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

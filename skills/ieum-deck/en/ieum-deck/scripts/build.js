@@ -172,11 +172,11 @@ async function main() {
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
-  // noteLabels holds the labels before footnotes and the source line in a number-style deck, including labels set on slides (check_layout treats those lines as notes)
+  // noteLabels holds the labels before footnotes and the source line in a number-style deck, including labels set on slides and labels the author wrote (산식:, 범례: etc.) (check_layout treats those lines as notes)
   // footnoteInline lists the slide numbers and ids whose notes and source line run on (reported for the user to check)
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean)])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   if (inline.length) console.log(`INFO Notes run on in ${inline.length} slide(s): ${inline.join(", ")} (footnoteInline. Include in the report for the user to check)`);
