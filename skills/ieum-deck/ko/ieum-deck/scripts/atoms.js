@@ -316,15 +316,16 @@ function lineOpt(ln, fallbackPt) {
 // ---------------------------------------------------------------- 텍스트 실행 목록 변환
 // meta.footnoteStyle 선택지. 첫 값이 기본 (lint.py 의 FOOTNOTE_STYLES 와 같은 목록)
 const NOTE_STYLES = ["number", "mark"];
-let NOTES = null; // 조판 중인 슬라이드의 주석 표기 { style, labels: { note, source }, inline }. build.js 가 슬라이드마다 설정
-/** 슬라이드의 주석 표기 지정. style 은 meta.footnoteStyle, labels 는 주석 라벨과 출처 라벨, inline 은 슬라이드 footnoteInline
+let NOTES = null; // 조판 중인 슬라이드의 주석 표기 { style, labels: { note, source }, inline, markSource }. build.js 가 슬라이드마다 설정
+/** 슬라이드의 주석 표기 지정. style 은 meta.footnoteStyle, labels 는 주석 라벨과 출처 라벨, inline 은 슬라이드 footnoteInline,
+ *  markSource 는 meta.footnoteSourceMark (※ 기호 덱에서 출처 행과 출처 주석에도 ※ 를 붙임)
  *  number 이면 runsOf 가 작성자가 직접 쓴 ※ 를 번호 표기로 바꿈 */
-function setNoteStyle(style, labels, inline) {
-  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline };
+function setNoteStyle(style, labels, inline, markSource) {
+  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline, markSource: !!markSource };
 }
 /** 현재 슬라이드의 주석 표기. build.js 밖에서 불러 지정이 없으면 기본 표기와 기본 라벨 */
 function noteState() {
-  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false };
+  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false, markSource: false };
 }
 const LEAD_MARK = /^\s*※/;
 /** 번호 표기 덱의 문단 변환. ※ 로 시작하는 연속 문단은 주석 묶음으로 보고 noteBlock 표기를 붙이고, 문장 중간의 ※ 는 뺌 (예: "(※ 시안)" → "(시안)")
@@ -953,7 +954,7 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** 주석 묶음 1개의 표기 { lead, leads, lines, items, join }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
- *  mark 는 lead 없이 항목마다 ※ (작성자 라벨은 ※ 뒤에 그대로 남음)
+ *  mark 는 lead 없이 항목마다 ※ (작성자 라벨은 ※ 뒤에 그대로 남음). 출처 표기로 시작하는 항목은 ※ 없이 출처 표기로 시작 (meta.footnoteSourceMark 이면 ※ 를 붙임)
  *  number 는 작성자 라벨(출처:, 산식:, 범례: 등)을 그대로 쓰고 라벨이 없는 항목은 주석 라벨(footnoteLabel)을 씀
  *    + 항목 1개: 라벨 뒤에 내용
  *    + 라벨이 모두 같은 2개 이상: 첫 줄에만 라벨을 쓰고 항목마다 1) 2) 를 붙여 1줄에 1항목 (출처 라벨이면 번호 없이 출처 행처럼 세미콜론으로 구분)
@@ -969,7 +970,13 @@ function noteBlock(items, state) {
   const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
     const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
-    return { lead: null, leads: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
+    const line = (t) => {
+      const src = ns.markSource ? null : sourceMark(t);
+      if (!src) return `※ ${t}`;
+      USED_LEADS.add(tidyLabel(src));
+      return `${tidyLabel(src)} ${t.slice(src.length).trim()}`;
+    };
+    return { lead: null, leads: null, lines: arr.map(line), items: arr.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -990,7 +997,9 @@ function noteBlock(items, state) {
   return block(labels, rows.map((r) => r.text));
 }
 /** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)
- *  lead 는 number 이면 작성자가 쓴 첫 출처 표기 (예: "출처:", 없으면 출처 라벨), mark 이면 "※" 와 작성자가 쓴 첫 출처 표기 (예: "※ 출처:"), 출처 표기가 없으면 "※"
+ *  lead 는 작성자가 쓴 첫 출처 표기 (예: "출처:", 없으면 출처 라벨). 두 표기 공통이며 ※ 를 붙이지 않음
+ *  meta.footnoteSourceMark 를 지정한 ※ 기호 덱만 "※" 와 첫 출처 표기 (예: "※ 출처:", 출처 표기가 없으면 "※")
+ *  Why: "출처:" 가 이미 줄의 성격을 나타내므로 ※ 를 겹쳐 붙이지 않음. RFP 양식이 "※ 출처:" 를 요구하는 경우에만 옵션으로 붙임
  *  lead 와 이은 출처가 폭 w 의 1줄에 들어가거나 슬라이드 footnoteInline 이면 "A; B" 1줄, 넘치면 1줄에 출처 1개 (세미콜론은 줄 끝에 남김)
  *  Why: 이은 출처가 줄 끝을 넘으면 자료명 중간에서 줄이 바뀌어 출처 경계가 흐려짐. 출처 경계에서 줄을 바꾸고 첫 출처의 시작 위치에 맞춰 정렬 (notePlan) */
 function sourceBlock(items, w, sz, state) {
@@ -1004,9 +1013,9 @@ function sourceBlock(items, w, sz, state) {
     else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
+  const lead = ns.style === "mark" && ns.markSource ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
-  if (ns.style !== "mark") USED_LEADS.add(lead);
+  if (!lead.startsWith("※")) USED_LEADS.add(lead);
   const one = parts.join("; ");
   const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
   return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };

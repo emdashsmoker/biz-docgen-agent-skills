@@ -113,21 +113,21 @@
 - Write each source item as `기관명(연도), 자료명` (organization (year), material name)
 - Separate several sources with semicolons (the build joins a `source` array)
     + The build joins a source line that fits one line and sets one source per line when it does not (the semicolon stays at the line end)
-    + In the line-broken form, the second source onward aligns with the start of the first source (after the source label in a number-style deck; after the width of ※ and the source mark, as in "※ Source:", in a ※ mark deck)
+    + In the line-broken form, the second source onward aligns with the start of the first source (after the source mark; in a ※ mark deck with footnoteSourceMark, after the width of ※ and the source mark, as in "※ Source:")
     + Sources get no numbers (a source number signals numbered citations in the body)
 - Quote document titles and material names in sources (`source`, `factSource`) as in the original (replace only em dashes and en dashes with hyphens)
 - Notes and sources start with the `meta.footnoteStyle` mark
     + The build adds the ※, the number and the number-style label to note-type slots, footnotes and source
-    + Notes written directly in body cells get ※ by hand
+    + Notes written directly in body cells get ※ by hand (a source starts with its source mark without ※)
     + In a number-style deck, the build turns a ※ added by hand into the deck mark
     + (Labels in a number-style deck) A label the author wrote (출처:, 산식: etc.) is typeset as is; an item without one gets the note label (footnoteLabel)
     + (Notes with two or more items in a number-style deck) With the same label or none, the label goes on the first line only and 1) 2) tell the items apart; items from 2) onward align with the start of 1) (a source label gets no numbers and separates the items with semicolons). With different labels, each line keeps its own label without numbers
     + The build removes a ※, * or number written before an item and adds the deck mark (superscript numbers or * marks paired with spots in the body are not supported)
 - Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:")
-    + (※ mark deck) The build adds only ※, so the source mark you write is typeset as is (e.g. "※ Source: organization (year), material name; organization (year), material name")
-    + (Number-style deck) The source mark you write is typeset as is (the build adds sourceLabel only to a source line without a source mark)
+    + (Both styles) The source mark you write is typeset as is, without ※ (e.g. "Source: organization (year), material name; organization (year), material name"; the build adds sourceLabel to a source line without a source mark)
+    + (※ on sources) A ※ mark deck with `meta.footnoteSourceMark` true adds ※, as in "※ Source:" (when the user asks for it, for example to follow an RFP template)
     + (source array) Write the source mark on the first item only (the build separates the items with semicolons)
-- Use ※ only for note text such as evidence, sources, premises and caveats
+- Use ※ only for note text such as evidence, premises and caveats (a source starts with its source mark)
 - Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions
     + Used as a note, start it with ※
@@ -157,10 +157,10 @@
     + Write the explanation as one noun phrase that spells out the meaning (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
     + Do not repeat the defined term or use other technical terms in the explanation
     + For an abbreviation, add the full name in parentheses at the end of the explanation. When the full name already gives the meaning, write the full name alone (e.g. "(TTL) Travel, transport, and logistics")
-- Write note items without a label by default (in a number-style deck the build adds the note label, so legends, bases and caveats share one style; an item that cites a source follows the source mark rule)
-- Start an explanation that sits inside a box right under a figure or item name with a content label (a label is one word without spaces followed by a colon)
-    + (Where) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
-    + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure
+- Write note items without a label as the default (in a number-style deck the build adds the note label, so legends, bases, caveats and the like share one style; an item that cites a source follows the source mark rule)
+- An explanation that sits inside a box right under a figure or item name usually reads better with a content label (a label is one word without spaces followed by a colon)
+    + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), where a footnote-style "Note:" does not fit
+    + (Label examples) "Formula:" for the calculation of a figure, "Source:" for the material a figure comes from, "Basis:" for the reference point of a figure, and similar labels
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs
@@ -168,15 +168,16 @@
     + (Numbers) Apply the same minimum as the ※ mark (with two or more items the build numbers them and sets one item per line)
     + (Judgment per slide) These counts are common practice, so do not apply them mechanically to every slide. Make the final judgment from the content and context of the slide
 - Run-on is set with `footnoteInline: true` on the slide (the build never switches the line-broken form to run-on by itself)
-- Set run-on only on a slide that still meets every condition below after the minimum note count and the source citation rules are applied
+- Consider run-on on a slide where the situations below occur together even after the minimum note count and the source citation rules are applied
     + (Body fit) On the slide built in the line-broken form, the body overflows or overlaps (confirm with a check_layout FAIL or the PNG)
-    + (Line saving) Running on removes two or more lines from the bottom notes and source line together (confirm with the build; do not set it when short items keep the same line count)
+    + (Line saving) Running on removes two or more lines from the bottom notes and source line together (confirm with the build; when short items keep the same line count, the gain is small)
 - Run-on layout
-    + (Notes of a number-style deck) "Note: 1) A 2) B 3) C" runs on in one paragraph
-    + (Source line) "Source: A; B; C" or "※ Source: A; B; C" runs on in one paragraph
+    + (Notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A 2) B 3) C"
+    + (Source line) Runs on in one paragraph, as in "Source: A; B; C" ("※ Source: A; B; C" in a ※ mark deck with footnoteSourceMark)
     + (Notes of a ※ mark deck) No run-on; each line keeps its ※
     + A run-on paragraph that passes the line end aligns its second line onward after the label
-- Keep run-on slides an exception across the deck (when several slides meet the conditions, review the amount of notes and sources in the deck)
+- Keeping run-on slides an exception across the deck is recommended (when several slides call for it, review the amount of notes and sources in the deck)
+- (Judgment in context) The label and run-on guides above follow common practice, so they do not fit every slide mechanically. Make the final judgment from the context of the whole slide
 
 ## Tables
 

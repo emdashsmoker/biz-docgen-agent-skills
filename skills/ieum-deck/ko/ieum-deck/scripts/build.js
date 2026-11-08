@@ -60,7 +60,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   // 이 슬라이드의 주석 표기 등록. 번호 표기 덱은 남은 ※ 를 이 슬라이드의 주석 라벨로 변환 (슬라이드 footnoteLabel, sourceLabel 이 덱 라벨보다 우선)
   // footnoteInline 은 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀
   const ns = TEMPLATES.helpers.noteStyle(ctx);
-  A.setNoteStyle(ns.style, ns.labels, ns.inline);
+  A.setNoteStyle(ns.style, ns.labels, ns.inline, ns.markSource);
   // 절 번호는 "1." 형태로 정규화 (01, 1 처럼 마침표가 없으면 붙이고 앞의 0 은 제거)
   const secNo = sb.secNo == null ? sb.secNo : String(sb.secNo).trim().replace(/^0+(\d)/, "$1").replace(/^([\dIVXivx①-⑮]+)$/, "$1.");
   const band = { secNo, secTitle: sb.section, tracker: sb.tracker || sb.chapter, headline: sb.headline, marker: sb.marker, markerNote: sb.markerNote };

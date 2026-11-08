@@ -60,7 +60,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   // Registers this slide's note style. A number-style deck turns the remaining ※ into this slide's note labels (the slide footnoteLabel and sourceLabel take precedence over the deck labels)
   // footnoteInline runs this slide's notes and source line on in one paragraph
   const ns = TEMPLATES.helpers.noteStyle(ctx);
-  A.setNoteStyle(ns.style, ns.labels, ns.inline);
+  A.setNoteStyle(ns.style, ns.labels, ns.inline, ns.markSource);
   // Normalize the section number to the "1." form (add a missing period as in 01 or 1, and drop leading zeros)
   const secNo = sb.secNo == null ? sb.secNo : String(sb.secNo).trim().replace(/^0+(\d)/, "$1").replace(/^([\dIVXivx①-⑮]+)$/, "$1.");
   const band = { secNo, secTitle: sb.section, tracker: sb.tracker || sb.chapter, headline: sb.headline, marker: sb.marker, markerNote: sb.markerNote };

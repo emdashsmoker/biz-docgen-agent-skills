@@ -547,10 +547,10 @@ function calloutW(ctx, text, w0, maxW) {
   return w;
 }
 /** 슬라이드의 주석 표기. style 은 meta.footnoteStyle (미지정이면 number), 라벨은 슬라이드 footnoteLabel, sourceLabel, meta.labels.common, 기본값 순
- *  inline 은 슬라이드 footnoteInline (주석과 출처 행을 1문단으로 이어 씀). build.js 가 슬라이드마다 atoms.setNoteStyle 로 등록 */
+ *  inline 은 슬라이드 footnoteInline (주석과 출처 행을 1문단으로 이어 씀), markSource 는 meta.footnoteSourceMark (※ 기호 덱의 출처에도 ※). build.js 가 슬라이드마다 atoms.setNoteStyle 로 등록 */
 function noteStyle(ctx) {
   const sb = ctx.sb || {};
-  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true };
+  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true, markSource: !!(ctx.meta && ctx.meta.footnoteSourceMark) };
 }
 /** 상자 아래 주석의 문단 구성과 줄 수 (atoms.noteBlock, notePlan). w 는 주석 상자 폭 */
 function boxNote(v, w) {

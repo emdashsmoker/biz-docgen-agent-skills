@@ -316,15 +316,16 @@ function lineOpt(ln, fallbackPt) {
 // ---------------------------------------------------------------- Text run list conversion
 // meta.footnoteStyle choices. The first value is the default (same list as FOOTNOTE_STYLES in lint.py)
 const NOTE_STYLES = ["number", "mark"];
-let NOTES = null; // Note style of the slide being set { style, labels: { note, source }, inline }. build.js sets it per slide
-/** Sets the slide note style. style is meta.footnoteStyle, labels are the note and source labels, inline is the slide footnoteInline
+let NOTES = null; // Note style of the slide being set { style, labels: { note, source }, inline, markSource }. build.js sets it per slide
+/** Sets the slide note style. style is meta.footnoteStyle, labels are the note and source labels, inline is the slide footnoteInline,
+ *  markSource is meta.footnoteSourceMark (a ※ mark deck also puts ※ before the source line and source notes)
  *  With number, runsOf turns the ※ the author wrote into number-style marks */
-function setNoteStyle(style, labels, inline) {
-  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline };
+function setNoteStyle(style, labels, inline, markSource) {
+  NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline, markSource: !!markSource };
 }
 /** Note style of the current slide. Called outside build.js without a setting, it is the default style with default labels */
 function noteState() {
-  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false };
+  return NOTES || { style: NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel"), source: LB.label("common", "sourceLabel") }, inline: false, markSource: false };
 }
 const LEAD_MARK = /^\s*※/;
 /** Paragraph conversion for a number-style deck. Consecutive paragraphs starting with ※ are a note group and get the noteBlock marks; a ※ inside a sentence is removed (e.g. "(※ 시안)" → "(시안)")
@@ -953,7 +954,7 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** Marks of one note group { lead, leads, lines, items, join }. Shared by slide footnotes, notes under boxes, number card notes and the ※ conversion of number-style decks
- *  mark has no lead and puts ※ on each item (an author label stays after the ※)
+ *  mark has no lead and puts ※ on each item (an author label stays after the ※). An item that starts with a source mark starts with that mark without ※ (meta.footnoteSourceMark adds ※)
  *  number keeps the author's label (출처:, 산식:, 범례: etc.) and gives an item without one the note label (footnoteLabel)
  *    + One item: the label, then the text
  *    + Two or more items with the same label: the label on the first line only and 1) 2) on each item, one item per line (a source label gets no numbers and separates the items with semicolons like the source line)
@@ -969,7 +970,13 @@ function noteBlock(items, state) {
   const raw = [].concat(items || []).map((t) => String(t == null ? "" : t).trim().replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
     const arr = raw.map((t) => (lb.note && t.startsWith(lb.note) ? t.slice(lb.note.length).trim() : t)).filter(Boolean);
-    return { lead: null, leads: null, lines: arr.map((t) => `※ ${t}`), items: arr.length };
+    const line = (t) => {
+      const src = ns.markSource ? null : sourceMark(t);
+      if (!src) return `※ ${t}`;
+      USED_LEADS.add(tidyLabel(src));
+      return `${tidyLabel(src)} ${t.slice(src.length).trim()}`;
+    };
+    return { lead: null, leads: null, lines: arr.map(line), items: arr.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -990,7 +997,9 @@ function noteBlock(items, state) {
   return block(labels, rows.map((r) => r.text));
 }
 /** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
- *  The lead is the first source mark the author wrote in number style (e.g. "출처:", the source label without one); in mark style it is "※" with the first source mark (e.g. "※ Source:"), or "※" without a source mark
+ *  The lead is the first source mark the author wrote (e.g. "출처:", the source label without one), without ※ in both styles
+ *  Only a ※ mark deck with meta.footnoteSourceMark uses "※" with the first source mark (e.g. "※ Source:", "※" without a source mark)
+ *  Why: "Source:" already tells what the line is, so no ※ is stacked on it. ※ is added only as an option for an RFP template that asks for "※ 출처:"
  *  When the lead and the joined sources fit one line of width w, or the slide sets footnoteInline, the line is "A; B"; otherwise one source per line (the semicolon stays at the line end)
  *  Why: joined sources that pass the line end break inside a material name and blur where a source ends. Breaking at source boundaries and aligning to the first source start (notePlan) keeps them apart */
 function sourceBlock(items, w, sz, state) {
@@ -1004,9 +1013,9 @@ function sourceBlock(items, w, sz, state) {
     else if (lb.source && s.startsWith(lb.source)) { if (mark == null) mark = lb.source; s = s.slice(lb.source.length); }
     return s.trim();
   }).filter(Boolean);
-  const lead = ns.style === "mark" ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
+  const lead = ns.style === "mark" && ns.markSource ? (mark ? `※ ${mark}` : "※") : mark || lb.source;
   if (!parts.length) return { lead, lines: [], items: 0 };
-  if (ns.style !== "mark") USED_LEADS.add(lead);
+  if (!lead.startsWith("※")) USED_LEADS.add(lead);
   const one = parts.join("; ");
   const split = !ns.inline && parts.length > 1 && estimateLines(`${lead} ${one}`, w, sz) > 1;
   return { lead, lines: split ? parts.map((p, i) => (i < parts.length - 1 ? `${p};` : p)) : [one], items: parts.length };

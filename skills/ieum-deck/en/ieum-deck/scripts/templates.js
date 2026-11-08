@@ -548,10 +548,10 @@ function calloutW(ctx, text, w0, maxW) {
   return w;
 }
 /** Note style of the slide. style is meta.footnoteStyle (number when unset); labels come from the slide footnoteLabel and sourceLabel, meta.labels.common, then the defaults
- *  inline is the slide footnoteInline (notes and the source line run on in one paragraph). build.js registers it per slide with atoms.setNoteStyle */
+ *  inline is the slide footnoteInline (notes and the source line run on in one paragraph), markSource is meta.footnoteSourceMark (※ on sources in a ※ mark deck). build.js registers it per slide with atoms.setNoteStyle */
 function noteStyle(ctx) {
   const sb = ctx.sb || {};
-  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true };
+  return { style: (ctx.meta && ctx.meta.footnoteStyle) || A.NOTE_STYLES[0], labels: { note: LB.label("common", "footnoteLabel", sb.footnoteLabel), source: LB.label("common", "sourceLabel", sb.sourceLabel) }, inline: sb.footnoteInline === true, markSource: !!(ctx.meta && ctx.meta.footnoteSourceMark) };
 }
 /** Paragraphs and line count of a note under a box (atoms.noteBlock, notePlan). w is the note box width */
 function boxNote(v, w) {

@@ -2,7 +2,7 @@
 """lint.py: storyboard.json 검사. FAIL 0건이 빌드 착수 조건.
 사용: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "유지 사유"]
 검사 항목
-- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char), 각주 표기(meta.footnoteStyle: number | mark), 슬라이드 주석 이어 쓰기(footnoteInline: true | false) (FAIL)
+- 스키마: id 고유, template 유효, 필수 필드, 사용자 지정 테마 색(meta.themeColors 의 base 와 색 키) 6자리 색상 코드, 줄바꿈 단위(meta.lineBreak: word | char), 각주 표기(meta.footnoteStyle: number | mark), ※ 기호 덱 출처의 ※ (meta.footnoteSourceMark: true | false), 슬라이드 주석 이어 쓰기(footnoteInline: true | false) (FAIL)
 - 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
@@ -593,6 +593,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
         fails.append(f"meta.lineBreak 는 {' 또는 '.join(LINE_BREAKS)}. 입력값: {meta.get('lineBreak')}")
     if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
         fails.append(f"meta.footnoteStyle 는 {' 또는 '.join(FOOTNOTE_STYLES)}. 입력값: {meta.get('footnoteStyle')}")
+    if "footnoteSourceMark" in meta and not isinstance(meta["footnoteSourceMark"], bool):
+        fails.append(f"meta.footnoteSourceMark 는 true 또는 false. 입력값: {meta['footnoteSourceMark']}")
     for s in story.get("slides", []):
         if "footnoteInline" in s and not isinstance(s["footnoteInline"], bool):
             fails.append(f"[{s.get('id')}] footnoteInline 은 true 또는 false. 입력값: {s['footnoteInline']}")
