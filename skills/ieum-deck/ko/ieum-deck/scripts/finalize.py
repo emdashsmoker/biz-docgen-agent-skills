@@ -11,7 +11,8 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
         핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제,
         OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak),
         주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록),
-        재직렬화가 0 으로 바꾼 내어쓰기 문단의 탭 위치를 marL 로 복원
+        재직렬화가 0 으로 바꾼 내어쓰기 문단의 탭 위치를 marL 로 복원,
+        빌드 기록의 계열 레이블 지정(chartLabels)을 항목 레이블로 기록 (재직렬화 전 1회)
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -70,6 +71,19 @@ GROUPING_CHART_TAGS = (
 
 # 누적 차트에서 제거할 데이터 레이블 위치값
 FORBIDDEN_STACKED_LABEL_POSITION = "outEnd"
+
+# 계열 레이블 지정(빌드 기록 chartLabels)의 값. none 은 숨김, 나머지는 ECMA-376 데이터 레이블 위치
+# 차트 형식별 허용 여부는 lint.py 가 검사하고 여기서는 XML 속성에 넣을 수 있는 값인지만 확인
+LABEL_HIDDEN = "none"
+LABEL_POSITIONS = (LABEL_HIDDEN, "bestFit", "b", "ctr", "inBase", "inEnd", "l", "outEnd", "r", "t")
+
+CHART_PART_DIR = "ppt/charts/"
+SERIES_PATTERN = re.compile(r"<c:ser>.*?</c:ser>", re.S)
+SERIES_LABELS_PATTERN = re.compile(r"<c:dLbls>(.*?)</c:dLbls>", re.S)
+POINT_LABEL_PATTERN = re.compile(r'<c:dLbl>\s*<c:idx val="(\d+)"/>(.*?)</c:dLbl>', re.S)
+LABEL_POSITION_PATTERN = re.compile(r'<c:dLblPos val="[^"]*"/>')
+# 계열 레이블 묶음에만 허용되는 요소. 계열 서식을 항목 레이블에 복사할 때 제외
+SERIES_ONLY_LABEL_PATTERN = re.compile(r"<c:showLeaderLines[^>]*/>|<c:leaderLines>.*?</c:leaderLines>|<c:extLst>.*?</c:extLst>", re.S)
 
 # 슬라이드 부품 판정. id 중복 집계 대상
 SLIDE_PART_PATTERN = re.compile(r"^ppt/slides/slide\d+\.xml$")
@@ -919,6 +933,94 @@ def restore_hole_sizes(data: bytes, holes: dict) -> bytes:
     return write_package(fixed)
 
 
+def point_label(index: int, template: str, position: str) -> str:
+    """항목 1개의 데이터 레이블(c:dLbl). none 은 숨김, 그 밖은 template 서식에 위치만 바꿔 기록"""
+    if position == LABEL_HIDDEN:
+        return f'<c:dLbl><c:idx val="{index}"/><c:delete val="1"/></c:dLbl>'
+    tag = f'<c:dLblPos val="{position}"/>'
+    if LABEL_POSITION_PATTERN.search(template):
+        body = LABEL_POSITION_PATTERN.sub(tag, template)
+    else:  # 위치를 생략한 계열(묶은 막대)은 스키마 순서상 showLegendKey 앞에 위치를 넣음
+        body = template.replace("<c:showLegendKey", tag + "<c:showLegendKey", 1)
+    return f'<c:dLbl><c:idx val="{index}"/>{body}</c:dLbl>'
+
+
+def set_series_labels(series_xml: str, positions: list) -> tuple[str, int]:
+    """계열 1개(c:ser)의 레이블 묶음에 항목별 지정을 기록. 같은 항목의 기존 c:dLbl 은 그 서식을 바탕으로 교체
+
+    WHY: 기존 c:dLbl 이 없으면 계열 서식(글꼴, 숫자 서식, 표시 항목)을 복사해야 지정하지 않은 속성이 계열과 같게 표시됨
+    """
+    found = SERIES_LABELS_PATTERN.search(series_xml)
+    if not found:
+        return series_xml, 0
+    body = found.group(1)
+    points = {int(m.group(1)): m for m in POINT_LABEL_PATTERN.finditer(body)}
+    rest = POINT_LABEL_PATTERN.sub("", body)
+    series_format = SERIES_ONLY_LABEL_PATTERN.sub("", rest)
+    labels = {i: m.group(0) for i, m in points.items()}
+    changed = 0
+    for index, position in enumerate(positions):
+        if position is None:
+            continue
+        template = points[index].group(2) if index in points else series_format
+        labels[index] = point_label(index, template, position)
+        changed += 1
+    # 스키마 순서상 항목 레이블(c:dLbl)이 계열 서식보다 앞
+    new_body = "".join(labels[i] for i in sorted(labels)) + rest
+    return series_xml[:found.start(1)] + new_body + series_xml[found.end(1):], changed
+
+
+def apply_chart_labels(xml: str, series_positions: list) -> tuple[str, int]:
+    """차트 XML 의 계열을 문서 순서(storyboard series 순서)로 대응시켜 항목별 레이블 지정을 기록"""
+    out, last, count = [], 0, 0
+    for match, positions in zip(SERIES_PATTERN.finditer(xml), series_positions):
+        fixed, changed = set_series_labels(match.group(0), positions or [])
+        out.append(xml[last:match.start()] + fixed)
+        last, count = match.end(), count + changed
+    return "".join(out) + xml[last:], count
+
+
+def apply_label_overrides(data: bytes, chart_labels: dict) -> tuple[bytes, int]:
+    """빌드 기록의 계열 레이블 지정을 차트 부품에 기록. 지정이 없으면 패키지를 그대로 반환"""
+    if not chart_labels:
+        return data, 0
+    fixed, total = [], 0
+    for name, payload in read_package(data):
+        series_positions = chart_labels.get(name[len(CHART_PART_DIR):]) if name.startswith(CHART_PART_DIR) else None
+        if series_positions:
+            xml, changed = apply_chart_labels(payload.decode("utf-8"), series_positions)
+            payload, total = xml.encode("utf-8"), total + changed
+        fixed.append((name, payload))
+    return write_package(fixed), total
+
+
+def record_chart_labels(pptx_path: Path) -> dict:
+    """빌드 기록(<파일명>.build.json)의 계열 레이블 지정(chartLabels). 차트 파일 이름 -> 계열별 항목 지정 배열
+    XML 속성에 넣을 수 없는 값은 지정 없음(None)으로 바꾸고 개수를 출력"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return {}
+    try:
+        labels = json.loads(record.read_text(encoding="utf-8")).get("chartLabels") or {}
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(labels, dict):
+        return {}
+    out, dropped = {}, 0
+    for part, series in labels.items():
+        if not isinstance(series, list):
+            continue
+        out[part] = []
+        for positions in series:
+            positions = positions if isinstance(positions, list) else []
+            valid = [p if p in LABEL_POSITIONS else None for p in positions]
+            dropped += sum(1 for p, v in zip(positions, valid) if p is not None and v is None)
+            out[part].append(valid)
+    if dropped:
+        print(f"[finalize] 계열 레이블 지정 {dropped}개는 허용 값({', '.join(LABEL_POSITIONS)})이 아니어서 무시")
+    return out
+
+
 def record_language(pptx_path: Path) -> dict:
     """빌드 기록(<파일명>.build.json)의 언어 태그(meta.labels.language). 태그 형식이 아닌 값은 무시하고 기본값 유지"""
     record = pptx_path.with_suffix(".build.json")
@@ -963,6 +1065,10 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     data = pptx_path.read_bytes()
     data, _ = normalize_package(data)
     data, _ = fix_package_xml(data)
+    # 계열 레이블 지정은 구조가 정해진 pptxgenjs XML 에 1회 기록. soffice 재직렬화는 같은 지정을 표준 형식(숨김은 showVal 0)으로 다시 기록
+    data, labeled = apply_label_overrides(data, record_chart_labels(pptx_path))
+    if labeled:
+        print(f"[finalize] 차트 항목 레이블 지정 {labeled}개 기록 (빌드 기록 chartLabels)")
     pptx_path.write_bytes(data)
 
     reserialized = False

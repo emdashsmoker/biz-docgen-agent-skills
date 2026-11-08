@@ -734,7 +734,7 @@ function table(slide, atom, opt) {
   });
 }
 
-/** 네이티브 차트. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values}], holeSize, showLegend, highlight} */
+/** 네이티브 차트. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values, labelPos}], holeSize, showLegend, highlight} */
 const COL_GAP_SINGLE = 130; // 단일 계열 세로 막대의 막대 간격 (막대 폭 대비 %)
 const NEG_LABEL_ROOM = 0.22, POS_LABEL_ROOM = 0.12; // 음수가 있는 막대 차트의 값 축 여유 (값 범위 대비. 음수 막대 아래와 양수 막대 위 수치 자리)
 /** 두 색 사이를 같은 간격으로 나눈 n 색 (양 끝 색 포함) */
@@ -753,6 +753,7 @@ function chart(pres, slide, box, spec) {
   let cats = (spec.categories || []).map(String);
   let series = (spec.series || []).map((s) => ({ name: s.name || "", labels: cats, values: (s.values || []).map((v) => (v == null ? 0 : v)) }));
   if (!series.length) series = [{ name: "", labels: cats, values: cats.map(() => 0) }];
+  const labelPos = (spec.series || []).map((s) => s.labelPos);
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
     chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
@@ -767,10 +768,11 @@ function chart(pres, slide, box, spec) {
     opt.barDir = spec.barDir === "bar" ? "bar" : "col";
     if (opt.barDir === "bar" && series.length === 1 && !spec.keepOrder) {
       // 항목 비교는 큰 값이 위: 내림차순 정렬 후 범주 축을 역순으로
-      const pairs = cats.map((c, i) => [c, series[0].values[i]]).sort((a, b) => b[1] - a[1]);
+      const pairs = cats.map((c, i) => [c, series[0].values[i], i]).sort((a, b) => b[1] - a[1]);
       cats = pairs.map((p) => p[0]);
       series[0].labels = cats;
       series[0].values = pairs.map((p) => p[1]);
+      if (Array.isArray(labelPos[0])) labelPos[0] = pairs.map((p) => labelPos[0][p[2]]); // 항목별 레이블 지정도 같은 순서로
       opt.catAxisOrientation = "maxMin";
     }
     // 단일 계열 세로 막대는 막대 사이를 넓혀 굵기를 줄임 (막대 길이 차이가 눈에 띄도록)
@@ -809,7 +811,22 @@ function chart(pres, slide, box, spec) {
   }
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // 레이블이 선과 겹치지 않도록 표식 위에 배치
   slide.addChart(ctype, series, opt);
+  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length); // 도넛은 레이블을 그리지 않음
 }
+
+// 차트 파일 이름별 계열 레이블 지정 (storyboard series[].labelPos)
+// WHY: pptxgenjs 는 레이블 위치와 표시 여부를 모든 계열과 항목에 같게 기록. 계열별, 항목별 지정은 build.js 가 빌드 기록(chartLabels)에 남기고
+//      finalize.py 가 soffice 재직렬화 전에 차트 XML 의 항목 레이블(c:dLbl)로 기록
+const CHART_LABELS = {};
+/** 계열별 labelPos 를 항목 수 길이 배열로 펼쳐 기록. 지정이 없는 계열과 항목은 null (빌더 기본 레이블 유지) */
+function recordLabelPos(slide, labelPos, n) {
+  if (!labelPos.some((p) => p != null)) return;
+  // pptxgenjs 3.12.0 은 차트 파일 이름을 슬라이드의 차트 관계 목록(_relsChart)에만 보관 (공개 API 없음. 버전을 올리면 확인 필요)
+  const rel = slide._relsChart[slide._relsChart.length - 1];
+  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => (Array.isArray(p) ? p[i] ?? null : p))));
+}
+/** 빌드 기록용 계열 레이블 지정 (build.js 가 읽음) */
+function chartLabels() { return CHART_LABELS; }
 
 let IMAGE_BASE = null; // storyboard 폴더. 빌드한 위치와 관계없이 같은 storyboard 가 같은 이미지를 찾도록 상대 경로의 기준으로 사용
 
@@ -1545,4 +1562,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

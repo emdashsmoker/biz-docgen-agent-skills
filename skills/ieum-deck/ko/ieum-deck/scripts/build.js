@@ -177,6 +177,8 @@ async function main() {
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
   const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  // chartLabels 는 계열별 데이터 레이블 위치와 숨김 지정 (series[].labelPos, finalize 가 차트 XML 에 기록). 지정이 없으면 기록하지 않음
+  if (Object.keys(A.chartLabels()).length) report.chartLabels = A.chartLabels();
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));
   console.log(`built ${outPath} slides=${slides.length} layout=${layoutKey} theme=${themeLabel} warnings=${warnings.length}`);
   if (inline.length) console.log(`INFO 주석 이어 쓰기 슬라이드 ${inline.length}장: ${inline.join(", ")} (footnoteInline. 보고에 포함하여 사용자 확인)`);

@@ -114,7 +114,7 @@
 | `funnel` | 깔때기 (후보에서 최종까지 단계별 선별) | `stages[{label, value, cells[] 또는 items}]` (위 단계부터), `head[]`(설명 열 제목, 선택), `funnelHead`(깔때기 열 제목, 선택). 띠 안에 단계 이름과 대상 수, 오른쪽 칸에 단계별 설명. `head` 가 있으면 `cells` 를 열 순서대로 조판 |
 | `governance` | 추진체계도 (가운데 관리 계선과 좌우 심의, 협력 주체) | `spine[]`(연구개발비 전달 순서의 주체), `sides[{at, side, text, dash}]`. `at` 은 연결할 계선 주체 순번(0부터), `side` 값은 left 또는 right, `dash` 가 true 이면 점선(협력) |
 | `numbers` | 핵심 수치 타일 | `items[{value, label, note}]`. note 표기는 칸 주석과 같음. 수치 설명은 "산식:" 같은 내용 라벨이나 덱의 출처 표기로 시작 (writing-rules.md 주석 절) |
-| `chart` | 네이티브 차트 | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` 는 데이터 레이블과 값 축의 숫자 서식 (예: "0.0" 은 소수 첫째 자리까지. 지정하지 않으면 막대와 선 차트는 정수로 반올림하여 표시) |
+| `chart` | 네이티브 차트 | `chart{type, barDir, categories, series, grouping, highlight, numFmt}`. `numFmt` 는 데이터 레이블과 값 축의 숫자 서식 (예: "0.0" 은 소수 첫째 자리까지. 지정하지 않으면 막대와 선 차트는 정수로 반올림하여 표시). 계열의 `labelPos` 는 데이터 레이블 위치나 숨김 (아래 chart 레이블 조정 절) |
 | `image` | 이미지 또는 자리 상자 | `src`(경로 또는 data URI), `caption`(이미지 아래 설명), `label`(자리 상자 문구) |
 
 - 블록 라벨(valuechain, porter 의 라벨 필드와 goalsystem, house, logicmodel, canvas 의 labels)의 덱 공통 값은 `meta.labels` 의 블록 이름 키로 지정 (`references/templates.md` 라벨 슬롯 절)
@@ -204,6 +204,41 @@
     + 짧은 문구는 대상, 기준, 수치를 병기
     + 긴 문구는 두 항목으로 나눔
 - 상자 글 채움 경고가 칸 폭 때문이면 `cols` 비율을 줄이거나 칸 수를 늘림
+
+### chart 레이블 조정
+
+- 데이터 레이블이 겹치거나 잘리면 계열(`series[]`)의 `labelPos` 로 위치를 바꾸거나 레이블을 숨김
+- 적용 대상은 chart 블록, chart_text, chart_two, task 표본, 커스텀 슬라이드의 차트 슬롯
+- (값 형식) 문자열은 계열 전체에 적용하고 배열은 values 와 같은 순서로 항목마다 적용
+    + 배열 안의 null 은 빌더 기본 위치를 유지
+    + "none" 은 레이블을 숨김
+    + 가로 막대 내림차순 정렬 시 배열도 values 와 함께 정렬
+- (형식별 위치) 차트 형식마다 쓸 수 있는 위치가 다름
+    + 막대는 outEnd, inEnd, ctr, inBase
+    + 누적 막대는 inEnd, ctr, inBase
+    + 선은 t(위), b(아래), l(왼쪽), r(오른쪽), ctr
+    + 원형은 outEnd, inEnd, ctr, bestFit
+- lint 는 허용 값 밖의 위치와 values 와 길이가 다른 배열을 FAIL 로 보고
+- lint 는 도넛 계열의 labelPos 와 chart 단위 labelPos 를 무시되는 지정으로 보고 (WARN)
+- finalize.py 가 빌드 기록의 지정을 차트 XML 에 기록하므로 build.js 만 실행한 PPTX 에는 반영되지 않음
+- 글자 크기는 조정 대상에서 제외 (데이터 레이블은 본문 하한 11pt 로 조판하므로 위치와 숨김으로 조정)
+- (조정 순서) 120 dpi 단독 PNG 를 보고 아래 순서로 조정
+    + 겹친 레이블 가운데 메시지에 필요한 레이블을 먼저 고름
+    + 메시지에 필요한 레이블은 위치를 옮기고 나머지만 숨김
+    + 숨김은 겹침이 풀리는 최소 범위로 한정
+    + 다시 빌드하여 120 dpi PNG 로 재확인
+- 숨긴 레이블의 수치는 아래 경로 가운데 한 곳 이상에 남김
+    + (본문) chart_two 의 items, chart_text 의 findings 등 같은 슬라이드 문구
+    + (주석) 슬라이드 footnotes
+    + (범례) 숨긴 계열 이름에 수치 범위를 병기 (예: "기타(1-2%)")
+    + (같은 값 레이블) 교차점처럼 같은 값을 다른 계열 레이블이 표시하는 경우
+
+| 이슈 | 막대 | 누적 막대 | 선 | 원형 |
+|---|---|---|---|---|
+| 겹침 | 이웃 막대 레이블이 맞닿으면 메시지와 무관한 계열이나 항목을 none | 얇은 조각의 레이블은 위치를 바꿔도 조각 안에 놓이므로 none | 계열마다 t 와 b 를 나누고 시작, 끝, 교차 밖의 항목은 none | 작은 조각 사이에 끼인 레이블을 none |
+| 잘림 | 칸 끝에서 잘리면 해당 항목을 inEnd | 레이블이 조각 안에 놓여 해당 없음 | 차트 가장자리에서 잘리면 첫 항목을 r, 끝 항목을 l | 작은 조각이 많아 잘리면 기타로 합침 |
+| 누락 | 미지원. 빌더가 결측값(null)을 0 막대와 "0" 레이블로 그리므로 해당 항목을 빼거나 표로 제시 | 막대와 같음 | 미지원. 결측값이 0 으로 떨어진 선으로 그려지므로 해당 항목을 빼거나 표로 제시 | 값이 0 인 항목은 빼고 작성 |
+| 판독 곤란 | 반올림으로 다른 값이 같게 보이면 numFmt 로 소수 자리 지정. 짙은 막대 안쪽 위치(inEnd, ctr, inBase)는 글자 대비가 낮음 | 붙은 레이블이 한 수치로 읽히면 얇은 계열을 none | 같은 값 레이블이 포개지면 한 계열의 해당 항목을 none | 레이블 글자색이 차트 전체 1색이므로 inEnd 와 ctr 는 옅은 조각에만 사용 |
 
 ## 레시피 목록
 

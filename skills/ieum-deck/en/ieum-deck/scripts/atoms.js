@@ -734,7 +734,7 @@ function table(slide, atom, opt) {
   });
 }
 
-/** Native chart. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values}], holeSize, showLegend, highlight} */
+/** Native chart. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values, labelPos}], holeSize, showLegend, highlight} */
 const COL_GAP_SINGLE = 130; // Bar gap for single-series column bars (% of bar width)
 const NEG_LABEL_ROOM = 0.22, POS_LABEL_ROOM = 0.12; // Value axis room for bar charts with negatives (relative to the value range. Label room under negative bars and above positive bars)
 /** n colors spaced evenly between two colors (both end colors included) */
@@ -753,6 +753,7 @@ function chart(pres, slide, box, spec) {
   let cats = (spec.categories || []).map(String);
   let series = (spec.series || []).map((s) => ({ name: s.name || "", labels: cats, values: (s.values || []).map((v) => (v == null ? 0 : v)) }));
   if (!series.length) series = [{ name: "", labels: cats, values: cats.map(() => 0) }];
+  const labelPos = (spec.series || []).map((s) => s.labelPos);
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
     chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
@@ -767,10 +768,11 @@ function chart(pres, slide, box, spec) {
     opt.barDir = spec.barDir === "bar" ? "bar" : "col";
     if (opt.barDir === "bar" && series.length === 1 && !spec.keepOrder) {
       // Item comparison puts the largest value on top: sort descending and reverse the category axis
-      const pairs = cats.map((c, i) => [c, series[0].values[i]]).sort((a, b) => b[1] - a[1]);
+      const pairs = cats.map((c, i) => [c, series[0].values[i], i]).sort((a, b) => b[1] - a[1]);
       cats = pairs.map((p) => p[0]);
       series[0].labels = cats;
       series[0].values = pairs.map((p) => p[1]);
+      if (Array.isArray(labelPos[0])) labelPos[0] = pairs.map((p) => labelPos[0][p[2]]); // per-point label settings follow the same order
       opt.catAxisOrientation = "maxMin";
     }
     // Single-series column bars get wider gaps and thinner bars (so length differences stand out)
@@ -809,7 +811,22 @@ function chart(pres, slide, box, spec) {
   }
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
   slide.addChart(ctype, series, opt);
+  if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length); // doughnuts draw no labels
 }
+
+// Series label settings per chart file name (storyboard series[].labelPos)
+// WHY: pptxgenjs writes the same label position and visibility for every series and point. build.js records per-series and per-point settings
+//      in the build record (chartLabels) and finalize.py writes them as point labels (c:dLbl) in the chart XML before soffice re-serialization
+const CHART_LABELS = {};
+/** Expand each series labelPos to an array as long as the point count. Series and points without a setting are null (builder default label) */
+function recordLabelPos(slide, labelPos, n) {
+  if (!labelPos.some((p) => p != null)) return;
+  // pptxgenjs 3.12.0 keeps the chart file name only in the slide chart relationship list (_relsChart, no public API. Recheck after a version upgrade)
+  const rel = slide._relsChart[slide._relsChart.length - 1];
+  CHART_LABELS[rel.fileName] = labelPos.map((p) => (p == null ? null : Array.from({ length: n }, (_, i) => (Array.isArray(p) ? p[i] ?? null : p))));
+}
+/** Series label settings for the build record (read by build.js) */
+function chartLabels() { return CHART_LABELS; }
 
 let IMAGE_BASE = null; // Storyboard folder. Base for relative paths so the same storyboard finds the same images wherever it is built
 
@@ -1545,4 +1562,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

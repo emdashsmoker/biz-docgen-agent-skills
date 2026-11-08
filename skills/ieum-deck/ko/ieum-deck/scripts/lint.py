@@ -60,6 +60,16 @@ HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
 FOOTNOTE_STYLES = ("number", "mark")  # 각주 표기(meta.footnoteStyle). 첫 값이 기본. atoms.js 의 NOTE_STYLES 와 같은 목록
+# 차트 계열 레이블 지정(series[].labelPos). none 은 숨김. 위치는 ECMA-376 과 MS-OI29500 의 차트 형식별 허용 값
+# (누적 막대는 outEnd 불가, 영역형은 위치 지정 불가). 도넛은 빌더가 레이블을 그리지 않으므로 표에 없음
+LABEL_HIDDEN = "none"
+LABEL_POSITIONS = {
+    "bar": ("outEnd", "inEnd", "ctr", "inBase"),
+    "stacked": ("inEnd", "ctr", "inBase"),
+    "line": ("t", "b", "l", "r", "ctr"),
+    "pie": ("outEnd", "inEnd", "ctr", "bestFit"),
+    "area": (),
+}
 HANGUL_RE = re.compile(r"[가-힣]")
 # 커스텀 슬라이드 치환 문구의 상자 넘침 판정. 빌더(atoms.js 의 playOwn, shape, fitParas)가 정할 문단 간격과 글꼴 크기를 같은 규칙으로 계산한 뒤 렌더 높이로 잼
 # 상자 조판 값은 빌드(atoms.js 의 shape, mgPt, playOwn, fitParas)와 tokens.js 의 값
@@ -425,6 +435,50 @@ def own_overflows(own_slide, slots, layout, geo=None):
     return out
 
 
+def chart_specs(v):
+    """슬라이드 안의 차트 지정. series 배열을 가진 객체 (chart 슬롯, chart 블록, 커스텀 슬라이드의 차트 슬롯)"""
+    if isinstance(v, dict):
+        if isinstance(v.get("series"), list):
+            yield v
+        for x in v.values():
+            yield from chart_specs(x)
+    elif isinstance(v, list):
+        for x in v:
+            yield from chart_specs(x)
+
+
+def label_kind(spec):
+    """labelPos 허용 값의 차트 형식. 정의되지 않은 type 은 빌더(atoms.chart)와 같이 막대로 취급"""
+    t = spec.get("type")
+    if t in ("line", "pie", "doughnut", "area"):
+        return t
+    return "stacked" if spec.get("grouping") in ("stacked", "percentStacked") else "bar"
+
+
+def label_pos_checks(sid, spec):
+    """series[].labelPos 검사. 허용 값 밖의 값과 values 와 길이가 다른 배열은 FAIL, 무시되는 지정은 WARN"""
+    fails, warns = [], []
+    if "labelPos" in spec:
+        warns.append(f"[{sid}] 차트 단위 labelPos 는 무시됨. series 항목마다 labelPos 지정")
+    kind = label_kind(spec)
+    for s in spec.get("series") or []:
+        if not isinstance(s, dict) or "labelPos" not in s:
+            continue
+        pos, name = s["labelPos"], s.get("name", "")
+        if kind == "doughnut":
+            warns.append(f"[{sid}] 계열 {name} labelPos 는 무시됨 (도넛은 데이터 레이블 없이 중앙 수치로 표시)")
+            continue
+        allowed = (LABEL_HIDDEN,) + LABEL_POSITIONS[kind]
+        n_values = len(s.get("values") or [])
+        if isinstance(pos, list) and len(pos) != n_values:
+            fails.append(f"[{sid}] 계열 {name} labelPos 배열 {len(pos)}개가 values {n_values}개와 다름")
+        # 배열 안의 null 은 빌더 기본 레이블 유지
+        bad = sorted({str(p) for p in (pos if isinstance(pos, list) else [pos]) if not (p in allowed or (p is None and isinstance(pos, list)))})
+        if bad:
+            fails.append(f"[{sid}] 계열 {name} labelPos {', '.join(bad)} 는 {kind} 차트에 쓸 수 없음. 허용 값: {', '.join(allowed)}")
+    return fails, warns
+
+
 def blocks_of(sl):
     regs = ((sl.get("slots") or {}).get("regions")) or []
     return [b for r in regs for b in (r.get("blocks") or ([r["block"]] if r.get("block") else []))]
@@ -622,6 +676,9 @@ def lint(story, ledger=None, story_path=".", layout=None):
         else: run_tpl, run_n = key, 1
         if run_n == L.get("sameTemplateRun", 3) + 1: warns.append(f"[{sid}] 같은 구조 {key} {run_n}장 연속 (리듬 단조)")
         if tpl == "free": free_n += 1
+        for spec in chart_specs(s):
+            cf, cw = label_pos_checks(sid, spec)
+            fails.extend(cf); warns.extend(cw)
         hl = s.get("headline", "")
         # bandMode blank 는 밴드를 그리지 않으므로 헤드라인 자리가 없음
         if tpl not in BAND_TEMPLATES and not tpl.startswith("own:") and s.get("bandMode") != "blank" and not hl:

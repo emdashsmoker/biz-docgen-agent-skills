@@ -724,6 +724,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Item comparison uses horizontal bars in descending order
     + Time series use vertical bars or lines
     + Show data labels
+    + When labels overlap or are clipped, move or hide them with `labelPos` on the series (responses per chart type and paths for hidden figures are in the chart label adjustment section of `references/recipes.md`)
     + No gridlines
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color
@@ -802,6 +803,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + finalize.py fails with exit code 1 when paragraphs without the line break unit remain after processing
 - finalize.py restores the top and bottom margins of table cells in the cell properties (marT, marB) to prevent tables from overflowing when PowerPoint applies default margins
 - finalize.py sets NanumGothic as the East Asian font of chart text (categories, legends, data labels) to prevent chart Hangul from switching to the theme default font
+- finalize.py writes the series label settings of the build record (`series[].labelPos`) as point labels in the chart XML (a PPTX from build.js alone does not show them)
 - finalize.py records the language of text runs that contain Hangul as ko-KR, so LibreOffice re-saving does not store Hangul in another language (zh-CN etc.) depending on the runtime locale
 - finalize.py makes hyphen bullets ("-") follow the text font to prevent PowerPoint from showing these bullets as empty boxes
 - finalize.py resets the 0.01 mm (360 EMU) that soffice reserialization leaves as the height of horizontal lines and the width of vertical lines back to 0, so PowerPoint draws these lines straight
@@ -835,6 +837,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - On slides with charts, re-check text overlaps inside the chart on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_chart 120` (contact sheets shrink this text below legible size)
+    + Adjust label overlaps with `labelPos` on the series, then rebuild and re-check
 - List the viewed contact sheet file names in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
@@ -868,6 +871,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
 - Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
+- Do the figures of hidden labels (`labelPos` none) appear in the body, a note or the legend?
 
 #### Placement
 
