@@ -109,7 +109,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 5 lint                         python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → 종료 코드 0 이 빌드 조건
 6 빌드                         node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
 7 구조 검수                    python3 scripts/check_layout.py out.pptx → 심층 검토(references/review.md) → 수정 → 재빌드
-8 시각 검수와 납품             bash scripts/render.sh out.pptx png_dir 60 → PNG 전량 열람 → 조치 → bash scripts/topdf.sh out.pptx (PDF 동봉 시)
+8 시각 검수와 납품             bash scripts/render.sh out.pptx png_dir 60 → PNG 전량 열람 → 조치, 재빌드, 재열람 (결함 0건까지 반복) → bash scripts/topdf.sh out.pptx (PDF 동봉 시)
 ```
 
 - 의존성은 다른 단계보다 먼저 `python3 scripts/setup_deps.py --check` 로 확인
@@ -122,8 +122,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 재제시에는 바뀐 파일만 전달
     + 지정 폴더의 파일만 전달하는 도구는 사본을 그 폴더에 둔 뒤 전달 (기준본은 작업 폴더의 원본)
     + 전달 도구가 없는 실행 환경에서는 파일 경로를 안내
-- 납품 파일(PPTX, 동봉 시 PDF)은 PNG 전량 열람 후 전달
-- 완료 보고에는 파일 경로, 열람한 시트 파일명, 미해결 사항, 남은 사용자 확인 항목을 기재
+- 납품 파일(PPTX, 동봉 시 PDF)은 완료 조건을 모두 충족한 뒤 전달
+- 완료 보고에는 파일 경로, 열람한 시트 파일명, 남은 사용자 확인 항목을 기재
 - 주석과 출처 행을 이어 쓴 슬라이드(`footnoteInline`)가 있으면 lint 와 build 가 출력한 INFO 목록을 완료 보고에 기재
 - PDF 를 동봉하면 착수 질의 15번의 근사 렌더링 안내를 완료 보고에 1줄로 다시 기재
 - 진행 지점은 세션 인계를 위해 `state.json` 에 기록
@@ -813,7 +813,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 ## 검수 체계
 
-- 완료 판정의 근거는 렌더링 PNG 열람 기록
+- 완료 판정의 근거는 렌더링 PNG 열람 기록과 결함 조치 결과
 - (lint) `scripts/lint.py` 의 검사 항목 (WARN 이 남으면 실패)
     + (구조) 스키마, Task 전수 대응, 섹션대장 일치, 배점 귀속, 분량 상한, 판형 전용 문구(`byLayout`)의 판형 이름과 경로
     + (표기) 문장 규범, RFP 워딩, 대상 지칭어, 절 번호, 주석 ※, 접두 중복, 테마 색 글자 대비
@@ -923,7 +923,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 판단 기준은 실무자가 발표자료로 제출했을 때 지적받을 수준인지 여부
 - 조치는 storyboard 수정, 구성 교체, 슬롯 비우기, 슬라이드 분리 중에서 선택
 - 원인을 모르는 결함은 해당 슬라이드의 단독 빌드로 재현
-- 수정 근거와 남은 결함은 완료 보고에 기재
+- 수정 근거는 완료 보고에 기재
 
 ### 시각 조정 재량
 
@@ -950,6 +950,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 빌드 경고 0건
 - finalize.py 와 validate.py 통과
 - PNG 전량 열람 기록
+- 작업 중 인지한 결함 전량 조치 (lint 와 check_layout 의 WARN 은 아래 WARN 기준 적용)
+- 조치 결과는 재빌드한 PNG 로 확인
+- 완료 보고 기재는 결함 조치를 대신하지 않음
 - 섹션대장의 대응 100% (RFP 과업, Task, 슬라이드)
 - 회사 사실 정보의 자리 표기 해소
 - WARN 은 조치하거나 `--allow-warn "유지 사유"` 를 붙였을 때만 통과
