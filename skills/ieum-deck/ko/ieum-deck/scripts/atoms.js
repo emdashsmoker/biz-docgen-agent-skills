@@ -318,7 +318,7 @@ function lineOpt(ln, fallbackPt) {
 const NOTE_STYLES = ["number", "mark"];
 let NOTES = null; // 조판 중인 슬라이드의 주석 표기 { style, labels: { note, source }, inline, markSource }. build.js 가 슬라이드마다 설정
 /** 슬라이드의 주석 표기 지정. style 은 meta.footnoteStyle, labels 는 주석 라벨과 출처 라벨, inline 은 슬라이드 footnoteInline,
- *  markSource 는 meta.footnoteSourceMark (※ 기호 덱에서 출처 행과 출처 주석에도 ※ 를 붙임)
+ *  markSource 는 meta.footnoteSourceMark (※ 표기 덱에서 출처 행과 출처 주석에도 ※ 를 붙임)
  *  number 이면 runsOf 가 작성자가 직접 쓴 ※ 를 번호 표기로 바꿈 */
 function setNoteStyle(style, labels, inline, markSource) {
   NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline, markSource: !!markSource };
@@ -1004,7 +1004,7 @@ function noteBlock(items, state) {
 }
 /** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)
  *  lead 는 작성자가 쓴 첫 출처 표기 (예: "출처:", 없으면 출처 라벨). 두 표기 공통이며 ※ 를 붙이지 않음
- *  meta.footnoteSourceMark 를 지정하거나 작성자가 첫 출처 앞에 ※ 를 쓴 ※ 기호 덱만 "※" 와 첫 출처 표기 (예: "※ 출처:", 출처 표기가 없으면 "※")
+ *  meta.footnoteSourceMark 를 지정하거나 작성자가 첫 출처 앞에 ※ 를 쓴 ※ 표기 덱만 "※" 와 첫 출처 표기 (예: "※ 출처:", 출처 표기가 없으면 "※")
  *  Why: "출처:" 가 이미 줄의 성격을 나타내므로 ※ 를 겹쳐 붙이지 않음. RFP 양식이 "※ 출처:" 를 요구하는 경우에만 옵션으로 붙임
  *  lead 와 이은 출처가 폭 w 의 1줄에 들어가거나 슬라이드 footnoteInline 이면 "A; B" 1줄, 넘치면 1줄에 출처 1개 (세미콜론은 줄 끝에 남김)
  *  Why: 이은 출처가 줄 끝을 넘으면 자료명 중간에서 줄이 바뀌어 출처 경계가 흐려짐. 출처 경계에서 줄을 바꾸고 첫 출처의 시작 위치에 맞춰 정렬 (notePlan) */
@@ -1012,7 +1012,7 @@ function sourceBlock(items, w, sz, state) {
   const ns = state || noteState();
   const lb = ns.labels;
   let mark = null;
-  // ※ 기호 덱에서 작성자가 첫 출처 앞에 ※ 를 직접 쓰면 footnoteSourceMark 와 같이 ※ 를 붙임
+  // ※ 표기 덱에서 작성자가 첫 출처 앞에 ※ 를 직접 쓰면 footnoteSourceMark 와 같이 ※ 를 붙임
   const authorMark = /^\s*※/.test(String([].concat(items || [])[0] || ""));
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
@@ -1041,7 +1041,7 @@ function hangPlan(block, sz, bold) {
   return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
 /** 주석 묶음의 문단 구성과 줄 수 { hang, texts, lines }. 폭 w 상자 기준이며 lines 는 줄바꿈을 포함한 줄 수
- *  lead 없는 묶음(※ 기호 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음(이어 쓴 출처 라벨 묶음 포함)은 "lead 내용", 그 밖은 라벨 뒤 위치에 맞춰 내어 씀 (hangPlan) */
+ *  lead 없는 묶음(※ 표기 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음(이어 쓴 출처 라벨 묶음 포함)은 "lead 내용", 그 밖은 라벨 뒤 위치에 맞춰 내어 씀 (hangPlan) */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };

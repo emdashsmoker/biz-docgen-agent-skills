@@ -176,16 +176,16 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Number-style numbering) When a spot has two or more notes with the same label or none, the label appears on the first line only, followed by numbers from 1) (from the second number on, items align with the start of the first)
     + (Number-style different labels) When the notes at a spot have different labels, each line keeps its own label without numbers
     + (Number-style source line) The source line starts without numbers, with the source mark the author wrote ("Source:" without one)
-    + (※ mark notes) A note without a label gets ※ before it (typeset example: "※ caveat text")
-    + (※ mark labels) The source line and notes that start with a label (e.g. "Source:", "출처:", "Formula:") start without ※, with the label written in the storyboard (typeset example: "Source: organization (year), material name")
+    + (※-style notes) A note without a label gets ※ before it (typeset example: "※ caveat text")
+    + (※-style labels) The source line and notes that start with a label (e.g. "Source:", "출처:", "Formula:") start without ※, with the label written in the storyboard (typeset example: "Source: organization (year), material name")
     + (Labels of the numbers choice) In the question, describe how labels work inside the numbers choice description (e.g. notes get "Note:", an explanation inside a box such as a number card starts with a content label such as "Formula:" or "Source:", a source line without a source mark gets "Source:")
     + (※ typed directly) In a number-style deck, the build also converts ※ typed directly in custom slide originals, body cells, titles and similar places
     + (※ at line start) A line starting with ※ gets the number or label above in place of the ※
     + (※ in mid-sentence) A ※ in mid-sentence is removed (e.g. "(※ 시안)" becomes "(시안)")
     + (Deck labels) Change the labels added to notes without a label and to source lines without a source mark (default "Note:", "Source:") with footnoteLabel and sourceLabel in `meta.labels.common` to fit the client's practice (e.g. "주:", "자료:") or Korean labels (e.g. "참조:", "출처:")
     + (Slide labels) When only some slides need other labels, set footnoteLabel and sourceLabel on those slides, which take precedence over the deck labels (e.g. with the deck label "Note:", only a slide whose note is a caveat uses "주:")
-    + (※ on labeled notes) When a labeled note in a ※ mark deck needs ※, the author writes ※ before that item (the build keeps it)
-    + (※ on sources) ※ before sources ("※ Source:") is not asked at kickoff (when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` of a ※ mark deck to true)
+    + (※ on labeled notes) When a labeled note in a ※-style deck needs ※, the author writes ※ before that item (the build keeps it)
+    + (※ on sources) ※ before sources ("※ Source:") is not asked at kickoff (when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` of a ※-style deck to true)
 
 ## Company facts
 
@@ -506,7 +506,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Starting with a content label is recommended for an explanation that sits inside a box right under a figure or item name (a label is one word without spaces followed by a colon)
     + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), which does not suit the footnote label "Note:"
     + (Label examples) "Formula:" (the calculation of a figure), "Source:" (the material a figure comes from), "Basis:" (the reference point of a figure) and similar labels
-- In a ※ mark deck, the build adds no ※ to a note that starts with a label
+- In a ※-style deck, the build adds no ※ to a note that starts with a label
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
@@ -523,8 +523,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Line saving) Running on removes two or more lines in total from the bottom notes and source line (confirm with the build)
 - Run-on notes and source lines are set as below
     + (Notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A 2) B 3) C"
-    + (Source line) Runs on in one paragraph, as in "Source: A; B; C" ("※ Source: A; B; C" in a ※ mark deck with footnoteSourceMark)
-    + (Notes of a ※ mark deck) No run-on (each line keeps its ※)
+    + (Source line) Runs on in one paragraph, as in "Source: A; B; C" ("※ Source: A; B; C" in a ※-style deck with footnoteSourceMark)
+    + (Notes of a ※-style deck) No run-on (each line keeps its ※)
     + (Paragraph past the line end) A run-on paragraph that passes the line end aligns its second line onward after the label
 - Keeping run-on slides as exceptions within the deck is recommended (when several slides call for it, review the amount of notes and sources in the deck)
 - (Judgment in context) The label and run-on guides above sum up common practice, so make the final call on applying them from the context of the whole slide
