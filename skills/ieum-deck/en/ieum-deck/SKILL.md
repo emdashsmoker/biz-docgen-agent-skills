@@ -834,6 +834,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
+- On slides with charts, re-check text overlaps inside the chart on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_chart 120` (contact sheets shrink this text below legible size)
 - List the viewed contact sheet file names in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
@@ -865,7 +866,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do boxes overlap each other, or do connectors pass through boxes?
 - Do roadmap and gantt bars touch lane dividers or neighboring bars?
 - Do connectors and arrows float away from boxes?
-- Do chart labels overlap rings, bars or other labels?
+- Do chart labels overlap chart elements or other labels?
 
 #### Placement
 
