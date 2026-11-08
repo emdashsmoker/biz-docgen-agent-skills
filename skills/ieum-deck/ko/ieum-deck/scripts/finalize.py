@@ -10,7 +10,8 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
      2) XML 교정 - cNvPr id 재부여, 누적 차트의 dLblPos 제거, 차트 글자의 동아시아 글꼴 지정, run 과 차트의 언어 태그 지정(meta.labels.language),
         핵심 속성 관계 형식 교정, 작성 프로그램 이름 비움, 문서 언어와 화면 판형 이름 삭제,
         OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak),
-        주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록)
+        주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록),
+        재직렬화가 0 으로 바꾼 내어쓰기 문단의 탭 위치를 marL 로 복원
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -315,6 +316,33 @@ def set_hanging_indent(xml: str) -> tuple[str, int]:
     return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
 
 
+def restore_hanging_tab_stop(xml: str) -> tuple[str, int]:
+    """내어쓰기 문단(불릿 없음, marL 이 M, indent 가 -M)의 유일한 탭 위치가 pos="0" 이면 pos="M" 으로 되돌림
+
+    WHY: soffice 재직렬화는 marL 기준인 LibreOffice 내부 탭 위치(0)를 글 상자 왼쪽 기준으로 바꾸지 않고 pos="0" 으로 기록.
+         PowerPoint 는 탭 위치를 글 상자 왼쪽에서 재므로 첫 줄이 0 에서 시작하는 "<탭>내용" 문단(출처 행과 번호 주석의 둘째 줄 이후)의
+         탭이 0 위치에서 멈춰 내용이 라벨 자리에 붙음. 라벨 뒤 탭(첫 줄)은 PowerPoint 도 marL 로 보내므로 정상.
+         LibreOffice 는 두 경우 모두 marL 에 맞추므로 검수 PDF 에서는 드러나지 않음
+    """
+    count = 0
+
+    def fix(m: re.Match) -> str:
+        nonlocal count
+        attrs, body = m.group(1), m.group(2)
+        if attrs.rstrip().endswith("/") or "<a:buChar" in body or "<a:buAutoNum" in body:
+            return m.group(0)
+        marl, ind = re.search(r'\smarL="(\d+)"', attrs), re.search(r'\sindent="-(\d+)"', attrs)
+        if not (marl and ind and int(marl.group(1)) > 0 and marl.group(1) == ind.group(1)):
+            return m.group(0)
+        if TAB_STOP_PATTERN.findall(body) != ["0"]:
+            return m.group(0)
+        count += 1
+        body = re.sub(r'(<a:tab\b[^>]*\bpos=")0(")', rf"\g<1>{marl.group(1)}\g<2>", body)
+        return f"<a:pPr{attrs}>{body}</a:pPr>"
+
+    return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
+
+
 TXBODY_PATTERN = re.compile(r"<(p|a):txBody>(.*?)</\1:txBody>", re.S)
 PPR_OPEN_TAG_PATTERN = re.compile(r"<a:pPr\b[^>]*?(/?)>")
 
@@ -592,6 +620,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, dup = strip_duplicate_paragraph_props(xml)
         stats["duplicate_ppr"] = dup
         xml, _ = set_hanging_indent(xml)
+        xml, _ = restore_hanging_tab_stop(xml)
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)

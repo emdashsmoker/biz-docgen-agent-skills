@@ -10,7 +10,8 @@ HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml fi
      2) XML correction - reassign cNvPr ids, remove dLblPos from stacked charts, set the East Asian font of chart text, set the language tags of runs and charts (meta.labels.language),
         correct the core properties relationship type, clear the application name, remove the document language and presentation format name,
         replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak),
-        write marL and indent on note and source paragraphs that hang after a label (other paragraphs without bullets in the same box get 0)
+        write marL and indent on note and source paragraphs that hang after a label (other paragraphs without bullets in the same box get 0),
+        restore the tab stop of hanging paragraphs that re-serialization set to 0 back to marL
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -315,6 +316,34 @@ def set_hanging_indent(xml: str) -> tuple[str, int]:
     return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
 
 
+def restore_hanging_tab_stop(xml: str) -> tuple[str, int]:
+    """Sets the only tab stop of a hanging paragraph (no bullet, marL M, indent -M) back from pos="0" to pos="M"
+
+    WHY: soffice re-serialization writes LibreOffice's internal tab position, measured from marL (0), as pos="0"
+         without converting it to the text box left edge. PowerPoint measures tab stops from the text box left edge,
+         so in a "<tab>text" paragraph whose first line starts at 0 (source rows and numbered notes after the first line)
+         the tab stops at 0 and the text sits at the label position. The tab after a label (first line) still goes to marL in PowerPoint.
+         LibreOffice aligns both cases to marL, so the review PDF does not show the defect
+    """
+    count = 0
+
+    def fix(m: re.Match) -> str:
+        nonlocal count
+        attrs, body = m.group(1), m.group(2)
+        if attrs.rstrip().endswith("/") or "<a:buChar" in body or "<a:buAutoNum" in body:
+            return m.group(0)
+        marl, ind = re.search(r'\smarL="(\d+)"', attrs), re.search(r'\sindent="-(\d+)"', attrs)
+        if not (marl and ind and int(marl.group(1)) > 0 and marl.group(1) == ind.group(1)):
+            return m.group(0)
+        if TAB_STOP_PATTERN.findall(body) != ["0"]:
+            return m.group(0)
+        count += 1
+        body = re.sub(r'(<a:tab\b[^>]*\bpos=")0(")', rf"\g<1>{marl.group(1)}\g<2>", body)
+        return f"<a:pPr{attrs}>{body}</a:pPr>"
+
+    return PPR_WITH_BODY_PATTERN.sub(fix, xml), count
+
+
 TXBODY_PATTERN = re.compile(r"<(p|a):txBody>(.*?)</\1:txBody>", re.S)
 PPR_OPEN_TAG_PATTERN = re.compile(r"<a:pPr\b[^>]*?(/?)>")
 
@@ -592,6 +621,7 @@ def fix_part_xml(name: str, payload: bytes) -> tuple[bytes, dict]:
         xml, dup = strip_duplicate_paragraph_props(xml)
         stats["duplicate_ppr"] = dup
         xml, _ = set_hanging_indent(xml)
+        xml, _ = restore_hanging_tab_stop(xml)
         xml, adj = apply_shape_adjust(xml)
         stats["shape_adjust"] = adj
         xml, sl = straighten_lines(xml)
