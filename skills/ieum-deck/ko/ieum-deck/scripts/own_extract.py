@@ -38,6 +38,7 @@ import re
 from pathlib import Path
 import sys
 from pptx import Presentation
+from pptx.oxml import parse_xml
 from pptx.util import Emu
 
 NS = {
@@ -116,16 +117,30 @@ def emu(v):
     return round(v / EMU_PER_IN, 3) if v is not None else None
 
 
+# clrScheme 의 색 슬롯. OOXML 스키마 순서로 두어 own-deck.json 의 theme 키 순서를 원본 XML 순서와 맞춤
+THEME_SLOTS = ("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")
+# schemeClr 가 슬롯 대신 쓰는 별칭
+THEME_ALIASES = {"tx1": "dk1", "bg1": "lt1", "tx2": "dk2", "bg2": "lt2"}
+
+
 def theme_colors(prs):
     part = prs.slide_masters[0].part
     for rel in part.rels.values():
         if rel.reltype.endswith("/theme"):
-            xml = rel.target_part.blob.decode("utf-8")
-            m = re.search(r"<a:clrScheme.*?</a:clrScheme>", xml, re.S)
-            pairs = re.findall(r"<a:(dk1|lt1|dk2|lt2|accent\d|hlink|folHlink)>.*?val=\"(\w+)\"", m.group(0), re.S)
-            d = dict(pairs)
-            d.update({"tx1": d["dk1"], "bg1": d["lt1"], "tx2": d["dk2"], "bg2": d["lt2"]})
-            return d
+            # python-pptx 가 다른 부품에 쓰는 파서(엔티티 해소 끔)로 테마를 읽음
+            scheme = parse_xml(rel.target_part.blob).find("a:themeElements/a:clrScheme", NS)
+            colors = {}
+            for name in THEME_SLOTS:
+                srgb = scheme.find(f"a:{name}/a:srgbClr", NS)
+                sys_clr = scheme.find(f"a:{name}/a:sysClr", NS)
+                if srgb is not None:
+                    colors[name] = srgb.get("val")
+                # sysClr 의 val 은 windowText 같은 시스템 색 이름이므로 PowerPoint 가 저장 시점의 색상 코드를 기록한 lastClr 를 씀
+                elif sys_clr is not None and sys_clr.get("lastClr"):
+                    colors[name] = sys_clr.get("lastClr")
+                # lastClr 가 없는 sysClr 와 그 밖의 색 형식은 키를 두지 않음. schemeClr 해소 결과가 None(미지정)이 되어 추출이 이어짐
+            colors.update({alias: colors[name] for alias, name in THEME_ALIASES.items() if name in colors})
+            return colors
     return {}
 
 
@@ -703,6 +718,11 @@ if __name__ == "__main__":
         print("잔존 식별 문구:", sorted(leftover))
     else:
         print("잔존 식별 문구 없음")
+    # 해소하지 못한 테마 색은 빌드 경고와 validate 에 드러나지 않으므로 추출 단계에서 알림
+    unresolved = [name for name in THEME_SLOTS if name not in data["theme"]]
+    if unresolved:
+        print("해소하지 못한 테마 색:", ", ".join(unresolved),
+              "(이 색을 참조하는 글자, 채움, 선의 색이 원본과 달라질 수 있음. 원본 PPTX 의 테마 색을 RGB 값으로 지정한 뒤 다시 추출)")
     with open(dst, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=0)
     kinds = {}

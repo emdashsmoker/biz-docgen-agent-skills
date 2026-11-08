@@ -27,6 +27,19 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-08
+
+### ieum-deck
+- Fixed custom slide extraction stopping with an error on brightness-adjusted Text 1 and Background 1 colors when the source theme stores them as system colors (#106)
+- Fixed Background 1 fills and default shape text in custom slides turning from white to black when the source theme stores Background 1 as a system color (#106)
+- Added an extraction warning that lists the theme colors without a resolvable color code (#106)
+- Action needed: extract custom slides again if own-deck.json contains the color name window or windowText (#106)
+
+* 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
+* 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
+* 색상 코드로 해소하지 못한 테마 색의 커스텀 슬라이드 추출 경고 추가 (#106)
+* window 또는 windowText 색 이름이 기록된 own-deck.json 의 커스텀 슬라이드 재추출 필요 (#106)
+
 ## 2026-11-07
 
 ### blockwriter
