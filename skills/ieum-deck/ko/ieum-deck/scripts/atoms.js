@@ -954,8 +954,8 @@ function noteLeads() {
   return [...USED_LEADS];
 }
 /** 주석 묶음 1개의 표기 { lead, leads, lines, items, join }. 슬라이드 각주, 상자 아래 주석, 수치 카드 주석, 번호 표기 덱의 ※ 변환이 공통으로 사용
- *  mark 는 lead 없이 라벨 없는 항목마다 ※. 라벨(출처:, 산식: 등)로 시작하는 항목은 ※ 없이 라벨로 시작
- *    (작성자가 라벨 앞에 ※ 를 직접 쓴 항목과 meta.footnoteSourceMark 덱의 출처 항목은 ※ 유지)
+ *  mark 는 lead 없이 줄마다 앞 표기(leads)를 둠. 라벨 없는 항목은 ※, 라벨(출처:, 산식: 등)로 시작하는 항목은 ※ 없이 라벨
+ *    (작성자가 라벨 앞에 ※ 를 직접 쓴 항목과 meta.footnoteSourceMark 덱의 출처 항목은 "※ 라벨")
  *  number 는 작성자 라벨(출처:, 산식:, 범례: 등)을 그대로 쓰고 라벨이 없는 항목은 주석 라벨(footnoteLabel)을 씀
  *    + 항목 1개: 라벨 뒤에 내용
  *    + 라벨이 모두 같은 2개 이상: 첫 줄에만 라벨을 쓰고 항목마다 1) 2) 를 붙여 1줄에 1항목 (출처 라벨이면 번호 없이 출처 행처럼 세미콜론으로 구분)
@@ -972,17 +972,17 @@ function noteBlock(items, state) {
   const raw = src0.map((t) => t.replace(NOTE_LEAD, "")).filter(Boolean);
   if (ns.style === "mark") {
     // 라벨이 줄의 성격을 이미 나타내므로 ※ 를 겹쳐 붙이지 않음. 발주기관 양식 등으로 ※ 가 필요하면 작성자가 직접 붙인 ※ 를 유지
-    const lines = src0.map((t0) => {
+    const rows = src0.map((t0) => {
       let t = t0.replace(NOTE_LEAD, "");
       if (lb.note && t.startsWith(lb.note)) t = t.slice(lb.note.length).trim();
       if (!t) return null;
       const { label, text } = splitLabel(t, lb);
-      if (!label || !text) return `※ ${t}`;
-      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return `※ ${label} ${text}`;
+      if (!label || !text) return { lead: "※", text: t };
+      if (t0.startsWith("※") || (ns.markSource && sourceMark(t))) return { lead: `※ ${label}`, text };
       USED_LEADS.add(label);
-      return `${label} ${text}`;
+      return { lead: label, text };
     }).filter(Boolean);
-    return { lead: null, leads: null, lines, items: lines.length };
+    return { lead: null, leads: rows.map((r) => r.lead), lines: rows.map((r) => r.text), items: rows.length };
   }
   const rows = raw.map((t) => splitLabel(t, lb)).filter((r) => r.text).map((r) => ({ label: r.label || lb.note, text: r.text }));
   if (!rows.length) return { lead: lb.note, leads: [], lines: [], items: 0 };
@@ -1040,12 +1040,21 @@ function hangPlan(block, sz, bold) {
   const hang = Math.max(...leads.filter(Boolean).map((l) => hangWidthIn(l, sz, bold)));
   return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
-/** 주석 묶음의 문단 구성과 줄 수 { hang, texts, lines }. 폭 w 상자 기준이며 lines 는 줄바꿈을 포함한 줄 수
- *  lead 없는 묶음(※ 표기 주석)은 줄마다 그대로, 1줄에 들어가는 1문단 묶음(이어 쓴 출처 라벨 묶음 포함)은 "lead 내용", 그 밖은 라벨 뒤 위치에 맞춰 내어 씀 (hangPlan) */
+/** 주석 묶음의 문단 구성과 줄 수 { hang, hangs, texts, lines }. 폭 w 상자 기준이며 lines 는 줄바꿈을 포함한 줄 수
+ *  1줄에 들어가는 1문단 묶음(이어 쓴 출처 라벨 묶음 포함)은 "lead 내용"
+ *  lead 없는 묶음(※ 표기 주석)은 문단마다 각자의 앞 표기(※, 라벨) 뒤 위치에 맞춰 내어 씀 (hangs 는 문단별 내어쓰기 위치, hang 은 그 최댓값)
+ *  그 밖은 가장 넓은 라벨 뒤 위치에 맞춰 내어 씀 (hangPlan)
+ *  Why: ※ 표기 주석은 줄마다 독립된 항목이므로 내용 시작 위치를 한 열로 모으지 않음. 각 문단의 둘째 줄은 그 문단 첫 줄의 내용 시작 위치에 정렬 */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
-  if (!block.lead) return { hang: 0, texts: block.lines, lines: count(block.lines, w) };
+  if (!block.lead) {
+    const texts = block.lines.map((t, i) => `${block.leads[i]} ${t}`);
+    if (texts.length === 1 && estimateLines(texts[0], w, sz, bold) <= 1) return { hang: 0, texts, lines: 1 };
+    const hangs = block.leads.map((l) => hangWidthIn(l, sz, bold));
+    const lines = block.lines.reduce((n, t, i) => n + Math.max(1, estimateLines(t, w - hangs[i], sz, bold)), 0);
+    return { hang: Math.max(...hangs), hangs, texts: block.lines.map((t, i) => `${block.leads[i]}\t${t}`), lines };
+  }
   const one = `${block.lead} ${block.join || block.lines[0]}`;
   if ((block.join || block.lines.length === 1) && estimateLines(one, w, sz, bold) <= 1) return { hang: 0, texts: [one], lines: 1 };
   const plan = hangPlan(block, sz, bold);
@@ -1054,14 +1063,14 @@ function notePlan(block, w, sz, bold) {
 /** notePlan 의 문단 목록. opt: { sz, color, align } */
 function noteParas(plan, opt) {
   const o = opt || {};
-  return plan.texts.map((t) => ({ align: o.align || "left", hang: plan.hang || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
+  return plan.texts.map((t, i) => ({ align: o.align || "left", hang: (plan.hangs ? plan.hangs[i] : plan.hang) || undefined, runs: [{ t, sz: o.sz, color: o.color }] }));
 }
 /** 가운데 정렬 자리의 주석 배치 { box, align }. 내어쓰기 묶음은 왼쪽 정렬 문단 묶음을 추정 폭(좌우 여백 padX 포함)으로 상자 가운데에 둠. 그 밖은 가운데 정렬
  *  Why: 내어쓰기 문단을 가운데 정렬하면 줄마다 가운데로 모여 라벨 뒤 정렬이 깨짐 */
 function centerNoteBox(box, plan, sz, padX) {
   if (!plan.hang) return { box, align: "center" };
-  const textW = Math.max(...plan.texts.map((t) => lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
-  const w = Math.min(box.w, plan.hang + textW + 2 * (padX || 0));
+  const blockW = Math.max(...plan.texts.map((t, i) => (plan.hangs ? plan.hangs[i] : plan.hang) + lineWidthIn(t.slice(t.indexOf("\t") + 1), sz)));
+  const w = Math.min(box.w, blockW + 2 * (padX || 0));
   return { box: { ...box, x: +(box.x + (box.w - w) / 2).toFixed(3), w: +w.toFixed(3) }, align: "left" };
 }
 /** 슬라이드 하단 각주. 아래 끝을 bottomY(출처 행 위 끝)에 맞춤. plan 은 본문 폭 기준 notePlan 결과 */

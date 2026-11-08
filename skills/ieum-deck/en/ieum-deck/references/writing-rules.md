@@ -125,12 +125,17 @@
     + (Source-label notes in a number-style deck) Two or more notes that start with the same source mark get no numbers and are separated with semicolons
     + (Different-label notes in a number-style deck) Notes with different labels keep their own labels line by line without numbers
     + (Marks written by hand) The build removes a ※, * or number written before an item and adds the deck mark (superscript numbers or * marks paired with spots in the body are not supported)
-- Start the first source item and any note item that cites a source with a source mark (e.g. "Source:", "출처:", "자료:")
+- Start the first source item and any note item that cites a source with the same source mark as the deck sourceLabel ("Source:" in a default deck)
     + (Both styles) The source mark the author writes is typeset as is, without ※ (e.g. "Source: organization (year), material name; organization (year), material name")
     + (Added label) The build adds sourceLabel to a source line without a source mark
     + (※ on sources) A ※-style deck with `meta.footnoteSourceMark` true adds ※, as in "※ Source:" (set when the user asks for it, for example to follow an RFP template)
     + (※ written before a source) In a ※-style deck, an item where the author wrote ※ before the source keeps the ※
     + (source array) Write the source mark on the first item only (the build separates the items with semicolons)
+- Keep the note label and the source mark in one language pair across the deck (default "Note:" with "Source:", Korean example "참조:" with "출처:", client practice example "주:" with "자료:")
+    + (Deck labels) Change footnoteLabel and sourceLabel together as a pair in one language
+    + (Author source marks) A source mark the author writes uses the same mark as the deck sourceLabel
+    + (Slide labels) Slide footnoteLabel and sourceLabel use the same language as the deck labels
+    + (Content labels) Content labels such as "Formula:" and "Basis:" are recommended in the same language as the deck labels (the author decides for a label that reads more naturally in the other language by convention)
 - Use ※ only for note text such as evidence, premises and caveats (a note that starts with a label such as a source or formula starts with the label)
 - Put evidence, caveats and similar content in note slots or footnotes (the build adds the mark)
 - ※ paragraphs in sample slides are example positions
@@ -166,7 +171,7 @@
     + (Items citing a source) An item that cites a source follows the source mark rule
 - Starting with a content label is recommended for an explanation that sits inside a box right under a figure or item name (a label is one word without spaces followed by a colon)
     + (Where, for example) Text read as part of the box, such as the note of a number card (numbers), which does not suit the footnote label "Note:"
-    + (Label examples) "Formula:" (the calculation of a figure), "Source:" (the material a figure comes from), "Basis:" (the reference point of a figure) and similar labels
+    + (Label examples) "Formula:" (the calculation of a figure), "Basis:" (the reference point of a figure) and similar labels (the material a figure comes from starts with the deck source mark)
 - In a ※-style deck, the build adds no ※ to a note that starts with a label
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
