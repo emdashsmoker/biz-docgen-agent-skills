@@ -61,6 +61,9 @@ Changelog rules
 - Added labelPos on chart series to move, offset or hide data labels per series or per point (#113)
 - Added lint checks that fail on labelPos positions a chart type does not allow, unknown object keys, non-numeric offsets and arrays whose length differs from values (#113)
 - Added a chart label resolution order to the guides that puts chart design first, then position codes and offsets, then hiding, and a table when hiding would drop figures the message needs (#113, #114)
+- Changed the completion conditions to require fixing every defect noticed during the work and confirming the fixes on PNGs of the rebuilt deck (#115)
+- Changed the visual review before delivery to repeat fixing, rebuilding and viewing again until no defects remain (#115)
+- Removed unresolved issues and remaining defects from the completion report items (#115)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
@@ -93,6 +96,9 @@ Changelog rules
 * 차트 데이터 레이블을 계열별, 항목별로 옮기거나 숨기는 labelPos 추가 (#113)
 * 차트 형식에 맞지 않는 labelPos 위치, 정의되지 않은 객체 키, 숫자가 아닌 이동 거리, values 와 길이가 다른 배열의 lint 검사 추가 (#113)
 * 차트 설계, 위치 조정, 숨김, 표 전환 순서의 차트 레이블 해결 지침 추가 (#113, #114)
+* 작업 중 인지한 결함의 전량 조치와 재빌드 PNG 확인을 요구하는 완료 조건으로 변경 (#115)
+* 결함 0건까지 조치, 재빌드, 재열람을 반복하는 납품 전 시각 검수로 변경 (#115)
+* 완료 보고 항목의 미해결 사항과 남은 결함 삭제 (#115)
 
 ## 2026-11-07
 
