@@ -3,7 +3,7 @@
 Usage: python3 lint.py <storyboard.json> [--layout 16:9|A4|10.83|4:3] [--ledger ledger.json] [--report out.json] [--allow-warn "reason for keeping"]
 The text checks target Korean deck text, and their word lists and patterns are Korean
 Checks
-- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char), footnote style (meta.footnoteStyle: number | mark), ※ on sources in a ※ mark deck (meta.footnoteSourceMark: true | false), slide note run-on (footnoteInline: true | false) (FAIL)
+- Schema: unique id, valid template, required fields, custom theme colors (base and color keys of meta.themeColors) as 6-digit color codes, line break unit (meta.lineBreak: word | char), footnote style (meta.footnoteStyle: number | mark), ※ on sources in a ※-style deck (meta.footnoteSourceMark: true | false), slide note run-on (footnoteInline: true | false) (FAIL)
 - Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)

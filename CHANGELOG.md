@@ -48,6 +48,7 @@ Changelog rules
 - Fixed slides with footnotes and no source line ending the body 0.2 inch early and leaving a blank band under the footnotes (#108)
 - Added cash and in-kind rows and a Key Point to the R031 funding plan sample (#108)
 - Added sub-issues, hypothesis rows and a module column to the R001 issue tree sample (#108)
+- Changed the name of the ※ mark deck in the docs to the ※-style deck (#109)
 
 * 시스템 색으로 저장된 텍스트 1과 배경 1의 밝기 조정 색에서 커스텀 슬라이드 추출이 오류로 중단되는 현상 수정 (#106)
 * 시스템 색으로 저장된 배경 1을 쓰는 커스텀 슬라이드의 채움과 기본 도형 글자가 흰색에서 검정으로 바뀌는 현상 수정 (#106)
@@ -67,6 +68,7 @@ Changelog rules
 * 출처 행 없이 각주만 있는 슬라이드에서 본문이 0.2인치 일찍 끝나 각주 아래에 빈 띠가 남는 현상 수정 (#108)
 * R031 재원 조달 견본의 현금과 현물 행 및 Key Point 추가 (#108)
 * R001 이슈 구조화 견본의 하위 이슈, 가설 행, 담당 모듈 열 추가 (#108)
+* 문서의 ※ 기호 덱 명칭을 ※ 표기 덱으로 변경 (#109)
 
 ## 2026-11-07
 

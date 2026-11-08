@@ -318,7 +318,7 @@ function lineOpt(ln, fallbackPt) {
 const NOTE_STYLES = ["number", "mark"];
 let NOTES = null; // Note style of the slide being set { style, labels: { note, source }, inline, markSource }. build.js sets it per slide
 /** Sets the slide note style. style is meta.footnoteStyle, labels are the note and source labels, inline is the slide footnoteInline,
- *  markSource is meta.footnoteSourceMark (a ※ mark deck also puts ※ before the source line and source notes)
+ *  markSource is meta.footnoteSourceMark (a ※-style deck also puts ※ before the source line and source notes)
  *  With number, runsOf turns the ※ the author wrote into number-style marks */
 function setNoteStyle(style, labels, inline, markSource) {
   NOTES = { style: NOTE_STYLES.includes(style) ? style : NOTE_STYLES[0], labels: labels || {}, inline: !!inline, markSource: !!markSource };
@@ -1004,7 +1004,7 @@ function noteBlock(items, state) {
 }
 /** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
  *  The lead is the first source mark the author wrote (e.g. "출처:", the source label without one), without ※ in both styles
- *  Only a ※ mark deck with meta.footnoteSourceMark, or where the author wrote ※ before the first source, uses "※" with the first source mark (e.g. "※ Source:", "※" without a source mark)
+ *  Only a ※-style deck with meta.footnoteSourceMark, or where the author wrote ※ before the first source, uses "※" with the first source mark (e.g. "※ Source:", "※" without a source mark)
  *  Why: "Source:" already tells what the line is, so no ※ is stacked on it. ※ is added only as an option for an RFP template that asks for "※ 출처:"
  *  When the lead and the joined sources fit one line of width w, or the slide sets footnoteInline, the line is "A; B"; otherwise one source per line (the semicolon stays at the line end)
  *  Why: joined sources that pass the line end break inside a material name and blur where a source ends. Breaking at source boundaries and aligning to the first source start (notePlan) keeps them apart */
@@ -1012,7 +1012,7 @@ function sourceBlock(items, w, sz, state) {
   const ns = state || noteState();
   const lb = ns.labels;
   let mark = null;
-  // In a ※ mark deck, ※ the author wrote before the first source adds ※ as footnoteSourceMark does
+  // In a ※-style deck, ※ the author wrote before the first source adds ※ as footnoteSourceMark does
   const authorMark = /^\s*※/.test(String([].concat(items || [])[0] || ""));
   const parts = [].concat(items || []).flatMap((x) => String(x == null ? "" : x).split(";")).map((x) => {
     let s = x.trim().replace(/^※\s*/, "");
@@ -1041,7 +1041,7 @@ function hangPlan(block, sz, bold) {
   return { hang, texts: block.lines.map((t, i) => `${leads[i] || ""}\t${t}`) };
 }
 /** Paragraphs and line count of a note group { hang, texts, lines } for a box of width w. lines includes wrapped lines
- *  A group without lead (※ mark notes) keeps its lines, a one-paragraph group that fits one line (including a source label group run on) is "lead text", any other group hangs after the labels (hangPlan) */
+ *  A group without lead (※-style notes) keeps its lines, a one-paragraph group that fits one line (including a source label group run on) is "lead text", any other group hangs after the labels (hangPlan) */
 function notePlan(block, w, sz, bold) {
   const count = (texts, width) => texts.reduce((n, t) => n + Math.max(1, estimateLines(t, width, sz, bold)), 0);
   if (!block.lines.length) return { hang: 0, texts: [], lines: 0 };
