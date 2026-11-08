@@ -48,6 +48,8 @@ function loadOwn(p) {
   const byN = {};
   d.slides.forEach((s) => (byN[s.n] = s));
   byN.__colorMap = d.colorMap || {};
+  // 원본 판형(인치). 커스텀 슬라이드 재생 배율의 분모이며 slideW, slideH 가 없는 이전 추출본은 16:9 기준으로 간주
+  byN.__slideSize = { W: d.slideW || T.BASE_W, H: d.slideH || T.BASE_H };
   return byN;
 }
 

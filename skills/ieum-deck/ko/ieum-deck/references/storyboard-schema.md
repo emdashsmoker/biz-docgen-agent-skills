@@ -29,7 +29,7 @@
 | rfp.tasks | [{id: "T1", text, module}] RFP 과업 세부내용 전수. structure 가 plan 이면 계획서 항목, sections 이면 RFP 요구 항목을 등재. ID 는 섹션대장의 내부 추적용 |
 | rfp.moduleTasks | [{id: "M1-T2", title, rfp: ["T1", "T3"], rfpNamed}] 제안사가 설계한 Task. rfpNamed 는 title 이 RFP 가 정한 명칭일 때 true (예시 모듈명 검사 예외) |
 | rfp.evalItems | [{id: "A-1", name, score, quantitative}] 세부평가항목 |
-| rfp.wording | [{standard, variants: []}] 핵심 워딩의 표준 표기와 교체 대상 변형 표기 |
+| rfp.wording | [{standard, variants: []}] 핵심 워딩의 표준 표기와 교체 대상 변형 표기. lint 는 standard 와 정확히 일치하는 구간을 가린 뒤 문장 규범과 비선호 어휘를 검사 (명칭 밖 어휘는 기존 기준 적용) |
 
 ### meta.labels
 

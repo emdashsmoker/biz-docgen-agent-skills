@@ -952,8 +952,10 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
   const sl = slots || {};
   const ids = { texts: [], tables: [], images: [], charts: [] };
   let tk = 0, bk = 0, ik = 0, ck = 0;
-  const sx = ctx && ctx.S ? ctx.S.sx : 1;
-  const sy = ctx && ctx.S ? ctx.S.sy : 1;
+  // 원본 좌표는 원본 판형 기준이므로 배율은 덱 판형 크기 ÷ 원본 판형 크기 (ctx.S.sx, sy 는 16:9 기준 토큰 좌표용 배율)
+  const src = (ctx && ctx.own && ctx.own.__slideSize) || { W: T.BASE_W, H: T.BASE_H };
+  const sx = ctx && ctx.S ? ctx.S.layout.W / src.W : 1;
+  const sy = ctx && ctx.S ? ctx.S.layout.H / src.H : 1;
   const sc = (a) => (sx === 1 && sy === 1 ? a : { ...a, x: +(a.x * sx).toFixed(3), y: +(a.y * sy).toFixed(3), w: +(a.w * sx).toFixed(3), h: +(a.h * sy).toFixed(3) });
   // 사전 패스: 동일 원본 글꼴 크기 계열의 최소 축소율 (형제 상자 간 글자 크기가 따로 놀지 않게 함). 슬롯 치환 텍스트는 원문 기준으로 근사
   const ratioBySize = {};

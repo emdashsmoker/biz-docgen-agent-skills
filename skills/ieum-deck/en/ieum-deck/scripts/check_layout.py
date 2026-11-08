@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits.json").exists() else {}
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
+OWN_BASE_SIZE = (13.333, 7.5)  # Base page size 16:9 when own-deck.json has no source page size (slideW, slideH) (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # Overlap threshold between a label and body glyphs inside a box (relative to the smaller glyph area)
 # Text at or above this size is a title and is excluded from the multi-line no-bullet check (the 40pt cover title shrunk to the 0.6 floor is 24pt; the largest body-family size is the 20pt contents item)
@@ -37,21 +38,23 @@ def _build_record(pptx_path):
 
 
 def _own_small_boxes(record):
-    """Coordinate set of shapes typeset below the body minimum font size in the custom slide source.
+    """Coordinate set of shapes typeset below the body minimum font size in the custom slide source, and the source page size (width, height).
 
     Custom slide playback keeps the source font sizes, so these shapes are excluded from the body minimum check.
     Slot substitution keeps the source coordinates, so shapes are identified by coordinates. Empty set without registered custom slides.
+    The source page size is slideW, slideH in own-deck.json. Older extracts without them are treated as 16:9 (same rule as the build's atoms.js playOwn).
     """
     f = record.get("ownDeck")
-    if not f or not Path(f).exists(): return set()
+    if not f or not Path(f).exists(): return set(), OWN_BASE_SIZE
     out = set()
-    for sl in json.load(open(f, encoding="utf-8")).get("slides", []):
+    geo = json.load(open(f, encoding="utf-8"))
+    for sl in geo.get("slides", []):
         for a in sl.get("atoms", []):
             for para in a.get("paras", []) or []:
                 if any((r.get("sz") or 18) < BODY_MIN for r in para.get("runs", []) or []):
                     out.add((round(a.get("x", 0), 2), round(a.get("y", 0), 2), round(a.get("w", 0), 2), round(a.get("h", 0), 2)))
                     break
-    return out
+    return out, (geo.get("slideW") or OWN_BASE_SIZE[0], geo.get("slideH") or OWN_BASE_SIZE[1])
 
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
@@ -160,7 +163,7 @@ def main():
     record = _build_record(args[0])
     own_slides = set(record.get("ownSlides") or [])
     note_labels = tuple(str(t) for t in record.get("noteLabels") or [] if str(t).strip())  # labels before footnotes and the source line in a number-style deck (build.json noteLabels)
-    OWN_SMALL = _own_small_boxes(record)
+    OWN_SMALL, own_size = _own_small_boxes(record)
     # Add the theme colors in the build record (custom themes included) to the allowed table cell colors
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
     # A character-level deck (meta.lineBreak=char) is one where the user allowed mid-word breaks, so the mid-word line break estimate is skipped
@@ -168,6 +171,7 @@ def main():
     W, H = inch(prs.slide_width), inch(prs.slide_height)
     sy = H / 7.5
     sx = W / 13.333  # Horizontal scale against the 16:9 base
+    own_sx, own_sy = W / own_size[0], H / own_size[1]  # Scale against the custom slide source page size (for matching OWN_SMALL coordinates, same values as the build's playOwn)
     fails, warns, headline_pts = [], [], []
     for n, slide in enumerate(prs.slides, start=1):
         rects, texts, icons, ink, ink_lines = [], [], [], [], []
@@ -198,7 +202,7 @@ def main():
                         struct_label = bool(re.fullmatch(r"[A-Z][A-Z0-9&/. -]{1,13}", txt_all))
                         # Text starting with ※ already carries the note mark, so its use needs no check
                         note_marked = txt_all.startswith("※") or bool(re.match(r"^\d+\)\s", txt_all)) or bool(note_labels and txt_all.startswith(note_labels))  # includes footnote numbers 1) 2) and the labels of a number-style deck (Note: etc.)
-                        own_origin = n in own_slides or struct_label or note_marked or (round(x / sx, 2), round(y / sy, 2), round(w / sx, 2), round(h / sy, 2)) in OWN_SMALL
+                        own_origin = n in own_slides or struct_label or note_marked or (round(x / own_sx, 2), round(y / own_sy, 2), round(w / own_sx, 2), round(h / own_sy, 2)) in OWN_SMALL
                         if sz and sz < BODY_MIN and not is_band and y < NOTE_Y * sy - 0.05 and not small_done and not own_origin:
                             small_done = True
                             # Text smaller than body text reads as a note, so check the ※ mark

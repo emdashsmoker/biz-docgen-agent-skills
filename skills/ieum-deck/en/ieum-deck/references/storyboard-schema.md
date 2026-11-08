@@ -29,7 +29,7 @@
 | rfp.tasks | [{id: "T1", text, module}] Every RFP work item (과업 세부내용). With structure plan, list the plan items. With sections, list the RFP required items. The ID is for internal tracking in the section ledger |
 | rfp.moduleTasks | [{id: "M1-T2", title, rfp: ["T1", "T3"], rfpNamed}] Tasks designed by the bidder. rfpNamed is true when title is the name set by the RFP (exempt from the sample module name check) |
 | rfp.evalItems | [{id: "A-1", name, score, quantitative}] Detailed evaluation items |
-| rfp.wording | [{standard, variants: []}] Standard spelling of key wording and the variant spellings to replace |
+| rfp.wording | [{standard, variants: []}] Standard spelling of key wording and the variant spellings to replace. lint masks spans that exactly match standard before the sentence norm and discouraged vocabulary checks (words outside the name are checked as before) |
 
 ### meta.labels
 
