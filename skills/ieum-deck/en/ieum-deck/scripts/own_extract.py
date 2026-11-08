@@ -38,6 +38,7 @@ import re
 from pathlib import Path
 import sys
 from pptx import Presentation
+from pptx.oxml import parse_xml
 from pptx.util import Emu
 
 NS = {
@@ -116,16 +117,30 @@ def emu(v):
     return round(v / EMU_PER_IN, 3) if v is not None else None
 
 
+# Color slots of clrScheme. Kept in OOXML schema order so the theme key order in own-deck.json matches the source XML order
+THEME_SLOTS = ("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")
+# Aliases that schemeClr uses in place of the slots
+THEME_ALIASES = {"tx1": "dk1", "bg1": "lt1", "tx2": "dk2", "bg2": "lt2"}
+
+
 def theme_colors(prs):
     part = prs.slide_masters[0].part
     for rel in part.rels.values():
         if rel.reltype.endswith("/theme"):
-            xml = rel.target_part.blob.decode("utf-8")
-            m = re.search(r"<a:clrScheme.*?</a:clrScheme>", xml, re.S)
-            pairs = re.findall(r"<a:(dk1|lt1|dk2|lt2|accent\d|hlink|folHlink)>.*?val=\"(\w+)\"", m.group(0), re.S)
-            d = dict(pairs)
-            d.update({"tx1": d["dk1"], "bg1": d["lt1"], "tx2": d["dk2"], "bg2": d["lt2"]})
-            return d
+            # Reads the theme with the parser python-pptx uses for the other parts (entity resolution off)
+            scheme = parse_xml(rel.target_part.blob).find("a:themeElements/a:clrScheme", NS)
+            colors = {}
+            for name in THEME_SLOTS:
+                srgb = scheme.find(f"a:{name}/a:srgbClr", NS)
+                sys_clr = scheme.find(f"a:{name}/a:sysClr", NS)
+                if srgb is not None:
+                    colors[name] = srgb.get("val")
+                # The val of sysClr holds a system color name such as windowText, so use lastClr, where PowerPoint records the hex color at save time
+                elif sys_clr is not None and sys_clr.get("lastClr"):
+                    colors[name] = sys_clr.get("lastClr")
+                # A sysClr without lastClr and any other color form get no key. The schemeClr then resolves to None (unspecified) and extraction continues
+            colors.update({alias: colors[name] for alias, name in THEME_ALIASES.items() if name in colors})
+            return colors
     return {}
 
 
@@ -703,6 +718,11 @@ if __name__ == "__main__":
         print("Remaining identifying text:", sorted(leftover))
     else:
         print("No remaining identifying text")
+    # Unresolved theme colors do not show up in build warnings or validate, so report them at extraction
+    unresolved = [name for name in THEME_SLOTS if name not in data["theme"]]
+    if unresolved:
+        print("Unresolved theme colors:", ", ".join(unresolved),
+              "(text, fills and lines that reference these colors may differ from the source. Set the source PPTX theme colors as RGB values and extract again)")
     with open(dst, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=0)
     kinds = {}
