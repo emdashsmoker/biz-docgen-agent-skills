@@ -853,6 +853,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 로드맵과 간트의 막대가 레인 구분선이나 옆 막대에 닿는가
 - 연결선과 화살표가 상자에서 떨어져 떠 있는가
 - 차트 레이블이 차트 요소나 다른 레이블과 겹치는가
+- 차트에 표시된 수치가 storyboard 값과 일치하는가 (나란히 붙은 레이블은 한 수치처럼 보임)
 
 #### 배치
 

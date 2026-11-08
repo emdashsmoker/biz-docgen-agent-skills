@@ -867,6 +867,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do roadmap and gantt bars touch lane dividers or neighboring bars?
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
+- Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
 
 #### Placement
 
