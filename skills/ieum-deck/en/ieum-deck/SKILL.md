@@ -638,7 +638,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Use a tint fill for marks grounded in the content (emphasized targets, elements that differ in a content attribute and the like)
     + (Emphasized targets) Apply a tint fill together with bold text to the result column of a flow, goal boxes, summary rows and the like (a tinted box with regular-weight text is taken as inactive next to white boxes)
     + (Content attributes) Apply a tint fill to elements that differ in a content attribute such as the performer or the progress state (examples: system work in a flowchart, the current point in a timeline)
-    + (Alternating fills) Do not fill table rows, table columns or side-by-side shapes in alternating colors (a fill that follows the layout order shows no difference in content)
+    + (No alternating fills) Do not fill table rows, table columns or side-by-side shapes in alternating colors (a fill that follows the layout order shows no difference in content)
     + Emphasis red #C0392B is used in one place per slide
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
