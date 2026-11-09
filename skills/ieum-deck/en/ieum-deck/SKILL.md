@@ -896,6 +896,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do the headline, marker or page number intrude on band borders or edge margins?
 - Is content pushed to one side, leaving the other side largely empty?
 - Is a bordered box less than half full so it looks empty (judge even without a code warning)?
+- Does a Key Point band sentence fill less than half of the inner band width so both sides look empty (how to lengthen it is in the content composition section of `references/writing-rules.md`)?
 
 #### Alignment
 

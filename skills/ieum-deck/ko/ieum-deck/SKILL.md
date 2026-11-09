@@ -882,6 +882,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 헤드라인, 마커, 쪽번호가 밴드 경계나 가장자리 여백을 침범하는가
 - 내용이 한쪽으로 몰려 반대쪽이 크게 비어 있는가
 - 테두리 상자 안이 절반도 차지 않아 비어 보이는가 (코드 경고가 없어도 판단)
+- Key Point 밴드 문장이 띠 안쪽 폭의 절반에 못 미쳐 좌우가 비어 보이는가 (보강 방식은 `references/writing-rules.md` 내용 구성 절)
 
 #### 정렬
 
