@@ -23,6 +23,7 @@
   "summaryFillMin": 0.9,
   "summaryMaxFillMin": 0.95,
   "boxFillMin": 0.45,
+  "pointFillMin": 0.5,
   "bandBottomGapMax": 0.15,
   "bodyCoverMin": 0.7,
   "bulletOnlyShareMax": 0.5,

@@ -2,7 +2,7 @@
 """check_layout.py: 빌드된 pptx 의 구조 검수 (python-pptx 는 검수에만 사용).
 사용: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 검사: 텍스트 넘침 추정(빌드와 같은 나눔고딕 실측 폭과 어절 단위 줄바꿈으로 소요 높이 산정, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
-      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(줄 끝에 걸린 어절을 LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 곳. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
+      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(줄 끝에 걸린 어절을 LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 곳. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), Key Point 문장 분량 부족(밴드 문구 칸 안쪽 폭 대비 문장별 한 줄 폭 50% 미만, WARN), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
 결과: FAIL 과 WARN 목록. 종료 코드 1 이면 FAIL 존재
 """
 import json
@@ -20,6 +20,8 @@ BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
 OWN_BASE_SIZE = (13.333, 7.5)  # own-deck.json 에 원본 판형(slideW, slideH)이 없을 때의 기준 판형 16:9 (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기준 (작은 쪽 글자 면적 대비)
+POINT_TAG = "keypoint"  # Key Point 밴드 문구 칸의 도형 이름 (templates.js CALLOUT_TAG)
+POINT_FILL_MIN = LIM.get("LIMIT", {}).get("pointFillMin", 0.5)  # 문장별 한 줄 폭이 문구 칸 안쪽 폭에서 차지해야 하는 최소 비율
 # 이 크기 이상인 글은 제목으로 보고 불릿 없는 여러 줄 판정에서 제외 (표지 제목 40pt 를 축소 하한 0.6배로 줄여도 24pt, 본문 계열 상한은 목차 항목 20pt)
 TITLE_PT = 24
 # 표 셀에 허용되는 기본 채움색 (navy 와 mono 테마 색, 틴트, 회색, 흰색). 실행 시 빌드 기록의 palette(적용한 테마 색)를 더함. 그 외 색은 시각 검수 대상
@@ -104,6 +106,23 @@ def token_splits(paras, inner):
         runs = [r for r in para_runs(p) if r[0]]
         if not runs: continue
         out += [f"{w[:cut]}|{w[cut:]}" for w, cut in wrap_paragraph(runs, max(0.1, inner - bullet_indent(p)))[2]]
+    return out
+
+
+def point_fills(sh):
+    """Key Point 문구 칸의 문단별 (채움 비율, 문장). 비율은 문장 한 줄 폭 / 문구 칸 안쪽 폭 (불릿 문단은 들여쓰기를 뺀 폭)
+    Why: 밴드 폭은 템플릿과 판형마다 다르므로 빌드된 도형의 실제 폭으로 잼. 2줄 이상 문장은 첫 줄이 폭을 채우므로 1"""
+    bp = sh.text_frame._txBody.find(NSA + "bodyPr")
+    ins = lambda k: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else 0.1
+    inner = sh.width / 914400 - ins("lIns") - ins("rIns")
+    out = []
+    for p in sh.text_frame.paragraphs:
+        runs = [r for r in para_runs(p) if r[0]]
+        txt = "".join(r[0] for r in runs).strip()
+        if not txt: continue
+        width = max(0.1, inner - bullet_indent(p))
+        lines, last_w = wrap_lines(runs, width)
+        out.append((1.0 if lines > 1 else last_w / width, txt))
     return out
 
 
@@ -409,6 +428,14 @@ def main():
             need, avail, _ = overflow_estimate(sh)
             if avail > 0 and need / avail < LIM.get("LIMIT", {}).get("boxFillMin", 0.45):
                 warns.append(f"[{n}] 상자 내용 부족 {need / avail:.0%} 채움 '{sh.text_frame.text.strip()[:12]}' (항목 보강, 도식 교체, 상자 축소 중 선택)")
+
+        # Key Point 밴드 문장의 가로 채움 (references/writing-rules.md 내용 구성 절). 밴드 1개에 경고 1건, 기준 미만 문장은 모두 표기
+        # Why: 밴드는 채움 상자이면서 높이 0.5인치이므로 위 상자 내용 부족 검사의 대상 밖. 짧은 문장은 틴트 상자 좌우에 넓은 빈 공간을 남김
+        for sh in slide.shapes:
+            if sh.name != POINT_TAG or not sh.has_text_frame or sh.width is None: continue
+            short = [f"{ratio:.0%} 채움 '{txt[:12]}'" for ratio, txt in point_fills(sh) if ratio < POINT_FILL_MIN]
+            if short:
+                warns.append(f"[{n}] Key Point 문장 분량 부족 {', '.join(short)} (문장 보강, 문장 삭제, footnotes 이동 중 선택. 보강은 대상, 기준, 시점, 주체의 구체화로 수행. 수식어, 평가어, 연결어로 길이를 늘리지 않음. 보강할 정보가 없으면 문장 삭제. 한 줄짜리 산식이나 단서는 footnotes 로 이동)")
 
         # 본문 하단이 크게 비는 경우 (내용이 위로 몰림). 표지와 목차와 간지는 위쪽 정렬 설계이므로 제외
         has_headline = any(sh.has_text_frame and sh.text_frame.text.strip() and sh.top is not None and sh.width is not None

@@ -524,6 +524,9 @@ const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // 라벨 칸 형식의 문구 칸 
 const CALLOUT_TINT_MG = [0.12, 0.03, 0.12, 0.03]; // 틴트 상자 형식의 안 여백. 좌우를 같은 값으로 두어 가운데 정렬 문장을 상자 정중앙에 둠
 const CALLOUT_H = 0.5; // Key Point 띠 높이 (인치)
 const CALLOUT_W_STEP = 0.1; // Key Point 띠 폭을 넓히는 단위 (인치)
+// Key Point 문구 칸의 도형 이름. check_layout.py 가 이 이름으로 밴드를 찾아 문장별 가로 채움을 잼 (POINT_TAG)
+// Why: 틴트 채움과 0.5인치 높이는 다른 템플릿의 상자도 쓰므로 모양으로는 밴드를 구분하지 못함. adj: 접두어는 finalize 가 조정값으로 옮기므로 피함
+const CALLOUT_TAG = "keypoint";
 /** Key Point 문구의 줄 목록 (배열 항목과 줄바꿈을 줄 단위로 나눔) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
@@ -543,7 +546,7 @@ function callout(ctx, slide, box, lbl, text) {
   const multi = lines.length > 1;
   const align = multi || name ? "left" : "center";
   const paras = lines.map((t) => ({ align, bullet: multi, indent: multi ? T.PARA.bulletIndentIn : 0, marL: multi ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
-  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false });
+  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false, objectName: CALLOUT_TAG });
 }
 /** Key Point 띠 폭. 묶음 폭 w0 에서 시작하여 문구가 띠 높이 안에 들어가는 폭까지 넓힘 (상한 maxW)
  *  패널이나 카드 묶음이 짧은 항목에 맞춰 좁아지면 띠 문구가 상자 밖으로 넘치므로 띠와 묶음을 함께 넓히는 데 씀

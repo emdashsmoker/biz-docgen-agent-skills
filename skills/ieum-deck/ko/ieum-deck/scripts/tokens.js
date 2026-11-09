@@ -346,6 +346,7 @@ const LIMIT = {
   summaryFillMin: 0.9, // 종합 상자(아젠다 박스) 항목 글줄 평균 비율의 하한 (결론 칸이므로 불릿 상자보다 높게 둠)
   summaryMaxFillMin: 0.95, // 종합 상자에서 가장 긴 항목 글줄 비율의 하한
   boxFillMin: 0.45, // 테두리 상자 안 텍스트가 차지해야 하는 최소 비율 (추정 폭 기반이라 실제보다 낮게 잡힘)
+  pointFillMin: 0.5, // Key Point 밴드 문장마다 한 줄 폭이 문구 칸 안쪽 폭에서 차지해야 하는 최소 비율 (writing-rules.md 내용 구성 절. 2줄 이상 문장은 첫 줄이 폭을 채우므로 통과)
   bandBottomGapMax: 0.15, // 본문 밴드 하단 여백 상한 (내용이 위로 몰리는 정도)
   bodyCoverMin: 0.7, // 본문 밴드 높이 가운데 내용이 차지해야 하는 최소 비율 (상자를 내용에 맞춰 줄인 뒤 남는 공간 판정)
   bulletOnlyShareMax: 0.5, // 불릿 패널만 쓴 슬라이드의 본문 내 최대 비중
