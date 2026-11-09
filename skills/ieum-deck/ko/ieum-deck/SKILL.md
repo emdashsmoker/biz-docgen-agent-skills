@@ -365,7 +365,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 모듈 안 Task 번호는 T1 부터 연속으로 부여 (불연속은 lint WARN)
 - 슬라이드 항목은 조사 대상, 자료 출처, 조사 규모, 분석 방법, 산출물, 실측 표본 1개
 - 절 제목은 `[Module 1] 모듈명` 형식 (대괄호는 절 번호의 마침표와 겹치지 않게 하는 표기)
-- 마커는 `Task 2. Task명` 형식
+- 마커는 모듈 번호를 포함한 `Task 1-2. Task명` 형식 (모듈 번호가 없는 `Task 2.` 는 다른 모듈의 Task 와 구분되지 않음)
+- 헤드라인은 절 제목과 마커의 번호를 반복하지 않음 (`references/headline-patterns.md` 수행계획 슬라이드 헤드라인 절)
 - 목차와 간지의 모듈 항목도 `[Module 1] 모듈명` 형식
 
 ### Task 슬라이드 구성

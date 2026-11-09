@@ -124,6 +124,6 @@
   {"id": "S001", "template": "cover", "slots": {"title": "○○ 용역", "client": "발주기관", "date": "2026. 09."}},
   {"id": "S002", "template": "purpose", "secNo": "1.", "section": "배경 및 목적", "chapter": "Ⅰ. 제안개요", "headline": "본 과업은 ...수립을 목적으로 추진", "marker": "과업의 배경 및 목적", "evalItems": ["A-1"], "slots": {"leads": [{"title": "(제도 변화) ...", "sub": ["...", "..."]}], "purpose": "...", "issues": ["(자료 접근) ..."]}},
   {"id": "S003", "template": "composite", "secNo": "1.", "section": "[Module 1] 현황 조사", "chapter": "Ⅲ. 사업수행계획", "headline": "...", "marker": "이해관계자 면담 설계", "moduleTasks": ["M1-T1"], "rfpTasks": ["T1"], "slots": {"recipe": "interview_plan", "cols": [1, 1, 1], "regions": [{"title": "면담 개요", "block": {"kind": "labeled", "rows": [{"label": "목적", "text": "..."}]}}, {"title": "면담 방식", "block": {"kind": "bullets", "items": ["..."]}}, {"title": "진행 절차", "block": {"kind": "flow", "dir": "v", "nodes": [{"text": "..."}]}}]}},
-  {"id": "S010", "template": "task", "secNo": "1.", "section": "[Module 1] 현황 조사", "chapter": "Ⅲ. 사업수행계획", "headline": "...", "marker": "Task 1. 현황 조사", "moduleTasks": ["M1-T1"], "rfpTasks": ["T1"], "slots": {"rows": [["조사 대상", "..."]], "sample": {"items": ["..."]}, "point": "..."}}
+  {"id": "S010", "template": "task", "secNo": "1.", "section": "[Module 1] 현황 조사", "chapter": "Ⅲ. 사업수행계획", "headline": "...", "marker": "Task 1-1. 현황 조사", "moduleTasks": ["M1-T1"], "rfpTasks": ["T1"], "slots": {"rows": [["조사 대상", "..."]], "sample": {"items": ["..."]}, "point": "..."}}
  ]}
 ```

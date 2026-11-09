@@ -145,7 +145,7 @@
 - All bullets in one box use the same font size
 - The subject term rules follow the subject term section of `references/headline-patterns.md`
 - Module section titles use the `[Module 1] 모듈명` format (to avoid clashing with the period after the section number)
-- Task markers use the `Task 2. Task명` format
+- Task markers use the `Task 1-2. Task명` format, which includes the module number
 - Module items in organization charts and the table of contents also use the `[Module 1] 모듈명` format
 
 ## Notes

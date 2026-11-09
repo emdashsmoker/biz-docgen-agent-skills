@@ -378,7 +378,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Number Tasks in a module consecutively from T1 (gaps are lint WARN)
 - Slide items are survey target, data source, survey scale, analysis method, deliverable and one measured sample
 - Section titles use the format `[Module 1] 모듈명` (the square brackets keep it from colliding with the period of the section number)
-- Markers use the format `Task 2. Task명`
+- Markers use the format `Task 1-2. Task명`, which includes the module number (`Task 2.` without the module number cannot be told apart from the Tasks of other modules)
+- Headlines do not repeat the numbers in the section title and the marker (execution plan slide headlines section of `references/headline-patterns.md`)
 - Module items in the contents and dividers also use the format `[Module 1] 모듈명`
 
 ### Task slide layout
