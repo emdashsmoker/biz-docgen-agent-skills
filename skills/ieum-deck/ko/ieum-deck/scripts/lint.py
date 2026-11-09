@@ -35,6 +35,7 @@
 - 모듈 표기: 절 제목과 목차 항목이 "Module N." 형식이면 WARN ([Module N] 권장)
 - 대상 지칭어: 지칭어 혼용, 지칭어 변경 후 과업 잔존, 제안 외 산출물의 과업 라벨 잔존 시 WARN, "본 기획" 표기 시 WARN
 - 리더 호칭: 총괄 리더와 품질 리더의 호칭이 한 발표자료 안에서 섞이면 WARN
+- Key Point 밴드 형식: 라벨 칸 없는 틴트 상자 밴드와 라벨 칸 밴드가 한 발표자료 안에서 섞이면 WARN (라벨 해석 순서는 build.js 와 같음)
 - 리듬: 같은 구조 4장 연속 WARN, free 8장 초과 WARN (composite 는 레시피나 블록 구성이 다르면 다른 구조로 셈)
 - 덱 다양성: 본문 템플릿 종류가 본문 장수의 30% 미만이거나 한 템플릿이 40% 초과이거나 한 장이 단일 템플릿이면 WARN
 - 불릿 편중: 불릿 패널 계열 템플릿이 본문의 50% 를 넘으면 WARN
@@ -643,6 +644,25 @@ def label_checks(labels):
     return fails, warns
 
 
+def point_band_formats(meta, slides):
+    """Key Point 밴드의 형식별 슬라이드 id 목록. 반환: (틴트 상자 형식, 라벨 칸 형식)
+    라벨 해석 순서는 build.js 와 같음 (free callout 블록 label, 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값)
+    빈 라벨은 틴트 상자 형식, 라벨이 있으면 라벨 칸 형식"""
+    labels = meta.get("labels")
+    common = labels.get("common") if isinstance(labels, dict) else None
+    deck = meta.get("pointLabel") or (common.get("pointLabel") if isinstance(common, dict) else None) or LABEL_DEFAULTS["common"]["pointLabel"]
+    tint, labeled = [], []
+    for sl in slides:
+        own = sl.get("pointLabel") or deck
+        names = [own] if sl.get("point") or (sl.get("slots") or {}).get("point") else []
+        if (sl.get("template") or sl.get("type") or "free") == "free":
+            blocks = sl.get("blocks") or (sl.get("slots") or {}).get("blocks") or []
+            names += [b.get("label") or own for b in blocks if isinstance(b, dict) and b.get("kind") == "callout"]
+        for name in names:
+            (labeled if name else tint).append(sl.get("id"))
+    return tint, labeled
+
+
 def lint(story, ledger=None, story_path=".", layout=None):
     fails, warns = [], []
     meta = story.get("meta", {})
@@ -869,6 +889,10 @@ def lint(story, ledger=None, story_path=".", layout=None):
                     if w2 in tx: hit[w2] += 1
         if len(hit) > 1:
             warns.append(f"{kind} 리더 호칭 혼용 {dict(hit)} (RFP 표기로 하나를 골라 통일할 것)")
+    # Key Point 밴드 형식 혼용: 슬라이드마다 요약 문장 자리의 모양이 달라지므로 한 발표자료 안에서는 하나로 통일
+    tint, labeled = point_band_formats(meta, slides)
+    if tint and labeled:
+        warns.append(f"Key Point 밴드 형식 혼용 {{'틴트 상자': {tint}, '라벨 칸': {labeled}}} (덱 전체를 한 형식으로 통일)")
     # 제안 외 산출물에 커스텀 슬라이드의 과업 라벨이 남은 경우
     if not proposal:
         for sl in slides:

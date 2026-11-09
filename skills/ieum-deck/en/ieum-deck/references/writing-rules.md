@@ -84,6 +84,17 @@
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 
+## Key Point labels
+
+- Write labels only in a deck that sets the Key Point band in the label cell format (the default tint box format has no label)
+- A label is a short noun phrase that tells the reader what kind of information the band sentence is
+- Do not build a label from an evaluative word that declares importance
+- When the RFP, the manuscript or the client form has an expression with the same role, use that expression first
+- Keep the label length within one line of the label cell
+- Use the same label for the same kind of content within a deck
+- Set the deck-level label (`meta.pointLabel`) only when the user specifies one label for the whole deck
+- List the label of each slide in the completion report for user review
+
 ## Notation
 
 - Space long names word by word (a word wider than the inner box width is cut in the middle)

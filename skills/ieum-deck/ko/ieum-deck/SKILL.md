@@ -46,7 +46,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | 밴드 | 슬라이드 상단 영역. 절 번호, 절 제목, 장 추적기, 헤드라인이 놓임 |
 | 헤드라인 | 밴드 가운데의 결론 문장 1개 |
 | 마커 | 본문 첫 줄의 소제목. 정사각형 도형과 함께 조판 |
-| Key Point 밴드 | 본문 아래에 라벨 칸과 한 문장을 담은 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 표시 |
+| Key Point 밴드 | 본문 아래에 한 문장을 담은 틴트 띠. 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 표시. 형식은 라벨 칸 없는 틴트 상자(기본)와 라벨 칸(옵션) |
 | 템플릿 | storyboard 의 `template` 값이 가리키는 조판 방식 |
 | 파라메트릭 템플릿 | 항목 수에 따라 배치가 바뀌는 고정 구조 템플릿 (`references/templates.md`) |
 | 레시피 | composite 템플릿의 격자와 블록 조합 견본 (`references/recipes.md`) |
@@ -125,6 +125,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 납품 파일(PPTX, 동봉 시 PDF)은 완료 조건을 모두 충족한 뒤 전달
 - 완료 보고에는 파일 경로, 열람한 시트 파일명, 남은 사용자 확인 항목을 기재
 - 주석과 출처 행을 이어 쓴 슬라이드(`footnoteInline`)가 있으면 lint 와 build 가 출력한 INFO 목록을 완료 보고에 기재
+- Key Point 밴드를 라벨 칸 형식으로 조판한 덱은 슬라이드별 라벨 목록을 완료 보고에 기재 (사용자 검토용)
 - PDF 를 동봉하면 착수 질의 15번의 근사 렌더링 안내를 완료 보고에 1줄로 다시 기재
 - 진행 지점은 세션 인계를 위해 `state.json` 에 기록
 
@@ -173,6 +174,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (슬라이드 라벨) 일부 슬라이드에만 다른 라벨이 필요하면 덱 라벨보다 우선하는 슬라이드 footnoteLabel 과 sourceLabel 을 지정 (예: 덱 라벨이 "참조:" 일 때 주석이 단서 성격인 슬라이드만 "주:")
     + (라벨 주석의 ※) ※ 표기 덱에서 라벨로 시작하는 주석에 ※ 가 필요하면 작성자가 해당 항목 앞에 ※ 를 직접 씀 (빌드가 유지)
     + (출처의 ※) 출처 앞의 ※("※ 출처:")는 착수 질의에서 묻지 않음 (사용자가 RFP 양식 등으로 요청하면 ※ 표기 덱의 `meta.footnoteSourceMark` 를 true 로 지정)
+18. (Key Point 밴드 형식) 틴트 상자(기본) 또는 라벨 칸
+    + (틴트 상자 선택지 설명) 라벨 없이 문장만 가운데 정렬
+    + (라벨 칸 선택지 설명) 밴드마다 내용에 맞는 전용 라벨을 왼쪽 칸에 표시
+    + (라벨 칸 기재) 라벨 칸을 고르면 슬라이드마다 `pointLabel` 에 전용 라벨을 기재 (작성 원칙은 `references/writing-rules.md` Key Point 라벨 절)
+    + (덱 단위 라벨) 사용자가 덱 전체에 라벨 1개를 지정한 경우에만 `meta.pointLabel` 에 기재
 
 ## 회사 사실 정보
 
@@ -536,7 +542,6 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 제안 외 산출물에 과업 라벨이 남으면 lint WARN
 - 제안 전용 라벨은 산출 대상에 맞춰 변경
     + 덱 전체에 같은 라벨은 `meta.labels` 에 한 번 지정 (키와 기본값은 `references/templates.md` 라벨 슬롯 절)
-    + Key Point 밴드의 라벨 문구(기본 "Key Point")는 `meta.pointLabel` 로 변경
     + 간트의 과업 열 머리와 보고 행 묶음 이름(기본 "과업", "보고회")은 gantt 의 `taskHead`, `reportHead` 로 변경
     + 표지와 종료 슬라이드의 회사명은 `meta.company` 로 지정
 
@@ -553,6 +558,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Key Point) 밴드는 헤드라인과 본문에 없는 판단 기준, 산식, 후속 연계, 선정 사유, 적용 시점, 원칙 등을 담을 때만 사용
     + 헤드라인 반복이나 본문 요약만 담은 밴드는 삭제
     + 한 줄짜리 산식이나 단서는 `footnotes` 에 기재하여 본문 높이를 확보
+    + `pointLabel` 과 free callout 블록의 `label` 은 라벨 칸 형식 덱(착수 질의 18번)에서만 기재
+    + 라벨 문구는 `references/writing-rules.md` Key Point 라벨 절의 작성 원칙을 따름
 - lint 는 문장 규범 위반을 FAIL 과 WARN 으로 보고
 
 ## 영문 발표자료
@@ -566,7 +573,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 일부 슬라이드만 영문인 덱은 영문 슬라이드가 쓰는 템플릿의 라벨만 지정하거나 그 슬라이드의 슬롯에 지정
     + 지정하지 않은 키는 한국어 기본값으로 조판되므로 영문 덱이 쓰는 템플릿의 라벨은 모두 지정
     + lint 는 `meta.labels` 의 알 수 없는 템플릿, 블록, 슬롯 이름과 형식 오류를 FAIL 로 보고
-- Key Point 밴드 라벨은 `meta.pointLabel` 또는 `meta.labels.common.pointLabel` 로 지정
+- 라벨이 없는 Key Point 밴드 기본 형식(틴트 상자)은 영문 라벨 지정 대상에서 제외
+- Key Point 밴드를 라벨 칸 형식으로 조판하는 덱은 슬라이드별 `pointLabel` 을 영문으로 작성
 - scope 의 구조 라벨(visionTag, scopeTag, outputTag)은 10pt 로 조판되므로 영문 대문자로 지정 (다른 표기는 check_layout 11pt 하한 WARN)
 - PPTX 글자의 언어 태그는 `meta.labels.language` 로 지정 (기본 latin en-US, 한글이 든 run 은 east_asia ko-KR. finalize.py 가 적용)
 - 자리 표기(`[회사 확인]`, `[확인 필요]`)는 lint 가 미완성 항목을 찾는 표기이므로 영문 발표자료에서도 그대로 사용
@@ -710,6 +718,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (형태) 파라메트릭, composite, free 템플릿의 기본 도형은 사각형, 반경 0.05인치 이내 둥근 사각형, 셰브론, 직선, 직교 연결선(직선 분해), 원
     + 도식 전용 도형(흐름 화살표, 하베이 볼 부채꼴, strategy 와 house 지붕의 사다리꼴, pyramid 의 삼각형과 사다리꼴, funnel 띠, porter 화살촉, 저장소 원통, flowchart 의 타원과 마름모)은 해당 도식에서만 사용
     + 아이콘, 그라데이션, 그림자, 3D, 알약형 상자, 전폭 색상 띠, 측면 세로 띠, 제목 아래 장식선, 동일 카드 격자 반복은 쓰지 않음
+    + Key Point 밴드는 라벨 칸 없는 틴트 상자(기본)와 좌측 라벨 칸을 둔 틴트 띠(옵션) 중 한 형식으로 덱 전체를 통일 (세부 조판은 `references/templates.md` Key Point 밴드 절)
 - (차트) 네이티브 차트만 사용
     + 구성비는 원형(6조각 이하)이나 누적 막대
     + 항목 비교는 가로 막대 내림차순

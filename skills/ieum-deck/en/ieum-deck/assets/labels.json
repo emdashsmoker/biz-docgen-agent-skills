@@ -1,5 +1,5 @@
 {
- "common": {"pointLabel": "Key Point", "company": "회사명", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
+ "common": {"pointLabel": "", "company": "회사명", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
  "cover": {"label": "제안발표자료"},
  "contents": {"title": "목차"},
  "end": {"title": "감사합니다"},

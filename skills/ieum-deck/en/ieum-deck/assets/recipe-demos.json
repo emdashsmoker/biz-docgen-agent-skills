@@ -1547,8 +1547,7 @@
     ],
     "point": "운영 방식 전환은 당해 연도, 지표 재편 및 환류 연동은 차년도 평가부터 적용",
     "recipe": "gap_analysis"
-   },
-   "pointLabel": "추진 순서"
+   }
   },
   {
    "id": "R011",
@@ -1832,7 +1831,6 @@
    "footnotes": [
     "수치는 구성 이해를 위한 예시"
    ],
-   "pointLabel": "추정 방식",
    "byLayout": {
     "4:3": {
      "slots.regions.0.block.levels.0.items": [
@@ -2708,7 +2706,6 @@
     "point": "하위 지표는 상위 목표 기여도를 기준으로 채택하고 계층별 가중치 합을 100%로 관리",
     "recipe": "alignment_pyramid"
    },
-   "pointLabel": "정렬 기준",
    "byLayout": {
     "A4,4:3": {
      "slots.regions.1.block.rows": [
@@ -2839,8 +2836,7 @@
     ],
     "point": "최종 과제는 과제 정의서로 구체화하고 탈락 과제는 사유와 함께 중장기 후보군으로 관리",
     "recipe": "task_funnel"
-   },
-   "pointLabel": "후속 처리"
+   }
   },
   {
    "id": "R022",
@@ -3089,8 +3085,7 @@
     ],
     "point": "2안은 비용 효율성 및 전문성 확보에서 우위이며 실행 가능성은 위탁 계약 조건으로 보완",
     "recipe": "option_evaluation"
-   },
-   "pointLabel": "선정 사유"
+   }
   },
   {
    "id": "R024",
@@ -3910,7 +3905,6 @@
     "point": "지방비 매칭 협약과 민자 부담 확약서는 착수 전 확보하고 미확보 재원은 연차 투입 규모를 조정",
     "recipe": "funding_plan"
    },
-   "pointLabel": "조달 원칙",
    "footnotes": [
     "민자 현물은 단위별 환산 기준에 따라 금액으로 환산"
    ]
@@ -4085,8 +4079,7 @@
     ],
     "point": "편익 = 미래 시장규모 × 사업기여율 × R&D기여율 × R&D사업화성공률 × 부가가치율 (시장수요접근법)",
     "recipe": "econ_analysis"
-   },
-   "pointLabel": "편익 산식"
+   }
   },
   {
    "id": "R034",
@@ -4166,8 +4159,7 @@
    },
    "footnotes": [
     "계수는 한국은행 산업연관표의 최신 기준 연도를 적용"
-   ],
-   "pointLabel": "반영 원칙"
+   ]
   },
   {
    "id": "R035",
@@ -4854,7 +4846,6 @@
    "footnotes": [
     "수치는 구성 이해를 위한 예시"
    ],
-   "pointLabel": "판단 기준",
    "byLayout": {
     "4:3": {
      "slots.regions.0.block.steps": [
@@ -5355,8 +5346,7 @@
     ],
     "point": "자원 구간은 내부망에 두고 외부 접속은 이용 구간으로만 허용",
     "recipe": "system_architecture"
-   },
-   "pointLabel": "보안 원칙"
+   }
   },
   {
    "id": "R044",
@@ -6593,8 +6583,7 @@
     ],
     "point": "위원은 전문성, 포괄성, 균형성(산학연, 지역, 소속기관) 기준으로 선정하고 분과위별 명단 및 선정 사유를 기록",
     "recipe": "collaboration_structure"
-   },
-   "pointLabel": "구성 기준"
+   }
   },
   {
    "id": "R054",
@@ -7790,8 +7779,7 @@
     ],
     "point": "반영이 어려운 의견은 사유 및 대안을 함께 회신",
     "recipe": "comment_response"
-   },
-   "pointLabel": "회신 원칙"
+   }
   },
   {
    "id": "R065",
@@ -7854,8 +7842,7 @@
     ],
     "point": "산출물마다 활용 주체의 담당자를 지정하고 최종보고 후 인수 설명회를 개최",
     "recipe": "output_utilization"
-   },
-   "pointLabel": "활용 지원"
+   }
   },
   {
    "id": "R066",

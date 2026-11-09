@@ -502,8 +502,6 @@ function chevronRow(ctx, slide, box, steps, opt) {
   });
   return w;
 }
-/** Conclusion box: navy label on the left + tinted message on the right */
-/** Conclusion band label. Slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default */
 /** Marks and line counts of the slide bottom notes { notes, src, noteLines, srcLines }. The body bottom (body) and the setting (source) share this calculation */
 function bottomNotes(ctx, sb) {
   const S = ctx.S, sz = T.SIZE.note;
@@ -517,32 +515,46 @@ function noteRows(ctx, sb) {
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
   return T.BAND.NOTE_LINE_H * (srcLines ? noteLines + srcLines - 1 : Math.max(0, noteLines - 1));
 }
+/** Key Point band label. Slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default (empty string)
+ *  An empty string sets the tint box format without a label cell; a label sets the label cell format */
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
 }
-const CALLOUT_LABEL_W = 1.2; // Key Point band label cell width (inches on 16:9, scaled by the page width ratio)
-const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Key Point band text cell insets (left, top, right, bottom inches)
+const CALLOUT_LABEL_W = 1.2; // Label cell width of the label cell format (inches on 16:9, scaled by the page width ratio)
+const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Text cell insets of the label cell format (left, top, right, bottom inches)
+const CALLOUT_TINT_MG = [0.12, 0.03, 0.12, 0.03]; // Insets of the tint box format. Equal left and right insets put a centered sentence at the exact center of the box
 const CALLOUT_H = 0.5; // Key Point band height (inches)
 const CALLOUT_W_STEP = 0.1; // Step for widening the Key Point band (inches)
 /** Lines of the Key Point text (array items and line breaks split into lines) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
 }
+/** Label cell width and text cell insets per format. Without a label the label cell width is 0 (tint box format) */
+function calloutFrame(ctx, name) {
+  return name ? { lw: CALLOUT_LABEL_W * ctx.S.sx, mg: CALLOUT_MG } : { lw: 0, mg: CALLOUT_TINT_MG };
+}
+/** Key Point band. The label cell format draws a theme color label cell on the left and a tinted text cell on the right; the tint box format draws one tinted box over the full band width
+ *  Without lbl the slide and deck pointLabel apply (including a free callout block without label) */
 function callout(ctx, slide, box, lbl, text) {
-  const lw = CALLOUT_LABEL_W * ctx.S.sx;
-  label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, lbl || pointLabel(ctx, ctx.sb), { sz: T.SIZE.body });
-  // Several lines get bullets to keep items apart (1 line is written as a sentence without a bullet)
+  const name = lbl || pointLabel(ctx, ctx.sb);
+  const { lw, mg } = calloutFrame(ctx, name);
+  if (name) label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, name, { sz: T.SIZE.body });
+  // Several lines get bullets and left alignment to keep items apart. 1 line is written as a sentence without a bullet (centered in the tint box format, left aligned next to the label in the label cell format)
   const lines = calloutLines(text);
-  const paras = lines.map((t) => ({ align: "left", bullet: lines.length > 1, indent: lines.length > 1 ? T.PARA.bulletIndentIn : 0, marL: lines.length > 1 ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
-  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(CALLOUT_MG), isTextBox: true, autoFit: false });
+  const multi = lines.length > 1;
+  const align = multi || name ? "left" : "center";
+  const paras = lines.map((t) => ({ align, bullet: multi, indent: multi ? T.PARA.bulletIndentIn : 0, marL: multi ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
+  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false });
 }
 /** Key Point band width. Starts at the group width w0 and widens until the text fits in the band height (upper bound maxW)
- *  When a panel or card group narrows to short items, the band text overflows, so the band and the group are widened together */
+ *  When a panel or card group narrows to short items, the band text overflows, so the band and the group are widened together
+ *  Line counts use the text cell width of each format (minus the label cell in the label cell format, the full inner band width in the tint box format) */
 function calloutW(ctx, text, w0, maxW) {
+  const { lw, mg } = calloutFrame(ctx, pointLabel(ctx, ctx.sb));
   const lines = calloutLines(text);
   const ind = lines.length > 1 ? T.PARA.bulletIndentIn : 0;
-  const inset = CALLOUT_LABEL_W * ctx.S.sx + CALLOUT_MG[0] + CALLOUT_MG[2] + ind;
-  const maxLines = Math.max(1, Math.floor((CALLOUT_H - CALLOUT_MG[1] - CALLOUT_MG[3]) / A.lineHeightIn(T.SIZE.body)));
+  const inset = lw + mg[0] + mg[2] + ind;
+  const maxLines = Math.max(1, Math.floor((CALLOUT_H - mg[1] - mg[3]) / A.lineHeightIn(T.SIZE.body)));
   const fits = (w) => lines.reduce((n, t) => n + A.estimateLines(t, w - inset, T.SIZE.body, true), 0) <= maxLines;
   let w = w0;
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);
