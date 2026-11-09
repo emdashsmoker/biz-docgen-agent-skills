@@ -14,7 +14,7 @@
 | layout | 16:9 (default), A4, 10.83, 4:3. On page sizes narrower than 16:9, shorten box text by the body width ratio (A4 87.7%, 10.83 81.2%, 4:3 75.0%) |
 | headlineStyle | noun (noun-ending style, default), polite (polite style) |
 | marker | Marker shape. square (default), bar, triangle |
-| pointLabel | Label text of the Key Point band (default "Key Point"). Can also be set per slide |
+| pointLabel | Deck-level label of the Key Point band. Set only when the user specifies one label for the whole deck. In a deck without it (default), a band without a slide pointLabel is set in the tint box format |
 | labels | Object that sets the fixed template and block labels, language tags and extra note tokens for the whole deck. The form is {template or block: {slot: label}} (meta.labels section below). Omitted, the Korean default labels apply |
 | lineBreak | Line break unit. word (word-level, default), char (character-level). finalize.py writes it on every paragraph property (eaLnBrk, latinLnBrk) |
 | footnoteStyle | Style of notes (footnotes, note slots) and the source line. Applies to the whole deck. number (default) gives a note without a label common.footnoteLabel (labels the author wrote before a note, such as "Source:" or "Formula:", are kept). In number, two or more notes at one spot with the same label or none get numbers from 1) after the label on the first line, and items from 2) onward align with the start of 1) (notes that start with the same source mark get no numbers and are separated with semicolons). In number, notes with different labels keep their own labels line by line without numbers. In number, the source line starts without numbers, with the source mark the author wrote (common.sourceLabel without one). mark puts ※ before notes without a label. In mark, the source line and notes that start with a label ("Source:", "출처:", "Formula:" and similar) start without ※ (※ the author wrote is kept; see footnoteSourceMark) |
@@ -37,7 +37,7 @@
 - Sets label slot values that would otherwise repeat on every slide (cover label, gantt headers, module overview row labels and so on) once per deck
 - The resolution order is the slide slot value, then meta.labels, then the default (`assets/labels.json`)
 - The keys are template or composite block names and slot names (all keys, defaults and an English example are in the label slots section of `references/templates.md`)
-    + common.pointLabel: Key Point band label (meta.pointLabel takes precedence when set)
+    + common.pointLabel: Key Point band label (meta.pointLabel takes precedence when set. The default empty string sets the tint box format)
     + language.latin, language.east_asia: language tags of the PPTX text (default en-US, ko-KR for runs that contain Hangul)
     + notation.source: extra tokens recognized as note lines (the built-in tokens ※, 출처:, 자료:, Source:, Note: stay)
 - Any key may be omitted (omitted keys keep the default)
@@ -79,6 +79,7 @@
 | footnotes | Footnote array. Placed above the source line (without a source line, the last line takes the source line position). The build adds the ※, number or label of `meta.footnoteStyle`. A ※, * or number written before an item is replaced with the deck style. Content type labels ("Source:", "Formula:" and similar) are kept (in a ※-style deck, so is ※ written before a label) |
 | footnoteLabel, sourceLabel | Labels this slide adds to notes without a label (number-style deck) and to a source line without a source mark (both styles). Take precedence over `meta.labels.common` |
 | footnoteInline | When true, the notes and source line of this slide run on in one paragraph (e.g. notes of a number-style deck "Note: 1) A 2) B", the source line "Source: A; B"). Notes of a ※-style deck keep ※ on each line. Default false. Conditions are in the Notes section of `references/writing-rules.md`. lint and build print the list of these slides as INFO |
+| pointLabel | Dedicated label of this slide's Key Point band. Set only in a label cell format deck (writing principles in the Key Point labels section of `references/writing-rules.md`). When omitted, meta.pointLabel applies. Without a label the format is the tint box |
 | markerNote | Subtitle to the right of the marker (unit, reference date, etc.) |
 | rfpTasks, moduleTasks, evalItems | Lists of matching IDs. lint checks full coverage and score attribution |
 | allowCount | true when the headline uses a count set by the RFP (exempt from the number declaration check) |

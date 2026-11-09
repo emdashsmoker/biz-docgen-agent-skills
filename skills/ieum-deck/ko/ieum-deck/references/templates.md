@@ -128,6 +128,22 @@
 
 - 수행조직도와 회사 조직도의 배치 규칙은 SKILL.md 수행조직 절을 따름
 
+## Key Point 밴드
+
+- `point` 슬롯 문구와 free 의 callout 블록은 본문 아래 띠로 조판 (`point` 슬롯을 가진 템플릿은 위 템플릿 표의 슬롯 열)
+- 띠 높이는 0.5인치
+- 띠 폭은 위 본문 묶음과 같은 폭
+- 형식은 라벨 해석 결과로 정함 (해석 순서는 라벨 슬롯 절)
+    + (틴트 상자, 기본) 라벨이 빈 문자열이면 라벨 칸 없이 띠 전체 폭에 틴트 상자 1개를 조판
+    + (라벨 칸, 옵션) 라벨이 있으면 좌측 테마 색 라벨 칸과 우측 틴트 문구 칸을 조판
+- 틴트 상자의 채움은 tintBg, 테두리는 borderLight 0.5pt (라벨 칸 형식의 문구 칸과 같은 값)
+- 틴트 상자의 좌우 안 여백은 가운데 정렬 문장을 상자 정중앙에 두기 위해 같은 값(0.12인치)으로 설정
+- 문구 서식은 12pt Bold, 본문 글자색, 세로 가운데 정렬
+    + (문장 1개, 틴트 상자 형식) 기호 없이 가운데 정렬
+    + (문장 1개, 라벨 칸 형식) 라벨 옆에 좌측 정렬
+    + (문장 2개 이상) 배열 항목과 줄바꿈 줄마다 • 불릿 좌측 정렬 (두 형식 공통)
+- 한 덱 안에 두 형식이 섞이면 lint WARN
+
 ## 라벨 슬롯
 
 - 템플릿과 블록의 고정 라벨은 슬라이드 슬롯 값, `meta.labels`, 기본값(한국어) 순으로 해석
@@ -141,12 +157,14 @@
     + 객체 라벨(labels)은 키 단위로 병합 (지정한 키만 바뀜)
     + 형식 라벨(idFormat, titleFormat, monthFormat)의 `{n}` 은 번호, `{t}` 는 제목
     + 일부 키만 지정해도 됨 (생략한 키는 기본값)
-- Key Point 밴드 라벨은 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값 순
+- Key Point 밴드 라벨은 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값(빈 문자열) 순
+    + 해석 결과가 빈 문자열이면 틴트 상자 형식, 라벨이 있으면 라벨 칸 형식 (Key Point 밴드 절)
+    + 라벨 칸 형식의 라벨은 슬라이드마다 pointLabel 에 지정하는 전용 라벨 (작성 원칙은 `references/writing-rules.md` Key Point 라벨 절)
 - lint 는 알 수 없는 템플릿, 블록, 슬롯 이름과 값 형식 오류를 FAIL 로 보고 (형식 라벨에 `{n}` 이나 `{t}` 가 빠지면 WARN)
 
 | 템플릿 또는 블록 | 슬롯 | 기본값 |
 |---|---|---|
-| common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선) | Key Point |
+| common | pointLabel (슬라이드 pointLabel 과 meta.pointLabel 이 우선. 빈 문자열이면 라벨 칸 없는 틴트 상자 형식) | "" (빈 문자열) |
 | common | company (슬라이드 company 와 meta.company 가 우선) | 회사명 |
 | common | footnoteLabel (번호 표기 덱에서 작성자가 라벨을 쓰지 않은 주석에 붙는 라벨. 같은 위치의 라벨 없는 주석 2개 이상은 첫 줄 라벨 뒤에 1) 2) 를 붙임. 슬라이드 footnoteLabel 이 우선) | Note: |
 | common | sourceLabel (출처 표기 없이 시작하는 출처 행에 붙는 라벨. 두 표기 공통. footnoteSourceMark 를 지정한 ※ 표기 덱은 라벨 대신 ※ 를 붙임. 줄 나눔 출처는 둘째 출처부터 출처 표기 뒤에 정렬. 슬라이드 sourceLabel 이 우선) | Source: |
@@ -192,12 +210,12 @@
 
 ### 영문 라벨 예시
 
-- 영문 발표자료의 `meta.labels` 전체 예시 (`assets/labels.json` 과 같은 키)
+- 영문 발표자료의 `meta.labels` 전체 예시 (`assets/labels.json` 과 같은 키. 기본값이 빈 문자열인 common.pointLabel 은 제외)
 - 일부 슬라이드만 영문인 덱은 영문 슬라이드가 쓰는 템플릿의 라벨만 지정하거나 해당 슬라이드의 슬롯에 지정
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key Point", "company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
+ "common": {"company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},
@@ -231,4 +249,5 @@
 - (내용 상자) panel{head, items}, bullets{items, fill, line}, text{text, sz, bold, align, fill, line}, label{text, fill}, box{text, fill, line}
 - (데이터) table{head, rows, align}, chart{type, categories, series, numFmt}
 - (흐름) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right 또는 down}, line{color, pt, arrow, dash}
+- callout 블록은 Key Point 밴드와 같은 형식으로 조판 (label 을 생략한 블록은 슬라이드와 덱의 pointLabel 사용. 라벨이 없으면 틴트 상자 형식)
 - (기타) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy 또는 tint}]}

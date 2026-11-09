@@ -59,7 +59,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | Band | The top area of a slide. Holds the section number, section title, chapter tracker and headline |
 | Headline | The one conclusion sentence in the middle of the band |
 | Marker | The subheading on the first line of the body. Typeset with a square shape |
-| Key Point band | A strip below the body holding a label cell and one sentence ("Key Point" by default). Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body |
+| Key Point band | A tinted strip below the body holding one sentence. Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body. Formats are the tint box without a label cell (default) and the label cell (option) |
 | Template | The typesetting method named by the `template` value in the storyboard |
 | Parametric template | A fixed-structure template whose layout changes with the number of items (`references/templates.md`) |
 | Recipe | A sample combination of grid and blocks for the composite template (`references/recipes.md`) |
@@ -138,6 +138,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Deliver the delivery files (PPTX, and the PDF when included) after all completion conditions are met
 - The completion report lists file paths, viewed contact sheet file names and remaining user confirmation items
 - When slides run notes and the source line on (`footnoteInline`), the completion report lists the INFO output of lint and build
+- When a deck sets the Key Point band in the label cell format, the completion report lists the label of each slide (for user review)
 - When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
 - Record the progress point in `state.json` for session handover
 
@@ -186,6 +187,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Slide labels) When only some slides need other labels, set footnoteLabel and sourceLabel on those slides, which take precedence over the deck labels (e.g. with the deck label "참조:", only a slide whose note is a caveat uses "주:")
     + (※ on labeled notes) When a labeled note in a ※-style deck needs ※, the author writes ※ before that item (the build keeps it)
     + (※ on sources) ※ before sources ("※ Source:") is not asked at kickoff (when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` of a ※-style deck to true)
+18. (Key Point band format) Tint box (default) or label cell
+    + (Tint box choice description) Only the sentence, centered, without a label
+    + (Label cell choice description) A dedicated label that fits each band's content, shown in the left cell
+    + (Label cell entry) When the label cell is chosen, write a dedicated label in `pointLabel` on each slide (writing principles in the Key Point labels section of `references/writing-rules.md`)
+    + (Deck-level label) Write `meta.pointLabel` only when the user specifies one label for the whole deck
 
 ## Company facts
 
@@ -549,7 +555,6 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - An engagement label left in a non-proposal output is lint WARN
 - Change proposal-only labels to fit the output type
     + Set labels shared by the whole deck once in `meta.labels` (keys and defaults in the label slots section of `references/templates.md`)
-    + Change the label text of the Key Point band (default "Key Point") with `meta.pointLabel`
     + Change the engagement column header and the report row group name of the gantt (defaults "과업", "보고회") with `taskHead` and `reportHead` of gantt
     + Set the company name on the cover and closing slides with `meta.company`
 
@@ -566,6 +571,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body
     + Write one-line formulas or conditions in `footnotes` to free body height
+    + Write `pointLabel` and the `label` of free callout blocks only in a label cell format deck (kickoff item 18)
+    + Label text follows the writing principles in the Key Point labels section of `references/writing-rules.md`
 - lint reports writing rule violations as FAIL and WARN
 
 ## English decks
@@ -579,7 +586,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
     + Keys left out are typeset with the Korean defaults, so set every label of the templates the English deck uses
     + lint reports unknown template, block and slot names and type errors in `meta.labels` as FAIL
-- Set the Key Point band label with `meta.pointLabel` or `meta.labels.common.pointLabel`
+- The default Key Point band format (tint box) has no label and needs no English label
+- A deck that sets the Key Point band in the label cell format writes the `pointLabel` of each slide in English
 - The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
 - Set the language tags of the PPTX text with `meta.labels.language` (default latin en-US, east_asia ko-KR for runs that contain Hangul; finalize.py applies them)
 - Keep the placeholders (`[회사 확인]`, `[확인 필요]`) as they are in English decks, since lint finds unfinished items by them
@@ -723,6 +731,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Shapes) The basic shapes of parametric, composite and free templates are rectangles, rounded rectangles with a radius of 0.05 inch or less, chevrons, straight lines, orthogonal connectors (split into straight lines) and circles
     + Diagram-specific shapes (flow arrows, Harvey ball pie slices, trapezoids of the strategy and house roofs, triangles and trapezoids of pyramid, funnel strips, porter arrowheads, storage cylinders, ellipses and diamonds of flowchart) are used only in their diagrams
     + Do not use icons, gradients, shadows, 3D, pill-shaped boxes, full-width color strips, vertical side strips, decorative lines below titles, or repeated grids of identical cards
+    + The Key Point band uses one format across the deck, either the tint box without a label cell (default) or the tinted strip with a label cell on the left (option). Typesetting details are in the Key Point band section of `references/templates.md`
 - (Charts) Use native charts only
     + Composition uses pie charts (six slices or fewer) or stacked bars
     + Item comparison uses horizontal bars in descending order
@@ -887,6 +896,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do the headline, marker or page number intrude on band borders or edge margins?
 - Is content pushed to one side, leaving the other side largely empty?
 - Is a bordered box less than half full so it looks empty (judge even without a code warning)?
+- Does a Key Point band sentence fill less than half of the inner band width so both sides look empty (how to lengthen it is in the content composition section of `references/writing-rules.md`)?
 
 #### Alignment
 

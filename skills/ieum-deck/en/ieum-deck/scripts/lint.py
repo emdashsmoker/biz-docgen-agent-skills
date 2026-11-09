@@ -36,6 +36,7 @@ Checks
 - Module notation: WARN if section titles and contents items use the "Module N." format ([Module N] recommended)
 - Subject term: WARN for mixed subject terms, 과업 left after changing the subject term, engagement labels left in non-proposal outputs, and "본 기획"
 - Leader titles: WARN if the titles of the overall leader and quality leader are mixed within one deck
+- Key Point band format: WARN if tint box bands without a label cell and label cell bands are mixed within one deck (labels resolve in the same order as build.js)
 - Rhythm: WARN for 4 slides in a row with the same structure, WARN for more than 8 free slides (composite counts as a different structure when its recipe or block layout differs)
 - Deck variety: WARN if body template kinds are under 30% of the body slide count, one template exceeds 40%, or one chapter uses a single template
 - Bullet skew: WARN if bullet panel templates exceed 50% of the body
@@ -645,6 +646,25 @@ def label_checks(labels):
     return fails, warns
 
 
+def point_band_formats(meta, slides):
+    """Slide ids of Key Point bands per format. Returns: (tint box format, label cell format)
+    Labels resolve in the same order as build.js (free callout block label, slide pointLabel, meta.pointLabel, meta.labels.common.pointLabel, default)
+    An empty label means the tint box format; a label means the label cell format"""
+    labels = meta.get("labels")
+    common = labels.get("common") if isinstance(labels, dict) else None
+    deck = meta.get("pointLabel") or (common.get("pointLabel") if isinstance(common, dict) else None) or LABEL_DEFAULTS["common"]["pointLabel"]
+    tint, labeled = [], []
+    for sl in slides:
+        own = sl.get("pointLabel") or deck
+        names = [own] if sl.get("point") or (sl.get("slots") or {}).get("point") else []
+        if (sl.get("template") or sl.get("type") or "free") == "free":
+            blocks = sl.get("blocks") or (sl.get("slots") or {}).get("blocks") or []
+            names += [b.get("label") or own for b in blocks if isinstance(b, dict) and b.get("kind") == "callout"]
+        for name in names:
+            (labeled if name else tint).append(sl.get("id"))
+    return tint, labeled
+
+
 def lint(story, ledger=None, story_path=".", layout=None):
     fails, warns = [], []
     meta = story.get("meta", {})
@@ -871,6 +891,10 @@ def lint(story, ledger=None, story_path=".", layout=None):
                     if w2 in tx: hit[w2] += 1
         if len(hit) > 1:
             warns.append(f"mixed {kind} leader titles {dict(hit)} (pick one following the RFP spelling)")
+    # Mixed Key Point band formats: the summary sentence spot changes shape between slides, so use one format within a deck
+    tint, labeled = point_band_formats(meta, slides)
+    if tint and labeled:
+        warns.append(f"mixed Key Point band formats {{'tint box': {tint}, 'label cell': {labeled}}} (use one format across the deck)")
     # Custom slide engagement labels left in a non-proposal output
     if not proposal:
         for sl in slides:

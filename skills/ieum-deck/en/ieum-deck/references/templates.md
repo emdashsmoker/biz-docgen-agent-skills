@@ -128,6 +128,22 @@
 
 - The placement rules for the project organization chart and the company organization chart follow the SKILL.md project organization section
 
+## Key Point band
+
+- The `point` slot text and the free callout block are set as a strip below the body (templates with a `point` slot are listed in the slots column of the template table above)
+- The strip height is 0.5 inch
+- The strip width equals the width of the body group above
+- The format follows the resolved label (resolution order in the label slots section)
+    + (Tint box, default) When the label is an empty string, one tint box fills the full strip width without a label cell
+    + (Label cell, option) When a label exists, a theme color label cell on the left and a tinted text cell on the right are set
+- The tint box uses tintBg fill and a borderLight 0.5pt border (the same values as the text cell of the label cell format)
+- The tint box has equal left and right insets (0.12 inch) to put a centered sentence at the exact center of the box
+- Text style is 12pt Bold, body text color, vertical centering
+    + (One sentence, tint box format) Centered without a symbol
+    + (One sentence, label cell format) Left aligned next to the label
+    + (Two or more sentences) Each array item and line break gets a • bullet with left alignment (both formats)
+- A deck that mixes both formats gets a lint WARN
+
 ## Label slots
 
 - The fixed labels of templates and blocks resolve in this order: the slide slot value, then `meta.labels`, then the default (Korean)
@@ -141,12 +157,14 @@
     + Object labels (labels) are merged per key (only the given keys change)
     + In format labels (idFormat, titleFormat, monthFormat), `{n}` is the number and `{t}` the title
     + Any key may be omitted (omitted keys keep the default)
-- The Key Point band label resolves from the slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default
+- The Key Point band label resolves from the slide pointLabel, then meta.pointLabel, then meta.labels.common.pointLabel, then the default (empty string)
+    + An empty result sets the tint box format; a label sets the label cell format (Key Point band section)
+    + The label of the label cell format is a dedicated label set per slide in pointLabel (writing principles in the Key Point labels section of `references/writing-rules.md`)
 - lint reports unknown template, block and slot names and value type errors as FAIL (a format label missing `{n}` or `{t}` is a WARN)
 
 | Template or block | Slot | Default |
 |---|---|---|
-| common | pointLabel (the slide pointLabel and meta.pointLabel take precedence) | Key Point |
+| common | pointLabel (the slide pointLabel and meta.pointLabel take precedence. An empty string sets the tint box format without a label cell) | "" (empty string) |
 | common | company (the slide company and meta.company take precedence) | 회사명 |
 | common | footnoteLabel (label a number-style deck adds to a note the author wrote without a label. Two or more such notes at one spot get 1) 2) after the label on the first line. The slide footnoteLabel takes precedence) | Note: |
 | common | sourceLabel (label before a source line that starts without a source mark. Both styles. A ※-style deck with footnoteSourceMark puts ※ instead of the label. In the line-broken form, the second source onward aligns after the source mark. The slide sourceLabel takes precedence) | Source: |
@@ -192,12 +210,12 @@
 
 ### English label example
 
-- A complete `meta.labels` example for English decks (the same keys as `assets/labels.json`)
+- A complete `meta.labels` example for English decks (the same keys as `assets/labels.json`, except common.pointLabel whose default is an empty string)
 - For a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
 
 ```json
 {"meta": {"labels": {
- "common": {"pointLabel": "Key Point", "company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
+ "common": {"company": "Company name", "footnoteLabel": "Note:", "sourceLabel": "Source:"},
  "cover": {"label": "Proposal"},
  "contents": {"title": "Contents"},
  "end": {"title": "Thank you"},
@@ -232,4 +250,5 @@
 - (Content boxes) panel{head, items}, bullets{items, fill, line}, text{text, sz, bold, align, fill, line}, label{text, fill}, box{text, fill, line}
 - (Data) table{head, rows, align}, chart{type, categories, series, numFmt}
 - (Flow) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right or down}, line{color, pt, arrow, dash}
+- The callout block is set in the same formats as the Key Point band (a block without label uses the slide and deck pointLabel. Without a label the format is the tint box)
 - (Other) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy or tint}]}

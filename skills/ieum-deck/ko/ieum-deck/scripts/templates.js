@@ -501,8 +501,6 @@ function chevronRow(ctx, slide, box, steps, opt) {
   });
   return w;
 }
-/** 결론 상자: 좌측 네이비 라벨 + 우측 틴트 메시지 */
-/** 결론 밴드 라벨. 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값 순 */
 /** 슬라이드 하단 주석 영역의 표기와 줄 수 { notes, src, noteLines, srcLines }. 본문 하단(body)과 조판(source)이 같은 계산을 씀 */
 function bottomNotes(ctx, sb) {
   const S = ctx.S, sz = T.SIZE.note;
@@ -516,32 +514,46 @@ function noteRows(ctx, sb) {
   const { noteLines, srcLines } = bottomNotes(ctx, sb);
   return T.BAND.NOTE_LINE_H * (srcLines ? noteLines + srcLines - 1 : Math.max(0, noteLines - 1));
 }
+/** Key Point 밴드 라벨. 슬라이드 pointLabel, meta.pointLabel, meta.labels.common.pointLabel, 기본값(빈 문자열) 순
+ *  빈 문자열이면 라벨 칸 없는 틴트 상자 형식, 라벨이 있으면 라벨 칸 형식으로 조판 */
 function pointLabel(ctx, sb) {
   return (sb && sb.pointLabel) || (ctx.meta && ctx.meta.pointLabel) || LB.label("common", "pointLabel");
 }
-const CALLOUT_LABEL_W = 1.2; // Key Point 라벨 칸 폭 (16:9 기준 인치, 판형 가로 비율로 환산)
-const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Key Point 문구 칸 안 여백 (좌, 위, 우, 아래 인치)
+const CALLOUT_LABEL_W = 1.2; // 라벨 칸 형식의 라벨 칸 폭 (16:9 기준 인치, 판형 가로 비율로 환산)
+const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // 라벨 칸 형식의 문구 칸 안 여백 (좌, 위, 우, 아래 인치)
+const CALLOUT_TINT_MG = [0.12, 0.03, 0.12, 0.03]; // 틴트 상자 형식의 안 여백. 좌우를 같은 값으로 두어 가운데 정렬 문장을 상자 정중앙에 둠
 const CALLOUT_H = 0.5; // Key Point 띠 높이 (인치)
 const CALLOUT_W_STEP = 0.1; // Key Point 띠 폭을 넓히는 단위 (인치)
 /** Key Point 문구의 줄 목록 (배열 항목과 줄바꿈을 줄 단위로 나눔) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
 }
+/** 형식별 라벨 칸 폭과 문구 칸 안 여백. 라벨이 없으면 라벨 칸 폭 0 (틴트 상자 형식) */
+function calloutFrame(ctx, name) {
+  return name ? { lw: CALLOUT_LABEL_W * ctx.S.sx, mg: CALLOUT_MG } : { lw: 0, mg: CALLOUT_TINT_MG };
+}
+/** Key Point 밴드. 라벨 칸 형식은 좌측 테마 색 라벨 칸과 우측 틴트 문구 칸, 틴트 상자 형식은 밴드 전체 폭의 틴트 상자 1개
+ *  lbl 이 없으면 슬라이드와 덱의 pointLabel 을 사용 (free callout 블록의 label 생략 포함) */
 function callout(ctx, slide, box, lbl, text) {
-  const lw = CALLOUT_LABEL_W * ctx.S.sx;
-  label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, lbl || pointLabel(ctx, ctx.sb), { sz: T.SIZE.body });
-  // 여러 줄이면 불릿을 붙여 항목 구분을 유지 (1줄은 불릿 없이 문장으로 표기)
+  const name = lbl || pointLabel(ctx, ctx.sb);
+  const { lw, mg } = calloutFrame(ctx, name);
+  if (name) label(ctx, slide, { x: box.x, y: box.y, w: lw, h: box.h }, name, { sz: T.SIZE.body });
+  // 여러 줄이면 불릿 좌측 정렬로 항목 구분을 유지. 1줄은 불릿 없이 문장으로 표기 (틴트 상자 형식은 가운데 정렬, 라벨 칸 형식은 라벨 옆 좌측 정렬)
   const lines = calloutLines(text);
-  const paras = lines.map((t) => ({ align: "left", bullet: lines.length > 1, indent: lines.length > 1 ? T.PARA.bulletIndentIn : 0, marL: lines.length > 1 ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
-  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(CALLOUT_MG), isTextBox: true, autoFit: false });
+  const multi = lines.length > 1;
+  const align = multi || name ? "left" : "center";
+  const paras = lines.map((t) => ({ align, bullet: multi, indent: multi ? T.PARA.bulletIndentIn : 0, marL: multi ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
+  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false });
 }
 /** Key Point 띠 폭. 묶음 폭 w0 에서 시작하여 문구가 띠 높이 안에 들어가는 폭까지 넓힘 (상한 maxW)
- *  패널이나 카드 묶음이 짧은 항목에 맞춰 좁아지면 띠 문구가 상자 밖으로 넘치므로 띠와 묶음을 함께 넓히는 데 씀 */
+ *  패널이나 카드 묶음이 짧은 항목에 맞춰 좁아지면 띠 문구가 상자 밖으로 넘치므로 띠와 묶음을 함께 넓히는 데 씀
+ *  줄 수는 형식별 문구 칸 폭으로 판정 (라벨 칸 형식은 라벨 칸 폭을 뺀 폭, 틴트 상자 형식은 띠 전체 안쪽 폭) */
 function calloutW(ctx, text, w0, maxW) {
+  const { lw, mg } = calloutFrame(ctx, pointLabel(ctx, ctx.sb));
   const lines = calloutLines(text);
   const ind = lines.length > 1 ? T.PARA.bulletIndentIn : 0;
-  const inset = CALLOUT_LABEL_W * ctx.S.sx + CALLOUT_MG[0] + CALLOUT_MG[2] + ind;
-  const maxLines = Math.max(1, Math.floor((CALLOUT_H - CALLOUT_MG[1] - CALLOUT_MG[3]) / A.lineHeightIn(T.SIZE.body)));
+  const inset = lw + mg[0] + mg[2] + ind;
+  const maxLines = Math.max(1, Math.floor((CALLOUT_H - mg[1] - mg[3]) / A.lineHeightIn(T.SIZE.body)));
   const fits = (w) => lines.reduce((n, t) => n + A.estimateLines(t, w - inset, T.SIZE.body, true), 0) <= maxLines;
   let w = w0;
   while (w < maxW && !fits(w)) w = Math.min(maxW, w + CALLOUT_W_STEP);

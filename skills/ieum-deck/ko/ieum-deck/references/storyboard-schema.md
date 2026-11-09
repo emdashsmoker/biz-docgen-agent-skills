@@ -14,7 +14,7 @@
 | layout | 16:9(기본), A4, 10.83, 4:3. 16:9 보다 좁은 판형은 상자 문구를 본문 폭 비율(A4 87.7%, 10.83 81.2%, 4:3 75.0%)만큼 줄여 작성 |
 | headlineStyle | noun(명사형, 기본), polite(존댓말) |
 | marker | 마커 도형 모양. square(기본), bar, triangle |
-| pointLabel | Key Point 밴드의 라벨 문구 (기본 "Key Point"). 슬라이드별 지정도 가능 |
+| pointLabel | Key Point 밴드의 덱 단위 라벨. 사용자가 덱 전체에 라벨 1개를 지정한 경우에만 기재. 미지정(기본) 덱의 밴드는 슬라이드 pointLabel 이 없으면 틴트 상자 형식으로 조판 |
 | labels | 템플릿과 블록의 고정 라벨, 언어 태그, 추가 주석 토큰을 덱 단위로 지정하는 객체. 형식은 {템플릿 또는 블록: {슬롯: 라벨}} (아래 meta.labels 절). 생략하면 한국어 기본 라벨 |
 | lineBreak | 줄바꿈 단위. word(단어 단위, 기본), char(글자 단위). finalize.py 가 모든 문단 속성(eaLnBrk, latinLnBrk)에 기록 |
 | footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. number(기본)는 라벨이 없는 주석에 common.footnoteLabel 을 붙임 (작성자가 주석 앞에 쓴 "출처:", "산식:" 등의 라벨은 유지). number 에서 같은 위치의 주석이 2개 이상이고 라벨이 같거나 모두 없으면 첫 줄 라벨 뒤에 1) 부터 번호를 붙이고 2) 이하는 1) 의 시작 위치에 정렬 (같은 출처 표기로 시작하는 주석은 번호 없이 세미콜론으로 구분). number 에서 라벨이 서로 다른 주석은 번호 없이 줄마다 각자의 라벨을 붙임. number 의 출처 행은 번호 없이 작성자가 쓴 출처 표기(없으면 common.sourceLabel)로 시작. mark 는 라벨 없는 주석 앞에 ※ 를 붙임. mark 의 출처 행과 라벨("출처:", "자료:", "산식:" 등)로 시작하는 주석은 ※ 없이 시작 (작성자가 직접 쓴 ※ 는 유지. footnoteSourceMark 참고) |
@@ -37,7 +37,7 @@
 - 슬라이드마다 반복하던 라벨 슬롯 값(표지 label, 간트 머리, 모듈 개요 행 라벨 등)을 덱 단위로 한 번 지정
 - 해석 순서는 슬라이드 슬롯 값, meta.labels, 기본값(`assets/labels.json`)
 - 키는 템플릿 또는 composite 블록 이름과 슬롯 이름 (전체 키, 기본값, 영문 예시는 `references/templates.md` 라벨 슬롯 절)
-    + common.pointLabel: Key Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선)
+    + common.pointLabel: Key Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선. 기본값인 빈 문자열은 틴트 상자 형식으로 조판)
     + language.latin, language.east_asia: PPTX 글자의 언어 태그 (기본 en-US, 한글이 든 run 은 ko-KR)
     + notation.source: 주석 줄로 인식할 토큰 추가 목록 (기본 토큰 ※, 출처:, 자료:, Source:, Note: 는 유지)
 - 일부 키만 지정 가능 (생략한 키는 기본값)
@@ -79,6 +79,7 @@
 | footnotes | 각주 배열. 출처 행 위에 배치 (출처 행이 없으면 마지막 줄을 출처 행 위치에 배치). 빌드가 `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙임. 항목 앞에 직접 쓴 ※, *, 번호는 덱 기준 표기로 교체. 내용 유형 라벨("출처:", "산식:" 등)은 유지 (※ 표기 덱에서 라벨 앞에 직접 쓴 ※ 도 유지) |
 | footnoteLabel, sourceLabel | 이 슬라이드의 라벨 없는 주석(번호 표기 덱)과 출처 표기 없는 출처 행(두 표기 공통)에 붙는 라벨. `meta.labels.common` 보다 우선 |
 | footnoteInline | true 이면 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀 (예: 번호 표기 덱의 주석 "Note: 1) A 2) B", 출처 행 "출처: A; B"). ※ 표기 덱의 주석은 줄마다 ※ 를 붙이는 형태 유지. 기본 false. 지정 조건은 `references/writing-rules.md` 주석 절. lint 와 build 가 지정 슬라이드 목록을 INFO 로 출력 |
+| pointLabel | 이 슬라이드 Key Point 밴드의 전용 라벨. 라벨 칸 형식 덱에서만 기재 (작성 원칙은 `references/writing-rules.md` Key Point 라벨 절). 생략하면 meta.pointLabel 사용. 라벨이 없으면 틴트 상자 형식 |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
 | rfpTasks, moduleTasks, evalItems | 대응 ID 목록. lint 가 전수 대응과 배점 귀속을 검사 |
 | allowCount | RFP 가 지정한 개수를 헤드라인에 쓸 때 true (숫자 선언 검사 예외) |

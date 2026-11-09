@@ -83,6 +83,22 @@
 - Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
+- Write the Key Point band sentence long enough to fill at least half of one line of the inner band width (in the centered tint box, a short sentence leaves large empty space on both sides and looks bare)
+    + (Recommended length) 70-80% or more of one line of the inner band width
+    + (How to lengthen) Make the subject, criterion, timing and owner the sentence carries more specific
+    + (What not to add) Do not lengthen the sentence with modifiers, evaluative words or connectives
+    + (Sentence structure) Write one simple sentence with one predicate within one line of the band
+- When a short band has nothing to add, delete the band or move the content to `footnotes`
+
+## Key Point labels
+
+- Write labels only in a deck that sets the Key Point band in the label cell format (the default tint box format has no label)
+- A label is a short noun phrase that tells the reader what kind of information the band sentence is
+- Do not build a label from an evaluative word that declares importance
+- When the RFP, the manuscript or the client form has an expression with the same role, use that expression first
+- Keep the label length within one line of the label cell
+- Use the same label for the same kind of content within a deck
+- Set the deck-level label (`meta.pointLabel`) only when the user specifies one label for the whole deck
 
 ## Notation
 
