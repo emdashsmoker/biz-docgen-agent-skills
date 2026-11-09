@@ -635,9 +635,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Use the theme color (navy #1F3864, mono #2B2B2B, the user-specified base color) only for label cells, chevrons, conclusion bands, markers and emphasized figures
     + The mono theme sets tints and secondary gray text in achromatic colors too
     + Body panels and table bodies use a white background with a 0.5pt gray border
-    + Use a tint fill to mark emphasized targets and content attributes
+    + Use a tint fill for marks grounded in the content (emphasized targets, elements that differ in a content attribute and the like)
     + (Emphasized targets) Apply a tint fill together with bold text to the result column of a flow, goal boxes, summary rows and the like (a tinted box with regular-weight text is taken as inactive next to white boxes)
     + (Content attributes) Apply a tint fill to elements that differ in a content attribute such as the performer or the progress state (examples: system work in a flowchart, the current point in a timeline)
+    + (Alternating fills) Do not fill table rows, table columns or side-by-side shapes in alternating colors (a fill that follows the layout order shows no difference in content)
     + Emphasis red #C0392B is used in one place per slide
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
@@ -660,6 +661,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Inner margins are 0.07 inch for text boxes, 0.045 inch left and right for theme color label cells, 0.05 inch left and right and 0.03 inch top and bottom for table cells
 - (Tables)
     + Table cell fills use only the theme color, tints, gray and white
+    + Use a table cell tint for purposes grounded in the cell content, such as emphasis, an inactive mark or a distinction (alternating fills follow the color item)
     + Set white for empty cells
     + Capability comparisons use Harvey balls with the ● ◐ ○ symbols in table cells
     + The circle color of Harvey balls is the body text color

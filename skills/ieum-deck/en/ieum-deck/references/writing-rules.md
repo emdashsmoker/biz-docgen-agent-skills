@@ -238,7 +238,7 @@
 - A column that is hard to judge is centered
 - The cells of a comparison line are all single-item or all multi-item (when the item counts are hard to match, bullets in that line follow the comparison line condition above)
 - Vertical alignment is centered for the whole table
-- Cell fills use only the theme color, tint, gray and white
+- Cell fills use only the theme color, tint, gray and white (usage criteria in the color item of the SKILL.md design system)
 - Set white even on cells without a fill
 - With many rows, split the table or reduce the row height so it ends within the body area
 - Merge cells repeating the same value only when the higher category actually continues
