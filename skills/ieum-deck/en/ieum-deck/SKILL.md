@@ -387,11 +387,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Work scale uses the unit that fits the Task's method (survey scale, design scope, application targets and so on)
 - Section titles use the format `[Module 1] 모듈명` (the square brackets keep it from colliding with the period of the section number)
 - Markers use the format `Task 1-2. Task명`, which includes the module number (`Task 2.` without the module number cannot be told apart from the Tasks of other modules)
-- On a slide that bundles several Tasks, the marker pairs each Task number with its Task name and joins the pairs with a middle dot that has a space on each side (` · `) (example: `Task 1-1 Market and technology trend analysis · Task 1-2 Policy and law analysis`)
-    + A form that lists only the numbers with commas (`Task 1-1, 1-2.`) does not show which number belongs to which Task name
-    + When the marker exceeds the length limit (30 Korean-equivalent characters), use a range form only for a bundle with consecutive numbers (example: `Task 1-1~1-2. Trends and policy analysis`)
-    + The Task name in a range form joins the key words of the bundled Tasks with "and" (commas and "and" for 3 or more)
-    + When a bundle with non-consecutive numbers exceeds the limit, split the slide by Task
+- The marker of a slide that bundles several Tasks follows the marker length limit (30 Korean-equivalent characters) and whether the Task numbers are consecutive (a form that lists only numbers with commas, such as `Task 1-1, 1-2.`, cannot show which number belongs to which Task name)
+    + (Within the limit) Pair each Task number with its Task name and join the pairs with a middle dot that has a space on each side (` · `) (example: `Task 1-1 Market trends · Task 1-2 Policy review`)
+    + (Over the limit, consecutive numbers) After the number range, join one phrase per Task, each with its own target and action, using "and" (example: `Task 1-3~1-4. Ecosystem diagnosis and awareness survey`. Commas and "and" for 3 or more)
+    + (Over the limit, non-consecutive numbers) Split the slide by Task
 - References to a Task in body text also use the `Task 1-2` format
 - Headlines do not repeat the numbers in the section title and the marker (execution plan slide headlines section of `references/headline-patterns.md`)
 - Module items in the contents and dividers also use the format `[Module 1] 모듈명`
@@ -636,8 +635,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Use the theme color (navy #1F3864, mono #2B2B2B, the user-specified base color) only for label cells, chevrons, conclusion bands, markers and emphasized figures
     + The mono theme sets tints and secondary gray text in achromatic colors too
     + Body panels and table bodies use a white background with a 0.5pt gray border
-    + Use a tint fill to set apart some boxes within a group (the current point, a key element, an element of a different kind)
-    + In a layout whose columns are joined by arrows, set the column boxes on a white background (a column whose boxes are all tinted reads as inactive next to columns of white boxes)
+    + (Fill for distinction) Apply a tint fill to some boxes of a different kind within a group (the current point, a summary row, work done by a system and the like)
+    + (Fill for emphasis) Mark emphasized targets such as the result column of a flow and goal boxes with a white background, theme-color label cells and arrows (a tinted box next to white boxes is taken as inactive)
     + Emphasis red #C0392B is used in one place per slide
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
@@ -856,7 +855,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Typesetting) Layout variety, bullet overuse, empty table cells, volume of replaced text, remaining slot markers
 - (Structural check) Checks of `scripts/check_layout.py` (remaining WARNs are a failure)
     + (Overflow) Estimated text overflow, estimated mid-word line breaks and line breaks inside a word in text boxes and table cells, tables leaving the slide
-    + (Overflow estimate basis) Chevrons and home plates use the width of the text area without the points. Word-unit decks use the larger line count of the LibreOffice rules and PowerPoint line breaks at spaces
+    + (Overflow estimate basis) The text width of chevrons and home plates is the text area width without the points, and the line count of word-unit decks is the larger of the LibreOffice rules and PowerPoint line breaks at spaces
     + (Overlap) Overlap between text boxes (over 20% WARN, over 30% or over a picture FAIL), overlap among tables, charts, pictures and filled boxes (over 15% FAIL, over 25% between filled boxes FAIL), overlap of icons and text (FAIL), overlap of a table and text (FAIL when grown table rows cover footnotes, source rows and similar text)
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
@@ -864,10 +863,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
-- After the contact sheets, re-check the slides below one by one on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_single 120` (contact sheets shrink text cut at shape edges, chart text and misaligned line ends below legible size)
-    + (Chart slides) Text overlaps inside the chart. Adjust label overlaps in the chart label resolution order of the design system (rebuild and re-check after adjusting)
-    + (First-impression slides) Slides that show the overall setup of the project, such as the cover, background and purpose, goals and scope, strategy, process and schedule. Check text cut inside chevrons and label cells, connector ends and the space between the body and the footnotes
-    + (Freely composed slides) Slides on the free template and slides adjusted outside the rules under visual adjustment discretion. Code checks cannot judge the relations between shapes or the visual balance
+- (Single PNG re-check) After the contact sheets, re-check the slides below one by one on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_single 120` (the reduced size of a contact sheet is too small to read text cut at shape edges and chart text)
+    + (Chart slides) Overlapping chart labels
+    + (First-impression slides) Text cut inside chevrons and label cells on the cover, background and purpose, goals and scope, strategy, process and schedule slides
+    + (Freely composed slides) Shape alignment and connector ends on free template slides and slides adjusted outside the rules (outside the reach of code checks)
+- Adjust chart label overlaps in the chart label resolution order of the design system (rebuild and re-check after adjusting)
 - List the viewed contact sheet and single PNG file names in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
@@ -880,7 +880,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### Visual check items
 
 - Check defects that code checks miss in the PNG of every slide
-- First-impression slides (cover, background and purpose, strategy, process and so on) come first and get a detailed check
+- First-impression slides (the single PNG re-check targets) come first and get a detailed check
     + Do the notes of the background and purpose slide start with the `meta.footnoteStyle` mark?
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?

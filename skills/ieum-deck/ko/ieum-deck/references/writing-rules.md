@@ -161,7 +161,7 @@
 - 대상 지칭어 규칙은 `references/headline-patterns.md` 대상 지칭어 절을 따름
 - 모듈 절 제목은 `[Module 1] 모듈명` 형식 (절 번호 뒤 마침표와 겹침 방지)
 - Task 마커는 모듈 번호를 포함한 `Task 1-2. Task명` 형식
-- Task 여러 건을 묶은 마커는 Task 마다 번호와 Task명을 짝지어 ` · ` 로 연결 (범위 표기 조건은 SKILL.md Task 슬라이드 절)
+- Task 여러 건을 묶은 마커는 SKILL.md Task 슬라이드 절의 표기를 따름
 - 본문에서 Task 를 가리킬 때도 `Task 1-2` 형식으로 표기
 - 조직도와 목차의 모듈 항목도 `[Module 1] 모듈명` 형식
 

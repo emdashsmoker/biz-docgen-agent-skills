@@ -217,7 +217,7 @@ def wrap_paragraph(runs, width_in, word_only=False):
     """Line count, width (inches) of the last line and breaks inside words [(word, characters kept on the upper line)] of a paragraph at width_in. Same calculation as the build's estimateLines
     Lines break at spaces, and a word caught at the line end is split by the LibreOffice rule (break_in_word). A word wider than the line breaks in the middle (such words are left out of the list)
     The space and the script boundary gap are added only when a word joins the previous word on the same line (a trailing space and gap do not count toward the line width)
-    With word_only, a word caught at the line end moves to the next line whole (the rule by which PowerPoint breaks a word-unit deck only at spaces)"""
+    With word_only, a word caught at the line end moves whole to the next line (the PowerPoint line break rule for word-unit decks)"""
     ref = max(pt for _, pt, _ in runs)
     cap = width_in * 72 / ref * LINE_SAFETY
     cur, n, last, splits = 0.0, 1, WEAK, []

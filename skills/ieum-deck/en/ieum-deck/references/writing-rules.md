@@ -163,7 +163,7 @@
 - The subject term rules follow the subject term section of `references/headline-patterns.md`
 - Module section titles use the `[Module 1] 모듈명` format (to avoid clashing with the period after the section number)
 - Task markers use the `Task 1-2. Task명` format, which includes the module number
-- A marker that bundles several Tasks pairs each Task number with its Task name and joins the pairs with ` · ` (range form conditions in the SKILL.md Task slides section)
+- A marker that bundles several Tasks follows the form in the SKILL.md Task slides section
 - References to a Task in body text also use the `Task 1-2` format
 - Module items in organization charts and the table of contents also use the `[Module 1] 모듈명` format
 

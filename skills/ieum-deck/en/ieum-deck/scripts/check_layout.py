@@ -142,8 +142,8 @@ def hanging_runs(runs):
 
 def pointed_text_cut(sh):
     """Width (inches) by which the text area of a chevron or home plate is narrower than the shape. 0 for other shapes
-    Why: in the OOXML shape definitions (presetShapeDefinitions) the text area of a chevron lies between its two points (the width minus two point widths),
-         and that of a home plate is narrower by half a point width. Counting lines at the shape width estimates 2 lines for chevron text that runs to 3 lines and overflows in PowerPoint"""
+    Why: in the OOXML shape definitions (presetShapeDefinitions) the text area of a chevron is the width minus two point widths, and that of a home plate is the width minus half a point width
+         Counting lines at the shape width estimates 2 lines for chevron text that runs to 3 lines and overflows in PowerPoint"""
     pg = sh._element.find(".//" + NSA + "prstGeom")
     k = POINTED_TEXT_CUT.get(pg.get("prst")) if pg is not None else None
     if k is None: return 0.0
@@ -155,7 +155,7 @@ def pointed_text_cut(sh):
 
 def overflow_estimate(sh, ppt_words=False):
     """Compares the estimated needed height of a text box with the box height. Returns (need_in, avail_in, wrap)
-    With ppt_words, the line count of a paragraph is the larger of the LibreOffice rules and PowerPoint word-unit line breaks
+    With ppt_words, the line count of a paragraph is the larger of the LibreOffice rules and PowerPoint line breaks at spaces
     Why: PowerPoint breaks a word-unit deck (meta.lineBreak=word) only at spaces. The LibreOffice rules split '인재·윤리·거버넌스' after a middle dot and count fewer lines"""
     tf = sh.text_frame
     bp = tf._txBody.find(NSA + "bodyPr")
@@ -531,8 +531,8 @@ def main():
             if not sh.has_table: continue
             top = sh.top / 914400 if sh.top else 0
             bottom = top + (sh.height / 914400 if sh.height else 0)
-            # The table height already includes rows grown to fit the text, written by the soffice re-save in finalize (check_layout runs after finalize)
-            # Text boxes that start inside the table area (footnotes, source rows, Key Point bands and the like covered by a grown table). The footnote area is outside the overlap checks above, so it is checked here
+            # The table height includes the row growth written by the soffice re-save in finalize (check_layout runs after finalize)
+            # Detect text boxes that start inside the table area (footnotes, source rows, Key Point bands and the like covered by a grown table). The overlap checks above exclude the footnote area
             left, right = inch(sh.left), inch(sh.left + sh.width)
             covered = [o for o in slide.shapes if o is not sh and o.has_text_frame and o.text_frame.text.strip() and o.top is not None
                        and top + 0.02 <= inch(o.top) < bottom - 0.02 and min(right, inch(o.left + o.width)) - max(left, inch(o.left)) > 0.05]

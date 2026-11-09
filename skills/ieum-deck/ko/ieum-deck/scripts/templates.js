@@ -1190,8 +1190,8 @@ function compare(ctx, slide, sb) {
 }
 /** 로드맵: 전략 행 × 연차 열. slots: {periods:[], lanes:[{title, tasks:[{text, from, to}]}], note} */
 function roadmap(ctx, slide, sb0) {
-  // note 슬롯은 로드맵 전체를 보충하므로 슬라이드 각주와 보충 대상이 같음. 각주 영역의 첫 항목으로 옮겨 주석을 한 곳에 모음
-  // Why: 로드맵 아래 가운데 주석과 하단 각주가 같은 표기(※ 등)로 두 곳에 나뉘어 보임
+  // note 슬롯은 각주 영역의 첫 항목으로 조판 (로드맵 전체를 보충하는 주석이므로 슬라이드 각주와 보충 대상이 동일)
+  // Why: 로드맵 아래 가운데 주석과 하단 각주에 같은 표기(※ 등)가 따로 표시되는 중복 방지
   const note0 = (sb0.slots || {}).note;
   const sb = note0 ? { ...sb0, footnotes: [].concat(note0, sb0.footnotes || []) } : sb0;
   const s = sb.slots || {}, b = body(ctx, sb), S = ctx.S;

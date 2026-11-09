@@ -1191,8 +1191,8 @@ function compare(ctx, slide, sb) {
 }
 /** Roadmap: strategy rows × year columns. slots: {periods:[], lanes:[{title, tasks:[{text, from, to}]}], note} */
 function roadmap(ctx, slide, sb0) {
-  // The note slot supplements the whole roadmap, so it has the same target as the slide footnotes. Move it to the first item of the footnote area to keep the notes in one place
-  // Why: a centered note under the roadmap and the footnotes at the bottom showed the same mark (※ and the like) in two places
+  // The note slot is set as the first item of the footnote area (a note on the whole roadmap has the same target as the slide footnotes)
+  // Why: avoids the same mark (※ and the like) showing separately in a centered note under the roadmap and in the footnotes at the bottom
   const note0 = (sb0.slots || {}).note;
   const sb = note0 ? { ...sb0, footnotes: [].concat(note0, sb0.footnotes || []) } : sb0;
   const s = sb.slots || {}, b = body(ctx, sb), S = ctx.S;
