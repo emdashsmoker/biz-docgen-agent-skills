@@ -93,7 +93,6 @@
 - Keep the label length within one line of the label cell
 - Use the same label for the same kind of content within a deck
 - Set the deck-level label (`meta.pointLabel`) only when the user specifies one label for the whole deck
-- List the label of each slide in the completion report for user review
 
 ## Notation
 
