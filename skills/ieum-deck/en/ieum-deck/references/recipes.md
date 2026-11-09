@@ -90,7 +90,7 @@
 | `table` | Row and column comparison | `head[]`, `rows[][]`. Cell values are strings, item arrays, or ● ◐ ○ (Harvey balls). Column widths are computed automatically. Column alignment is set with `align[]`, and bullet lines for single-item cells with `bulletRows[]`, `bulletCols[]` and `labelCols[]` (`references/templates.md` table typesetting) |
 | `bullets` | Item list | `head` (optional), `items[]` |
 | `text` | One-sentence message | `text`, `style` (navy, tint, box, plain. Default box) |
-| `stack` | Vertical stack of titled boxes | `items[{head, items or text, headFill, fill}]`. The value of `headFill` and `fill` is tint |
+| `stack` | Vertical stack of titled boxes | `items[{head, items or text, headFill, fill}]`. The value of `headFill` and `fill` is tint (usage criteria in the color item of the SKILL.md design system) |
 | `summary` | Synthesis box (a shape holding a conclusion strip and response items inside one border) | `lead` (one-sentence conclusion), `items[{head, items or text}]` |
 | `labeled` | Rows with a label on the left and content on the right | `rows[{label, items or text}]`, `labelW` (ratio of the cell width) |
 | `grid` | Label column and cell grid | `head[]` (optional), `rows[{label, cells[], sz}]`, `labelW`, `style` (hierarchy typesets a hierarchy chart). Cell values are strings or `{text or items, fill, span, bold, color, shape, numbered}`. The `fill` value is navy or tint. The `shape` value db is a storage cylinder. The `color` value is navy. If `numbered` is true, the leading number of each item (1-1. etc.) replaces the bullet. `sz` is the font size (pt) of rows given a hierarchy. If `flow` is true, right arrows between cell columns (showing the gap from current state to target) |

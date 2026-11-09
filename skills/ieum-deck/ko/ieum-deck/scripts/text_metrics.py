@@ -211,10 +211,11 @@ def break_in_word(word, prev, x, cap, para_end):
 # Why 어절 단위 줄바꿈: 폭 ÷ 줄 폭 올림은 줄 끝에 남는 빈 공간을 세지 않아 줄 수를 적게 셈 (넘침을 놓치는 방향)
 #     위 렌더의 글 상자 문단 7,337개에서 렌더와 줄 수가 다른 문단: 올림 122개(모두 과소), 어절 단위 41개
 #     (41개는 마름모, 셰브론, 타원의 안쪽 글 영역 18개와 문구 폭이 줄 폭의 99.5% 이상인 경계 23개로 빌드 추정과 같은 차이)
-def wrap_paragraph(runs, width_in):
+def wrap_paragraph(runs, width_in, word_only=False):
     """width_in 폭에서 문단이 차지하는 줄 수, 마지막 줄 폭(인치), 어절 안 줄바꿈 목록 [(어절, 윗줄에 남는 글자 수)]. 빌드의 estimateLines 와 같은 계산
     공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(break_in_word)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔 (이 어절은 목록에서 제외)
-    앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄 끝 공백과 간격은 줄 폭에 들지 않음)"""
+    앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄 끝 공백과 간격은 줄 폭에 들지 않음)
+    word_only 가 참이면 줄 끝에 걸린 어절을 나누지 않고 다음 줄로 넘김 (어절 단위 덱을 PowerPoint 가 공백에서만 나누는 규칙)"""
     ref = max(pt for _, pt, _ in runs)
     cap = width_in * 72 / ref * LINE_SAFETY
     cur, n, last, splits = 0.0, 1, WEAK, []
@@ -224,7 +225,7 @@ def wrap_paragraph(runs, width_in):
         gap = GAP_EM if first and last and first != last else 0
         need = em + (space + gap if cur > 0 else 0)
         if cur > 0 and cur + need > cap:
-            cut, scripts = break_in_word(word, last, cur + space, cap, i == len(words) - 1)
+            cut, scripts = (0, None) if word_only else break_in_word(word, last, cur + space, cap, i == len(words) - 1)
             if cut == len(word):  # 문단 끝 문장부호가 줄 밖에 걸쳐 줄이 늘지 않음
                 cur += need
                 last = end
@@ -244,7 +245,7 @@ def wrap_paragraph(runs, width_in):
     return n, cur * ref / 72, splits
 
 
-def wrap_lines(runs, width_in):
+def wrap_lines(runs, width_in, word_only=False):
     """width_in 폭에서 문단이 차지하는 줄 수와 마지막 줄 폭(인치) (wrap_paragraph 참고)"""
-    n, last_w, _ = wrap_paragraph(runs, width_in)
+    n, last_w, _ = wrap_paragraph(runs, width_in, word_only)
     return n, last_w

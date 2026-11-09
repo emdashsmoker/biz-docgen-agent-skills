@@ -213,10 +213,11 @@ def break_in_word(word, prev, x, cap, para_end):
 # Why word wrapping: ceil(width ÷ line width) ignores the space left at line ends, so it counts too few lines (the direction that misses overflow)
 #     Paragraphs whose line count differs from the render among the 7,337 text box paragraphs above: ceil 122 (all under), word wrapping 41
 #     (the 41 are 18 inner text areas of diamonds, chevrons and ellipses and 23 edge cases with text at 99.5% of the line width or more, the same differences as the build estimate)
-def wrap_paragraph(runs, width_in):
+def wrap_paragraph(runs, width_in, word_only=False):
     """Line count, width (inches) of the last line and breaks inside words [(word, characters kept on the upper line)] of a paragraph at width_in. Same calculation as the build's estimateLines
     Lines break at spaces, and a word caught at the line end is split by the LibreOffice rule (break_in_word). A word wider than the line breaks in the middle (such words are left out of the list)
-    The space and the script boundary gap are added only when a word joins the previous word on the same line (a trailing space and gap do not count toward the line width)"""
+    The space and the script boundary gap are added only when a word joins the previous word on the same line (a trailing space and gap do not count toward the line width)
+    With word_only, a word caught at the line end moves to the next line whole (the rule by which PowerPoint breaks a word-unit deck only at spaces)"""
     ref = max(pt for _, pt, _ in runs)
     cap = width_in * 72 / ref * LINE_SAFETY
     cur, n, last, splits = 0.0, 1, WEAK, []
@@ -226,7 +227,7 @@ def wrap_paragraph(runs, width_in):
         gap = GAP_EM if first and last and first != last else 0
         need = em + (space + gap if cur > 0 else 0)
         if cur > 0 and cur + need > cap:
-            cut, scripts = break_in_word(word, last, cur + space, cap, i == len(words) - 1)
+            cut, scripts = (0, None) if word_only else break_in_word(word, last, cur + space, cap, i == len(words) - 1)
             if cut == len(word):  # A punctuation mark at the paragraph end hangs past the margin, so no line is added
                 cur += need
                 last = end
@@ -246,7 +247,7 @@ def wrap_paragraph(runs, width_in):
     return n, cur * ref / 72, splits
 
 
-def wrap_lines(runs, width_in):
+def wrap_lines(runs, width_in, word_only=False):
     """Number of lines a paragraph takes at width_in and the width (inches) of its last line (see wrap_paragraph)"""
-    n, last_w, _ = wrap_paragraph(runs, width_in)
+    n, last_w, _ = wrap_paragraph(runs, width_in, word_only)
     return n, last_w
