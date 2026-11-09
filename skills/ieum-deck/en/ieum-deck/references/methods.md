@@ -51,7 +51,7 @@
 - A module opens with a module overview slide
 - The module overview columns are Tasks, and the rows are process, data used and outputs
 - The output row holds the official output names
-- Each Task specifies the data used, the survey scale and the outputs
+- Each Task specifies the data used, the work scale (survey scale, design scope, application targets and so on) and the outputs
 - Each Task gets at least 1 measured sample
 - The sample type is one of a real data table, a real tool screen (NTIS, KOSIS, patent DB, corporate information system) or a case summary
 - Mark the sample as a draft with ※

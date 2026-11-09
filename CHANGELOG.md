@@ -27,6 +27,19 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-09
+
+### ieum-deck
+- Changed the headline patterns of module overview, Task bundle and Task slides from patterns that start with the module or Task number to patterns that start with the module name or the work performed (#116)
+- Changed the Task number in markers and body text from the Task 2 format to the Task 1-2 format that includes the module number (#116)
+- Changed the base Task headline pattern from a survey-style pattern to a method and result pattern that fits any way of working (#116)
+- Changed the Task slide items and the per-Task specification from survey items to work target, work scale and work method items (#116)
+
+* 모듈 개요, Task 묶음, Task 슬라이드의 헤드라인 문형을 번호로 시작하는 문형에서 모듈명이나 수행 내용으로 시작하는 문형으로 변경 (#116)
+* 마커와 본문의 Task 번호 표기를 Task 2 형식에서 모듈 번호를 포함한 Task 1-2 형식으로 변경 (#116)
+* Task 헤드라인 기본 문형을 조사형 문형에서 모든 수행 방식에 맞는 수행 방식과 결과 문형으로 변경 (#116)
+* Task 슬라이드 항목과 Task 별 특정 항목을 조사 항목에서 수행 대상, 수행 규모, 수행 방법 항목으로 변경 (#116)
+
 ## 2026-11-08
 
 ### ieum-deck

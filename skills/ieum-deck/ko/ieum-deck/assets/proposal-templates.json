@@ -429,7 +429,7 @@
    "secNo": "1.",
    "section": "[Module 1] 현황 진단",
    "chapter": "Ⅲ. 사업수행계획",
-   "headline": "Module 1은 평가제도 진단을 목적으로 4개의 단계별 프로세스로 추진",
+   "headline": "현황 진단은 평가제도 운영 실태 파악을 목적으로 4개의 단계별 프로세스로 추진",
    "marker": "[Module 1] 현황 진단 개요",
    "slots": {
     "tasks": [
@@ -515,8 +515,8 @@
    "secNo": "1.",
    "section": "[Module 1] 현황 진단",
    "chapter": "Ⅲ. 사업수행계획",
-   "headline": "Task 2는 부서별 주요 구성원을 대상으로 대면 면담을 실시하여 개선 과제를 도출",
-   "marker": "Task 2. 이해관계자 면담",
+   "headline": "부서별 주요 구성원을 대상으로 대면 면담을 실시하여 개선 과제를 도출",
+   "marker": "Task 1-2. 이해관계자 면담",
    "slots": {
     "rows": [
      [
@@ -641,7 +641,7 @@
    "secNo": "2.",
    "section": "[Module 2] 지표 개발",
    "chapter": "Ⅲ. 사업수행계획",
-   "headline": "Module 2는 지표 후보 도출부터 정의서 작성까지 3개 Task로 수행",
+   "headline": "지표 개발은 지표 후보 도출부터 정의서 작성까지 3개 Task로 수행",
    "marker": "[Module 2] 지표 개발 개요",
    "moduleTasks": [
     "M2-T1",
@@ -710,12 +710,12 @@
    "secNo": "2.",
    "section": "[Module 2] 지표 개발",
    "chapter": "Ⅲ. 사업수행계획",
-   "headline": "Module 2는 지표 후보 도출부터 정의서 작성까지 3개 Task를 연계하여 수행",
+   "headline": "지표 개발은 지표 후보 도출부터 정의서 작성까지 3개 Task를 연계하여 수행",
    "marker": "Task별 수행 방안",
    "slots": {
     "tasks": [
      {
-      "id": "Task 1",
+      "id": "Task 2-1",
       "title": "지표 후보 도출",
       "items": [
        "활용자료: 제도 분석서, 면담 결과서",
@@ -724,7 +724,7 @@
       ]
      },
      {
-      "id": "Task 2",
+      "id": "Task 2-2",
       "title": "타당성 검증",
       "items": [
        "활용자료: 지표 후보 pool, 전문가 명단",
@@ -733,7 +733,7 @@
       ]
      },
      {
-      "id": "Task 3",
+      "id": "Task 2-3",
       "title": "지표 정의서 작성",
       "items": [
        "활용자료: 검증 결과서, 기관 평가 규정",
@@ -793,7 +793,7 @@
      ]
     }
    ],
-   "point": "도출한 지표 후보는 Task 2 델파이 조사에서 타당성을 검증",
+   "point": "도출한 지표 후보는 Task 2-2 델파이 조사에서 타당성을 검증",
    "moduleTasks": [
     "M2-T1"
    ],
@@ -1005,7 +1005,7 @@
    "secNo": "3.",
    "section": "[Module 3] 제도 개선",
    "chapter": "Ⅲ. 사업수행계획",
-   "headline": "Module 3은 시범 적용에서 환류 체계 설계까지 3개 Task로 수행",
+   "headline": "제도 개선은 시범 적용에서 환류 체계 설계까지 3개 Task로 수행",
    "marker": "[Module 3] 제도 개선 개요",
    "moduleTasks": [
     "M3-T1",

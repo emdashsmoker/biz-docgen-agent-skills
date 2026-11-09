@@ -31,9 +31,19 @@
 - Exceptions are form names set by the RFP (과업지시서, 과업 세부내용, etc.) and structural labels such as VISION and SCOPE
 - An engagement (과업) label left in a non-proposal output is a lint WARN
 
+## Execution plan slide headlines
+
+- Headlines do not repeat the module number (Module 1) or the Task number (Task 1-2) shown in the section title and the marker
+- (Module-level headlines) Module overview slides and Task bundle slides take the module name as the subject (e.g. "대내외 환경분석은 ...")
+- (Task-level headlines) Task slides describe how the Task is done and what it yields (Task pattern in the base patterns section)
+
 ## Base patterns
 
-- (Task) Task {{N}}은 {{대상}}을 대상으로 {{방법}}을 실시하여 {{산출물}} 도출
+- (Task) {{수행 방식}}으로 {{결과}} {{서술어}}
+    + (How) The actual method of the Task, which differs per Task (survey, analysis, comparison, design, measurement, verification, consultation, pilot operation and so on)
+    + (Result) The deliverable or judgment of the Task (choose the predicate to fit the result, such as 도출, 확정, 수립, 설계, 제시)
+    + (Examples) "업무별 처리 시간 측정으로 자동화 대상 업무 확정", "산식 및 측정 주기 설계로 지표 정의서 작성", "시범 부서 적용으로 지표 측정 절차 보완"
+    + (Topic patterns first) When a topic pattern fits the Task content, use the topic pattern
 - (Analysis result) {{대상}}은 {{발견}}
 - (Implication) {{개선 대상}}의 {{개선 방향}}이 필요
 - (SWOT synthesis) 강점, 약점, 기회, 위협 요인을 취합하여 {{N}}개 전략 방향 도출
@@ -86,7 +96,7 @@
 
 | Group | Topic | Pattern | Layout |
 |---|---|---|---|
-| Module overview | Module overview | Module {{N}}은 {{목적}}을 목적으로 {{M}}개 단계별 프로세스로 추진 | module_overview |
+| Module overview | Module overview | {{모듈명}}은 {{목적}}을 목적으로 {{M}}개 단계별 프로세스로 추진 | module_overview |
 | Current state diagnosis | Issue structuring | 환경분석 및 전문가 검토 결과를 이슈 트리로 정리하여 {{중점 분야}}를 확정 | issue_tree |
 | Current state diagnosis | Interview design | 부서별 주요 구성원 대상 대면 면담으로 {{개선 과제}}를 도출 | interview_plan |
 | Current state diagnosis | Demand survey | {{조사 대상}} 대상 수요조사로 분야별 {{요구사항}}을 도출 | survey_design |

@@ -75,7 +75,7 @@
    "slots": {"no": "Ⅱ", "title": "Project Execution"}},
   {"id": "S13", "template": "composite", "secNo": "2.", "section": "[Module 2] Vision and Task Design", "chapter": "Ⅱ. Project Execution",
    "headline": "Recommending an adoption model by scoring three options on the same criteria",
-   "marker": "Task 3. Adoption model comparison and recommendation",
+   "marker": "Task 2-3. Adoption model comparison and recommendation",
    "pointLabel": "Direction",
    "slots": {
     "recipe": "option_evaluation",
@@ -107,7 +107,7 @@
    "slots": {"no": "Ⅱ", "title": "Project Execution"}},
   {"id": "S15", "template": "composite", "secNo": "2.", "section": "[Module 3] Pilot Service and Safe Use", "chapter": "Ⅱ. Project Execution",
    "headline": "Pilot workflow, data and functions designed with complaint replies as the example",
-   "marker": "Task 1. Pilot service design",
+   "marker": "Task 3-1. Pilot service design",
    "slots": {
     "recipe": "process_redesign",
     "rows": [{"h": 1, "cols": [2.5, 1]}, {"h": 1, "cols": [2.5, 1]}],

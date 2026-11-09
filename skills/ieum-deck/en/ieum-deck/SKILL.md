@@ -376,9 +376,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Every Task appears in `moduleTasks` of at least one slide (non-appearance is lint FAIL)
 - lint names Tasks without slides as missing numbers (for example T2 when only T1, T3 and T4 have slides)
 - Number Tasks in a module consecutively from T1 (gaps are lint WARN)
-- Slide items are survey target, data source, survey scale, analysis method, deliverable and one measured sample
+- Slide items are work target, data source, work scale, work method, deliverable and one measured sample
+    + Item names follow how the Task is done (a survey Task uses survey target, survey scale and analysis method)
+    + Work scale uses the unit that fits the Task's method (survey scale, design scope, application targets and so on)
 - Section titles use the format `[Module 1] 모듈명` (the square brackets keep it from colliding with the period of the section number)
-- Markers use the format `Task 2. Task명`
+- Markers use the format `Task 1-2. Task명`, which includes the module number (`Task 2.` without the module number cannot be told apart from the Tasks of other modules)
+- References to a Task in body text also use the `Task 1-2` format
+- Headlines do not repeat the numbers in the section title and the marker (execution plan slide headlines section of `references/headline-patterns.md`)
 - Module items in the contents and dividers also use the format `[Module 1] 모듈명`
 
 ### Task slide layout
@@ -408,7 +412,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Structure and system diagnosis) value_chain, industry_chain, alignment_pyramid, logic_model, business_model, swot, env_to_strategy
     + (Tasks and definition sheets) task_definition, project_breakdown
 - For content not in the examples, choose a recipe with a matching purpose in `references/recipes.md`
-- The parametric `task` is a layout that holds the Task design table (survey target, data source, survey scale, analysis method, deliverable) and a measured sample on one slide
+- The parametric `task` is a layout that holds the Task design table (work target, data source, work scale, work method, deliverable) and a measured sample on one slide
 
 ### Volume
 
