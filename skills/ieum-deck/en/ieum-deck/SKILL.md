@@ -635,8 +635,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Use the theme color (navy #1F3864, mono #2B2B2B, the user-specified base color) only for label cells, chevrons, conclusion bands, markers and emphasized figures
     + The mono theme sets tints and secondary gray text in achromatic colors too
     + Body panels and table bodies use a white background with a 0.5pt gray border
-    + (Fill for distinction) Apply a tint fill to some boxes of a different kind within a group (the current point, work done by a system and the like)
-    + (Fill for emphasis) Apply a tint fill together with bold text to emphasized targets such as the result column of a flow, goal boxes and summary rows (a tinted box with regular-weight text is taken as inactive next to white boxes)
+    + (Tint fill targets) Apply a tint fill only to emphasized targets (the result column of a flow, goal boxes, summary rows and the like) and to marker cells defined by a block (system work in a flowchart, the current point in a timeline and the like)
+    + (Text in emphasized targets) Apply bold text together with the tint fill (a tinted box with regular-weight text is taken as inactive next to white boxes)
     + Emphasis red #C0392B is used in one place per slide
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
