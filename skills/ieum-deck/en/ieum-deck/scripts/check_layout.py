@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
-Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
+Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping. Chevrons and home plates use the text area width without the points, FAIL), overlap of a table and text (by the table height written by the finalize re-save. A grown table row covering footnotes or the source row, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
         text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), short Key Point sentence (one-line width of a sentence under 50% of the inner width of the band text cell, WARN), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
@@ -60,6 +60,8 @@ def _own_small_boxes(record):
 
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+POINTED_TEXT_CUT = {"chevron": 2.0, "homePlate": 0.5}  # Multiple of the point width that narrows the text area from the shape width (left and right formulas of the text rectangle in the OOXML shape definitions)
+POINTED_ADJ_DEFAULT = 50000  # Default adjust value of chevrons and home plates (point width = short side x adjust value / 100000)
 
 def para_runs(p):
     """Runs of a paragraph (text, size pt, bold). 18pt when the size is unset"""
@@ -138,15 +140,30 @@ def hanging_runs(runs):
     return out or runs
 
 
-def overflow_estimate(sh):
-    """Compares the estimated needed height of a text box with the box height. Returns (need_in, avail_in, wrap)"""
+def pointed_text_cut(sh):
+    """Width (inches) by which the text area of a chevron or home plate is narrower than the shape. 0 for other shapes
+    Why: in the OOXML shape definitions (presetShapeDefinitions) the text area of a chevron is the width minus two point widths, and that of a home plate is the width minus half a point width
+         Counting lines at the shape width estimates 2 lines for chevron text that runs to 3 lines and overflows in PowerPoint"""
+    pg = sh._element.find(".//" + NSA + "prstGeom")
+    k = POINTED_TEXT_CUT.get(pg.get("prst")) if pg is not None else None
+    if k is None: return 0.0
+    gd = pg.find(NSA + "avLst/" + NSA + "gd")
+    fmla = gd.get("fmla", "") if gd is not None else ""
+    adj = int(fmla.split()[-1]) if fmla.startswith("val ") else POINTED_ADJ_DEFAULT
+    return k * min(sh.width, sh.height) / 914400 * adj / 100000
+
+
+def overflow_estimate(sh, ppt_words=False):
+    """Compares the estimated needed height of a text box with the box height. Returns (need_in, avail_in, wrap)
+    With ppt_words, the line count of a paragraph is the larger of the LibreOffice rules and PowerPoint line breaks at spaces
+    Why: PowerPoint breaks a word-unit deck (meta.lineBreak=word) only at spaces. The LibreOffice rules split '인재·윤리·거버넌스' after a middle dot and count fewer lines"""
     tf = sh.text_frame
     bp = tf._txBody.find(NSA + "bodyPr")
     ins = lambda k, d: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else d
     l, r, t, b = ins("lIns", 0.1), ins("rIns", 0.1), ins("tIns", 0.05), ins("bIns", 0.05)
     wrap = bp is None or bp.get("wrap") != "none"
     w, h = sh.width / 914400, sh.height / 914400
-    inner_w = max(0.1, w - l - r)
+    inner_w = max(0.1, w - l - r - pointed_text_cut(sh))
     need = 0.0
     for p in tf.paragraphs:
         runs = para_runs(p)
@@ -164,7 +181,7 @@ def overflow_estimate(sh):
             indent = int(pr.get("marL")) / 914400
             runs = hanging_runs(runs)
         eff_w = max(0.1, inner_w - indent)
-        lines = wrap_lines(runs, eff_w)[0] if wrap else 1
+        lines = (max(wrap_lines(runs, eff_w)[0], wrap_lines(runs, eff_w, word_only=True)[0]) if ppt_words else wrap_lines(runs, eff_w)[0]) if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
         need += lines * pt * 1.2 / 72 + (int(spc.get("val")) / 100 / 72 if spc is not None else 0)
     # PowerPoint shows short labels without line breaks centered and ignores box insets, so compare against the height with insets included
@@ -222,7 +239,7 @@ def main():
                 tf = sh.text_frame
                 over = 0.0
                 if FM and not is_band:
-                    need, avail, wrap = overflow_estimate(sh)
+                    need, avail, wrap = overflow_estimate(sh, word_break)
                     if need > avail + max(0.15, avail * 0.12):  # 12% of the box height allows for renderer line spacing differences
                         fails.append(f"[{n}] Estimated text overflow {need:.2f}in > box {avail:.2f}in '{tf.text[:15]}'")
                     over = max(0.0, need - avail)
@@ -514,6 +531,14 @@ def main():
             if not sh.has_table: continue
             top = sh.top / 914400 if sh.top else 0
             bottom = top + (sh.height / 914400 if sh.height else 0)
+            # The table height includes the row growth written by the soffice re-save in finalize (check_layout runs after finalize)
+            # Detect text boxes that start inside the table area (footnotes, source rows, Key Point bands and the like covered by a grown table). The overlap checks above exclude the footnote area
+            left, right = inch(sh.left), inch(sh.left + sh.width)
+            covered = [o for o in slide.shapes if o is not sh and o.has_text_frame and o.text_frame.text.strip() and o.top is not None
+                       and top + 0.02 <= inch(o.top) < bottom - 0.02 and min(right, inch(o.left + o.width)) - max(left, inch(o.left)) > 0.05]
+            if covered:
+                o = covered[0]
+                fails.append(f"[{n}] Table and text overlap (table bottom {bottom:.2f}in > text top {inch(o.top):.2f}in '{o.text_frame.text.strip()[:15]}'. Shorten the cell text that grows a row, widen the column or reduce the rows)")
             if bottom > H - 0.05:
                 fails.append(f"[{n}] Table runs off the slide (bottom {bottom:.2f}in > limit {H - 0.05:.2f}in, {len(sh.table.rows)} rows)")
             elif bottom > H - EDGE + 0.05:

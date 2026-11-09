@@ -90,7 +90,7 @@
 | `table` | 행과 열 비교 | `head[]`, `rows[][]`. 셀 값은 문자열, 항목 배열, ● ◐ ○(하베이 볼). 열 폭은 자동 산정. 열 정렬은 `align[]`, 항목 1개 셀의 불릿 줄은 `bulletRows[]`, `bulletCols[]`, `labelCols[]` 로 지정 (`references/templates.md` 표 조판) |
 | `bullets` | 항목 나열 | `head`(선택), `items[]` |
 | `text` | 한 문장 메시지 | `text`, `style`(navy, tint, box, plain. 기본 box) |
-| `stack` | 제목 상자의 세로 적층 | `items[{head, items 또는 text, headFill, fill}]`. `headFill` 과 `fill` 의 값은 tint |
+| `stack` | 제목 상자의 세로 적층 | `items[{head, items 또는 text, headFill, fill, bold}]`. `headFill` 과 `fill` 의 값은 tint. `bold` 가 true 이면 상자 글자를 굵게 조판 (사용 기준은 SKILL.md 디자인 시스템의 색상 항목) |
 | `summary` | 종합 상자 (결론 띠와 대응 항목을 테두리 하나에 담은 도형) | `lead`(한 문장 결론), `items[{head, items 또는 text}]` |
 | `labeled` | 왼쪽 라벨과 오른쪽 내용의 행 | `rows[{label, items 또는 text}]`, `labelW`(칸 폭 대비 비율) |
 | `grid` | 라벨 열과 칸 격자 | `head[]`(선택), `rows[{label, cells[], sz}]`, `labelW`, `style`(hierarchy 이면 계층도 조판). 칸 값은 문자열 또는 `{text 또는 items, fill, span, bold, color, shape, numbered}`. `fill` 값은 navy 또는 tint. `shape` 값 db 는 저장소 원통. `color` 값은 navy. `numbered` 가 true 이면 항목 앞 번호(1-1. 등)가 불릿을 대신함. `sz` 는 위계를 두는 행의 글꼴 크기(pt). `flow` 가 true 이면 칸 열 사이에 오른쪽 화살표 (현황에서 목표로 가는 격차 표시) |

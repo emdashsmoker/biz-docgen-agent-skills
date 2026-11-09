@@ -1190,16 +1190,17 @@ function compare(ctx, slide, sb) {
   source(ctx, slide, sb);
 }
 /** Roadmap: strategy rows × year columns. slots: {periods:[], lanes:[{title, tasks:[{text, from, to}]}], note} */
-function roadmap(ctx, slide, sb) {
+function roadmap(ctx, slide, sb0) {
+  // The note slot is set as the first item of the footnote area (a note on the whole roadmap has the same target as the slide footnotes)
+  // Why: avoids the same mark (※ and the like) showing separately in a centered note under the roadmap and in the footnotes at the bottom
+  const note0 = (sb0.slots || {}).note;
+  const sb = note0 ? { ...sb0, footnotes: [].concat(note0, sb0.footnotes || []) } : sb0;
   const s = sb.slots || {}, b = body(ctx, sb), S = ctx.S;
   const lw = 2.3 * S.sx, periods = s.periods || [], lanes = s.lanes || [];
   const gx = b.x + lw + 0.1, gw = b.w - lw - 0.1, pw = gw / Math.max(periods.length, 1);
   label(ctx, slide, { x: b.x, y: b.y, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: 0.35 }, LB.label("roadmap", "laneHead", s.laneHead), { sz: T.SIZE.body });
   periods.forEach((p, i) => label(ctx, slide, { x: gx + i * pw, y: b.y, w: pw - 0.02, h: 0.35 }, p, { fill: T.COLOR.tintHead, color: T.COLOR.textDark, sz: T.SIZE.body }));
-  // The note takes 0.4 inch for one line plus NOTE_LINE_H for each further line
-  const note = boxNote(s.note, b.w - 2 * A.TEXT_MG_IN[0]); // inner width of a box with default margins
-  const noteExtra = boxNoteH(note, 0);
-  const lh = (b.h - 0.45 - boxNoteH(note, 0.4)) / Math.max(lanes.length, 1);
+  const lh = (b.h - 0.45) / Math.max(lanes.length, 1);
   lanes.forEach((ln, i) => {
     const y = b.y + 0.45 + i * lh;
     label(ctx, slide, { x: b.x, y: y + 0.05, w: lw + 0.1 - T.PANEL.LABEL_GAP, h: lh - 0.1 }, `${i + 1}  ${ln.title}`, { sz: T.SIZE.body });
@@ -1214,7 +1215,6 @@ function roadmap(ctx, slide, sb) {
       slide.addText(A.runsOf(A.parasFromString(t.text, { sz: T.SIZE.tableDense, color: T.COLOR.textDark, align: "left" })), { ...bx, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: 0.5 }, valign: "middle", margin: A.boxMargin([0.06, 0.01, 0.06, 0.01]), isTextBox: true, autoFit: false });
     });
   });
-  drawNote(slide, { x: b.x, y: b.y + b.h - 0.35 - noteExtra, w: b.w, h: 0.3 + noteExtra }, note, { align: "center" });
   source(ctx, slide, sb);
 }
 /** Gantt: category and task columns + weekly grid by month. slots: {months:N, weeks:4, groups:[{name, tasks:[{name, from, to}]}], reports:[{name, at}], groupHead, taskHead, reportHead} */

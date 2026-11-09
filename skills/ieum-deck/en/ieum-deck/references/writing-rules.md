@@ -163,6 +163,7 @@
 - The subject term rules follow the subject term section of `references/headline-patterns.md`
 - Module section titles use the `[Module 1] 모듈명` format (to avoid clashing with the period after the section number)
 - Task markers use the `Task 1-2. Task명` format, which includes the module number
+- A marker that bundles several Tasks follows the form in the SKILL.md Task slides section
 - References to a Task in body text also use the `Task 1-2` format
 - Module items in organization charts and the table of contents also use the `[Module 1] 모듈명` format
 
@@ -237,7 +238,7 @@
 - A column that is hard to judge is centered
 - The cells of a comparison line are all single-item or all multi-item (when the item counts are hard to match, bullets in that line follow the comparison line condition above)
 - Vertical alignment is centered for the whole table
-- Cell fills use only the theme color, tint, gray and white
+- Cell fills use only the theme color, tint, gray and white (usage criteria in the color item of the SKILL.md design system)
 - Set white even on cells without a fill
 - With many rows, split the table or reduce the row height so it ends within the body area
 - Merge cells repeating the same value only when the higher category actually continues

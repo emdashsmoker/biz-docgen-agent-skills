@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_layout.py: 빌드된 pptx 의 구조 검수 (python-pptx 는 검수에만 사용).
 사용: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
-검사: 텍스트 넘침 추정(빌드와 같은 나눔고딕 실측 폭과 어절 단위 줄바꿈으로 소요 높이 산정, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
+검사: 텍스트 넘침 추정(빌드와 같은 나눔고딕 실측 폭과 어절 단위 줄바꿈으로 소요 높이 산정. 셰브론과 홈플레이트는 꼭짓점을 제외한 글 영역 폭으로 산정, FAIL), 표와 글 겹침(finalize 재저장이 기록한 표 높이 기준. 늘어난 표 행이 각주나 출처 행을 덮는 경우, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
       텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(줄 끝에 걸린 어절을 LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 곳. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), Key Point 문장 분량 부족(밴드 문구 칸 안쪽 폭 대비 문장별 한 줄 폭 50% 미만, WARN), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
 결과: FAIL 과 WARN 목록. 종료 코드 1 이면 FAIL 존재
 """
@@ -60,6 +60,8 @@ def _own_small_boxes(record):
 
 
 NSA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+POINTED_TEXT_CUT = {"chevron": 2.0, "homePlate": 0.5}  # 도형 폭에서 글 영역을 줄이는 꼭짓점 폭 배수 (OOXML 도형 정의의 글 영역 좌우 수식)
+POINTED_ADJ_DEFAULT = 50000  # 셰브론과 홈플레이트 조정값 기본값 (꼭짓점 폭 = 짧은 변 x 조정값 / 100000)
 
 def para_runs(p):
     """문단의 조각 목록 (글, 크기 pt, 굵게). 크기 미지정은 18pt"""
@@ -138,15 +140,30 @@ def hanging_runs(runs):
     return out or runs
 
 
-def overflow_estimate(sh):
-    """텍스트 상자의 추정 소요 높이와 상자 높이 비교. (need_in, avail_in, wrap) 반환"""
+def pointed_text_cut(sh):
+    """셰브론과 홈플레이트의 글 영역이 도형 폭보다 좁아지는 폭(인치). 그 밖의 도형은 0
+    Why: OOXML 도형 정의(presetShapeDefinitions)에서 셰브론의 글 영역은 꼭짓점 폭 2개를 제외한 폭, 홈플레이트의 글 영역은 꼭짓점 폭의 절반을 제외한 폭
+         도형 폭 기준의 줄 수 산정은 PowerPoint 에서 3줄로 넘치는 셰브론 문구를 2줄로 추정"""
+    pg = sh._element.find(".//" + NSA + "prstGeom")
+    k = POINTED_TEXT_CUT.get(pg.get("prst")) if pg is not None else None
+    if k is None: return 0.0
+    gd = pg.find(NSA + "avLst/" + NSA + "gd")
+    fmla = gd.get("fmla", "") if gd is not None else ""
+    adj = int(fmla.split()[-1]) if fmla.startswith("val ") else POINTED_ADJ_DEFAULT
+    return k * min(sh.width, sh.height) / 914400 * adj / 100000
+
+
+def overflow_estimate(sh, ppt_words=False):
+    """텍스트 상자의 추정 소요 높이와 상자 높이 비교. (need_in, avail_in, wrap) 반환
+    ppt_words 가 참이면 문단 줄 수로 LibreOffice 규칙과 PowerPoint 공백 단위 줄바꿈 가운데 많은 줄 수를 사용
+    Why: PowerPoint 는 어절 단위 덱(meta.lineBreak=word)을 공백에서만 줄바꿈. LibreOffice 규칙은 '인재·윤리·거버넌스' 를 가운뎃점 뒤에서 나누어 줄 수를 적게 산정"""
     tf = sh.text_frame
     bp = tf._txBody.find(NSA + "bodyPr")
     ins = lambda k, d: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else d
     l, r, t, b = ins("lIns", 0.1), ins("rIns", 0.1), ins("tIns", 0.05), ins("bIns", 0.05)
     wrap = bp is None or bp.get("wrap") != "none"
     w, h = sh.width / 914400, sh.height / 914400
-    inner_w = max(0.1, w - l - r)
+    inner_w = max(0.1, w - l - r - pointed_text_cut(sh))
     need = 0.0
     for p in tf.paragraphs:
         runs = para_runs(p)
@@ -164,7 +181,7 @@ def overflow_estimate(sh):
             indent = int(pr.get("marL")) / 914400
             runs = hanging_runs(runs)
         eff_w = max(0.1, inner_w - indent)
-        lines = wrap_lines(runs, eff_w)[0] if wrap else 1
+        lines = (max(wrap_lines(runs, eff_w)[0], wrap_lines(runs, eff_w, word_only=True)[0]) if ppt_words else wrap_lines(runs, eff_w)[0]) if wrap else 1
         spc = p._p.find(NSA + "pPr/" + NSA + "spcBef/" + NSA + "spcPts")
         need += lines * pt * 1.2 / 72 + (int(spc.get("val")) / 100 / 72 if spc is not None else 0)
     # 줄바꿈 없는 짧은 라벨은 PowerPoint 가 상자 여백을 무시하고 가운데 정렬로 표시하므로 여백을 제외하지 않은 높이로 비교
@@ -222,7 +239,7 @@ def main():
                 tf = sh.text_frame
                 over = 0.0
                 if FM and not is_band:
-                    need, avail, wrap = overflow_estimate(sh)
+                    need, avail, wrap = overflow_estimate(sh, word_break)
                     if need > avail + max(0.15, avail * 0.12):  # 상자 높이의 12% 는 렌더러 행간 차이 허용
                         fails.append(f"[{n}] 텍스트 넘침 추정 {need:.2f}in > 상자 {avail:.2f}in '{tf.text[:15]}'")
                     over = max(0.0, need - avail)
@@ -514,6 +531,14 @@ def main():
             if not sh.has_table: continue
             top = sh.top / 914400 if sh.top else 0
             bottom = top + (sh.height / 914400 if sh.height else 0)
+            # 표 높이에는 finalize 의 soffice 재저장이 기록한 행 늘어남이 반영됨 (check_layout 은 finalize 뒤에 실행)
+            # 표 영역 안에서 시작하는 글 상자 탐지 (늘어난 표가 덮은 각주, 출처 행, Key Point 밴드 등). 각주 영역은 위 겹침 검사의 제외 대상
+            left, right = inch(sh.left), inch(sh.left + sh.width)
+            covered = [o for o in slide.shapes if o is not sh and o.has_text_frame and o.text_frame.text.strip() and o.top is not None
+                       and top + 0.02 <= inch(o.top) < bottom - 0.02 and min(right, inch(o.left + o.width)) - max(left, inch(o.left)) > 0.05]
+            if covered:
+                o = covered[0]
+                fails.append(f"[{n}] 표와 글 겹침 (표 하단 {bottom:.2f}in > 글 상단 {inch(o.top):.2f}in '{o.text_frame.text.strip()[:15]}'. 행을 늘리는 셀 문구 축약, 열 폭 확대, 행 수 축소 중 선택)")
             if bottom > H - 0.05:
                 fails.append(f"[{n}] 표가 슬라이드 밖으로 넘침 (하단 {bottom:.2f}in > 판정 기준 {H - 0.05:.2f}in, 행 {len(sh.table.rows)}개)")
             elif bottom > H - EDGE + 0.05:

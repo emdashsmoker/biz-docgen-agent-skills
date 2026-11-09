@@ -137,7 +137,7 @@ function writeItems(ctx, H, slide, box, items, sz, opt) {
     A.text(slide, box, textOf(list[0]), { sz, bold: o.bold, align: o.align || "center", valign: "middle", color: o.color });
     return;
   }
-  H.bulletsBlock(ctx, slide, box, list, { sz, noWarn: true, valign: o.valign || "middle", forceBullet: true, color: o.color, numbered: o.numbered, groupGapPt: o.groupGapPt });
+  H.bulletsBlock(ctx, slide, box, list, { sz, noWarn: true, valign: o.valign || "middle", forceBullet: true, color: o.color, numbered: o.numbered, groupGapPt: o.groupGapPt, bold: o.bold });
 }
 function arrowShape(ctx, slide, cx, cy, dir, w, h) {
   const aw = w || ARROW_W, ah = h || ARROW_H;
@@ -210,7 +210,7 @@ BLOCKS.stack = (ctx, H, slide, box, k) => {
     if (x.head) H.label(ctx, slide, { x: b.x, y: b.y, w: b.w, h: T.PANEL.HEAD_H }, x.head, { sz: T.SIZE.body, fill: x.headFill === "tint" ? T.COLOR.tintHead : undefined, color: x.headFill === "tint" ? T.COLOR.textDark : undefined });
     const bd = { x: b.x, y: b.y + (x.head ? T.PANEL.HEAD_H : 0), w: b.w, h: b.h - (x.head ? T.PANEL.HEAD_H : 0) };
     H.frame(ctx, slide, bd, { fill: x.fill === "tint" ? T.COLOR.tintBg : undefined });
-    writeItems(ctx, H, slide, bd, itemsOf(x), sz, { groupGapPt: cgap });
+    writeItems(ctx, H, slide, bd, itemsOf(x), sz, { groupGapPt: cgap, bold: !!x.bold });
     y += hs[i] + gap;
   });
 };
