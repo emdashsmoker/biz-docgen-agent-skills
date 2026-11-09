@@ -40,6 +40,7 @@ Changelog rules
 - Added a lint warning for decks that mix the two Key Point band formats (#119)
 - Added a writing rule that a Key Point band sentence fills at least half of the band width, with 70-80% or more recommended (#119)
 - Changed the Key Point band on slide 13 of the ko and en demos from the label cell format to the default tint box format (#121)
+- Added a check_layout warning for Key Point band sentences whose one-line width is below 50% of the inner width of the band text cell (#123)
 
 * 모듈 개요, Task 묶음, Task 슬라이드의 헤드라인 문형을 번호로 시작하는 문형에서 모듈명이나 수행 내용으로 시작하는 문형으로 변경 (#116)
 * 마커와 본문의 Task 번호 표기를 Task 2 형식에서 모듈 번호를 포함한 Task 1-2 형식으로 변경 (#116)
@@ -51,6 +52,7 @@ Changelog rules
 * 두 Key Point 밴드 형식이 한 덱에 섞인 경우의 lint 경고 추가 (#119)
 * 띠 폭의 절반 이상(권장 70-80% 이상)을 채우는 Key Point 밴드 문장 분량 규칙 추가 (#119)
 * ko, en 데모 13쪽의 Key Point 밴드를 라벨 칸 형식에서 기본 형식인 틴트 상자로 변경 (#121)
+* 한 줄 폭이 밴드 문구 칸 안쪽 폭의 50% 미만인 Key Point 밴드 문장의 check_layout 경고 추가 (#123)
 
 ## 2026-11-08
 
