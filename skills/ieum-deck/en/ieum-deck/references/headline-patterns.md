@@ -40,7 +40,7 @@
 ## Base patterns
 
 - (Task) {{수행 방식}}으로 {{결과}} {{서술어}}
-    + (How) The actual method of the Task, which differs per Task (survey, analysis, comparison, design, measurement, verification, consultation, pilot operation and so on)
+    + (How) The actual work method of each Task (survey, analysis, comparison, design, measurement, verification, consultation, pilot operation and so on)
     + (Result) The deliverable or judgment of the Task (choose the predicate to fit the result, such as 도출, 확정, 수립, 설계, 제시)
     + (Examples) "업무별 처리 시간 측정으로 자동화 대상 업무 확정", "산식 및 측정 주기 설계로 지표 정의서 작성", "시범 부서 적용으로 지표 측정 절차 보완"
     + (Topic patterns first) When a topic pattern fits the Task content, use the topic pattern
