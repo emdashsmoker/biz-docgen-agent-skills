@@ -133,7 +133,7 @@
 - The `point` slot text and the free callout block are set as a strip below the body (templates with a `point` slot are listed in the slots column of the template table above)
 - The strip height is 0.5 inch
 - The strip width equals the width of the body group above
-- The format follows the resolved label (resolution order in the label slots section)
+- The format depends on the resolved label (resolution order in the label slots section)
     + (Tint box, default) When the label is an empty string, one tint box fills the full strip width without a label cell
     + (Label cell, option) When a label exists, a theme color label cell on the left and a tinted text cell on the right are set
 - The tint box uses tintBg fill and a borderLight 0.5pt border (the same values as the text cell of the label cell format)

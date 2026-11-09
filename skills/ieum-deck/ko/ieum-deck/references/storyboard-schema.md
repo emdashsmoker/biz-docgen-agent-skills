@@ -37,7 +37,7 @@
 - 슬라이드마다 반복하던 라벨 슬롯 값(표지 label, 간트 머리, 모듈 개요 행 라벨 등)을 덱 단위로 한 번 지정
 - 해석 순서는 슬라이드 슬롯 값, meta.labels, 기본값(`assets/labels.json`)
 - 키는 템플릿 또는 composite 블록 이름과 슬롯 이름 (전체 키, 기본값, 영문 예시는 `references/templates.md` 라벨 슬롯 절)
-    + common.pointLabel: Key Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선. 기본값인 빈 문자열은 틴트 상자 형식으로 조판)
+    + common.pointLabel: Key Point 밴드 라벨 (meta.pointLabel 이 있으면 meta.pointLabel 우선. 기본값인 빈 문자열이면 틴트 상자 형식)
     + language.latin, language.east_asia: PPTX 글자의 언어 태그 (기본 en-US, 한글이 든 run 은 ko-KR)
     + notation.source: 주석 줄로 인식할 토큰 추가 목록 (기본 토큰 ※, 출처:, 자료:, Source:, Note: 는 유지)
 - 일부 키만 지정 가능 (생략한 키는 기본값)

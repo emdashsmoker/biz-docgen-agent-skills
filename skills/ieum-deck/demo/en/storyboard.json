@@ -8,7 +8,7 @@
   "track": "general",
   "chapters": ["Ⅰ. Proposal Overview", "Ⅱ. Project Execution", "Ⅲ. Project Management"],
   "labels": {
-   "common": {"pointLabel": "Key Point", "company": "Company name"},
+   "common": {"company": "Company name"},
    "cover": {"label": "Proposal"},
    "contents": {"title": "Contents"},
    "compare": {"asis.head": "AS-IS", "tobe.head": "TO-BE", "gapHead": "GAP"},
@@ -76,7 +76,6 @@
   {"id": "S13", "template": "composite", "secNo": "2.", "section": "[Module 2] Vision and Task Design", "chapter": "Ⅱ. Project Execution",
    "headline": "Recommending an adoption model by scoring three options on the same criteria",
    "marker": "Task 2-3. Adoption model comparison and recommendation",
-   "pointLabel": "Direction",
    "slots": {
     "recipe": "option_evaluation",
     "cols": [1, 1.62],
@@ -100,7 +99,7 @@
        "align": ["center", "right", "center", "center", "center"]},
       "note": "● 3, ◐ 2, ○ 1 point. Draft scores from public data, confirmed after the linkage diagnosis"}
     ],
-    "point": "Common platform as the base, with cloud services for features outside its scope, as the candidate"
+    "point": "Under the priority use rule for public institutions, recommend Option 3 as the base and Option 2 for features outside its scope"
    },
    "source": ["Source: Ministry of Government Legislation (2026), Act on AI and Data-Based Administration Art. 27", "Ministry of Science and ICT (2025), AI common platform press release"]},
   {"id": "S14", "template": "divider", "notes": "Filler slide that keeps the page numbers of the demo slides (not used in the demo image)",

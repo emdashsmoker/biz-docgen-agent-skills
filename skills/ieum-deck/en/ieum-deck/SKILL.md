@@ -59,7 +59,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | Band | The top area of a slide. Holds the section number, section title, chapter tracker and headline |
 | Headline | The one conclusion sentence in the middle of the band |
 | Marker | The subheading on the first line of the body. Typeset with a square shape |
-| Key Point band | A tinted strip below the body holding one sentence. Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body. Formats are the tint box without a label cell (default) and the label cell (option) |
+| Key Point band | A tinted strip below the body holding one sentence. Shows judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body. Formats are the tint box without a label cell (default) and the tinted strip with a label cell on the left (option) |
 | Template | The typesetting method named by the `template` value in the storyboard |
 | Parametric template | A fixed-structure template whose layout changes with the number of items (`references/templates.md`) |
 | Recipe | A sample combination of grid and blocks for the composite template (`references/recipes.md`) |
@@ -138,7 +138,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Deliver the delivery files (PPTX, and the PDF when included) after all completion conditions are met
 - The completion report lists file paths, viewed contact sheet file names and remaining user confirmation items
 - When slides run notes and the source line on (`footnoteInline`), the completion report lists the INFO output of lint and build
-- When a deck sets the Key Point band in the label cell format, the completion report lists the label of each slide (for user review)
+- When a deck sets the Key Point band in the label cell format, the completion report lists the label of each slide for user review
 - When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
 - Record the progress point in `state.json` for session handover
 
@@ -188,9 +188,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (※ on labeled notes) When a labeled note in a ※-style deck needs ※, the author writes ※ before that item (the build keeps it)
     + (※ on sources) ※ before sources ("※ Source:") is not asked at kickoff (when the user asks for it, for example to follow an RFP template, set `meta.footnoteSourceMark` of a ※-style deck to true)
 18. (Key Point band format) Tint box (default) or label cell
-    + (Tint box choice description) Only the sentence, centered, without a label
-    + (Label cell choice description) A dedicated label that fits each band's content, shown in the left cell
-    + (Label cell entry) When the label cell is chosen, write a dedicated label in `pointLabel` on each slide (writing principles in the Key Point labels section of `references/writing-rules.md`)
+    + (Tint box option) Only the sentence, centered, without a label
+    + (Label cell option) A dedicated label that fits each band's content, shown in the left cell
+    + (When the label cell is chosen) Write a dedicated label in `pointLabel` on each slide (writing principles in the Key Point labels section of `references/writing-rules.md`)
     + (Deck-level label) Write `meta.pointLabel` only when the user specifies one label for the whole deck
 
 ## Company facts
@@ -383,7 +383,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - lint names Tasks without slides as missing numbers (for example T2 when only T1, T3 and T4 have slides)
 - Number Tasks in a module consecutively from T1 (gaps are lint WARN)
 - Slide items are work target, data source, work scale, work method, deliverable and one measured sample
-    + Item names follow how the Task is done (a survey Task uses survey target, survey scale and analysis method)
+    + Item names follow how the Task is done (e.g. a survey Task uses survey target, survey scale and analysis method)
     + Work scale uses the unit that fits the Task's method (survey scale, design scope, application targets and so on)
 - Section titles use the format `[Module 1] 모듈명` (the square brackets keep it from colliding with the period of the section number)
 - Markers use the format `Task 1-2. Task명`, which includes the module number (`Task 2.` without the module number cannot be told apart from the Tasks of other modules)
@@ -586,7 +586,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + In a deck where only some slides are in English, set only the labels of the templates those slides use, or set them in the slots of those slides
     + Keys left out are typeset with the Korean defaults, so set every label of the templates the English deck uses
     + lint reports unknown template, block and slot names and type errors in `meta.labels` as FAIL
-- The default Key Point band format (tint box) has no label and needs no English label
+- The default Key Point band format (tint box without a label) needs no English label
 - A deck that sets the Key Point band in the label cell format writes the `pointLabel` of each slide in English
 - The scope structure labels (visionTag, scopeTag, outputTag) are typeset at 10pt, so write them in uppercase Latin letters (other text gets the check_layout 11pt minimum WARN)
 - Set the language tags of the PPTX text with `meta.labels.language` (default latin en-US, east_asia ko-KR for runs that contain Hangul; finalize.py applies them)
