@@ -67,7 +67,7 @@
    "slots": {"no": "Ⅱ", "title": "사업 수행부문"}},
   {"id": "S13", "template": "composite", "secNo": "2.", "section": "[Module 2] 비전 및 추진 과제 설계", "chapter": "Ⅱ. 사업 수행부문",
    "headline": "자체 구축형, 클라우드 서비스형, 공통기반 활용형의 같은 기준 비교로 도입 방식 권고안 제시",
-   "marker": "Task 3. 도입 방식 비교 및 권고",
+   "marker": "Task 2-3. 도입 방식 비교 및 권고",
    "pointLabel": "권고 방향",
    "slots": {
     "recipe": "option_evaluation",
@@ -99,7 +99,7 @@
    "slots": {"no": "Ⅱ", "title": "사업 수행부문"}},
   {"id": "S15", "template": "composite", "secNo": "2.", "section": "[Module 3] 시범 서비스 및 안전 활용 기반", "chapter": "Ⅱ. 사업 수행부문",
    "headline": "민원 답변 업무를 예시로 시범 서비스의 업무 흐름, 데이터, 기능 요건을 설계",
-   "marker": "Task 1. 시범 서비스 설계",
+   "marker": "Task 3-1. 시범 서비스 설계",
    "slots": {
     "recipe": "process_redesign",
     "rows": [{"h": 1, "cols": [2.5, 1]}, {"h": 1, "cols": [2.5, 1]}],
