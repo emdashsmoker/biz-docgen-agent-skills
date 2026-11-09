@@ -84,7 +84,7 @@
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 - Write the Key Point band sentence long enough to fill at least half of one line of the inner band width (in the centered tint box, a short sentence leaves large empty space on both sides and looks bare)
-    + (Length reference) Half of a band that spans the full body width on 16:9 is about 43 Korean characters including spaces
+    + (Recommended length) 70-80% or more of one line of the inner band width
     + (How to lengthen) Make the subject, criterion, timing and owner the sentence carries more specific
     + (What not to add) Do not lengthen the sentence with modifiers, evaluative words or connectives
     + (Sentence structure) Write one simple sentence with one predicate within one line of the band
