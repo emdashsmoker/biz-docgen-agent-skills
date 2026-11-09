@@ -700,6 +700,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Bullet boxes with a box text fill average below 65% or a longest line below 80% get a build warning (box text fill)
     + Synthesis boxes with an average below 90% or a longest line below 95% get a build warning
     + A synthesis box item longer than one line gets a build warning
+    + A Key Point band sentence whose one-line width is below 50% of the inner width of the text cell is a check_layout warning (short Key Point sentence. The sentence width uses the measured font width without a slack factor)
+    + Resolve short Key Point sentence warnings by lengthening the sentence, deleting it or moving it to `footnotes` (content composition section of `references/writing-rules.md`)
     + Parametric panels (bullets, cards, conclusion, compare row pairs) shrink the box width to the longest line and center the group
     + Resolve box text fill warnings by adding to item text (target, criterion, figures) or narrowing the cell
     + Boxes and tables with placeholders (`[회사 확인]` and so on) are excluded from the horizontal fill check
@@ -850,7 +852,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Overlap) Overlap between text boxes (over 20% WARN, over 30% or over a picture FAIL), overlap among tables, charts, pictures and filled boxes (over 15% FAIL, over 25% between filled boxes FAIL), overlap of icons and text (FAIL)
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
-    + (Placement) Body margin imbalance (over 15% on one side and below 15% on the other), insufficient body vertical fill (below 70%), edge margins, leaving the band, empty panels, not enough box content
+    + (Placement) Body margin imbalance (over 15% on one side and below 15% on the other), insufficient body vertical fill (below 70%), edge margins, leaving the band, empty panels, not enough box content, short Key Point sentence (below 50% per sentence)
     + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)

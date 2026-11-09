@@ -346,6 +346,7 @@ const LIMIT = {
   summaryFillMin: 0.9, // Minimum average line share of synthesis box (agenda box) items (higher than bullet boxes because it is a conclusion cell)
   summaryMaxFillMin: 0.95, // Minimum share of the longest synthesis box item line
   boxFillMin: 0.45, // Minimum share of text inside a bordered box (estimated from widths, so it reads lower than reality)
+  pointFillMin: 0.5, // Minimum share of the inner width of the Key Point text cell that one line of each band sentence must fill (content composition section of writing-rules.md. A sentence of two or more lines passes because its first line fills the width)
   bandBottomGapMax: 0.15, // Maximum bottom margin of the body band (how far content is crowded upward)
   bodyCoverMin: 0.7, // Minimum share of the body band height taken by content (judges space left after boxes shrink to content)
   bulletOnlyShareMax: 0.5, // Maximum share of body slides using only bullet panels

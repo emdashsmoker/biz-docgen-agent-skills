@@ -525,6 +525,9 @@ const CALLOUT_MG = [0.12, 0.03, 0.08, 0.03]; // Text cell insets of the label ce
 const CALLOUT_TINT_MG = [0.12, 0.03, 0.12, 0.03]; // Insets of the tint box format. Equal left and right insets put a centered sentence at the exact center of the box
 const CALLOUT_H = 0.5; // Key Point band height (inches)
 const CALLOUT_W_STEP = 0.1; // Step for widening the Key Point band (inches)
+// Shape name of the Key Point text cell. check_layout.py finds the band by this name and measures the horizontal fill of each sentence (POINT_TAG)
+// Why: other templates also draw tint boxes 0.5 inch high, so the shape alone cannot tell the band apart. The adj: prefix is avoided because finalize turns it into an adjustment value
+const CALLOUT_TAG = "keypoint";
 /** Lines of the Key Point text (array items and line breaks split into lines) */
 function calloutLines(text) {
   return [].concat(text).flatMap((t) => String(t).split("\n")).filter(Boolean);
@@ -544,7 +547,7 @@ function callout(ctx, slide, box, lbl, text) {
   const multi = lines.length > 1;
   const align = multi || name ? "left" : "center";
   const paras = lines.map((t) => ({ align, bullet: multi, indent: multi ? T.PARA.bulletIndentIn : 0, marL: multi ? T.PARA.bulletIndentIn : 0, runs: [{ t, sz: T.SIZE.body, b: true, color: T.COLOR.textDark }] }));
-  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false });
+  slide.addText(A.runsOf(paras), { x: box.x + lw, y: box.y, w: box.w - lw, h: box.h, shape: ctx.pres.ShapeType.rect, fill: { color: T.COLOR.tintBg }, line: { color: T.COLOR.borderLight, width: T.PANEL.LINE_PT }, valign: "middle", margin: A.boxMargin(mg), isTextBox: true, autoFit: false, objectName: CALLOUT_TAG });
 }
 /** Key Point band width. Starts at the group width w0 and widens until the text fits in the band height (upper bound maxW)
  *  When a panel or card group narrows to short items, the band text overflows, so the band and the group are widened together

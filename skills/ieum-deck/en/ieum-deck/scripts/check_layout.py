@@ -2,7 +2,7 @@
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
-        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
+        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), short Key Point sentence (one-line width of a sentence under 50% of the inner width of the band text cell, WARN),low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), accent color in 2 or more places, missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
 import json
@@ -20,6 +20,8 @@ BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
 OWN_BASE_SIZE = (13.333, 7.5)  # Base page size 16:9 when own-deck.json has no source page size (slideW, slideH) (tokens.js BASE_W, BASE_H)
 ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # Overlap threshold between a label and body glyphs inside a box (relative to the smaller glyph area)
+POINT_TAG = "keypoint"  # Shape name of the Key Point text cell (templates.js CALLOUT_TAG)
+POINT_FILL_MIN = LIM.get("LIMIT", {}).get("pointFillMin", 0.5)  # Minimum share of the inner text cell width that one line of each sentence must fill
 # Text at or above this size is a title and is excluded from the multi-line no-bullet check (the 40pt cover title shrunk to the 0.6 floor is 24pt; the largest body-family size is the 20pt contents item)
 TITLE_PT = 24
 # Base fill colors allowed in table cells (navy and mono theme colors, tints, grays, white). At run time the palette in the build record (applied theme colors) is added. Other colors go to visual review
@@ -104,6 +106,23 @@ def token_splits(paras, inner):
         runs = [r for r in para_runs(p) if r[0]]
         if not runs: continue
         out += [f"{w[:cut]}|{w[cut:]}" for w, cut in wrap_paragraph(runs, max(0.1, inner - bullet_indent(p)))[2]]
+    return out
+
+
+def point_fills(sh):
+    """(fill ratio, sentence) for each paragraph of a Key Point text cell. The ratio is the one-line sentence width / inner text cell width (minus the indent for bullet paragraphs)
+    Why: the band width differs by template and slide size, so it is measured on the built shape. A sentence of two or more lines gets 1 because its first line fills the width"""
+    bp = sh.text_frame._txBody.find(NSA + "bodyPr")
+    ins = lambda k: int(bp.get(k)) / 914400 if bp is not None and bp.get(k) else 0.1
+    inner = sh.width / 914400 - ins("lIns") - ins("rIns")
+    out = []
+    for p in sh.text_frame.paragraphs:
+        runs = [r for r in para_runs(p) if r[0]]
+        txt = "".join(r[0] for r in runs).strip()
+        if not txt: continue
+        width = max(0.1, inner - bullet_indent(p))
+        lines, last_w = wrap_lines(runs, width)
+        out.append((1.0 if lines > 1 else last_w / width, txt))
     return out
 
 
@@ -409,6 +428,14 @@ def main():
             need, avail, _ = overflow_estimate(sh)
             if avail > 0 and need / avail < LIM.get("LIMIT", {}).get("boxFillMin", 0.45):
                 warns.append(f"[{n}] Thin box content {need / avail:.0%} fill '{sh.text_frame.text.strip()[:12]}' (add items, replace with a diagram or shrink the box)")
+
+        # Horizontal fill of Key Point band sentences (content composition section of references/writing-rules.md). One warning per band that lists every sentence under the threshold
+        # Why: the band is a filled box 0.5 inch high, so the thin box content check above skips it. A short sentence leaves wide empty space on both sides of the tint box
+        for sh in slide.shapes:
+            if sh.name != POINT_TAG or not sh.has_text_frame or sh.width is None: continue
+            short = [f"{ratio:.0%} fill '{txt[:12]}'" for ratio, txt in point_fills(sh) if ratio < POINT_FILL_MIN]
+            if short:
+                warns.append(f"[{n}] Short Key Point sentence {', '.join(short)} (lengthen, delete or move to footnotes. Lengthen by making the subject, criterion, timing and owner more specific. Do not lengthen with modifiers, evaluative words or connectives. Delete the sentence when there is nothing to add. Move one-line formulas or caveats to footnotes)")
 
         # Large empty area at the body bottom (content crowded upward). Cover, contents and dividers are top-aligned by design and skipped
         has_headline = any(sh.has_text_frame and sh.text_frame.text.strip() and sh.top is not None and sh.width is not None

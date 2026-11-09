@@ -84,6 +84,7 @@
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
 - Write the Key Point band sentence long enough to fill at least half of one line of the inner band width (a short sentence leaves wide empty space on both sides of the centered tint box)
+    + (Check threshold) A sentence whose one-line width is below 50% of the inner width of the text cell is a `scripts/check_layout.py` warning (short Key Point sentence. The text cell is the whole band in the tint box format and the band minus the label cell in the label cell format)
     + (Recommended length) 70-80% or more of one line of the inner band width
     + (How to lengthen) Make the subject, criterion, timing and owner the sentence carries more specific
     + (What not to add) Do not lengthen the sentence with modifiers, evaluative words or connectives
