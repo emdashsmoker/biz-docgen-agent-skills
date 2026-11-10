@@ -215,7 +215,7 @@ def wrap_paragraph(runs, width_in, word_only=False):
     """width_in 폭에서 문단이 차지하는 줄 수, 마지막 줄 폭(인치), 어절 안 줄바꿈 목록 [(어절, 윗줄에 남는 글자 수)]. 빌드의 estimateLines 와 같은 계산
     공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(break_in_word)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔 (이 어절은 목록에서 제외)
     앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄 끝 공백과 간격은 줄 폭에 들지 않음)
-    word_only 가 참이면 줄 끝에 걸린 어절 전체를 다음 줄로 이동 (PowerPoint 의 어절 단위 덱 줄바꿈 규칙)"""
+    word_only 가 참이면 줄 끝에 걸린 어절 전체를 다음 줄로 이동 (어절 단위 덱에 적용되는 PowerPoint 줄바꿈 규칙)"""
     ref = max(pt for _, pt, _ in runs)
     cap = width_in * 72 / ref * LINE_SAFETY
     cur, n, last, splits = 0.0, 1, WEAK, []
