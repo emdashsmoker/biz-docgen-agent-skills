@@ -389,7 +389,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Markers use the format `Task 1-2. Task명`, which includes the module number (`Task 2.` without the module number cannot be told apart from the Tasks of other modules)
 - The marker of a slide that bundles several Tasks follows the marker length limit (30 Korean-equivalent characters) and whether the Task numbers are consecutive (a form that lists only numbers with commas, such as `Task 1-1, 1-2.`, cannot show which number belongs to which Task name)
     + (Within the limit) Pair each Task number with its Task name and join the pairs with a middle dot that has a space on each side (` · `) (example: `Task 1-1 Market trends · Task 1-2 Policy review`)
-    + (Over the limit, consecutive numbers) After the number range, join one phrase per Task, each with its own target and action, using "and" (example: `Task 1-3~1-4. Ecosystem diagnosis and awareness survey`. Commas and "and" for 3 or more)
+    + (Over the limit, consecutive numbers) After the number range, join a short name per Task that carries both its target and action, using "and" (example: `Task 1-3~1-4. Ecosystem diagnosis and awareness survey`. Commas and "and" for 3 or more)
     + (Over the limit, non-consecutive numbers) Split the slide by Task
 - References to a Task in body text also use the `Task 1-2` format
 - Headlines do not repeat the numbers in the section title and the marker (execution plan slide headlines section of `references/headline-patterns.md`)
@@ -637,7 +637,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Body panels and table bodies use a white background with a 0.5pt gray border
     + Use a tint fill for marks grounded in the content (emphasized targets, elements that differ in a content attribute and the like)
     + (Emphasized targets) Apply a tint fill together with bold text to the result column of a flow, goal boxes, summary rows and the like (a tinted box with regular-weight text is taken as inactive next to white boxes)
-    + (Content attributes) Apply a tint fill to elements that differ in a content attribute such as the performer or the progress state (examples: system work in a flowchart, the current point in a timeline)
+    + (Content attribute distinction) Apply a tint fill to elements that differ in a content attribute such as the performer or the progress state (examples: system work in a flowchart, the current point in a timeline)
     + (No alternating fills) Do not fill table rows, table columns or side-by-side shapes in alternating colors (a fill that follows the layout order shows no difference in content)
     + Emphasis red #C0392B is used in one place per slide
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
@@ -661,7 +661,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Inner margins are 0.07 inch for text boxes, 0.045 inch left and right for theme color label cells, 0.05 inch left and right and 0.03 inch top and bottom for table cells
 - (Tables)
     + Table cell fills use only the theme color, tints, gray and white
-    + Use a table cell tint for purposes grounded in the cell content, such as emphasis, an inactive mark or a distinction (alternating fills follow the color item)
+    + Use a table cell tint for purposes grounded in the cell content, such as emphasis, an inactive mark or an attribute distinction (the rule against alternating fills is in the color item)
     + Set white for empty cells
     + Capability comparisons use Harvey balls with the ● ◐ ○ symbols in table cells
     + The circle color of Harvey balls is the body text color
@@ -858,7 +858,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Typesetting) Layout variety, bullet overuse, empty table cells, volume of replaced text, remaining slot markers
 - (Structural check) Checks of `scripts/check_layout.py` (remaining WARNs are a failure)
     + (Overflow) Estimated text overflow, estimated mid-word line breaks and line breaks inside a word in text boxes and table cells, tables leaving the slide
-    + (Overflow estimate basis) The text width of chevrons and home plates is the text area width without the points, and the line count of word-unit decks is the larger of the LibreOffice rules and PowerPoint line breaks at spaces
+    + (Overflow estimate width) Overflow of chevrons and home plates is estimated at the text area width without the points
+    + (Overflow estimate line count) Overflow of word-unit decks is estimated at the larger line count of the LibreOffice rules and PowerPoint line breaks at spaces
     + (Overlap) Overlap between text boxes (over 20% WARN, over 30% or over a picture FAIL), overlap among tables, charts, pictures and filled boxes (over 15% FAIL, over 25% between filled boxes FAIL), overlap of icons and text (FAIL), overlap of a table and text (FAIL when grown table rows cover footnotes, source rows and similar text)
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
@@ -869,7 +870,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Single PNG re-check) After the contact sheets, re-check the slides below one by one on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_single 120` (the reduced size of a contact sheet is too small to read text cut at shape edges and chart text)
     + (Chart slides) Overlapping chart labels
     + (First-impression slides) Text cut inside chevrons and label cells on the cover, background and purpose, goals and scope, strategy, process and schedule slides
-    + (Freely composed slides) Shape alignment and connector ends on free template slides and slides adjusted outside the rules (outside the reach of code checks)
+    + (Freely composed slides) Shape alignment and connector end positions on free template slides and slides adjusted beyond the rules under the visual adjustment discretion section (items that code checks do not judge)
 - Adjust chart label overlaps in the chart label resolution order of the design system (rebuild and re-check after adjusting)
 - List the viewed contact sheet and single PNG file names in the completion report
 - (Visual review questions) Questions to check for every slide
