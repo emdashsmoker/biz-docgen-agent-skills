@@ -27,6 +27,15 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-10
+
+### ieum-deck
+- Fixed the Korean alternating fill rule that could be read as covering only shapes beside table rows or columns (#127)
+- Fixed the Korean table tint rule that named the attribute distinction use with 구분, the same word as the category column (#127)
+
+* 표의 행이나 열과 나란한 도형만 대상으로 읽힐 수 있던 한국어판 교차 채움 금지 규칙 수정 (#127)
+* 속성 구분 용도를 구분 열과 같은 단어인 "구분"으로 표기한 한국어판 표 셀 틴트 규칙 수정 (#127)
+
 ## 2026-11-09
 
 ### ieum-deck
