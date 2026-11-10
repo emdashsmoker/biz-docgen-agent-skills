@@ -492,6 +492,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Design the contents according to the RFP and the purpose of the document
 - Without an RFP designation, start from the chapter structure 제안개요, 제안업체 현황, 사업수행계획, 사업관리부문 (`references/skeletons.md`)
 - Choose only the sections the engagement needs from the skeleton's section candidates
+- In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order on one page is recommended (e.g. the process slide of the `process` template)
+    + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
+    + (Position) Choose it to fit the contents structure (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter)
+    + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slide
 
 ## Score attribution
 
@@ -752,9 +756,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color
     + For bar charts with negative values, the builder typesets a zero baseline and room for figures below negative bars
-- (Chart labels) Resolve label overlaps and clipping in the order below (methods and responses per chart type are in the chart label adjustment section of `references/recipes.md`)
+- (Chart labels) Resolve label overlaps, clipping and slice label defects in the order below (methods and responses per defect are in the chart label adjustment section of `references/recipes.md`)
     + (Chart design) First design a chart that needs no label adjustment, with the type, point count and series count that fit its one message
-    + (Position adjustment) Clear the remaining overlaps and clipping with the position codes and move distances of `labelPos` on the series
+    + (Position adjustment) Clear the remaining defects with the position codes and move distances of `labelPos` on the series
     + (Hiding) Among labels that still overlap after moving, hide only those the message does not need (keep hidden figures in at least one of the body, a note, the legend or another series label showing the same value)
     + (Switch to a table) When hiding drops figures the message needs, present a table instead of the chart
 - (Images) Set a path or data URI in `src` of image blocks in composite and free
@@ -867,12 +871,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
-- (Single PNG re-check) After the contact sheets, re-check the slides below one by one on single 120 DPI PNGs from `bash scripts/render.sh out.pptx png_single 120` (the reduced size of a contact sheet is too small to read text cut at shape edges and chart text)
-    + (Chart slides) Overlapping chart labels
-    + (First-impression slides) Text cut inside chevrons and label cells on the cover, background and purpose, goals and scope, strategy, process and schedule slides
-    + (Freely composed slides) Shape alignment and connector end positions on free template slides and slides adjusted beyond the rules under the visual adjustment discretion section (items that code checks do not judge)
-- Adjust chart label overlaps in the chart label resolution order of the design system (rebuild and re-check after adjusting)
-- List the viewed contact sheet and single PNG file names in the completion report
+- (Chart zoom check) After the contact sheets, check each chart again on a zoomed image (the reduced size of a contact sheet is too small to read overlaps, clipping and text contrast of chart labels)
+    + (Zoom area) The chart area including category names, the legend and data labels
+    + (Resolution) Choose it to fit the chart size, at a level where the label text is readable
+    + (Method) Crop one image per chart from PNGs rendered again with the resolution argument of `scripts/render.sh`
+    + (Other areas) Zoom in the same way on other areas that are hard to read on the contact sheets
+- Adjust chart label defects in the chart label resolution order of the design system (rebuild and re-check on zoomed chart images after adjusting)
+- List the file names of the viewed contact sheets and zoomed chart images in the completion report
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
     + Is the first place to look decided within three seconds?
@@ -884,7 +889,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### Visual check items
 
 - Check defects that code checks miss in the PNG of every slide
-- First-impression slides (the single PNG re-check targets) come first and get a detailed check
+- On the cover slide and the background and purpose slide, also check the items below
     + Do the notes of the background and purpose slide start with the `meta.footnoteStyle` mark?
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
@@ -905,6 +910,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Do roadmap and gantt bars touch lane dividers or neighboring bars?
 - Do connectors and arrows float away from boxes?
 - Do chart labels overlap chart elements or other labels?
+- Does label text sit across a slice border or the circle outline (stacked bars, pies)?
+- Does a label sit on a neighboring slice so that it reads as part of the wrong slice?
 - Do the numbers shown in charts match the storyboard values (labels that touch side by side can read as one number)?
 - Do the figures of hidden labels (`labelPos` none) appear in at least one of the body, a note, the legend or another series label showing the same value (switch to a table when figures the message needs are missing)?
 
@@ -940,6 +947,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - Do table headers or cell backgrounds use colors outside the palette (sky blue, orange and so on)?
 - Are unit rows or empty rows transparent so the default table style color shows?
+- Is the text color of a label on a slice too close to the slice color to read?
 
 #### Fixes
 
