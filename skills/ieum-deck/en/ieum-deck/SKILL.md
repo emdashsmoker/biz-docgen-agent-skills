@@ -495,7 +495,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
     + (Volume) One slide is recommended in most cases, large engagements included
-    + (Two or three slides) Decide on them conservatively, for cases such as RFPs that ask for a detailed module list or complex engagements with many stakeholders (e.g. a consortium, a complex delivery structure)
+    + (Two or three slides) Decide on them conservatively, for cases such as RFPs that ask for a detailed module list or complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure)
     + (Position) Choose it to fit the flow of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
     + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slides
 
