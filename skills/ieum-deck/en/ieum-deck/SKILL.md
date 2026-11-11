@@ -492,10 +492,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Design the contents according to the RFP and the purpose of the document
 - Without an RFP designation, start from the chapter structure 제안개요, 제안업체 현황, 사업수행계획, 사업관리부문 (`references/skeletons.md`)
 - Choose only the sections the engagement needs from the skeleton's section candidates
-- In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order on one page is recommended (e.g. the process slide of the `process` template)
+- In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
-    + (Position) Choose it to fit the flow of the document and the RFP requirements (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter)
-    + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slide
+    + (Volume) One slide by default (2-3 slides for very large engagements or RFPs that ask for a detailed module overview)
+    + (Position) Choose it to fit the flow of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
+    + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slides
 
 ## Score attribution
 
