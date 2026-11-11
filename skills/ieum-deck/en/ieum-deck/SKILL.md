@@ -136,7 +136,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + With a tool that delivers only files from a designated folder, place a copy in that folder and deliver it (the reference version is the original in the work folder)
     + In runtime environments without a delivery tool, give the file path
 - Deliver the delivery files (PPTX, and the PDF when included) after all completion conditions are met
-- The completion report lists file paths, viewed contact sheet file names and remaining user confirmation items
+- The completion report lists file paths, review results and remaining user confirmation items
 - When slides run notes and the source line on (`footnoteInline`), the completion report lists the INFO output of lint and build
 - When a deck sets the Key Point band in the label cell format, the completion report lists the label of each slide for user review
 - When the PDF is included, repeat the approximate rendering notice of kickoff question 15 in one line of the completion report
@@ -494,7 +494,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Choose only the sections the engagement needs from the skeleton's section candidates
 - In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order on one page is recommended (e.g. the process slide of the `process` template)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
-    + (Position) Choose it to fit the contents structure (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter)
+    + (Position) Choose it to fit the flow of the document and the RFP requirements (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter)
     + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slide
 
 ## Score attribution
@@ -855,7 +855,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 ## Review system
 
-- Completion is judged from the record of viewing the rendered PNGs and the results of fixing defects
+- Completion is judged from the review results of the rendered PNGs and the defect fixes
 - (lint) Checks of `scripts/lint.py` (remaining WARNs are a failure)
     + (Structure) Schema, full Task coverage, section ledger consistency, score attribution, volume limits, page size names and paths of page-size-specific text (`byLayout`)
     + (Notation) Writing rules, RFP wording, subject term, section numbers, ※ notes, duplicated prefixes, text contrast on theme colors
@@ -871,13 +871,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
-- (Chart zoom check) After the contact sheets, check each chart again on a zoomed image (the reduced size of a contact sheet is too small to read overlaps, clipping and text contrast of chart labels)
+- (Chart zoom check) After the contact sheets, check each chart again on a zoomed image
     + (Zoom area) The chart area including category names, the legend and data labels
     + (Resolution) Choose it to fit the chart size, at a level where the label text is readable
     + (Method) Crop one image per chart from PNGs rendered again with the resolution argument of `scripts/render.sh`
-    + (Other areas) Zoom in the same way on other areas that are hard to read on the contact sheets
+    + (Other areas) Zoom in the same way on other areas that are hard to read
 - Adjust chart label defects in the chart label resolution order of the design system (rebuild and re-check on zoomed chart images after adjusting)
-- List the file names of the viewed contact sheets and zoomed chart images in the completion report
+- The review results in the completion report give the defects found and their fixes with slide numbers
 - (Visual review questions) Questions to check for every slide
     + With the headline covered, does the body alone lead to the same conclusion?
     + Is the first place to look decided within three seconds?
@@ -889,7 +889,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### Visual check items
 
 - Check defects that code checks miss in the PNG of every slide
-- On the cover slide and the background and purpose slide, also check the items below
+- Check the slides that set the first impression first (cover, background and purpose, goals and scope, strategy, process, schedule and so on, chosen by the purpose of the work)
     + Do the notes of the background and purpose slide start with the `meta.footnoteStyle` mark?
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
@@ -1002,7 +1002,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - lint and check_layout exit code 0 (WARNs also count as failures)
 - Zero build warnings
 - finalize.py and validate.py pass
-- A record of viewing all PNGs
+- All PNGs viewed
 - Every defect noticed during the work fixed (WARNs of lint and check_layout follow the WARN rule below)
 - Fixes confirmed on PNGs rendered from the rebuilt deck
 - Writing a defect in the completion report does not replace fixing it
@@ -1011,7 +1011,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - A WARN passes only when it is fixed or `--allow-warn "reason for keeping"` is added
 - If `--allow-warn` is used, write the reason as is in the completion report
 - The last step is the PNG visual review
-- A completion report without viewed file paths counts as incomplete
+- A completion report without review results counts as incomplete
 
 ## Notice
 
