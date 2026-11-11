@@ -209,14 +209,14 @@
 
 #### Resolution order
 
-- Find data label overlaps and clipping on the single 120 dpi PNG and resolve them in the order below (rebuild and re-check after each step)
+- Resolve data label defects found on zoomed chart images (review system section of SKILL.md) in the order below (rebuild and re-check on zoomed chart images after each step)
 - (Chart design) Before using labelPos, design a chart that needs no label adjustment
     + Keep only the points and series the one message needs
     + When so many categories make labels overlap, keep the top 4-5 and merge the rest into Other (Other comes last, pies have six slices or fewer)
     + When so many periods make labels overlap, keep the latest 12 or only the span the message needs
     + Present item comparisons with long category names as horizontal bars
     + Split lines and clustered bars with so many series that labels overlap into two charts by series
-- (Position adjustment) Move overlaps and clipping that chart design cannot clear with labelPos
+- (Position adjustment) Move defects that chart design cannot clear with labelPos
     + First put labels on the side where they do not overlap, with position codes
     + Move overlaps that position codes cannot clear with dx and dy
     + Keep moved labels close to their marker, bar or slice so that it is clear which point the value belongs to
@@ -268,7 +268,18 @@
 | Overlap | When labels of neighboring bars touch, raise the label of the longer bar of each point with dy so the heights alternate | Position codes inside the segment cannot clear labels of thin segments, so give each series dy in opposite directions to move them above and below the bar | Split t and b by series and move the remaining overlaps with l, r or dx, dy | Stagger the labels of small slices at different heights with dx and dy |
 | Clipping | When clipped at the cell edge, keep the label inside with inEnd or dx | Not applicable because labels sit inside segments | When clipped at the chart edge, set r on the first point and l on the last point | When many small slices cause clipping, merge them into Other |
 | Missing | Not supported. The builder draws missing values (null) as 0 bars with a "0" label, so drop the point or present a table | Same as bars | Not supported. Missing values are drawn as a line dropping to 0, so drop the point or present a table | Leave out points whose value is 0 |
-| Hard to read | When rounding makes different values look equal, set decimals with numFmt. Inside positions on dark bars (inEnd, ctr, inBase) have low text contrast | When it is unclear which series a label moved outside the bar belongs to, state the series name and value in the body | When labels of the same value stack, move one series to b | Label text has one color for the whole chart, so use inEnd and ctr only on light slices |
+| Hard to read | When rounding makes different values look equal, set decimals with numFmt. Inside positions on dark bars (inEnd, ctr, inBase) have low text contrast | When it is unclear which series a label moved outside the bar belongs to, state the series name and value in the body | When labels of the same value stack, move one series to b | For the text contrast of labels on slices, follow the slice label defects section |
+
+#### Slice label defects
+
+- Respond to slice label defects of stacked bars and pies with the table below
+- Label text has one color (the body text color) for the whole chart, so the means of response are label position and move distance
+
+| Defect | Stacked bar | Pie |
+|---|---|---|
+| Border crossing (label text sits across a slice border or the circle outline) | Place labels larger than their segment outside the bar with dx and dy | Place labels inside a slice (inEnd, ctr) outside the circle with outEnd. Move labels outside the circle away from the outline with dx and dy, in the direction from the circle center through the middle of their slice |
+| Neighbor slice intrusion (a label sits on a neighboring slice) | Adjust the dy move distance to place the label inside its segment or outside the bar where it touches its segment | Place the label outside the circle in the direction from the circle center through the middle of its slice. When small slices in a row make labels outside the circle overlap, apply the pie overlap response of the per-type table |
+| Low text contrast (the text color of a label on a slice is too close to the slice color) | Place the labels of dark segments outside the bar with dx and dy | Place the labels of dark slices outside the circle with outEnd (use inEnd and ctr only on light slices) |
 
 ## Recipe list
 
