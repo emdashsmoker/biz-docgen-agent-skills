@@ -896,6 +896,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
     + Is the cover title exactly centered between the two horizontal lines?
+- Check freely composed slides (free template slides and slides adjusted beyond the rules under the visual adjustment discretion section) right after the slides that set the first impression (shape alignment and connector end positions can be checked only on the PNGs)
 
 #### Overflow
 
