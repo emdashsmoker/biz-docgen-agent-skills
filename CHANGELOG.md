@@ -32,14 +32,14 @@ Changelog rules
 ### ieum-deck
 - Removed the 120 dpi single PNG re-check of chart, first-impression and freely composed slides (#129)
 - Added a chart zoom check that crops each chart with its labels and reviews it at a readable resolution (#129)
-- Changed the first-impression slides checked first from a fixed list to examples that depend on the purpose of the work (#129)
+- Changed the slides checked first to first-impression slides that depend on the purpose of the work, followed by freely composed slides (#129, #131)
 - Added visual check items and per-type responses for slice labels that cross a slice border or the circle outline, sit on a neighboring slice or have low text contrast (#129)
 - Changed the completion report from viewed file names to review results with the defects found and their fixes (#129)
 - Added a recommendation for a slide that gives an overview of all modules in decks with the module and Task structure (#129)
 
 * 차트, 첫인상, 자유 조판 슬라이드의 120 dpi 단독 PNG 재확인 규칙 삭제 (#129)
 * 레이블을 포함한 차트 영역을 잘라 판독 가능한 해상도로 확인하는 차트 확대 확인 절차 추가 (#129)
-* 먼저 확인하는 첫인상 슬라이드의 고정 목록을 작업 목적에 따라 달라지는 예시 목록으로 변경 (#129)
+* 먼저 확인하는 슬라이드를 작업 목적에 따라 달라지는 첫인상 슬라이드와 자유 조판 슬라이드 순서로 변경 (#129, #131)
 * 조각 경계선과 원 외곽선 걸침, 이웃 조각 침범, 글자색 대비 부족을 다루는 조각 레이블 확인 항목과 형식별 대응 추가 (#129)
 * 완료 보고 기재 항목을 열람 파일명에서 검수 결과(발견 결함과 조치 내용)로 변경 (#129)
 * 모듈과 Task 구조 덱의 모듈 구조 개관 슬라이드 배치 권장 규칙 추가 (#129)
