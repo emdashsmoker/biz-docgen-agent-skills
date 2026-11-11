@@ -494,7 +494,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Choose only the sections the engagement needs from the skeleton's section candidates
 - In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
-    + (Volume) One slide by default (2-3 slides for very large engagements or RFPs that ask for a detailed module overview)
+    + (Volume) One slide is recommended in most cases, large engagements included
+    + (Two or three slides) Decide on them conservatively, for cases such as RFPs that ask for a detailed module list or complex engagements with many stakeholders (e.g. a consortium, a complex delivery structure)
     + (Position) Choose it to fit the flow of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
     + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slides
 
@@ -890,7 +891,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ### Visual check items
 
 - Check defects that code checks miss in the PNG of every slide
-- Check the slides that set the first impression first (cover, background and purpose, goals and scope, strategy, process, schedule and so on, chosen by the purpose of the work)
+- Check the slides that set the first impression first (cover, background and purpose, goals and scope, strategy, process, schedule and so on; which slides these are depends on the purpose of the work)
     + Do the notes of the background and purpose slide start with the `meta.footnoteStyle` mark?
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
