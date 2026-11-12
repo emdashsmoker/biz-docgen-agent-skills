@@ -27,6 +27,35 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-12
+
+### ieum-deck
+- Changed headline phrase emphasis into a kickoff option (item 19, off by default) that accepts several phrases per headline (#133)
+- Added a chart emphasis color option (kickoff item 20, off by default) that shows the bars a message points to in a theme color or a contrast color (#133)
+- Changed the headline emphasis color from a fixed red to a color that follows the theme (#133)
+- Changed the single-series bar color of the mono theme to a darker gray (#133)
+- Fixed the emphasized bar of horizontal bar charts that differed from the bar set in highlight (#133)
+- Added lint checks that report emphasis settings (accent, highlight) that the build does not typeset (#133)
+- Removed the check_layout check that counted red emphasis text per slide (#133)
+- Added the module structure overview slide recommendation to the references read when the modules and the table of contents are set (#133)
+- Added a writing rule against repeating the marker text in body titles and first lines (#133)
+- Added criteria for deciding whether to write a caption for each image (#133)
+- Added a rule that excludes ribbon decorations from free layouts and visual adjustments (#133)
+- Changed the review order of freely composed slides to the same priority as first-impression slides (#133)
+
+* 헤드라인 어구 강조를 여러 어구 지정이 가능한 착수 질의 선택 항목(19번, 기본 미적용)으로 변경 (#133)
+* 메시지가 가리키는 막대를 테마색이나 대비색으로 표시하는 차트 강조색 선택 항목(착수 질의 20번, 기본 미적용) 추가 (#133)
+* 헤드라인 강조색을 고정 붉은색에서 테마를 따르는 색으로 변경 (#133)
+* mono 테마의 단일 계열 막대 색을 짙은 회색으로 변경 (#133)
+* highlight 로 지정한 막대와 다른 막대가 강조되던 가로 막대 차트의 강조 순번 오류 수정 (#133)
+* 빌드가 조판하지 않는 강조 지정(accent, highlight)을 보고하는 lint 검사 추가 (#133)
+* 슬라이드당 붉은 강조 글자 수를 세던 check_layout 검사 삭제 (#133)
+* 모듈과 목차를 정하는 단계의 참조 문서에 모듈 구조 개관 슬라이드 권장 규칙 추가 (#133)
+* 본문 제목과 첫 줄의 마커 문구 반복을 막는 작성 규칙 추가 (#133)
+* 이미지별 캡션 작성 여부의 판단 기준 추가 (#133)
+* 자유 조판과 시각 조정에서 리본 장식을 제외하는 규칙 추가 (#133)
+* 자유 조판 슬라이드의 확인 순서를 첫인상 슬라이드와 같은 우선순위로 변경 (#133)
+
 ## 2026-11-11
 
 ### ieum-deck
