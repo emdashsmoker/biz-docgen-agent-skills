@@ -3,6 +3,7 @@
 - For slides whose topic has a pattern, the storyline step only swaps keywords into the pattern
 - The storyboard step uses the confirmed headline as is
 - For topics without a pattern, the storyline step writes a conclusion sentence that follows `references/writing-rules.md`
+- In decks with headline keyword emphasis on, set the deck emphasis criterion and the emphasis phrases of each slide when confirming the headlines (SKILL.md Headlines section)
 - The patterns are Korean deck text and stay in Korean
 
 ## Subject term

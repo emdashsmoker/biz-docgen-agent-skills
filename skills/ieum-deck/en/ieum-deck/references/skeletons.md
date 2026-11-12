@@ -4,6 +4,9 @@
 - If the RFP prescribes a table of contents or an evaluation item order, use that order as is
 - Headers paired with evaluation items put the item number in section (e.g. "1) 과업 이해도")
 - Path-style headers write section in the "주제 〉 세부" format (kickoff question 13)
+- For decks with the module and Task structure, review the placement of the module structure overview slide when setting the table of contents (volume and position criteria in the SKILL.md Contents section)
+    + (Scope) Decks whose `meta.structure` value is module, such as proposal decks, briefing-session decks, planning studies and general planning decks
+    + (Record) Write the position in 00_storyline.md (a deck without one gives the reason)
 - Chapter names are Korean deck text and stay in Korean (English glosses in parentheses)
 
 ## Default proposal deck skeleton

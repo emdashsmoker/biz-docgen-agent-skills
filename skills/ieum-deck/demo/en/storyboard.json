@@ -5,6 +5,7 @@
   "layout": "16:9",
   "theme": "mono",
   "headlineStyle": "noun",
+  "headlineAccent": true,
   "track": "general",
   "chapters": ["Ⅰ. Proposal Overview", "Ⅱ. Project Execution", "Ⅲ. Project Management"],
   "labels": {

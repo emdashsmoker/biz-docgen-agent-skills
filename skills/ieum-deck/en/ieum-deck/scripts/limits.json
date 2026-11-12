@@ -134,6 +134,12 @@
     "key": "textMuted",
     "on": "white",
     "min": 4.5
+   },
+   {
+    "key": "accent",
+    "on": "white",
+    "min": 4.5,
+    "as": "text"
    }
   ],
   "HINT": "Assign light colors to keys that carry body text (navyPastel2, navyRamp 3rd-4th, tints) and dark colors to keys that carry white text (navy, navyDeep, navyPastel, textMuted)",

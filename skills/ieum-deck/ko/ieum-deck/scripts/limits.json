@@ -134,6 +134,12 @@
     "key": "textMuted",
     "on": "white",
     "min": 4.5
+   },
+   {
+    "key": "accent",
+    "on": "white",
+    "min": 4.5,
+    "as": "text"
    }
   ],
   "HINT": "밝은 색은 본문 글자를 얹는 키(navyPastel2, navyRamp 3-4번째, 틴트)에, 짙은 색은 흰 글자를 얹는 키(navy, navyDeep, navyPastel, textMuted)에 지정",

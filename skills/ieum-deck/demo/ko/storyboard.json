@@ -5,6 +5,7 @@
   "layout": "16:9",
   "theme": "mono",
   "headlineStyle": "noun",
+  "headlineAccent": true,
   "track": "general",
   "chapters": ["Ⅰ. 제안 개요", "Ⅱ. 사업 수행부문", "Ⅲ. 사업 관리부문"]
  },

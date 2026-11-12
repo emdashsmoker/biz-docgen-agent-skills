@@ -102,17 +102,33 @@ const COLOR = {
   tintNavy: "C9CDD8",
   border: "A6A6A6",
   borderLight: "BFBFBF",
-  accent: "C0392B", // 슬라이드당 1곳
+  accent: "30579C", // 헤드라인 강조 어구의 글자색 (테마 키. mono 는 C0392B)
+  chartBase: "6B8EC2", // 단일 계열 차트의 막대와 영역 색 (테마 키)
+  chartAccent: "E67E22", // 대비색 방식의 강조 막대 색 (테마 키)
+  chartDeep: "1F3864", // 조화색 방식의 강조 막대 색 (applyTheme 이 navy 와 chartBase 로 계산)
   white: "FFFFFF",
   black: "000000",
 };
 // 색 테마. navy(기본)와 mono(무채색) 2종을 제공하며 사용자가 다른 색을 지정하면 applyTheme 로 덮어씀
 // 틴트(tintHead, tintBg)와 보조 회색(textMuted)도 테마 키에 포함하여 테마를 다시 적용할 때 이전 테마 값이 남지 않게 함
 // mono 의 틴트와 보조 회색은 navy 값과 같은 휘도의 무채색 (navy 값은 청회색이라 무채색 테마에서 색이 섞여 보임)
+// mono 의 chartBase 는 navyPastel 보다 짙은 회색 (무채색 막대는 같은 휘도의 유채색 막대보다 옅어 보이고 붉은 강조 막대와 무게가 맞지 않음)
+// mono 의 navyPastel 은 누적 막대 조각 안 본문 글자색 레이블의 대비 때문에 7F7F7F 을 유지
 const THEMES = {
-  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C" },
-  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959" },
+  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C", accent: "30579C", chartBase: "6B8EC2", chartAccent: "E67E22" },
+  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959", accent: "C0392B", chartBase: "666666", chartAccent: "C0392B" },
 };
+
+// 강조색 규칙. 값은 navy, mono, 컨설팅사와 대기업 브랜드 색 10종을 기준 색으로 둔 렌더링 비교로 정함
+// 헤드라인 강조 어구는 테마 색상(hue)과 채도를 유지하고 흰 바탕 대비가 아래 값이 되는 명도로 계산
+// (테마 색을 그대로 쓰면 짙은 테마에서 본문 글자색 333333 과 구분되지 않고 대비 4.5 는 파랑 계열에서 링크 글자처럼 밝음)
+const ACCENT_TEXT_CONTRAST = 7.0;
+const ACCENT_TEXT_START_L = 0.7; // 명도를 낮추기 시작하는 값 (대비 7.0 이 되는 명도는 모든 색상에서 이 값보다 낮음)
+const ACHROMATIC_S_MAX = 0.12; // 이 채도 미만의 기준 색은 무채색 테마로 봄 (같은 색상의 강조색이 본문 글자색과 구분되지 않음)
+const WARM_HUE = { from: 330, to: 70 }; // 난색 범위 (빨강, 주황, 노랑). 범위 밖 유채색은 한색으로 봄
+// 대비색은 보색 계산값을 쓰지 않고 색 계열별로 정한 색을 배정 (계산한 보색은 채도와 명도가 테마마다 달라 막대의 무게가 일정하지 않음)
+const ACCENT_BY_FAMILY = { achromatic: "C0392B", warm: "1F3864", cool: "E67E22" };
+const EMPHASIS_CONTRAST_MIN = 3.0; // 조화색 강조 막대와 일반 막대(chartBase)의 대비 하한 (기본 navy 팔레트 1F3864 와 6B8EC2 의 대비는 3.4)
 
 // 기준 색 1개로 테마 키 전체를 계산하는 규칙. 색상(hue)은 기준 색을 유지
 // 채도는 기준 색 채도에 곱하는 비율, 명도는 고정값. 두 값은 기본 navy 팔레트(1F3864 계열)의 실측 관계
@@ -150,6 +166,7 @@ const THEME_TEXT_RULES = [
   { key: "tintHead", on: "textDark", min: TINT_TEXT_CONTRAST_MIN },
   { key: "tintBg", on: "textDark", min: TINT_TEXT_CONTRAST_MIN },
   { key: "textMuted", on: "white", min: MUTED_CONTRAST_MIN },
+  { key: "accent", on: "white", min: LABEL_CONTRAST_MIN, as: "text" }, // 흰 바탕 위 헤드라인 강조 어구의 글자색 (as 가 text 인 키는 채움이 아닌 글자색으로 검사)
 ];
 const TEXT_DARK_DEFAULT = COLOR.textDark; // 모듈 적재 시점의 본문 글자색 (limits.json 에 테마와 무관한 값으로 기록)
 // 규칙 미달 경고에 붙이는 조치 안내
@@ -199,6 +216,29 @@ function darkenForWhite(hsl, min) {
   return { hex, l: c.l };
 }
 
+/** 기준 색의 색 계열 (achromatic, warm, cool) */
+function colorFamily(hsl) {
+  if (hsl.s < ACHROMATIC_S_MAX) return "achromatic";
+  return hsl.h >= WARM_HUE.from || hsl.h < WARM_HUE.to ? "warm" : "cool";
+}
+
+/** 헤드라인 강조 어구의 글자색. 유채색 테마는 테마 색상의 흰 바탕 대비 7.0 명도, 무채색 테마는 빨강 */
+function accentTextColor(hsl) {
+  if (colorFamily(hsl) === "achromatic") return ACCENT_BY_FAMILY.achromatic;
+  return darkenForWhite({ h: hsl.h, s: hsl.s, l: ACCENT_TEXT_START_L }, ACCENT_TEXT_CONTRAST).hex;
+}
+
+/** 조화색 강조 막대 색. 일반 막대와의 대비가 하한 이상이 될 때까지 테마 색의 명도를 낮춤 */
+function deepenAgainst(hex, against, min) {
+  const c = hexToHsl(hex);
+  let out = hex;
+  while (contrast(out, against) < min && c.l > 0) {
+    c.l = Math.max(0, c.l - CONTRAST_STEP_L);
+    out = hslToHex(c);
+  }
+  return out;
+}
+
 /** 색상 코드 표기 정규화 (# 제거, 대문자). 6자리 색상 코드가 아니면 오류 */
 function normHex(v, field) {
   const hex = String(v || "").replace("#", "").toUpperCase();
@@ -224,6 +264,9 @@ function deriveTheme(baseInput) {
     tintNavy: at("tintNavy"),
     tintHead: at("tintHead"),
     tintBg: at("tintBg"),
+    accent: accentTextColor(hsl),
+    chartBase: pastel,
+    chartAccent: ACCENT_BY_FAMILY[colorFamily(hsl)],
   };
   return { colors, adjusted: navy === base ? null : { from: base, to: navy } };
 }
@@ -245,6 +288,9 @@ function applyTheme(key, custom) {
   Object.assign(COLOR, keys);
   // 계산 테마에서 navyPastel 등을 따로 지정하고 navyRamp 는 지정하지 않으면 차트 계열 색을 최종 값으로 다시 구성
   if (derived && !keys.navyRamp) COLOR.navyRamp = [COLOR.navy, COLOR.navyPastel, COLOR.navyPastel2, derived.colors.navyRamp[3]];
+  // 계산 테마에서 navyPastel 만 따로 지정하면 단일 계열 차트 색도 같은 값을 따름
+  if (derived && keys.navyPastel && !keys.chartBase) COLOR.chartBase = COLOR.navyPastel;
+  if (!keys.chartDeep) COLOR.chartDeep = deepenAgainst(COLOR.navy, COLOR.chartBase, EMPHASIS_CONTRAST_MIN);
   Object.keys(COLOR_REMAP).forEach((k) => { delete COLOR_REMAP[k]; });
   Object.assign(COLOR_REMAP, buildRemap());
   return { color: COLOR, adjusted };

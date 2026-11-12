@@ -6,6 +6,8 @@
 - The free template places diagrams that templates and recipes cannot hold directly by coordinate ratios
 - Custom slide templates are used only when custom slides are registered (`references/custom-slides.md`)
 - The band fields are common to all body templates (secNo, section, chapter, headline, marker, source, accent)
+    + Write accent only in decks with headline keyword emphasis on (SKILL.md Headlines section)
+    + Body titles and first lines do not repeat the marker text (Notation section of `references/writing-rules.md`)
 - The page size is set with `meta.layout`
 - The builder converts coordinates for each page size
 - Text volume in the samples is based on 16:9 (text volume for narrower page sizes is in the page size item of the SKILL.md design system)
@@ -252,3 +254,6 @@
 - (Flow) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right or down}, line{color, pt, arrow, dash}
 - The callout block is set in the same formats as the Key Point band (a block without label uses the slide and deck pointLabel. Without a label the format is the tint box)
 - (Other) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy or tint}]}
+- The shapes item of the SKILL.md design system also applies to free block layouts
+    + (Ribbon decoration) Do not attach a color strip to an edge of a box or text line with line, box or label blocks
+    + (Distinction and emphasis) Express them with the means of the skill format (markers, theme color labels, panel headers, tint fills, bold text)

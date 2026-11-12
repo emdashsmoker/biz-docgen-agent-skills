@@ -6,6 +6,8 @@
 - free 템플릿은 템플릿과 레시피로 담기지 않는 도식을 좌표 비율로 직접 배치
 - 커스텀 슬라이드 템플릿은 커스텀 슬라이드를 등록한 경우에만 사용 (`references/custom-slides.md`)
 - 밴드 필드는 모든 본문 템플릿 공통 (secNo, section, chapter, headline, marker, source, accent)
+    + accent 는 헤드라인 키워드 강조를 적용한 덱에서만 기재 (SKILL.md 헤드라인 절)
+    + 본문의 제목과 첫 줄은 marker 와 같은 문구를 반복하지 않음 (`references/writing-rules.md` 표기 절)
 - 판형은 `meta.layout` 으로 지정
 - 판형별 좌표는 빌더가 환산
 - 견본의 문구 분량은 16:9 기준 (좁은 판형의 문구 분량은 SKILL.md 디자인 시스템의 판형 항목)
@@ -251,3 +253,6 @@
 - (흐름) chevron{steps, allChevron}, callout{label, text}, arrow{dir: right 또는 down}, line{color, pt, arrow, dash}
 - callout 블록은 Key Point 밴드와 같은 형식으로 조판 (label 을 생략한 블록은 슬라이드와 덱의 pointLabel 사용. 라벨이 없으면 틴트 상자 형식)
 - (기타) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy 또는 tint}]}
+- free 블록 배치에도 SKILL.md 디자인 시스템의 형태 항목을 적용
+    + (리본 장식) line, box, label 블록으로 상자나 글줄의 가장자리에 색 띠를 붙이지 않음
+    + (구분과 강조) 스킬 양식의 수단으로 표현 (마커, 테마 색 라벨, 패널 헤더, 틴트 채움, 굵은 글자)

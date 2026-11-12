@@ -8,6 +8,7 @@
 - Stages the RFP does not require can be omitted
 - Place the environment analysis module before the strategy module
 - Compose mixed engagements by mixing types module by module
+- After setting the modules, review the placement of a slide that gives an overview of all modules and their order (criteria in the SKILL.md Contents section)
 - The matching layouts listed in each section are recipe names from `references/recipes.md` and template names from `references/templates.md`
 - How the skeleton applies depends on how far an institutional framework governs the engagement
     + (Framework-based) National R&D performance evaluation response, R&D program planning review response and R&D program planning apply the type skeleton as the default (the framework sets the skeleton and wording)

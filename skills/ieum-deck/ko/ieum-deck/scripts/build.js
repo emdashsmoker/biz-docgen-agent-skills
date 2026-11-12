@@ -77,7 +77,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
-    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });
+    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: headlineAccent(sb, meta) });
     A.playOwn(pres, slide, s, sb.slots, ctx);
     if (mode !== "blank") A.pageNo(slide, S, index + 1);
     return;
@@ -87,9 +87,13 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const spec = TEMPLATES.SPEC[tpl] || {};
   const mode0 = sb.bandMode || spec.band || "full";
   const mode = sb.bandMode || (String(band.marker || "").trim() ? mode0 : bandNoMarker(mode0));
-  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: sb.accent });
+  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: headlineAccent(sb, meta) });
   fn(ctx, slide, sb);
   if (mode !== "blank" || spec.pageNo) A.pageNo(slide, S, index + 1);
+}
+/** 헤드라인 강조 어구. 덱의 헤드라인 키워드 강조(meta.headlineAccent)를 켠 경우에만 슬라이드의 accent 를 조판 */
+function headlineAccent(sb, meta) {
+  return meta.headlineAccent === true ? sb.accent : null;
 }
 /** 마커 텍스트가 없을 때 마커 밴드를 건너뛰는 모드로 낮춤 */
 function bandNoMarker(mode) {
@@ -143,6 +147,8 @@ async function main() {
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`줄바꿈 단위 ${lineBreak} 미정의. 선택: ${LINE_BREAKS.join(", ")}`);
   if (meta.footnoteStyle != null && !A.NOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`각주 표기 ${meta.footnoteStyle} 미정의. 선택: ${A.NOTE_STYLES.join(", ")}`);
+  if (meta.chartEmphasis != null && !A.CHART_EMPHASES.includes(meta.chartEmphasis)) throw new Error(`차트 강조 방식 ${meta.chartEmphasis} 미정의. 선택: ${A.CHART_EMPHASES.join(", ")}`);
+  A.setChartEmphasis(meta.chartEmphasis);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);
@@ -170,13 +176,14 @@ async function main() {
   // 커스텀 슬라이드 재생 슬라이드는 원본 글꼴과 폭 흡수 축소를 따르므로 본문 하한 검사에서 제외 (check_layout 이 읽음)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette 는 사용자 지정 테마 색을 표 셀 허용 색으로 인식시키기 위한 기록 (check_layout 이 읽음)
+  // accent 는 헤드라인 강조 어구의 글자색 (테마마다 다름. check_layout 이 본문의 강조색 글자를 셈)
   // language 는 PPTX 에 기록할 언어 태그 (meta.labels.language, finalize 가 읽음)
   // lineBreak 는 문단 속성에 기록할 줄바꿈 단위 (meta.lineBreak, finalize 와 check_layout 이 읽음)
   // noteLabels 는 번호 표기 덱의 각주와 출처 행 앞 라벨. 슬라이드에서 지정한 라벨과 작성자가 쓴 라벨(산식:, 범례: 등) 포함 (check_layout 이 주석 줄로 인식)
   // footnoteInline 은 주석과 출처 행을 이어 쓴 슬라이드 번호와 id (사용자 확인용 보고)
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), accent: T.COLOR.accent, language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   // chartLabels 는 계열별 데이터 레이블 위치와 숨김 지정 (series[].labelPos, finalize 가 차트 XML 에 기록). 지정이 없으면 기록하지 않음
   if (Object.keys(A.chartLabels()).length) report.chartLabels = A.chartLabels();
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));

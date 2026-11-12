@@ -31,6 +31,7 @@
 - 접두 중복: steps title 에 STEP 접두, process 모듈명에 M/Module 접두가 있으면 WARN
 - 번호 표기: 번호 뒤에 공백이 없으면 WARN ("1.목차" → "1. 목차"), secNo 에 마침표가 없으면 WARN
 - 주석 표기: 본문 항목이 ※ 나 "출처:", "자료:", "Source:", "Note:" (meta.labels.notation.source 로 추가한 토큰 포함) 로 시작하면 WARN (note 계열 슬롯과 source 의 ※ 는 빌드가 붙이므로 검사하지 않음. 슬라이드 footnoteLabel 과 sourceLabel 은 meta.labels.common 과 같은 라벨 설정값이므로 검사하지 않음)
+- 강조 지정: 헤드라인 키워드 강조(meta.headlineAccent: true | false)와 차트 강조 방식(meta.chartEmphasis: off | tone | contrast)의 값 형식 (FAIL). 빌드가 조판하지 않는 accent(강조를 켜지 않은 덱, 헤드라인에 없는 어구)와 highlight(단일 계열 막대 차트가 아닌 차트, 범위 밖 순번) (WARN)
 - 주석 이어 쓰기: footnoteInline 을 쓴 슬라이드 목록을 INFO 로 출력 (판정에 넣지 않음. 사용자 확인용 보고)
 - 모듈 표기: 절 제목과 목차 항목이 "Module N." 형식이면 WARN ([Module N] 권장)
 - 대상 지칭어: 지칭어 혼용, 지칭어 변경 후 과업 잔존, 제안 외 산출물의 과업 라벨 잔존 시 WARN, "본 기획" 표기 시 WARN
@@ -60,6 +61,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
+CHART_EMPHASES = ("off", "tone", "contrast")  # 차트 강조 방식(meta.chartEmphasis). 첫 값이 기본. atoms.js 의 CHART_EMPHASES 와 같은 목록
 FOOTNOTE_STYLES = ("number", "mark")  # 각주 표기(meta.footnoteStyle). 첫 값이 기본. atoms.js 의 NOTE_STYLES 와 같은 목록
 # 차트 계열 레이블 지정(series[].labelPos). 문자열은 위치, 객체는 위치(pos)와 pt 이동 거리(dx, dy). none 은 숨김
 # 위치는 ECMA-376 과 MS-OI29500 의 차트 형식별 허용 값
@@ -189,7 +191,9 @@ def theme_contrast_warns(theme_colors):
         if not fill:
             continue
         r = _contrast(fill, text[rule["on"]])
-        if r < rule["min"]:
+        if r < rule["min"] and rule.get("as") == "text":
+            out.append(f"meta.themeColors.{rule['key']} #{fill} 글자의 흰 바탕 대비 {r:.2f} < {rule['min']}. 더 짙은 색을 지정")
+        elif r < rule["min"]:
             on = "흰" if rule["on"] == "white" else "본문"
             out.append(f"meta.themeColors.{rule['key']} #{fill} 위 {on} 글자 대비 {r:.2f} < {rule['min']}. {spec.get('HINT', '')}")
     return out
@@ -496,6 +500,35 @@ def label_pos_checks(sid, spec):
     return fails, warns
 
 
+def accent_warns(sid, sl, enabled):
+    """헤드라인 강조 어구(accent) 검사 (WARN). 빌드가 조판하지 않는 지정을 보고
+    enabled 는 덱의 헤드라인 키워드 강조 사용 여부 (meta.headlineAccent)"""
+    acc = sl.get("accent")
+    if acc is None:
+        return []
+    phrases = acc if isinstance(acc, list) else [acc]
+    if not phrases or not all(isinstance(p, str) and p for p in phrases):
+        return [f"[{sid}] accent 는 강조 어구 문자열이나 강조 어구 배열. 입력값: {acc}"]
+    if not enabled:
+        return [f"[{sid}] accent 는 조판되지 않음 (meta.headlineAccent 가 true 인 덱에서만 강조). accent 를 삭제하거나 meta.headlineAccent 를 지정"]
+    missing = [p for p in phrases if p not in (sl.get("headline") or "")]
+    return [f"[{sid}] accent 어구가 헤드라인에 없음: {', '.join(missing)}"] if missing else []
+
+
+def highlight_warns(sid, spec, mode):
+    """차트 강조 막대(highlight) 검사 (WARN). 빌드가 조판하지 않는 지정을 보고
+    mode 는 덱의 차트 강조 방식 (meta.chartEmphasis). off 이면 빌드가 highlight 를 조판하지 않으므로 검사를 생략"""
+    if mode == CHART_EMPHASES[0] or spec.get("highlight") is None:
+        return []
+    series = spec.get("series") or []
+    if label_kind(spec) not in ("bar", "stacked") or len(series) != 1:
+        return [f"[{sid}] highlight 는 조판되지 않음 (단일 계열 막대 차트에만 적용)"]
+    marks = spec["highlight"] if isinstance(spec["highlight"], list) else [spec["highlight"]]
+    n_values = len((series[0] or {}).get("values") or [])
+    bad = [m for m in marks if not (isinstance(m, int) and not isinstance(m, bool) and 0 <= m < n_values)]
+    return [f"[{sid}] highlight 순번 오류: {bad} (categories 순번 0-{n_values - 1} 의 정수나 정수 배열)"] if bad else []
+
+
 def blocks_of(sl):
     regs = ((sl.get("slots") or {}).get("regions")) or []
     return [b for r in regs for b in (r.get("blocks") or ([r["block"]] if r.get("block") else []))]
@@ -573,7 +606,7 @@ def texts_of(sl):
             for x in v: walk(x, key)
         elif isinstance(v, dict):
             for k, x in v.items():
-                if k in ("id", "template", "type", "chapter", "section", "secNo", "tracker", "notes", "digest", "rfpTasks", "moduleTasks", "evalItems", "bandMode", "kind", "dir", "src", "image", "logo", "photo", "fill", "line", "color", "align"):
+                if k in ("id", "template", "type", "chapter", "section", "secNo", "tracker", "notes", "digest", "rfpTasks", "moduleTasks", "evalItems", "bandMode", "kind", "dir", "src", "image", "logo", "photo", "fill", "line", "color", "align", "accent"):
                     continue
                 walk(x, k)
     walk({k: v for k, v in sl.items() if k != "headline"})
@@ -683,6 +716,11 @@ def lint(story, ledger=None, story_path=".", layout=None):
         fails.append(f"meta.lineBreak 는 {' 또는 '.join(LINE_BREAKS)}. 입력값: {meta.get('lineBreak')}")
     if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
         fails.append(f"meta.footnoteStyle 는 {' 또는 '.join(FOOTNOTE_STYLES)}. 입력값: {meta.get('footnoteStyle')}")
+    if "headlineAccent" in meta and not isinstance(meta["headlineAccent"], bool):
+        fails.append(f"meta.headlineAccent 는 true 또는 false. 입력값: {meta['headlineAccent']}")
+    emphasis = meta.get("chartEmphasis", CHART_EMPHASES[0])
+    if emphasis not in CHART_EMPHASES:
+        fails.append(f"meta.chartEmphasis 는 {' 또는 '.join(CHART_EMPHASES)}. 입력값: {emphasis}")
     if "footnoteSourceMark" in meta and not isinstance(meta["footnoteSourceMark"], bool):
         fails.append(f"meta.footnoteSourceMark 는 true 또는 false. 입력값: {meta['footnoteSourceMark']}")
     for s in story.get("slides", []):
@@ -715,6 +753,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
         for spec in chart_specs(s):
             cf, cw = label_pos_checks(sid, spec)
             fails.extend(cf); warns.extend(cw)
+            warns.extend(highlight_warns(sid, spec, emphasis))
+        warns.extend(accent_warns(sid, s, meta.get("headlineAccent") is True))
         hl = s.get("headline", "")
         # bandMode blank 는 밴드를 그리지 않으므로 헤드라인 자리가 없음
         if tpl not in BAND_TEMPLATES and not tpl.startswith("own:") and s.get("bandMode") != "blank" and not hl:

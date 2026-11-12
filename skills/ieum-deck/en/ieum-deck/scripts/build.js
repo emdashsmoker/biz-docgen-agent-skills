@@ -77,7 +77,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
-    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });
+    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: headlineAccent(sb, meta) });
     A.playOwn(pres, slide, s, sb.slots, ctx);
     if (mode !== "blank") A.pageNo(slide, S, index + 1);
     return;
@@ -87,9 +87,13 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const spec = TEMPLATES.SPEC[tpl] || {};
   const mode0 = sb.bandMode || spec.band || "full";
   const mode = sb.bandMode || (String(band.marker || "").trim() ? mode0 : bandNoMarker(mode0));
-  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: sb.accent });
+  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: headlineAccent(sb, meta) });
   fn(ctx, slide, sb);
   if (mode !== "blank" || spec.pageNo) A.pageNo(slide, S, index + 1);
+}
+/** Headline emphasis phrases. The slide accent is typeset only when the deck turns on headline keyword emphasis (meta.headlineAccent) */
+function headlineAccent(sb, meta) {
+  return meta.headlineAccent === true ? sb.accent : null;
 }
 /** Lowers the mode to one that skips the marker band when there is no marker text */
 function bandNoMarker(mode) {
@@ -143,6 +147,8 @@ async function main() {
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`Line break unit ${lineBreak} is undefined. Choose: ${LINE_BREAKS.join(", ")}`);
   if (meta.footnoteStyle != null && !A.NOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`Footnote style ${meta.footnoteStyle} is undefined. Choose: ${A.NOTE_STYLES.join(", ")}`);
+  if (meta.chartEmphasis != null && !A.CHART_EMPHASES.includes(meta.chartEmphasis)) throw new Error(`Chart emphasis mode ${meta.chartEmphasis} is undefined. Choose: ${A.CHART_EMPHASES.join(", ")}`);
+  A.setChartEmphasis(meta.chartEmphasis);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);
@@ -170,13 +176,14 @@ async function main() {
   // Custom slide playback keeps the source font and width-absorbing shrink, so those slides skip the body minimum check (read by check_layout)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
+  // accent is the text color of headline emphasis phrases (differs by theme. check_layout counts emphasis-colored text in the body)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
   // noteLabels holds the labels before footnotes and the source line in a number-style deck, including labels set on slides and labels the author wrote (산식:, 범례: etc.) (check_layout treats those lines as notes)
   // footnoteInline lists the slide numbers and ids whose notes and source line run on (reported for the user to check)
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), accent: T.COLOR.accent, language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   // chartLabels holds per-series data label positions and hiding (series[].labelPos, written into the chart XML by finalize). Omitted when nothing is set
   if (Object.keys(A.chartLabels()).length) report.chartLabels = A.chartLabels();
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));

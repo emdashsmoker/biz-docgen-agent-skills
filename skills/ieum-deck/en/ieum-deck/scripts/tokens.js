@@ -102,17 +102,33 @@ const COLOR = {
   tintNavy: "C9CDD8",
   border: "A6A6A6",
   borderLight: "BFBFBF",
-  accent: "C0392B", // One place per slide
+  accent: "30579C", // Text color of headline emphasis phrases (theme key. C0392B in mono)
+  chartBase: "6B8EC2", // Bar and area color of single-series charts (theme key)
+  chartAccent: "E67E22", // Emphasized bar color in the contrast mode (theme key)
+  chartDeep: "1F3864", // Emphasized bar color in the tone mode (applyTheme computes it from navy and chartBase)
   white: "FFFFFF",
   black: "000000",
 };
 // Color themes. Two are provided, navy (default) and mono (achromatic). applyTheme overwrites them when the user sets other colors
 // Tints (tintHead, tintBg) and the secondary gray (textMuted) are theme keys too, so reapplying a theme leaves no values from the previous theme
 // mono tints and secondary gray are achromatic grays with the same luminance as the navy values (the navy values are blue-gray and look mixed in an achromatic theme)
+// mono chartBase is a darker gray than navyPastel (achromatic bars look paler than chromatic bars of the same luminance and carry less weight than a red emphasized bar)
+// mono navyPastel stays 7F7F7F for the contrast of body-color labels inside stacked bar segments
 const THEMES = {
-  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C" },
-  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959" },
+  navy: { navy: "1F3864", navyDeep: "17294A", navyPastel: "6B8EC2", navyPastel2: "A9B9D9", navyRamp: ["1F3864", "6B8EC2", "A9B9D9", "D5DDEC"], tintNavy: "C9CDD8", tintHead: "E9EBF0", tintBg: "F7F8FA", textMuted: "52596C", accent: "30579C", chartBase: "6B8EC2", chartAccent: "E67E22" },
+  mono: { navy: "2B2B2B", navyDeep: "111111", navyPastel: "7F7F7F", navyPastel2: "BFBFBF", navyRamp: ["2B2B2B", "7F7F7F", "BFBFBF", "E0E0E0"], tintNavy: "D0D0D0", tintHead: "EBEBEB", tintBg: "F8F8F8", textMuted: "595959", accent: "C0392B", chartBase: "666666", chartAccent: "C0392B" },
 };
+
+// Emphasis color rules. The values come from comparing renders with navy, mono and ten consulting firm and large company brand colors as the base color
+// A headline emphasis phrase keeps the theme hue and saturation and takes the lightness that gives the contrast below on white
+// (the theme color itself cannot be told from body text 333333 in dark themes, and contrast 4.5 looks as bright as link text in blue hues)
+const ACCENT_TEXT_CONTRAST = 7.0;
+const ACCENT_TEXT_START_L = 0.7; // Lightness to start darkening from (the lightness at contrast 7.0 is below this value in every hue)
+const ACHROMATIC_S_MAX = 0.12; // A base color below this saturation counts as an achromatic theme (an emphasis color of the same hue cannot be told from body text)
+const WARM_HUE = { from: 330, to: 70 }; // Warm range (red, orange, yellow). Chromatic colors outside the range count as cool
+// The contrast color is a color set per color family, not a computed complement (computed complements differ in saturation and lightness by theme, so the bar weight is uneven)
+const ACCENT_BY_FAMILY = { achromatic: "C0392B", warm: "1F3864", cool: "E67E22" };
+const EMPHASIS_CONTRAST_MIN = 3.0; // Minimum contrast between the tone-mode emphasized bar and plain bars (chartBase). 1F3864 and 6B8EC2 of the default navy palette have 3.4
 
 // Rules that compute all theme keys from one base color. The hue stays that of the base color
 // Saturation is a ratio multiplied by the base saturation, and lightness is fixed. Both come from measured relations in the default navy palette (1F3864 family)
@@ -150,6 +166,7 @@ const THEME_TEXT_RULES = [
   { key: "tintHead", on: "textDark", min: TINT_TEXT_CONTRAST_MIN },
   { key: "tintBg", on: "textDark", min: TINT_TEXT_CONTRAST_MIN },
   { key: "textMuted", on: "white", min: MUTED_CONTRAST_MIN },
+  { key: "accent", on: "white", min: LABEL_CONTRAST_MIN, as: "text" }, // Text color of headline emphasis phrases on a white background (a key with as text is checked as a text color, not a fill)
 ];
 const TEXT_DARK_DEFAULT = COLOR.textDark; // Body text color at module load (recorded in limits.json as a theme-independent value)
 // Fix guidance attached to rule warnings
@@ -199,6 +216,29 @@ function darkenForWhite(hsl, min) {
   return { hex, l: c.l };
 }
 
+/** Color family of a base color (achromatic, warm, cool) */
+function colorFamily(hsl) {
+  if (hsl.s < ACHROMATIC_S_MAX) return "achromatic";
+  return hsl.h >= WARM_HUE.from || hsl.h < WARM_HUE.to ? "warm" : "cool";
+}
+
+/** Text color of headline emphasis phrases. Chromatic themes take the theme hue at contrast 7.0 on white, achromatic themes take red */
+function accentTextColor(hsl) {
+  if (colorFamily(hsl) === "achromatic") return ACCENT_BY_FAMILY.achromatic;
+  return darkenForWhite({ h: hsl.h, s: hsl.s, l: ACCENT_TEXT_START_L }, ACCENT_TEXT_CONTRAST).hex;
+}
+
+/** Emphasized bar color in the tone mode. Lowers the lightness of the theme color until its contrast with plain bars reaches the minimum */
+function deepenAgainst(hex, against, min) {
+  const c = hexToHsl(hex);
+  let out = hex;
+  while (contrast(out, against) < min && c.l > 0) {
+    c.l = Math.max(0, c.l - CONTRAST_STEP_L);
+    out = hslToHex(c);
+  }
+  return out;
+}
+
 /** Normalizes a color code (drops #, uppercase). Error if it is not a 6-digit color code */
 function normHex(v, field) {
   const hex = String(v || "").replace("#", "").toUpperCase();
@@ -224,6 +264,9 @@ function deriveTheme(baseInput) {
     tintNavy: at("tintNavy"),
     tintHead: at("tintHead"),
     tintBg: at("tintBg"),
+    accent: accentTextColor(hsl),
+    chartBase: pastel,
+    chartAccent: ACCENT_BY_FAMILY[colorFamily(hsl)],
   };
   return { colors, adjusted: navy === base ? null : { from: base, to: navy } };
 }
@@ -245,6 +288,9 @@ function applyTheme(key, custom) {
   Object.assign(COLOR, keys);
   // In a computed theme, if keys such as navyPastel are set separately and navyRamp is not, rebuild the chart series colors from the final values
   if (derived && !keys.navyRamp) COLOR.navyRamp = [COLOR.navy, COLOR.navyPastel, COLOR.navyPastel2, derived.colors.navyRamp[3]];
+  // In a computed theme, if only navyPastel is set separately, the single-series chart color follows the same value
+  if (derived && keys.navyPastel && !keys.chartBase) COLOR.chartBase = COLOR.navyPastel;
+  if (!keys.chartDeep) COLOR.chartDeep = deepenAgainst(COLOR.navy, COLOR.chartBase, EMPHASIS_CONTRAST_MIN);
   Object.keys(COLOR_REMAP).forEach((k) => { delete COLOR_REMAP[k]; });
   Object.assign(COLOR_REMAP, buildRemap());
   return { color: COLOR, adjusted };
