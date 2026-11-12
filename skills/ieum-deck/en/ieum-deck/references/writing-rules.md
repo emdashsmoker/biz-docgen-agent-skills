@@ -82,7 +82,7 @@
 - If it still looks awkward after shrinking, change the form of expression or merge it with a neighboring box
 - Decide for each image whether to write a caption, by the slide message and the role of the image (criteria in the image captions item of the SKILL.md design system)
     + (Write) Images whose nature readers could mistake without a caption, such as deliverable examples and drafts
-    + (Omit) Decorative images, analogy illustrations, sets of example images, images whose content the body or text inside the image already conveys
+    + (Omit) Decorative images, analogy illustrations, sets of example images, images whose content the body or text inside the image already conveys and so on
 - Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
@@ -122,7 +122,7 @@
     + A grid cell that carries inherited numbering (1-1.) sets numbered so the number replaces the bullet
     + Write note and footnotes items without ※ or a mark such as "1)" (the mark comes from `meta.footnoteStyle`, content type labels from the Notes section below, and source marks from the source mark rule below)
     + Write process module names without numbers such as "M1" (the module number goes in the id field)
-- Body titles, cell titles, panel headers and first lines do not repeat the marker text or nearly the same text (the marker is the subtitle of the slide, so the same text adds no information)
+- Body titles, cell titles, panel headers, first lines and similar text do not repeat the marker text or nearly the same text (the marker is the subtitle of the slide, so the same text adds no information)
     + (Remove) Remove a title or first line whose content equals the marker
     + (Replace) In a cell that needs a title, use text with information the marker lacks (target, scope, criterion, time and so on)
 - The symbol repetition rule targets symbols typed directly (bullets drawn by the builder stay)

@@ -254,5 +254,5 @@
 - callout 블록은 Key Point 밴드와 같은 형식으로 조판 (label 을 생략한 블록은 슬라이드와 덱의 pointLabel 사용. 라벨이 없으면 틴트 상자 형식)
 - (기타) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy 또는 tint}]}
 - free 블록 배치에도 SKILL.md 디자인 시스템의 형태 항목을 적용
-    + (리본 장식) line, box, label 블록으로 상자나 글줄의 가장자리에 색 띠를 붙이지 않음
-    + (구분과 강조) 스킬 양식의 수단으로 표현 (마커, 테마 색 라벨, 패널 헤더, 틴트 채움, 굵은 글자)
+    + (리본 장식) line, box, label 블록 등으로 상자나 글줄의 가장자리에 색 띠를 붙이지 않음
+    + (구분과 강조) 스킬 양식의 수단으로 표현 (마커, 테마 색 라벨, 패널 헤더, 틴트 채움, 굵은 글자 등)

@@ -129,7 +129,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Install missing dependencies with `python3 scripts/setup_deps.py`
 - Accumulate the output of each step as files
 - The basic items of 00_storyline.md are the one-line storyline, chapter messages and per-slide headlines
-    + (Module and Task structure decks) Also write where the module structure overview slide goes (criteria in the Contents section. A deck without one gives the reason)
+    + (Module and Task structure decks) Including the module structure overview slide in the slide list is recommended (criteria in the Contents section)
     + (Headline keyword emphasis decks) Also write the deck emphasis criterion and the emphasis phrases of each slide (criteria in the Headlines section)
 - Responses contain only file paths, progress status and items that need confirmation
 - Deliver files for review and delivery files with the file delivery tool of the runtime environment
@@ -504,12 +504,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Design the contents according to the RFP and the purpose of the document
 - Without an RFP designation, start from the chapter structure 제안개요, 제안업체 현황, 사업수행계획, 사업관리부문 (`references/skeletons.md`)
 - Choose only the sections the engagement needs from the skeleton's section candidates
-- In decks with the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template)
+- In decks with the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
-    + (When to review) Review the placement at the work plan design step that sets the modules and at the storyline step that sets the table of contents (write the result in 00_storyline.md)
+    + (When to reflect) Reflect it in the table of contents at the work plan design step that sets the modules and at the storyline step that sets the table of contents
     + (Volume) One slide is recommended for most engagements, large engagements included
-    + (Two or three slides) Consider them for engagements whose RFP asks for a detailed module list and for complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure), and adopt them only when the need is clear
-    + (Position) Choose it to fit the order of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter)
+    + (Two or three slides) Consider them for engagements whose RFP asks for a detailed module list and for complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure and so on), and adopt them only when the need is clear
+    + (Position) Choose it to fit the order of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
     + (Difference from module overview slides) A module overview slide covers the Tasks of one module, so place it separately from the overview slide
 
 ## Score attribution
@@ -771,10 +771,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Shapes) The basic shapes of parametric, composite and free templates are rectangles, rounded rectangles with a radius of 0.05 inch or less, chevrons, straight lines, orthogonal connectors (split into straight lines) and circles
     + Diagram-specific shapes (flow arrows, Harvey ball pie slices, trapezoids of the strategy and house roofs, triangles and trapezoids of pyramid, funnel strips, porter arrowheads, storage cylinders, ellipses and diamonds of flowchart) are used only in their diagrams
     + Do not use icons, gradients, shadows, 3D, pill-shaped boxes, full-width color strips, vertical side strips, decorative lines below titles, or repeated grids of identical cards
-    + (Ribbon decoration) Do not use a color strip that carries no text and runs along an edge of a box, card or text line in any typesetting, free templates and visual adjustments included (a decoration that does not fit the black-and-white base and rectangle-centered shapes)
-    + (Side ribbon examples) A vertical color strip on the left edge of a figure card, a long vertical bar set to the left of a headline or subtitle, a strip of another color added to the left end of a conclusion band
-    + (Top and bottom ribbon examples) A full-width color strip at the top of the slide, a horizontal color strip along the top or bottom edge of a box
-    + (Alternatives) Express distinction and emphasis with markers, theme color label cells, panel headers, tint fills and bold text
+    + (Ribbon decoration) Do not use a color strip that carries no text and runs along an edge of a box, card, text line or similar element in any typesetting, free templates and visual adjustments included (a decoration that does not fit the black-and-white base and rectangle-centered shapes)
+    + (Side ribbon examples) A vertical color strip on the left edge of a figure card, a long vertical bar set to the left of a headline or subtitle, a strip of another color added to the left end of a conclusion band and so on
+    + (Top and bottom ribbon examples) A full-width color strip at the top of the slide, a horizontal color strip along the top or bottom edge of a box and so on
+    + (Alternatives) Express distinction and emphasis with markers, theme color label cells, panel headers, tint fills, bold text and so on
     + The Key Point band uses one format across the deck, either the tint box without a label cell (default) or the tinted strip with a label cell on the left (option). Typesetting details are in the Key Point band section of `references/templates.md`
 - (Charts) Use native charts only
     + Composition uses pie charts (six slices or fewer) or stacked bars
@@ -805,8 +805,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + check_layout warns about the small text of placeholder boxes
     + Before delivery, set an image for placeholder boxes or replace them with another block
 - (Image captions) Decide for each image whether to write a caption (`caption`), by the slide message and the role of the image
-    + (Write) Images whose nature readers could mistake without a caption (e.g. deliverable examples, drafts, photos that need the place or time stated)
-    + (Omit) Decorative images, illustrations that show a body concept by analogy, sets of images listed as examples of items the body mentions
+    + (Write) Images whose nature readers could mistake without a caption (e.g. deliverable examples, drafts, photos that need the place or time stated and so on)
+    + (Omit) Decorative images, illustrations that show a body concept by analogy, sets of images listed as examples of items the body mentions and so on
     + (Double description) A caption does not repeat what the body, a cell title or text inside the image already conveys
 
 ## Briefing deck
@@ -910,7 +910,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
     + (Placement) Body margin imbalance (over 15% on one side and below 15% on the other), insufficient body vertical fill (below 70%), edge margins, leaving the band, empty panels, not enough box content, short Key Point sentence (below 50% per sentence)
-    + (Notation) Headline font consistency, body text below 11pt, emphasis-colored text in two or more body places outside the headline, missing bullets in multi-line text, mixed table alignment
+    + (Notation) Headline font consistency, body text below 11pt, body text in the headline emphasis color (two or more places per slide), missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - (Chart zoom check) After the contact sheets, check each chart again on a zoomed image
@@ -1011,7 +1011,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + One slide shows a different style of font, color or spacing
     + Alignment varies within the same column or among boxes of the same level (left, center and right mixed)
     + Icons or markers unrelated to the content appear
-    + A ribbon decoration appears (a color strip on an edge of a box, card or text line. Shapes item of the Design system section)
+    + A ribbon decoration appears (a color strip on an edge of a box, card, text line or similar element. Shapes item of the Design system section)
     + Empty boxes, empty tables or charts without values remain
     + The same content appears in two places
     + A connector touches nothing or points the wrong way
@@ -1031,7 +1031,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - If text looks cramped or large areas are empty in review, adjust within the slide
 - The adjustment means and their order are line spacing distribution, box size adjustment, moving elements
-- Do not add new decorative shapes (ribbons, color strips, decorative lines) during adjustment
+- Do not add new decorative shapes that count as AI slop (ribbons, color strips, decorative lines and so on) during adjustment
 - Change font size only when changing it for the whole level together
 - The adjustment scope is all elements of the same level
 - After adjusting, check again the left-right and top-bottom weight and the spacing between levels

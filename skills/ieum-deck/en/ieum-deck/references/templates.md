@@ -255,5 +255,5 @@
 - The callout block is set in the same formats as the Key Point band (a block without label uses the slide and deck pointLabel. Without a label the format is the tint box)
 - (Other) image{src, caption, label}, circle{text, fill}, grid{cols, rows, cells[{r, c, span, text, fill: navy or tint}]}
 - The shapes item of the SKILL.md design system also applies to free block layouts
-    + (Ribbon decoration) Do not attach a color strip to an edge of a box or text line with line, box or label blocks
-    + (Distinction and emphasis) Express them with the means of the skill format (markers, theme color labels, panel headers, tint fills, bold text)
+    + (Ribbon decoration) Do not attach a color strip to an edge of a box or text line with line, box, label or other blocks
+    + (Distinction and emphasis) Express them with the means of the skill format (markers, theme color labels, panel headers, tint fills, bold text and so on)
