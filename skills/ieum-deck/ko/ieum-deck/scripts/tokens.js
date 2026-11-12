@@ -105,7 +105,7 @@ const COLOR = {
   accent: "30579C", // 헤드라인 강조 어구의 글자색 (테마 키. mono 는 C0392B)
   chartBase: "6B8EC2", // 단일 계열 차트의 막대와 영역 색 (테마 키)
   chartAccent: "E67E22", // 대비색 방식의 강조 막대 색 (테마 키)
-  chartDeep: "1F3864", // 조화색 방식의 강조 막대 색 (applyTheme 이 navy 와 chartBase 로 계산)
+  chartDeep: "1F3864", // 테마색 방식의 강조 막대 색 (applyTheme 이 navy 와 chartBase 로 계산)
   white: "FFFFFF",
   black: "000000",
 };
@@ -128,7 +128,7 @@ const ACHROMATIC_S_MAX = 0.12; // 이 채도 미만의 기준 색은 무채색 �
 const WARM_HUE = { from: 330, to: 70 }; // 난색 범위 (빨강, 주황, 노랑). 범위 밖 유채색은 한색으로 봄
 // 대비색은 보색 계산값을 쓰지 않고 색 계열별로 정한 색을 배정 (계산한 보색은 채도와 명도가 테마마다 달라 막대의 무게가 일정하지 않음)
 const ACCENT_BY_FAMILY = { achromatic: "C0392B", warm: "1F3864", cool: "E67E22" };
-const EMPHASIS_CONTRAST_MIN = 3.0; // 조화색 강조 막대와 일반 막대(chartBase)의 대비 하한 (기본 navy 팔레트 1F3864 와 6B8EC2 의 대비는 3.4)
+const EMPHASIS_CONTRAST_MIN = 3.0; // 테마색 강조 막대와 일반 막대(chartBase)의 대비 하한 (기본 navy 팔레트 1F3864 와 6B8EC2 의 대비는 3.4)
 
 // 기준 색 1개로 테마 키 전체를 계산하는 규칙. 색상(hue)은 기준 색을 유지
 // 채도는 기준 색 채도에 곱하는 비율, 명도는 고정값. 두 값은 기본 navy 팔레트(1F3864 계열)의 실측 관계
@@ -228,7 +228,7 @@ function accentTextColor(hsl) {
   return darkenForWhite({ h: hsl.h, s: hsl.s, l: ACCENT_TEXT_START_L }, ACCENT_TEXT_CONTRAST).hex;
 }
 
-/** 조화색 강조 막대 색. 일반 막대와의 대비가 하한 이상이 될 때까지 테마 색의 명도를 낮춤 */
+/** 테마색 강조 막대 색. 일반 막대와의 대비가 하한 이상이 될 때까지 테마 색의 명도를 낮춤 */
 function deepenAgainst(hex, against, min) {
   const c = hexToHsl(hex);
   let out = hex;

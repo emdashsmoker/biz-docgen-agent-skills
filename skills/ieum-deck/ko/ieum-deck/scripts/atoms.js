@@ -749,7 +749,7 @@ function rampBetween(from, to, n) {
 function categoryColors(palette, n) {
   return n <= palette.length ? palette.slice(0, n) : rampBetween(palette[0], palette[palette.length - 1], n);
 }
-// 막대 강조 방식 (meta.chartEmphasis). off 는 강조 없음, tone 은 테마 색을 짙게 한 조화색, contrast 는 테마와 색 계열이 다른 대비색
+// 막대 강조 방식 (meta.chartEmphasis). off 는 강조 없음, tone 은 테마 색을 짙게 한 테마색, contrast 는 테마와 색 계열이 다른 대비색
 const CHART_EMPHASES = ["off", "tone", "contrast"];
 let CHART_EMPHASIS = CHART_EMPHASES[0];
 /** 덱의 막대 강조 방식 등록 (build.js 가 meta.chartEmphasis 로 호출) */

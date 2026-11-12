@@ -21,7 +21,7 @@
 | footnoteSourceMark | When true, a ※-style deck also puts ※ before the source line and source notes (e.g. "※ Source: A; B"). Default false (sources start with their source mark without ※). Not asked at kickoff. Set only when the user asks for it, for example to follow an RFP template. Not applied in a number-style deck |
 | theme | navy (default), mono. Custom colors go in themeColors |
 | headlineAccent | Headline keyword emphasis. false (default), true. Only a deck with true typesets the slide accent in the theme emphasis color (kickoff item 19) |
-| chartEmphasis | Chart emphasis mode. off (default), tone (tone color), contrast (contrast color). Only a deck with a value other than off typesets the chart highlight (kickoff item 20) |
+| chartEmphasis | Chart emphasis mode. off (default), tone (theme color), contrast (contrast color). Only a deck with a value other than off typesets the chart highlight (kickoff item 20) |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
 | final | If true, lint checks remaining placeholders as FAIL (set right before the completion report) |

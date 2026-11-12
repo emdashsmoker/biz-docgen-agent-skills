@@ -199,8 +199,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (On option) Important phrases of the headline are shown in the theme emphasis color
     + (Emphasis color note) The navy theme and custom color themes use a color of the same family as the theme color, the mono theme uses red
     + (Choosing emphasis phrases) Follow the headline keyword emphasis item of the Headlines section
-20. (Chart emphasis color) Off (default), tone color or contrast color. Record the choice in `meta.chartEmphasis` as off, tone or contrast
-    + (Tone color option) The bar the message points to is shown in a deeper color of the same family as the theme color
+20. (Chart emphasis color) Off (default), theme color or contrast color. Record the choice in `meta.chartEmphasis` as off, tone or contrast
+    + (Theme color option) The bar the message points to is shown in a deeper color of the same family as the theme color
     + (Contrast color option) The bar the message points to is shown in a color of a different family from the theme color (orange in the navy theme, red in the mono theme)
     + (Contrast color of custom color themes) The build assigns orange for a cool base color, navy for a warm one and red for an achromatic one (tell the user the assigned color in the question)
     + (Choosing emphasized bars) Follow the chart emphasis item of the Design system section
@@ -508,7 +508,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
     + (When to reflect) Reflect it in the table of contents at the work plan design step that sets the modules and at the storyline step that sets the table of contents
     + (Volume) One slide is recommended for most engagements, large engagements included
-    + (Two or three slides) Consider them for engagements whose RFP asks for a detailed module list and for complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure and so on), and adopt them only when the need is clear
+    + (Two or three slides) Consider them for engagements whose RFP asks for a detailed module list and for complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure and so on), and adopt them conservatively, only when the need is clear
     + (Position) Choose it to fit the order of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
     + (Difference from module overview slides) A module overview slide covers the Tasks of one module, so place it separately from the overview slide
 
@@ -774,7 +774,6 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Ribbon decoration) Do not use a color strip that carries no text and runs along an edge of a box, card, text line or similar element in any typesetting, free templates and visual adjustments included (a decoration that does not fit the black-and-white base and rectangle-centered shapes)
     + (Side ribbon examples) A vertical color strip on the left edge of a figure card, a long vertical bar set to the left of a headline or subtitle, a strip of another color added to the left end of a conclusion band and so on
     + (Top and bottom ribbon examples) A full-width color strip at the top of the slide, a horizontal color strip along the top or bottom edge of a box and so on
-    + (Alternatives) Express distinction and emphasis with markers, theme color label cells, panel headers, tint fills, bold text and so on
     + The Key Point band uses one format across the deck, either the tint box without a label cell (default) or the tinted strip with a label cell on the left (option). Typesetting details are in the Key Point band section of `references/templates.md`
 - (Charts) Use native charts only
     + Composition uses pie charts (six slices or fewer) or stacked bars
@@ -785,13 +784,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color (single-series bars of the mono theme are dark gray #666666)
     + For bar charts with negative values, the builder typesets a zero baseline and room for figures below negative bars
-- (Chart emphasis) A deck that chose tone color or contrast color in kickoff item 20 sets the bars to emphasize in `highlight` of the chart (off by default. `highlight` in a deck with emphasis off is not typeset)
+- (Chart emphasis) A deck that chose theme color or contrast color in kickoff item 20 sets the bars to emphasize in `highlight` of the chart (off by default. `highlight` in a deck with emphasis off is not typeset)
     + (Target) The bar the slide message points to (the bar readers should see first)
     + (When to apply) Set it only in charts whose message points to specific bars (a chart that compares all bars evenly is typeset without emphasis)
     + (Emphasis range) Keep the number of emphasized bars to the minimum the message needs (many emphasized bars lose the effect)
     + (Chart types) Single-series bar charts (multi-series bars, stacked bars, lines and pies are excluded because series colors tell their items apart)
     + (Format) Write one categories index (from 0) or an index array of the emphasized bars in `highlight` (an index out of range and a setting on other chart types are lint WARNs)
-    + (Tone color) The emphasized bar takes the theme color deepened until its contrast with plain bars is 3:1 or more
+    + (Theme color) The emphasized bar takes the theme color deepened until its contrast with plain bars is 3:1 or more
     + (Contrast color) The emphasized bar takes a color of a different family from the theme color (orange #E67E22 in the navy theme, red #C0392B in the mono theme)
     + (Contrast color of custom color themes) Orange #E67E22 for a cool base color, navy #1F3864 for a warm one, red #C0392B for an achromatic one (changeable with the color key chartAccent)
 - (Chart labels) Resolve label overlaps, clipping and slice label defects in the order below (methods and responses per defect are in the chart label adjustment section of `references/recipes.md`)
@@ -936,7 +935,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
     + Is the cover title exactly centered between the two horizontal lines?
-- Check freely composed slides right after the slides that set the first impression (shape alignment and connector end positions can be checked only on the PNGs)
+- Check freely composed slides first, with the same priority as the slides that set the first impression (shape alignment and connector end positions can be checked only on the PNGs)
     + (free template slides) All slides typeset with the free template
     + (Adjusted slides) Slides adjusted beyond the rules under the visual adjustment discretion section
 
