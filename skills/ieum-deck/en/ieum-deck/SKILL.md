@@ -128,6 +128,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Check dependencies with `python3 scripts/setup_deps.py --check` before any other step
 - Install missing dependencies with `python3 scripts/setup_deps.py`
 - Accumulate the output of each step as files
+- The basic items of 00_storyline.md are the one-line storyline, chapter messages and per-slide headlines
+    + (Module and Task structure decks) Including the module structure overview slide in the slide list is recommended (criteria in the Contents section)
+    + (Headline keyword emphasis decks) Also write the deck emphasis criterion and the emphasis phrases of each slide (criteria in the Headlines section)
 - Responses contain only file paths, progress status and items that need confirmation
 - Deliver files for review and delivery files with the file delivery tool of the runtime environment
     + (Reason) In runtime environments where the work folder is not visible to the user, a path alone does not let the user open the file
@@ -192,6 +195,15 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Label cell option) A dedicated label that fits each band's content, shown in the left cell
     + (When the label cell is chosen) Write a dedicated label in `pointLabel` on each slide (writing principles in the Key Point labels section of `references/writing-rules.md`)
     + (Deck-level label) Write `meta.pointLabel` only when the user specifies one label for the whole deck
+19. (Headline keyword emphasis) Off (default) or on. Record the choice in `meta.headlineAccent` as false or true
+    + (On option) Important phrases of the headline are shown in the theme emphasis color
+    + (Emphasis color note) The navy theme and custom color themes use a color of the same family as the theme color, the mono theme uses red
+    + (Choosing emphasis phrases) Follow the headline keyword emphasis item of the Headlines section
+20. (Chart emphasis color) Off (default), theme color or contrast color. Record the choice in `meta.chartEmphasis` as off, tone or contrast
+    + (Theme color option) The bar the message points to is shown in a deeper color of the same family as the theme color
+    + (Contrast color option) The bar the message points to is shown in a color of a different family from the theme color (orange in the navy theme, red in the mono theme)
+    + (Contrast color of custom color themes) The build assigns orange for a cool base color, navy for a warm one and red for an achromatic one (tell the user the assigned color in the question)
+    + (Choosing emphasized bars) Follow the chart emphasis item of the Design system section
 
 ## Company facts
 
@@ -492,12 +504,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Design the contents according to the RFP and the purpose of the document
 - Without an RFP designation, start from the chapter structure 제안개요, 제안업체 현황, 사업수행계획, 사업관리부문 (`references/skeletons.md`)
 - Choose only the sections the engagement needs from the skeleton's section candidates
-- In decks that follow the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
+- In decks with the module and Task structure (`meta.structure` value module), placing a slide that gives an overview of all modules and their order is recommended (e.g. the process slide of the `process` template and so on)
     + (Purpose) Readers grasp the whole work structure before the detailed slides of each module
-    + (Volume) One slide is recommended in most cases, large engagements included
-    + (Two or three slides) Decide on them conservatively, for cases such as RFPs that ask for a detailed module list or complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure)
-    + (Position) Choose it to fit the flow of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
-    + (Module overview slides) They cover only the Tasks of one module, so place them separately from the overview slides
+    + (When to reflect) Reflect it in the table of contents at the work plan design step that sets the modules and at the storyline step that sets the table of contents
+    + (Volume) One slide is recommended for most engagements, large engagements included
+    + (Two or three slides) Consider them for engagements whose RFP asks for a detailed module list and for complex, very large engagements with many stakeholders (e.g. a consortium, a complex delivery structure and so on), and adopt them conservatively, only when the need is clear
+    + (Position) Choose it to fit the order of the document, the RFP requirements and the purpose of the work (e.g. after the strategy slide in 제안개요, at the start of the 사업수행계획 chapter and so on)
+    + (Difference from module overview slides) A module overview slide covers the Tasks of one module, so place it separately from the overview slide
 
 ## Score attribution
 
@@ -550,7 +563,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Paragraph past the line end) A run-on paragraph that passes the line end aligns its second line onward after the label
 - Keeping run-on slides as exceptions within the deck is recommended (when several slides call for it, review the amount of notes and sources in the deck)
 - (Judgment in context) The label and run-on guides above sum up common practice, so make the final call on applying them from the context of the whole slide
-- Set one emphasized phrase in the `accent` field
+- (Headline keyword emphasis) A deck that chose on in kickoff item 19 sets the important phrases of the headline in `accent` (off by default. `accent` in a deck with emphasis off is not typeset)
+    + (Emphasis criterion) Set an emphasis criterion that fits the purpose and readers of the deck at the storyline step and write it in 00_storyline.md (the criterion differs by deck, so the model sets it to fit the engagement)
+    + (Consistent use) Apply the criterion in the same way to every headline of the deck
+    + (Number of phrases) One headline can have several phrases that meet the criterion (a headline with no such phrase is typeset without emphasis)
+    + (Emphasis range) Keep the emphasis phrases to part of the headline (emphasis on most of a headline loses its effect)
+    + (Format) Write one phrase (string) or several phrases (array) in `accent` exactly as they appear in the headline (a phrase missing from the headline is a lint WARN)
+    + (Emphasis color) The build typesets them in the theme emphasis color (criteria in the color item of the Design system section)
 
 ### Subject term
 
@@ -578,6 +597,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Fixed wording) Keep the standard spelling of key RFP wording
     + Standard spellings are exempt from the lint sentence norm checks, so register only names that appear in the RFP text (`references/strategy.md` Key wording)
 - (Figures) Mark unconfirmed figures with the `[확인 필요]` placeholder
+- (Marker repetition) Body titles, cell titles and first lines do not repeat the marker text (Notation section of `references/writing-rules.md`)
 - (Key Point band) Use the band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
     + Delete a band that only repeats the headline or summarizes the body
     + Write one-line formulas or conditions in `footnotes` to free body height
@@ -645,7 +665,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Emphasized targets) Apply a tint fill together with bold text to the result column of a flow, goal boxes, summary rows and the like (a tinted box with regular-weight text is taken as inactive next to white boxes)
     + (Content attribute distinction) Apply a tint fill to elements that differ in a content attribute such as the performer or the progress state (examples: system work in a flowchart, the current point in a timeline)
     + (No alternating fills) Do not fill table rows, table columns or side-by-side shapes in alternating colors (a fill that follows the layout order shows no difference in content)
-    + Emphasis red #C0392B is used in one place per slide
+    + Emphasis colors are used only for headline emphasis phrases and emphasized chart bars (decks that chose on in kickoff items 19 and 20)
+    + The headline emphasis color has the hue of the theme color at the lightness that gives 7:1 contrast on white (#30579C in the navy theme. The theme color itself cannot be told from the body text color)
+    + The headline emphasis color of the mono theme and achromatic custom color themes is red #C0392B (an achromatic emphasis color cannot be told from the body text color)
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
     + The build computes the colors of conclusion bands, charts and tints from the one base color (computation rules in deriveTheme of `scripts/tokens.js`)
@@ -653,6 +675,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Record the adjusted color code in the completion report
     + The pastel color that carries white text (navyPastel) is computed at a lightness with a white text contrast of 3:1 or more
     + To set a specific color separately, write that color key together with base (written keys take precedence over computed values; the key list is in the themeColors color key section of `references/storyboard-schema.md`)
+    + Emphasis colors can also be set with color keys (headline emphasis color accent, contrast-mode emphasized bar chartAccent. The navy and mono themes accept them without base)
     + If a directly specified color key falls below the contrast minimum for the text color placed on it, lint WARN
     + Assign light brand colors to keys that carry body text (navyPastel2, navyRamp items 2-3) and dark colors to keys that carry white text (navy, navyDeep, navyPastel)
 - (Typeface) NanumGothic
@@ -748,6 +771,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Shapes) The basic shapes of parametric, composite and free templates are rectangles, rounded rectangles with a radius of 0.05 inch or less, chevrons, straight lines, orthogonal connectors (split into straight lines) and circles
     + Diagram-specific shapes (flow arrows, Harvey ball pie slices, trapezoids of the strategy and house roofs, triangles and trapezoids of pyramid, funnel strips, porter arrowheads, storage cylinders, ellipses and diamonds of flowchart) are used only in their diagrams
     + Do not use icons, gradients, shadows, 3D, pill-shaped boxes, full-width color strips, vertical side strips, decorative lines below titles, or repeated grids of identical cards
+    + (Ribbon decoration) Do not use a color strip that carries no text and runs along an edge of a box, card, text line or similar element in any typesetting, free templates and visual adjustments included (a decoration that does not fit the black-and-white base and rectangle-centered shapes)
+    + (Side ribbon examples) A vertical color strip on the left edge of a figure card, a long vertical bar set to the left of a headline or subtitle, a strip of another color added to the left end of a conclusion band and so on
+    + (Top and bottom ribbon examples) A full-width color strip at the top of the slide, a horizontal color strip along the top or bottom edge of a box and so on
     + The Key Point band uses one format across the deck, either the tint box without a label cell (default) or the tinted strip with a label cell on the left (option). Typesetting details are in the Key Point band section of `references/templates.md`
 - (Charts) Use native charts only
     + Composition uses pie charts (six slices or fewer) or stacked bars
@@ -756,8 +782,17 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Show data labels
     + No gridlines
     + Show the legend only on multi-series charts
-    + Chart colors are the pastel family of the theme color
+    + Chart colors are the pastel family of the theme color (single-series bars of the mono theme are dark gray #666666)
     + For bar charts with negative values, the builder typesets a zero baseline and room for figures below negative bars
+- (Chart emphasis) A deck that chose theme color or contrast color in kickoff item 20 sets the bars to emphasize in `highlight` of the chart (off by default. `highlight` in a deck with emphasis off is not typeset)
+    + (Target) The bar the slide message points to (the bar readers should see first)
+    + (When to apply) Set it only in charts whose message points to specific bars (a chart that compares all bars evenly is typeset without emphasis)
+    + (Emphasis range) Keep the number of emphasized bars to the minimum the message needs (many emphasized bars lose the effect)
+    + (Chart types) Single-series bar charts (multi-series bars, stacked bars, lines and pies are excluded because series colors tell their items apart)
+    + (Format) Write one categories index (from 0) or an index array of the emphasized bars in `highlight` (an index out of range and a setting on other chart types are lint WARNs)
+    + (Theme color) The emphasized bar takes the theme color deepened until its contrast with plain bars is 3:1 or more
+    + (Contrast color) The emphasized bar takes a color of a different family from the theme color (orange #E67E22 in the navy theme, red #C0392B in the mono theme)
+    + (Contrast color of custom color themes) Orange #E67E22 for a cool base color, navy #1F3864 for a warm one, red #C0392B for an achromatic one (changeable with the color key chartAccent)
 - (Chart labels) Resolve label overlaps, clipping and slice label defects in the order below (methods and responses per defect are in the chart label adjustment section of `references/recipes.md`)
     + (Chart design) First design a chart that needs no label adjustment, with the type, point count and series count that fit its one message
     + (Position adjustment) Clear the remaining defects with the position codes and move distances of `labelPos` on the series
@@ -768,6 +803,10 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + An image block without `src` is typeset as a dashed placeholder box
     + check_layout warns about the small text of placeholder boxes
     + Before delivery, set an image for placeholder boxes or replace them with another block
+- (Image captions) Decide for each image whether to write a caption (`caption`), by the slide message and the role of the image
+    + (Write) Images whose nature readers could mistake without a caption (e.g. deliverable examples, drafts, photos that need the place or time stated and so on)
+    + (Omit) Decorative images, illustrations that show a body concept by analogy, sets of images listed as examples of items the body mentions and so on
+    + (Double description) A caption does not repeat what the body, a cell title or text inside the image already conveys
 
 ## Briefing deck
 
@@ -860,7 +899,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Completion is judged from the review results of the rendered PNGs and the defect fixes
 - (lint) Checks of `scripts/lint.py` (remaining WARNs are a failure)
     + (Structure) Schema, full Task coverage, section ledger consistency, score attribution, volume limits, page size names and paths of page-size-specific text (`byLayout`)
-    + (Notation) Writing rules, RFP wording, subject term, section numbers, ※ notes, duplicated prefixes, text contrast on theme colors
+    + (Notation) Writing rules, RFP wording, subject term, section numbers, ※ notes, duplicated prefixes, text contrast on theme colors, emphasis settings (`accent`, `highlight`)
     + (Typesetting) Layout variety, bullet overuse, empty table cells, volume of replaced text, remaining slot markers
 - (Structural check) Checks of `scripts/check_layout.py` (remaining WARNs are a failure)
     + (Overflow) Estimated text overflow, estimated mid-word line breaks and line breaks inside a word in text boxes and table cells, tables leaving the slide
@@ -870,7 +909,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
     + (Placement) Body margin imbalance (over 15% on one side and below 15% on the other), insufficient body vertical fill (below 70%), edge margins, leaving the band, empty panels, not enough box content, short Key Point sentence (below 50% per sentence)
-    + (Notation) Headline font consistency, body text below 11pt, two or more accent colors, missing bullets in multi-line text, mixed table alignment
+    + (Notation) Headline font consistency, body text below 11pt, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - (Chart zoom check) After the contact sheets, check each chart again on a zoomed image
@@ -896,7 +935,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Are grounds attached to item text by line breaks?
     + Does every lead have a one-sentence title and 2-3 grounds?
     + Is the cover title exactly centered between the two horizontal lines?
-- Check freely composed slides (free template slides and slides adjusted beyond the rules under the visual adjustment discretion section) right after the slides that set the first impression (shape alignment and connector end positions can be checked only on the PNGs)
+- Check freely composed slides first, with the same priority as the slides that set the first impression (shape alignment and connector end positions can be checked only on the PNGs)
+    + (free template slides) All slides typeset with the free template
+    + (Adjusted slides) Slides adjusted beyond the rules under the visual adjustment discretion section
 
 #### Overflow
 
@@ -945,12 +986,15 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Is the number of notes the minimum the body needs (with two or more ※ notes, check that each covers a different target)?
 - Do font sizes differ within the same level?
 - Does one bullet in a box use a different font and stand out?
+- Does a body title, cell title or first line repeat the marker text?
+- Does a caption repeat what the body, a cell title or text inside the image conveys? (image captions item of the Design system section)
 
 #### Color
 
 - Do table headers or cell backgrounds use colors outside the palette (sky blue, orange and so on)?
 - Are unit rows or empty rows transparent so the default table style color shows?
 - Is the text color of a label on a slice too close to the slice color to read?
+- Do the headline emphasis phrases and emphasized chart bars fit the deck emphasis criterion and the slide message? (decks with emphasis on)
 
 #### Fixes
 
@@ -966,6 +1010,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + One slide shows a different style of font, color or spacing
     + Alignment varies within the same column or among boxes of the same level (left, center and right mixed)
     + Icons or markers unrelated to the content appear
+    + A ribbon decoration appears (a color strip on an edge of a box, card, text line or similar element. Shapes item of the Design system section)
     + Empty boxes, empty tables or charts without values remain
     + The same content appears in two places
     + A connector touches nothing or points the wrong way
@@ -985,6 +1030,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 - If text looks cramped or large areas are empty in review, adjust within the slide
 - The adjustment means and their order are line spacing distribution, box size adjustment, moving elements
+- Do not add new decorative shapes that count as AI slop (ribbons, color strips, decorative lines and so on) during adjustment
 - Change font size only when changing it for the whole level together
 - The adjustment scope is all elements of the same level
 - After adjusting, check again the left-right and top-bottom weight and the spacing between levels

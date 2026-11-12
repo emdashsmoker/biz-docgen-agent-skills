@@ -20,6 +20,8 @@
 | footnoteStyle | 주석(footnotes, note 슬롯)과 출처 행의 표기. 덱 전체에 적용. number(기본)는 라벨이 없는 주석에 common.footnoteLabel 을 붙임 (작성자가 주석 앞에 쓴 "출처:", "산식:" 등의 라벨은 유지). number 에서 같은 위치의 주석이 2개 이상이고 라벨이 같거나 모두 없으면 첫 줄 라벨 뒤에 1) 부터 번호를 붙이고 2) 이하는 1) 의 시작 위치에 정렬 (같은 출처 표기로 시작하는 주석은 번호 없이 세미콜론으로 구분). number 에서 라벨이 서로 다른 주석은 번호 없이 줄마다 각자의 라벨을 붙임. number 의 출처 행은 번호 없이 작성자가 쓴 출처 표기(없으면 common.sourceLabel)로 시작. mark 는 라벨 없는 주석 앞에 ※ 를 붙임. mark 의 출처 행과 라벨("출처:", "자료:", "산식:" 등)로 시작하는 주석은 ※ 없이 시작 (작성자가 직접 쓴 ※ 는 유지. footnoteSourceMark 참고) |
 | footnoteSourceMark | true 이면 ※ 표기 덱의 출처 행과 출처 주석 앞에도 ※ 를 붙임 (예: "※ 출처: A; B"). 기본 false (출처는 ※ 없이 출처 표기로 시작). 착수 질의에서 묻지 않음. RFP 양식 등으로 사용자가 요청한 경우에만 지정. 번호 표기 덱에는 적용하지 않음 |
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
+| headlineAccent | 헤드라인 키워드 강조. false(기본), true. true 인 덱만 슬라이드의 accent 를 테마 강조색으로 조판 (착수 질의 19번) |
+| chartEmphasis | 차트 강조 방식. off(기본), tone(테마색), contrast(대비색). off 가 아닌 덱만 차트의 highlight 를 조판 (착수 질의 20번) |
 | themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
 | final | true 이면 남은 자리 표기를 lint FAIL 로 검사 (완료 보고 직전에 지정) |
@@ -57,7 +59,13 @@
 | navyRamp 3번 | 차트 계열 4번째, 깔때기 맨 위 띠 | 본문 글자색 | 3.0 |
 | tintNavy, tintHead, tintBg | 피라미드 4-5층, 머리 칸, 배경 틴트 | 본문 글자색 | 4.5 |
 | textMuted | AS-IS 머리 칸, 일정 막대, 출처와 각주와 축 양끝 표기의 글자색 | 흰색 (글자색으로 쓸 때는 흰 바탕) | 4.5 |
+| accent | 헤드라인 강조 어구의 글자색 | 흰 바탕 위 글자색으로 사용 | 4.5 |
+| chartBase | 단일 계열 차트의 막대와 영역 | 없음 (레이블은 막대 밖에 조판) | 없음 |
+| chartAccent | 대비색 방식(chartEmphasis 값 contrast)의 강조 막대 | 없음 | 없음 |
+| chartDeep | 테마색 방식(chartEmphasis 값 tone)의 강조 막대. 지정하지 않으면 navy 를 chartBase 와의 대비 3:1 이상으로 짙게 한 색 | 없음 | 없음 |
 
+- accent, chartBase, chartAccent 의 기본값은 테마가 정함 (navy 는 30579C, 6B8EC2, E67E22. mono 는 C0392B, 666666, C0392B)
+- base 를 지정한 테마는 accent 와 chartAccent 를 기준 색의 색 계열에 따라 계산 (계산 기준은 SKILL.md 디자인 시스템의 색상 항목과 차트 강조 항목)
 - 차트 계열이나 원형 조각이 차트 팔레트 색 수보다 많으면 빌드가 팔레트의 첫 색과 끝 색 사이를 같은 간격으로 나누어 색을 배정
 - 매트릭스 초점 사분면과 tint 채움에 color navy 를 지정한 격자 칸은 tintHead 채움 위에 navy 글자를 얹음
 - navy 와 tintHead 의 대비가 4.5 미만이면 두 요소를 그린 슬라이드에 빌드 경고 (색은 지정값 유지)
@@ -71,7 +79,7 @@
 | secNo | 절 번호. "1." 형식 권장. "01" 이나 "1" 은 빌더가 "1." 로 보정 |
 | section, chapter | 밴드의 절 제목과 우측 장 추적기. 모듈 슬라이드의 section 은 `[Module 1] 모듈명` 형식 |
 | headline | 결론 문장 1-2줄 (1줄 50자, 2줄 100자. A4 판형 1줄 43자, 10.83 판형 1줄 40자, 4:3 판형 1줄 37자. 한글 환산 글자 수). 밴드 없는 템플릿(cover, contents, divider, end)과 bandMode blank 슬라이드는 생략 |
-| accent | 헤드라인 안 강조 어구 1곳 (빨강) |
+| accent | 헤드라인 강조 어구. 어구 1개(문자열)나 여러 어구(배열)를 헤드라인에 쓴 문구 그대로 기재. meta.headlineAccent 가 true 인 덱에서만 테마 강조색으로 조판 (선정 기준은 SKILL.md 헤드라인 절) |
 | marker | 마커 텍스트. 30자(한글 환산) 초과는 lint FAIL. 값을 비우면 마커 도형도 생략 |
 | bandMode | 밴드 모드의 강제 지정. full(기본), noMarker, headerOnly, blank |
 | slots, panels, blocks | 템플릿별 내용 (`references/templates.md`) |

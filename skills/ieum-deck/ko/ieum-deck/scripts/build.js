@@ -77,7 +77,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
-    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });
+    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: headlineAccent(sb, meta) });
     A.playOwn(pres, slide, s, sb.slots, ctx);
     if (mode !== "blank") A.pageNo(slide, S, index + 1);
     return;
@@ -87,9 +87,13 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const spec = TEMPLATES.SPEC[tpl] || {};
   const mode0 = sb.bandMode || spec.band || "full";
   const mode = sb.bandMode || (String(band.marker || "").trim() ? mode0 : bandNoMarker(mode0));
-  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: sb.accent });
+  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: headlineAccent(sb, meta) });
   fn(ctx, slide, sb);
   if (mode !== "blank" || spec.pageNo) A.pageNo(slide, S, index + 1);
+}
+/** 헤드라인 강조 어구. 덱의 헤드라인 키워드 강조(meta.headlineAccent)를 켠 경우에만 슬라이드의 accent 를 조판 */
+function headlineAccent(sb, meta) {
+  return meta.headlineAccent === true ? sb.accent : null;
 }
 /** 마커 텍스트가 없을 때 마커 밴드를 건너뛰는 모드로 낮춤 */
 function bandNoMarker(mode) {
@@ -143,6 +147,8 @@ async function main() {
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`줄바꿈 단위 ${lineBreak} 미정의. 선택: ${LINE_BREAKS.join(", ")}`);
   if (meta.footnoteStyle != null && !A.NOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`각주 표기 ${meta.footnoteStyle} 미정의. 선택: ${A.NOTE_STYLES.join(", ")}`);
+  if (meta.chartEmphasis != null && !A.CHART_EMPHASES.includes(meta.chartEmphasis)) throw new Error(`차트 강조 방식 ${meta.chartEmphasis} 미정의. 선택: ${A.CHART_EMPHASES.join(", ")}`);
+  A.setChartEmphasis(meta.chartEmphasis);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);

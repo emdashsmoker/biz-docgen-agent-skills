@@ -77,7 +77,7 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
     const company = (sb.slots && sb.slots.company) || meta.company || LB.label("common", "company");
     const b = b0;
     Object.keys(b).forEach((k) => { if (b[k]) b[k] = A.scrub(b[k], company); });
-    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: sb.accent });
+    if (mode !== "blank") A.bodyBand(pres, slide, S, b, mode, { accentHeadline: headlineAccent(sb, meta) });
     A.playOwn(pres, slide, s, sb.slots, ctx);
     if (mode !== "blank") A.pageNo(slide, S, index + 1);
     return;
@@ -87,9 +87,13 @@ function buildSlide(pres, sb, meta, own, S, index, warnings) {
   const spec = TEMPLATES.SPEC[tpl] || {};
   const mode0 = sb.bandMode || spec.band || "full";
   const mode = sb.bandMode || (String(band.marker || "").trim() ? mode0 : bandNoMarker(mode0));
-  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: sb.accent });
+  if (mode !== "blank") A.bodyBand(pres, slide, S, band, mode, { accentHeadline: headlineAccent(sb, meta) });
   fn(ctx, slide, sb);
   if (mode !== "blank" || spec.pageNo) A.pageNo(slide, S, index + 1);
+}
+/** Headline emphasis phrases. The slide accent is typeset only when the deck turns on headline keyword emphasis (meta.headlineAccent) */
+function headlineAccent(sb, meta) {
+  return meta.headlineAccent === true ? sb.accent : null;
 }
 /** Lowers the mode to one that skips the marker band when there is no marker text */
 function bandNoMarker(mode) {
@@ -143,6 +147,8 @@ async function main() {
   const lineBreak = meta.lineBreak || LINE_BREAKS[0];
   if (!LINE_BREAKS.includes(lineBreak)) throw new Error(`Line break unit ${lineBreak} is undefined. Choose: ${LINE_BREAKS.join(", ")}`);
   if (meta.footnoteStyle != null && !A.NOTE_STYLES.includes(meta.footnoteStyle)) throw new Error(`Footnote style ${meta.footnoteStyle} is undefined. Choose: ${A.NOTE_STYLES.join(", ")}`);
+  if (meta.chartEmphasis != null && !A.CHART_EMPHASES.includes(meta.chartEmphasis)) throw new Error(`Chart emphasis mode ${meta.chartEmphasis} is undefined. Choose: ${A.CHART_EMPHASES.join(", ")}`);
+  A.setChartEmphasis(meta.chartEmphasis);
   A.setImageBase(path.dirname(path.resolve(inPath)));
   const ownFile = ownPath(meta, inPath);
   const own = loadOwn(ownFile);

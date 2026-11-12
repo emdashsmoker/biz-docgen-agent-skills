@@ -2,7 +2,7 @@
 """check_layout.py: 빌드된 pptx 의 구조 검수 (python-pptx 는 검수에만 사용).
 사용: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 검사: 텍스트 넘침 추정(빌드와 같은 나눔고딕 실측 폭과 어절 단위 줄바꿈으로 소요 높이 산정. 셰브론과 홈플레이트는 꼭짓점을 제외한 글 영역 폭 적용, FAIL), 표와 글 겹침(늘어난 표 행이 덮은 각주나 출처 행. 표 높이는 finalize 재저장 기록 기준, FAIL), 아이콘과 텍스트 겹침(FAIL), 헤드라인 글꼴 일관성(WARN), 표 열과 나란한 상자의 정렬 혼재(WARN), 가장자리 여백(0.42인치), 밴드 이탈(본문 도형이 헤드라인 밴드 침범), 본문 계열 11pt 미만 텍스트(각주, 출처, 쪽번호 제외. 커스텀 슬라이드 재생 슬라이드는 build.json 의 ownSlides 로, VISION 과 SCOPE 같은 영문 대문자 구조 라벨은 원문 크기로 제외),
-      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 줄 끝 어절. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), Key Point 문장 분량 부족(밴드 문구 칸 안쪽 폭 대비 문장별 한 줄 폭 50% 미만, WARN), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 강조색 2곳 이상, 다중 줄 텍스트의 불릿 누락
+      텍스트 상자 상호 겹침(20% 초과 WARN, 30% 초과나 그림이 걸리면 FAIL), 내용 상자 안 라벨과 본문의 줄 단위 글자 겹침(30% 초과 WARN), 표·차트·그림·채움 상자의 상호 겹침(15% 초과, FAIL), 어절 중간 줄바꿈 추정(글 상자와 표 셀 안쪽 폭보다 넓은 어절, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 어절 안 줄바꿈 추정(LibreOffice 가 숫자와 단위 사이, 괄호와 쉼표 앞 등에서 나누는 줄 끝 어절. 글 상자와 표 셀, WARN. 빌드 기록의 lineBreak 가 char 이면 제외), 본문 상하좌우 여백 과다(내용이 한쪽으로 몰림), 상자 내용 부족(테두리 상자와 테두리 패널 안 글 상자의 채움 비율 45% 미만), Key Point 문장 분량 부족(밴드 문구 칸 안쪽 폭 대비 문장별 한 줄 폭 50% 미만, WARN), 본문 세로 채움 부족(내용 묶음이 본문 높이의 70% 미만), 빈 패널(테두리 상자 안에 텍스트 없음), 다중 줄 텍스트의 불릿 누락
 결과: FAIL 과 WARN 목록. 종료 코드 1 이면 FAIL 존재
 """
 import json
@@ -18,7 +18,6 @@ LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
 OWN_BASE_SIZE = (13.333, 7.5)  # own-deck.json 에 원본 판형(slideW, slideH)이 없을 때의 기준 판형 16:9 (tokens.js BASE_W, BASE_H)
-ACCENT = "C0392B"
 LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기준 (작은 쪽 글자 면적 대비)
 POINT_TAG = "keypoint"  # Key Point 밴드 문구 칸의 도형 이름 (templates.js CALLOUT_TAG)
 POINT_FILL_MIN = LIM.get("LIMIT", {}).get("pointFillMin", 0.5)  # 문장별 한 줄 폭이 문구 칸 안쪽 폭에서 차지해야 하는 최소 비율
@@ -229,7 +228,6 @@ def main():
     fails, warns, headline_pts = [], [], []
     for n, slide in enumerate(prs.slides, start=1):
         rects, texts, icons, ink, ink_lines = [], [], [], [], []
-        accent = 0
         for sh in slide.shapes:
             if sh.left is None: continue
             x, y, w, h = inch(sh.left), inch(sh.top), inch(sh.width), inch(sh.height)
@@ -248,7 +246,6 @@ def main():
                 paras = [p for p in tf.paragraphs if p.text.strip()]
                 small_done = False
                 for p in tf.paragraphs:
-                    prev_accent = False  # 같은 문단에서 이어진 강조색 조각은 1곳 (finalize 재저장이 "36억원" 을 "36" 과 "억원" 으로 나눔)
                     for run in p.runs:
                         sz = run.font.size.pt if run.font.size else None
                         # 구조 라벨(VISION, SCOPE 등 영문 대문자 단독)은 커스텀 슬라이드 원문 크기를 따르므로 제외
@@ -261,13 +258,6 @@ def main():
                             small_done = True
                             # 본문보다 작은 글씨는 주석으로 읽히므로 ※ 표기를 확인
                             warns.append(f"[{n}] {sz}pt 텍스트 (본문 하한 {BODY_MIN}) '{run.text[:15]}' → 시각 검수에서 용도 확인")
-                        col = run.font.color
-                        try:
-                            is_accent = bool(col and col.type is not None and str(col.rgb) == ACCENT)
-                        except Exception:
-                            is_accent = False
-                        if is_accent and not prev_accent: accent += 1
-                        if is_accent or run.text.strip(): prev_accent = is_accent  # 공백만 있는 조각은 이어짐을 끊지 않음
                 if len(paras) > 1 and not is_band:
                     bulleted = any(p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buChar") is not None or p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buAutoNum") is not None for p in paras)
                     # 모든 줄이 가운데 정렬이면 목록이 아닌 라벨(역할과 이름, 제목과 부제)로 보고 제외
@@ -334,7 +324,6 @@ def main():
                 # 차트와 표는 자체 내용을 가지므로 빈 패널 판정 대상에서 제외
                 if not (getattr(sh, "has_chart", False) or getattr(sh, "has_table", False)):
                     rects.append((r, sh.name))
-        if accent > 1: fails.append(f"[{n}] 강조색 {accent}곳 (상한 1)")
         # 텍스트 상자 겹침
         for i in range(len(texts)):
             for j in range(i + 1, len(texts)):

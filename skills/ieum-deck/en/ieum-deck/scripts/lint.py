@@ -32,6 +32,7 @@ Checks
 - Duplicate prefixes: WARN for a STEP prefix in steps titles or an M/Module prefix in process module names
 - Number notation: WARN without a space after the number ("1.목차" → "1. 목차"), WARN if secNo has no period
 - Note notation: WARN if a body item starts with ※, "출처:", "자료:", "Source:", "Note:" or a token added with meta.labels.notation.source (※ on note-type slots and source is added by the build, so they are not checked. The slide footnoteLabel and sourceLabel are label settings like meta.labels.common, so they are not checked)
+- Emphasis settings: value format of headline keyword emphasis (meta.headlineAccent: true | false) and the chart emphasis mode (meta.chartEmphasis: off | tone | contrast) (FAIL). accent the build does not typeset (deck without emphasis turned on, phrase missing from the headline) and highlight the build does not typeset (chart other than a single-series bar chart, index out of range) (WARN)
 - Note run-on: prints the slides that use footnoteInline as INFO (not part of the verdict; reported for the user to check)
 - Module notation: WARN if section titles and contents items use the "Module N." format ([Module N] recommended)
 - Subject term: WARN for mixed subject terms, 과업 left after changing the subject term, engagement labels left in non-proposal outputs, and "본 기획"
@@ -61,6 +62,7 @@ L = LIMITS.get("LIMIT", {})
 HL1, HL2 = L.get("headlineOneLine", 60), L.get("headlineTwoLine", 100)
 BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
+CHART_EMPHASES = ("off", "tone", "contrast")  # Chart emphasis mode (meta.chartEmphasis). The first value is the default. Same list as CHART_EMPHASES in atoms.js
 FOOTNOTE_STYLES = ("number", "mark")  # Footnote style (meta.footnoteStyle). The first value is the default. Same list as NOTE_STYLES in atoms.js
 # Chart series label settings (series[].labelPos). A string is a position, an object is a position (pos) and a move distance in pt (dx, dy). none hides the label
 # Positions are the values ECMA-376 and MS-OI29500 allow per chart type
@@ -191,7 +193,9 @@ def theme_contrast_warns(theme_colors):
         if not fill:
             continue
         r = _contrast(fill, text[rule["on"]])
-        if r < rule["min"]:
+        if r < rule["min"] and rule.get("as") == "text":
+            out.append(f"meta.themeColors.{rule['key']} #{fill} text contrast on white {r:.2f} < {rule['min']}. Set a darker color")
+        elif r < rule["min"]:
             on = "white" if rule["on"] == "white" else "body"
             out.append(f"meta.themeColors.{rule['key']} #{fill} contrast with {on} text {r:.2f} < {rule['min']}. {spec.get('HINT', '')}")
     return out
@@ -498,6 +502,35 @@ def label_pos_checks(sid, spec):
     return fails, warns
 
 
+def accent_warns(sid, sl, enabled):
+    """Checks headline emphasis phrases (accent) (WARN). Reports settings the build does not typeset
+    enabled is whether the deck uses headline keyword emphasis (meta.headlineAccent)"""
+    acc = sl.get("accent")
+    if acc is None:
+        return []
+    phrases = acc if isinstance(acc, list) else [acc]
+    if not phrases or not all(isinstance(p, str) and p for p in phrases):
+        return [f"[{sid}] accent is an emphasis phrase string or an array of emphasis phrases. Input: {acc}"]
+    if not enabled:
+        return [f"[{sid}] accent is not typeset (emphasized only in decks with meta.headlineAccent true). Remove accent or set meta.headlineAccent"]
+    missing = [p for p in phrases if p not in (sl.get("headline") or "")]
+    return [f"[{sid}] accent phrase missing from the headline: {', '.join(missing)}"] if missing else []
+
+
+def highlight_warns(sid, spec, mode):
+    """Checks emphasized chart bars (highlight) (WARN). Reports settings the build does not typeset
+    mode is the deck chart emphasis mode (meta.chartEmphasis). When it is off the build does not typeset highlight, so the check is skipped"""
+    if mode == CHART_EMPHASES[0] or spec.get("highlight") is None:
+        return []
+    series = spec.get("series") or []
+    if label_kind(spec) not in ("bar", "stacked") or len(series) != 1:
+        return [f"[{sid}] highlight is not typeset (applies only to single-series bar charts)"]
+    marks = spec["highlight"] if isinstance(spec["highlight"], list) else [spec["highlight"]]
+    n_values = len((series[0] or {}).get("values") or [])
+    bad = [m for m in marks if not (isinstance(m, int) and not isinstance(m, bool) and 0 <= m < n_values)]
+    return [f"[{sid}] highlight index error: {bad} (an integer or integer array of categories indexes 0-{n_values - 1})"] if bad else []
+
+
 def blocks_of(sl):
     regs = ((sl.get("slots") or {}).get("regions")) or []
     return [b for r in regs for b in (r.get("blocks") or ([r["block"]] if r.get("block") else []))]
@@ -575,7 +608,7 @@ def texts_of(sl):
             for x in v: walk(x, key)
         elif isinstance(v, dict):
             for k, x in v.items():
-                if k in ("id", "template", "type", "chapter", "section", "secNo", "tracker", "notes", "digest", "rfpTasks", "moduleTasks", "evalItems", "bandMode", "kind", "dir", "src", "image", "logo", "photo", "fill", "line", "color", "align"):
+                if k in ("id", "template", "type", "chapter", "section", "secNo", "tracker", "notes", "digest", "rfpTasks", "moduleTasks", "evalItems", "bandMode", "kind", "dir", "src", "image", "logo", "photo", "fill", "line", "color", "align", "accent"):
                     continue
                 walk(x, k)
     walk({k: v for k, v in sl.items() if k != "headline"})
@@ -685,6 +718,11 @@ def lint(story, ledger=None, story_path=".", layout=None):
         fails.append(f"meta.lineBreak is {' or '.join(LINE_BREAKS)}. Input: {meta.get('lineBreak')}")
     if meta.get("footnoteStyle", FOOTNOTE_STYLES[0]) not in FOOTNOTE_STYLES:
         fails.append(f"meta.footnoteStyle is {' or '.join(FOOTNOTE_STYLES)}. Input: {meta.get('footnoteStyle')}")
+    if "headlineAccent" in meta and not isinstance(meta["headlineAccent"], bool):
+        fails.append(f"meta.headlineAccent is true or false. Input: {meta['headlineAccent']}")
+    emphasis = meta.get("chartEmphasis", CHART_EMPHASES[0])
+    if emphasis not in CHART_EMPHASES:
+        fails.append(f"meta.chartEmphasis is {' or '.join(CHART_EMPHASES)}. Input: {emphasis}")
     if "footnoteSourceMark" in meta and not isinstance(meta["footnoteSourceMark"], bool):
         fails.append(f"meta.footnoteSourceMark is true or false. Input: {meta['footnoteSourceMark']}")
     for s in story.get("slides", []):
@@ -717,6 +755,8 @@ def lint(story, ledger=None, story_path=".", layout=None):
         for spec in chart_specs(s):
             cf, cw = label_pos_checks(sid, spec)
             fails.extend(cf); warns.extend(cw)
+            warns.extend(highlight_warns(sid, spec, emphasis))
+        warns.extend(accent_warns(sid, s, meta.get("headlineAccent") is True))
         hl = s.get("headline", "")
         # bandMode blank draws no band, so there is no headline position
         if tpl not in BAND_TEMPLATES and not tpl.startswith("own:") and s.get("bandMode") != "blank" and not hl:

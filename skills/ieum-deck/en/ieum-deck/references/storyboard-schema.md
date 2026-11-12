@@ -20,6 +20,8 @@
 | footnoteStyle | Style of notes (footnotes, note slots) and the source line. Applies to the whole deck. number (default) gives a note without a label common.footnoteLabel (labels the author wrote before a note, such as "Source:" or "Formula:", are kept). In number, two or more notes at one spot with the same label or none get numbers from 1) after the label on the first line, and items from 2) onward align with the start of 1) (notes that start with the same source mark get no numbers and are separated with semicolons). In number, notes with different labels keep their own labels line by line without numbers. In number, the source line starts without numbers, with the source mark the author wrote (common.sourceLabel without one). mark puts ※ before notes without a label. In mark, the source line and notes that start with a label ("Source:", "출처:", "Formula:" and similar) start without ※ (※ the author wrote is kept; see footnoteSourceMark) |
 | footnoteSourceMark | When true, a ※-style deck also puts ※ before the source line and source notes (e.g. "※ Source: A; B"). Default false (sources start with their source mark without ※). Not asked at kickoff. Set only when the user asks for it, for example to follow an RFP template. Not applied in a number-style deck |
 | theme | navy (default), mono. Custom colors go in themeColors |
+| headlineAccent | Headline keyword emphasis. false (default), true. Only a deck with true typesets the slide accent in the theme emphasis color (kickoff item 19) |
+| chartEmphasis | Chart emphasis mode. off (default), tone (theme color), contrast (contrast color). Only a deck with a value other than off typesets the chart highlight (kickoff item 20) |
 | themeColors | Custom theme colors. Put a 6-digit base color hex code in base and the build computes the full theme except textMuted (e.g. {"base": "1B4332"}). Color keys written alongside take priority over computed values (the color key list and contrast minimums are in the themeColors color keys section below). Without navyRamp, the chart series colors are the final navy, navyPastel, navyPastel2 and a computed 4th color. A format error gives a lint FAIL and a build error. A contrast below the minimum gives a lint WARN |
 | track | Wording track. rnd, mgmt, general |
 | final | If true, lint checks remaining placeholders as FAIL (set right before the completion report) |
@@ -57,7 +59,13 @@
 | navyRamp 3 | 4th chart series, top funnel band | Body text color | 3.0 |
 | tintNavy, tintHead, tintBg | Pyramid tiers 4-5, header cells, background tint | Body text color | 4.5 |
 | textMuted | AS-IS head cell, schedule bars, text color of sources, footnotes and axis ends | White (on a white background when used as text color) | 4.5 |
+| accent | Text color of headline emphasis phrases | Used as text color on a white background | 4.5 |
+| chartBase | Bars and areas of single-series charts | None (labels are typeset outside the bars) | None |
+| chartAccent | Emphasized bar in the contrast mode (chartEmphasis value contrast) | None | None |
+| chartDeep | Emphasized bar in the tone mode (chartEmphasis value tone). If unset, navy deepened until its contrast with chartBase is 3:1 or more | None | None |
 
+- The theme sets the defaults of accent, chartBase and chartAccent (30579C, 6B8EC2, E67E22 in navy. C0392B, 666666, C0392B in mono)
+- A theme with base computes accent and chartAccent from the color family of the base color (criteria in the color item and the chart emphasis item of the SKILL.md design system)
 - When a chart has more series or pie slices than its palette colors, the build spaces the colors evenly between the first and last palette color
 - The matrix focus quadrant and tint-filled grid cells with color navy put navy text on a tintHead fill
 - When navy and tintHead have a contrast below 4.5, slides that draw these two elements get a build warning (colors keep the specified values)
@@ -71,7 +79,7 @@
 | secNo | Section number. "1." format recommended. The builder corrects "01" or "1" to "1." |
 | section, chapter | Section title in the band and the chapter tracker on the right. For module slides, section takes the `[Module 1] 모듈명` format |
 | headline | Conclusion sentence in 1-2 lines (50 characters per line, 100 for 2 lines. On A4, 43 characters per line. On 10.83, 40 characters per line. On 4:3, 37 characters per line. Hangul-equivalent characters). Omit it for templates without a band (cover, contents, divider, end) and for bandMode blank slides |
-| accent | One emphasized phrase inside the headline (red) |
+| accent | Headline emphasis phrases. One phrase (string) or several phrases (array), written exactly as they appear in the headline. Typeset in the theme emphasis color only in decks with meta.headlineAccent true (selection criteria in the SKILL.md Headlines section) |
 | marker | Marker text. Over 30 characters (Hangul equivalent) is a lint FAIL. An empty value also omits the marker shape |
 | bandMode | Forced band mode. full (default), noMarker, headerOnly, blank |
 | slots, panels, blocks | Content per template (`references/templates.md`) |

@@ -734,7 +734,8 @@ function table(slide, atom, opt) {
   });
 }
 
-/** Native chart. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values, labelPos}], holeSize, showLegend, highlight} */
+/** Native chart. spec = {type: bar|line|pie|doughnut, barDir, categories, series:[{name, values, labelPos}], holeSize, showLegend, highlight}
+ *  highlight is one categories index (from 0) or an index array of the bars to emphasize. Typeset only in single-series bar charts when the deck chart emphasis mode is tone or contrast */
 const COL_GAP_SINGLE = 130; // Bar gap for single-series column bars (% of bar width)
 const NEG_LABEL_ROOM = 0.22, POS_LABEL_ROOM = 0.12; // Value axis room for bar charts with negatives (relative to the value range. Label room under negative bars and above positive bars)
 /** n colors spaced evenly between two colors (both end colors included) */
@@ -748,6 +749,16 @@ function rampBetween(from, to, n) {
 function categoryColors(palette, n) {
   return n <= palette.length ? palette.slice(0, n) : rampBetween(palette[0], palette[palette.length - 1], n);
 }
+// Bar emphasis mode (meta.chartEmphasis). off draws no emphasis, tone uses a deeper tone of the theme color, contrast uses a color from another color family
+const CHART_EMPHASES = ["off", "tone", "contrast"];
+let CHART_EMPHASIS = CHART_EMPHASES[0];
+/** Registers the deck bar emphasis mode (build.js calls it with meta.chartEmphasis) */
+function setChartEmphasis(mode) { CHART_EMPHASIS = CHART_EMPHASES.includes(mode) ? mode : CHART_EMPHASES[0]; }
+/** Set of emphasized bar indexes. Empty when the emphasis mode is off or highlight is not set */
+function highlightSet(spec) {
+  if (CHART_EMPHASIS === "off" || spec.highlight == null) return new Set();
+  return new Set([].concat(spec.highlight).map(Number).filter(Number.isInteger));
+}
 function chart(pres, slide, box, spec) {
   const ctype = { bar: pres.ChartType.bar, line: pres.ChartType.line, pie: pres.ChartType.pie, doughnut: pres.ChartType.doughnut, area: pres.ChartType.area }[spec.type] || pres.ChartType.bar;
   let cats = (spec.categories || []).map(String);
@@ -756,7 +767,7 @@ function chart(pres, slide, box, spec) {
   const labelPos = (spec.series || []).map((s) => s.labelPos);
   const opt = {
     x: box.x, y: box.y, w: box.w, h: box.h,
-    chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.navyPastel],
+    chartColors: series.length > 1 ? categoryColors(T.COLOR.navyRamp, series.length) : [T.COLOR.chartBase],
     showValue: true, dataLabelFontSize: T.SIZE.tableDense, dataLabelColor: T.COLOR.textDark, dataLabelFontFace: T.FONT.regular,
     dataLabelFormatCode: spec.numFmt || undefined, valAxisLabelFormatCode: spec.numFmt || undefined,
     catAxisLabelFontSize: T.SIZE.tableDense, catAxisLabelFontFace: T.FONT.regular, catAxisLabelColor: T.COLOR.textDark,
@@ -764,6 +775,7 @@ function chart(pres, slide, box, spec) {
     showLegend: !!spec.showLegend || series.length > 1, legendPos: "b", legendFontSize: T.SIZE.tableDense, legendFontFace: T.FONT.regular,
     showTitle: false, border: { pt: 0, color: "FFFFFF" }, plotArea: { border: { pt: 0, color: "FFFFFF" } },
   };
+  let marks = highlightSet(spec);
   if (spec.type === "bar") {
     opt.barDir = spec.barDir === "bar" ? "bar" : "col";
     if (opt.barDir === "bar" && series.length === 1 && !spec.keepOrder) {
@@ -773,6 +785,7 @@ function chart(pres, slide, box, spec) {
       series[0].labels = cats;
       series[0].values = pairs.map((p) => p[1]);
       if (Array.isArray(labelPos[0])) labelPos[0] = pairs.map((p) => labelPos[0][p[2]]); // per-point label settings follow the same order
+      marks = new Set(pairs.map((p, i) => (marks.has(p[2]) ? i : -1)).filter((i) => i >= 0)); // emphasized indexes follow the same order
       opt.catAxisOrientation = "maxMin";
     }
     // Single-series column bars get wider gaps and thinner bars (so length differences stand out)
@@ -796,8 +809,9 @@ function chart(pres, slide, box, spec) {
     }
     // A stacked bar with 1 category (share bar) hides the axis because the category name overlaps the cell caption
     if (cats.length === 1) opt.catAxisHidden = true;
-    if (spec.highlight != null && series.length === 1) {
-      opt.chartColors = series[0].values.map((_, i) => (i === spec.highlight ? T.COLOR.navy : T.COLOR.navyPastel));
+    if (marks.size && series.length === 1) {
+      const strong = CHART_EMPHASIS === "contrast" ? T.COLOR.chartAccent : T.COLOR.chartDeep;
+      opt.chartColors = series[0].values.map((_, i) => (marks.has(i) ? strong : T.COLOR.chartBase));
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
@@ -941,16 +955,23 @@ function bodyBand(pres, slide, S, band, mode, opt) {
       { sz: T.SIZE.note, color: T.COLOR.textMuted, valign: "middle", mg: [0, 0, 0, 0] });
   }
 }
-/** Colors one key phrase of the headline with the accent color */
-function headlineWithAccent(hl, phrase) {
+/** Typesets the headline emphasis phrases in the theme emphasis color. phrases is one phrase or a phrase array
+ *  Each phrase is emphasized at its first occurrence in the headline. Phrases missing from the headline and phrases overlapping an earlier span are not typeset */
+function headlineWithAccent(hl, phrases) {
   const sz = T.SIZE.headline;
-  const i = hl.indexOf(phrase);
-  if (i < 0) return parasFromString(hl, { sz, b: true, color: T.COLOR.textDark, align: "center" });
-  return [{ align: "center", runs: [
-    { t: hl.slice(0, i), sz, b: true, color: T.COLOR.textDark },
-    { t: phrase, sz, b: true, color: T.COLOR.accent },
-    { t: hl.slice(i + phrase.length), sz, b: true, color: T.COLOR.textDark },
-  ] }];
+  const run = (t, color) => ({ t, sz, b: true, color });
+  const spans = [].concat(phrases).filter((p) => typeof p === "string" && p).map((p) => ({ at: hl.indexOf(p), len: p.length })).filter((sp) => sp.at >= 0).sort((a, b) => a.at - b.at);
+  const runs = [];
+  let pos = 0;
+  for (const sp of spans) {
+    if (sp.at < pos) continue;
+    if (sp.at > pos) runs.push(run(hl.slice(pos, sp.at), T.COLOR.textDark));
+    runs.push(run(hl.slice(sp.at, sp.at + sp.len), T.COLOR.accent));
+    pos = sp.at + sp.len;
+  }
+  if (!runs.length) return parasFromString(hl, { sz, b: true, color: T.COLOR.textDark, align: "center" });
+  if (pos < hl.length) runs.push(run(hl.slice(pos), T.COLOR.textDark));
+  return [{ align: "center", runs }];
 }
 const NOTE_LEAD = /^(※|\*|\d+\))\s*/; // ※, * or a number the author put before a note. All are removed and the deck mark is added
 const SOURCE_MARK = /^(출처|자료|[Ss]ources?)\s*[:：)]\s*/; // source mark the author wrote before a source
@@ -1571,4 +1592,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, CHART_EMPHASES, setChartEmphasis, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
