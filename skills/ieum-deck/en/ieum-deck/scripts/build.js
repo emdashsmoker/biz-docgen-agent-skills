@@ -176,14 +176,13 @@ async function main() {
   // Custom slide playback keeps the source font and width-absorbing shrink, so those slides skip the body minimum check (read by check_layout)
   const ownSlides = slides.map((s, i) => (String(s.template || "").startsWith("own:") ? i + 1 : 0)).filter(Boolean);
   // palette records custom theme colors so they count as allowed table cell colors (read by check_layout)
-  // accent is the text color of headline emphasis phrases (differs by theme. check_layout counts emphasis-colored text in the body)
   // language holds the language tags written into the PPTX (meta.labels.language, read by finalize)
   // lineBreak holds the line break unit written on paragraph properties (meta.lineBreak, read by finalize and check_layout)
   // noteLabels holds the labels before footnotes and the source line in a number-style deck, including labels set on slides and labels the author wrote (산식:, 범례: etc.) (check_layout treats those lines as notes)
   // footnoteInline lists the slide numbers and ids whose notes and source line run on (reported for the user to check)
   const inline = slides.map((s, i) => (s.footnoteInline === true ? `${i + 1}(${s.id || "-"})` : null)).filter(Boolean);
   const themeLabel = meta.themeColors && meta.themeColors.base ? `custom #${T.COLOR.navy}` : theme;
-  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), accent: T.COLOR.accent, language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
+  const report = { out: outPath, slides: slides.length, layout: layoutKey, theme: themeLabel, palette: T.themePalette(), language: LB.language(), lineBreak, noteLabels: [...new Set([LB.label("common", "footnoteLabel"), LB.label("common", "sourceLabel"), ...slides.flatMap((s) => [s.footnoteLabel, s.sourceLabel]).filter(Boolean), ...A.noteLeads()])], themeAdjusted: themeResult.adjusted, ownDeck: ownFile, ownSlides, footnoteInline: inline, warnings };
   // chartLabels holds per-series data label positions and hiding (series[].labelPos, written into the chart XML by finalize). Omitted when nothing is set
   if (Object.keys(A.chartLabels()).length) report.chartLabels = A.chartLabels();
   fs.writeFileSync(outPath.replace(/\.pptx$/, "") + ".build.json", JSON.stringify(report, null, 1));

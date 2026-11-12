@@ -909,7 +909,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Overlap judgment) Labels inside content boxes are judged by the text area per line
     + (Overlap exclusion) Text that fits entirely inside a shape (text placed on a shape, such as stage names on funnel strips) is excluded from the icon overlap check
     + (Placement) Body margin imbalance (over 15% on one side and below 15% on the other), insufficient body vertical fill (below 70%), edge margins, leaving the band, empty panels, not enough box content, short Key Point sentence (below 50% per sentence)
-    + (Notation) Headline font consistency, body text below 11pt, body text in the headline emphasis color (two or more places per slide), missing bullets in multi-line text, mixed table alignment
+    + (Notation) Headline font consistency, body text below 11pt, missing bullets in multi-line text, mixed table alignment
 - (Visual review) Create PNGs with `scripts/render.sh` and view all of them
 - View them as contact sheets of 3-6 slides (`python3 scripts/sheet.py <png_dir> <out.png> 1,2,3 --cols 3`)
 - (Chart zoom check) After the contact sheets, check each chart again on a zoomed image

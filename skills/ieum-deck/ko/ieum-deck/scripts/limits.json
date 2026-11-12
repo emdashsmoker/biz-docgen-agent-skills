@@ -30,8 +30,7 @@
   "deckVarietyRatio": 0.3,
   "deckTemplateShareMax": 0.4,
   "taskVarietyRatio": 0.5,
-  "sameTemplateRun": 3,
-  "accentPerSlide": 1
+  "sameTemplateRun": 3
  },
  "HEADLINE_LINE_CHARS": {
   "16:9": 50,

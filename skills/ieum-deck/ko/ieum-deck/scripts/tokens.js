@@ -400,7 +400,6 @@ const LIMIT = {
   deckTemplateShareMax: 0.4, // 한 템플릿이 본문에서 차지하는 최대 비중
   taskVarietyRatio: 0.5, // Task 슬라이드 템플릿 종류 / 슬라이드 수 권장 하한
   sameTemplateRun: 3, // 같은 템플릿 연속 허용 상한 (4장 연속부터 리듬 경고)
-  accentPerSlide: 1,
 };
 
 // ---------------------------------------------------------------- 텍스트 폭 추정 (measure)

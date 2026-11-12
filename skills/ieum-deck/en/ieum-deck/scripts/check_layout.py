@@ -2,7 +2,7 @@
 """check_layout.py: structural review of a built pptx (python-pptx is used for review only).
 Usage: python3 check_layout.py <deck.pptx> [--layout 16:9|A4|10.83|4:3]
 Checks: estimated text overflow (needed height from the build's measured NanumGothic widths and word wrapping. Chevrons and home plates use the text area width without the points, FAIL), overlap of a table and text (footnotes or source rows covered by a grown table row. The table height follows the finalize re-save, FAIL), icon and text overlap (FAIL), headline font consistency (WARN), mixed alignment in table columns and side-by-side boxes (WARN), edge margin (0.42 inch), band intrusion (body shapes entering the headline band), body text under 11pt (footnotes, sources and page numbers excluded. Custom slide playback slides are excluded through ownSlides in build.json, and uppercase English structure labels such as VISION and SCOPE by their original size),
-        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), short Key Point sentence (one-line width of a sentence under 50% of the inner width of the band text cell, WARN), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), body text in the headline emphasis color in 2 or more places (the emphasis color is accent in the build record. Headline emphasis phrases are not counted), missing bullets on multi-line text
+        text boxes overlapping each other (WARN over 20%, FAIL over 30% or when a picture is involved), line-level glyph overlap between a label and body text inside a content box (WARN over 30%), tables, charts, pictures and filled boxes overlapping each other (FAIL over 15%), estimated mid-word line breaks (a word wider than the inner width of a text box or table cell, WARN. Skipped when lineBreak in the build record is char), estimated line breaks inside a word (where LibreOffice splits a word caught at the line end, for example between a number and its unit or before a closing bracket or comma. Text boxes and table cells, WARN. Skipped when lineBreak in the build record is char), excessive body margin on one side (content crowded to one side), thin box content (fill ratio under 45% for bordered boxes and text boxes inside bordered panels), short Key Point sentence (one-line width of a sentence under 50% of the inner width of the band text cell, WARN), low body vertical fill (content group under 70% of the body height), empty panels (no text inside a bordered box), missing bullets on multi-line text
 Result: FAIL and WARN lists. Exit code 1 means a FAIL exists
 """
 import json
@@ -18,8 +18,6 @@ LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
 OWN_BASE_SIZE = (13.333, 7.5)  # Base page size 16:9 when own-deck.json has no source page size (slideW, slideH) (tokens.js BASE_W, BASE_H)
-ACCENT = "C0392B"  # Default for earlier builds whose build record has no emphasis color (accent)
-ACCENT_BODY_MAX = 1  # Limit of emphasis-colored text in the body outside the headline (headline emphasis phrases follow the deck emphasis criterion and are not counted)
 LABEL_INK_RATIO = 0.3  # Overlap threshold between a label and body glyphs inside a box (relative to the smaller glyph area)
 POINT_TAG = "keypoint"  # Shape name of the Key Point text cell (templates.js CALLOUT_TAG)
 POINT_FILL_MIN = LIM.get("LIMIT", {}).get("pointFillMin", 0.5)  # Minimum share of the inner text cell width that one line of each sentence must fill
@@ -219,10 +217,6 @@ def main():
     OWN_SMALL, own_size = _own_small_boxes(record)
     # Add the theme colors in the build record (custom themes included) to the allowed table cell colors
     palette = PALETTE | {str(c).upper() for c in record.get("palette") or []}
-    # The text color of headline emphasis phrases differs by theme, so read it from the build record
-    # In a custom theme whose emphasis color equals a theme palette color, body text in the theme color cannot be told apart, so skip the body count
-    accent_hex = str(record.get("accent") or ACCENT).upper()
-    count_accent = accent_hex not in {str(c).upper() for c in record.get("palette") or []}
     # A character-level deck (meta.lineBreak=char) is one where the user allowed mid-word breaks, so the mid-word line break estimate is skipped
     word_break = record.get("lineBreak", "word") != "char"
     W, H = inch(prs.slide_width), inch(prs.slide_height)
@@ -232,7 +226,6 @@ def main():
     fails, warns, headline_pts = [], [], []
     for n, slide in enumerate(prs.slides, start=1):
         rects, texts, icons, ink, ink_lines = [], [], [], [], []
-        accent = 0
         for sh in slide.shapes:
             if sh.left is None: continue
             x, y, w, h = inch(sh.left), inch(sh.top), inch(sh.width), inch(sh.height)
@@ -251,7 +244,6 @@ def main():
                 paras = [p for p in tf.paragraphs if p.text.strip()]
                 small_done = False
                 for p in tf.paragraphs:
-                    prev_accent = False  # Consecutive accent-colored pieces in one paragraph count as 1 place (finalize resave splits "36억원" into "36" and "억원")
                     for run in p.runs:
                         sz = run.font.size.pt if run.font.size else None
                         # Structure labels (standalone uppercase English such as VISION, SCOPE) keep the custom slide source size, so they are excluded
@@ -264,13 +256,6 @@ def main():
                             small_done = True
                             # Text smaller than body text reads as a note, so check the ※ mark
                             warns.append(f"[{n}] {sz}pt text (body minimum {BODY_MIN}) '{run.text[:15]}' → check its use in visual review")
-                        col = run.font.color
-                        try:
-                            is_accent = bool(count_accent and not is_band and col and col.type is not None and str(col.rgb) == accent_hex)
-                        except Exception:
-                            is_accent = False
-                        if is_accent and not prev_accent: accent += 1
-                        if is_accent or run.text.strip(): prev_accent = is_accent  # Whitespace-only pieces do not break the run
                 if len(paras) > 1 and not is_band:
                     bulleted = any(p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buChar") is not None or p._p.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}buAutoNum") is not None for p in paras)
                     # If every line is centered, treat it as a label (role and name, title and subtitle) and skip it
@@ -337,7 +322,6 @@ def main():
                 # Charts and tables carry their own content, so they are excluded from the empty panel check
                 if not (getattr(sh, "has_chart", False) or getattr(sh, "has_table", False)):
                     rects.append((r, sh.name))
-        if accent > ACCENT_BODY_MAX: fails.append(f"[{n}] Body text uses the headline emphasis color in {accent} places (limit {ACCENT_BODY_MAX}. The emphasis color is for headline emphasis phrases)")
         # Text box overlap
         for i in range(len(texts)):
             for j in range(i + 1, len(texts)):

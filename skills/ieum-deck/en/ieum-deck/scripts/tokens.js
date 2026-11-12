@@ -400,7 +400,6 @@ const LIMIT = {
   deckTemplateShareMax: 0.4, // Maximum share of one template in the body
   taskVarietyRatio: 0.5, // Recommended minimum of Task slide template kinds / slide count
   sameTemplateRun: 3, // Maximum run of the same template (a rhythm warning from 4 in a row)
-  accentPerSlide: 1,
 };
 
 // ---------------------------------------------------------------- Text width estimation (measure)
