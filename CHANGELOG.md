@@ -44,6 +44,19 @@ Changelog rules
 * 캡션 없는 표의 문단 스타일을 위 여백이 있는 그림 위치 스타일로 변경 (#136)
 * engine 방식으로 처리한 HWPX 장표의 앞뒤에 바탕글 빈 문단 추가 (#136)
 
+### ieum-deck
+- Added a naming rule that ends module and Task names with an action word, such as 정책환경 분석 or 이행과제 도출 (#138)
+- Changed the skeleton module names to end with an action word (#138)
+- Changed the skeleton module names that joined two nouns with 과 or 와 to use 및 (#138)
+- Changed the ISP skeleton to the five stages of the ISP·ISMP 수립 공통가이드 9th edition, which include 정보화 비전 및 전략 수립 (#138)
+- Changed the sample module names checked by lint to the renamed skeleton module names (#138)
+
+* 모듈명과 Task명의 끝에 행위어를 붙이는 작명 규칙(예: 정책환경 분석, 이행과제 도출) 추가 (#138)
+* 골격 모듈명의 끝에 행위어를 붙이도록 변경 (#138)
+* 골격 모듈명에서 두 명사를 잇는 "과"와 "와"를 "및"으로 변경 (#138)
+* ISP 골격을 ISP·ISMP 수립 공통가이드 제9판의 5단계 구성(정보화 비전 및 전략 수립 포함)으로 변경 (#138)
+* lint가 검사하는 예시 모듈명을 바뀐 골격 모듈명으로 변경 (#138)
+
 ### juja-builder
 - Added a source footnote inheritance item to the kickoff questions (off by default) with a choice of short form or merging and a scope of □, section, chapter or whole document (#136)
 - Added the `--footnote-merge` build option that replaces footnotes repeating the same text inside the scope with a cross-reference to the first footnote number (#136)
@@ -52,6 +65,10 @@ Changelog rules
 - Changed figures wider than the body width to scale down to the body width (#136)
 - Changed tables without a caption to the figure position style for their paragraph margins (#136)
 - Added an empty body-style paragraph before and after hwpx long tables handled by `(장표: engine)` (#136)
+- Added a naming rule that ends Module and Task names with an action word, such as 정책환경 분석 or 이행과제 도출, and a matching storyline self-check item (#138)
+- Changed the skeleton module names to end with an action word (#138)
+- Changed the ISP skeleton to the five stages of the ISP·ISMP 수립 공통가이드 9th edition, which include 정보화 비전 및 전략 수립 (#138)
+- Changed the standard ISP work product names to the work products of the ISP·ISMP 수립 공통가이드 9th edition (#138)
 
 * 착수 질의에 출처 각주 상속 항목(기본 미적용, 약칭과 통합 중 선택, 범위는 □, 절, 장, 문서 전체) 추가 (#136)
 * 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체하는 build 옵션 `--footnote-merge` 추가 (#136)
@@ -60,6 +77,10 @@ Changelog rules
 * 본문 폭을 넘는 그림의 크기를 본문 폭에 맞춰 줄이도록 변경 (#136)
 * 캡션 없는 표의 문단 여백을 그림 위치 스타일 기준으로 변경 (#136)
 * `(장표: engine)`으로 처리한 hwpx 장표의 앞뒤에 바탕글 빈 문단 추가 (#136)
+* Module과 Task 명칭의 끝에 행위어를 붙이는 작명 규칙(예: 정책환경 분석, 이행과제 도출)과 스토리라인 자체 점검 항목 추가 (#138)
+* 골격 모듈명의 끝에 행위어를 붙이도록 변경 (#138)
+* ISP 골격을 ISP·ISMP 수립 공통가이드 제9판의 5단계 구성(정보화 비전 및 전략 수립 포함)으로 변경 (#138)
+* ISP 표준 산출물명을 ISP·ISMP 수립 공통가이드 제9판의 산출물명으로 변경 (#138)
 
 ## 2026-11-12
 
