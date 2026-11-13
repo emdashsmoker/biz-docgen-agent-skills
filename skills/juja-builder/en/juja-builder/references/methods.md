@@ -211,7 +211,7 @@
 |--------|---------|
 | M1 정책 및 환경 분석 (policy and environment analysis) | Fit with higher-level plans, policy and technology trends, derivation of problems and issues |
 | M2 유사사업 및 지적사항 분석 (analysis of similar programs and findings) | Review of similar programs, duplication and distinctiveness, item-by-item resolution of review findings on prior planning |
-| M3 목표체계 및 논리모형 설계 (goal system and logic model design) | Purpose, strategic goals, performance goals, indicators, detailed activities, alignment check |
+| M3 목표체계 및 논리모형 수립 (goal system and logic model development) | Purpose, strategic goals, performance goals, indicators, detailed activities, alignment check |
 | M4 타당성 확보 (securing feasibility) | Implementation structure, financing, legal and institutional risks, cost estimation and economic analysis |
 | M5 심사 및 보고 대응 (review and reporting response) | Writing the request document, responding to face-to-face meetings and Q&A, managing pending issues |
 
