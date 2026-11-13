@@ -132,7 +132,7 @@
 | M1 외부 환경 분석 (external environment analysis) | Select only the items that fit the topic among policy, economic, social, technology, and legal system trends. International first, then domestic | List of environmental change factors |
 | M2 내부현황 및 사례 분석 (internal status and case analysis) | Capability diagnosis of the target organization, analysis of leading domestic and international cases | Diagnosis results, case implications |
 | M3 비전 및 전략 도출 (vision and strategy derivation) | Synthesis of implications, vision system, strategies and strategic initiatives by field | Vision system diagram, strategic initiative list |
-| M4 실행계획 및 로드맵 (action plan and roadmap) | Discovery of implementation initiatives, priorities, roadmap, funding and implementation structure, performance indicators | Implementation initiative cards, roadmap, indicator table |
+| M4 실행계획 및 로드맵 수립 (action plan and roadmap development) | Discovery of implementation initiatives, priorities, roadmap, funding and implementation structure, performance indicators | Implementation initiative cards, roadmap, indicator table |
 
 ## Rules by Stage
 
@@ -211,7 +211,7 @@
 |--------|---------|
 | M1 정책 및 환경 분석 (policy and environment analysis) | Fit with higher-level plans, policy and technology trends, derivation of problems and issues |
 | M2 유사사업 및 지적사항 분석 (analysis of similar programs and findings) | Review of similar programs, duplication and distinctiveness, item-by-item resolution of review findings on prior planning |
-| M3 목표체계 및 논리모형 설계 (goal system and logic model design) | Purpose, strategic goals, performance goals, indicators, detailed activities, alignment check |
+| M3 목표체계 및 논리모형 수립 (goal system and logic model development) | Purpose, strategic goals, performance goals, indicators, detailed activities, alignment check |
 | M4 타당성 확보 (securing feasibility) | Implementation structure, financing, legal and institutional risks, cost estimation and economic analysis |
 | M5 심사 및 보고 대응 (review and reporting response) | Writing the request document, responding to face-to-face meetings and Q&A, managing pending issues |
 
@@ -286,13 +286,13 @@
 | Step | Content |
 |------|---------|
 | 1 대상사업 현황분석 (target program status analysis) | Review of the strategic plan and annual reports, review of the linkage of the performance system (purpose, strategic goals, performance goals, indicators) |
-| 2 분석 프레임워크 수립 (analysis framework development) | A four-column table of performance type × analysis item × analysis indicator × measurement method, with points |
+| 2 분석 프레임워크 설계 (analysis framework design) | A four-column table of performance type × analysis item × analysis indicator × measurement method, with points |
 | 3 성과 조사 및 검증 (performance survey and verification) | Specialized agency data, principal investigator survey, beneficiary survey, comparison with raw data |
 | 4 투입 및 과정 분석 (input and process analysis) | Appropriateness of the purpose and government support, implementation structure, budget scale and portfolio |
 | 5 산출의 효율성 분석 (output efficiency analysis) | Output per input presented with comparison groups (overall average, similar programs) |
 | 6 성과의 효과성 분석 (outcome effectiveness analysis) | Qualitative excellence, goal attainment, influencing factors, ripple effects |
 | 7 대표성과 도출 (representative outcome derivation) | Setting selection criteria, collecting outcome information, writing descriptions (3-5 at most) |
-| 8 종합분석 및 개선방안 (comprehensive analysis and improvements) | Improvements and action plans per weak area, feedback plan |
+| 8 종합분석 및 개선방안 도출 (comprehensive analysis and improvement derivation) | Improvements and action plans per weak area, feedback plan |
 | 9 보고서 및 점검 대응 (report and inspection response) | Report writing, response to the self-inspection committee and higher-level inspection |
 
 - R&D performance types are scientific, technological, economic, social, and infrastructural. Refer to the national R&D standard performance indicator system. Add outcomes specific to the program
@@ -344,15 +344,16 @@
 |--------|---------|---------------|
 | M1 환경 분석 (environment analysis) | Policy and technology trends, informatization cases of similar institutions | Environmental factors and implications |
 | M2 현황 분석 (current state analysis) | Business status, information system status, infrastructure and security, user requirements | Current state diagnosis and list of improvement requirements |
-| M3 목표모델 설계 (target model design) | Business model, information model, application model, technology model, security model | Target architecture |
-| M4 이행계획 (transition plan) | Definition of implementation initiatives, priorities, schedule per stage, required budget, expected effects | Implementation roadmap, initiative cards, budget calculation table |
+| M3 정보화 비전 및 전략 수립 (informatization vision and strategy development) | Linking the environment and current state analysis results, informatization vision and goals, phased execution strategy, information system build principles, applicable technology requirements and information management strategy | Informatization vision, goals, and execution strategy |
+| M4 목표모델 설계 (target model design) | Business model, information model, application model, technology model, security model | Target architecture |
+| M5 이행계획 수립 (transition plan development) | Definition of implementation initiatives, priorities, schedule per stage, required budget, expected effects | Implementation roadmap, initiative cards, budget calculation table |
 
-- For public plans such as intelligent information society plans, replace M3 with a policy initiative system. Add the implementation structure and performance indicators to M4
+- For public plans such as intelligent information society plans, replace M4 with a policy initiative system. Add the implementation structure and performance indicators to M5
 - For user requirements in the current state analysis, specify the scale of questionnaires and interviews in figures. Present system status as a table of real system names, year of introduction, and operator
 - Present the required budget as a table together with calculation grounds (staff unit costs, equipment quotation basis)
 - (Identifying a mandatory ISP) Identify by the basis for development (a system such as a law or budget guideline), the project cost scale, and the list of work products (information strategy plan, draft request for proposal). If unclear, confirm in the kickoff questions
-- For mandatory subjects, the parts set by institutions are the four-stage framework, the requirement classification system, the budget calculation standard (the SW project cost estimation guide of the Korea Software Industry Association), and public informatization security design (national network security system grade classification). Module names and division, Task composition, survey design, the level of detail of the target model, and the priority criteria for implementation initiatives are discretionary
-- Standard work product names are 환경분석서, 현황분석서, 정보화 비전 및 전략 정의서, 업무 프로세스 설계서, 목표모델 설계서, 데이터관리체계 설계서, 운영체계 설계서, 이행계획서, 차년도 사업계획서, and 제안요청서. Names the RFP sets take priority
+- For mandatory subjects, the parts set by institutions are the five-stage framework (environment analysis, current state analysis, informatization vision and strategy development, target model design, integrated implementation plan), the requirement classification system, the budget calculation standard (the SW project cost estimation guide of the Korea Software Industry Association), and public informatization security design (national network security system grade classification). Module names and division, Task composition, survey design, the level of detail of the target model, and the priority criteria for implementation initiatives are discretionary
+- Standard work product names are the work products in the ISP basic structure table of the ISP·ISMP 수립 공통가이드 (9th edition): 경영환경 분석서, 법·제도 분석서, 정보기술 동향 분석서, 업무현황 분석서, 정보기술 업무현황 분석서, 선진사례 동향 파악서, 차이 분석서, 요구사항 및 개선과제 분석서, 정보화 전략 정의서, To-Be 과제 상세 정의서, To-Be 업무프로세스 설계서, To-Be 정보시스템 구조 설계서, To-Be 데이터 구조 설계서, To-Be 기술 및 보안 구조 설계서, and 통합 이행계획 수립서. The same guide classifies 제안요청서 (RFP) and 정보시스템 구축 사업계획서 (information system build plan) as ISMP work products. Names the RFP sets take priority
 - Divide requirements into functional and non-functional. Use only classification codes the RFP specifies. If the RFP has no codes, use only classification names
 - Security design for public informatization uses as is the wording of the national network security system grade classification procedure (preparation, grade classification, threat identification, security measures, adequacy evaluation) and of the measures per grade
 - Compose the transition plan in the order of defining implementation initiatives, roadmap, sizing and budget (state the revision year of the SW project cost estimation guide), and build project plans (review of separate procurement, request for proposal)
@@ -364,8 +365,8 @@
 
 | Module | Content | Work products |
 |--------|---------|---------------|
-| M1 정책 및 사업 배경 (policy and program background) | Higher-level policy and the underlying program, regional and field conditions, program purpose | Program purpose definition |
-| M2 수요자 현황 및 애로 (beneficiary status and difficulties) | Status statistics of target companies and participants, status surveys and questionnaires, difficulties and requests | Demand tally table |
+| M1 정책 및 사업 배경 분석 (policy and program background analysis) | Higher-level policy and the underlying program, regional and field conditions, program purpose | Program purpose definition |
+| M2 수요자 현황 및 애로 조사 (beneficiary status and difficulties survey) | Status statistics of target companies and participants, status surveys and questionnaires, difficulties and requests | Demand tally table |
 | M3 프로그램 설계 (program design) | Diagnosis and selection, education, consulting, networking, market access and investment linkage | Program design document |
 | M4 성과관리 (performance management) | Performance goal system, performance indicators and target values, evidence and inspection method | Performance indicator table |
 | M5 운영 및 집행 (operation and execution) | Implementation structure and staffing, annual schedule, program budget and execution plan | Execution plan table |
