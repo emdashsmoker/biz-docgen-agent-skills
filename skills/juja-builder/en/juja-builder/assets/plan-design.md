@@ -16,6 +16,7 @@
 | Volume | The value the user set or the model's design [확인] |
 | Delivery format | hwpx or docx (both allowed after the notice) [확인] |
 | Long-table handling | engine or split [확인] |
+| Source footnote inheritance | One of off, short form, or merging. For short form and merging, add the scope (□, section, chapter, whole document) [확인] |
 | Document composition | Items to insert among table of contents, page numbers, cover, and divider pages [확인] |
 | Web search | Allowed or not allowed [확인] |
 | Document actor | The actor that pursues the program. Manuscript notation (real name or `[기업명]`) [확인] |

@@ -627,6 +627,7 @@ class ProposalLayout:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind == "band":
@@ -821,9 +822,6 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
         tbl = self._last_tbl()
         if tbl is not None and self.p.get("caption_prefix") and not e.text and tbl.get("numberingType") == "PICTURE":
             tbl.set("numberingType", "NONE")
-
-    def add_footnote(self, p, text: str):
-        p.add_footnote(text)
 
     def save(self, out: str):
         report = self.doc.validate()
@@ -2186,6 +2184,7 @@ def cmd_build(a):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
+        b.notes = lib.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.unify_mode = a.unify
         b.theme = a.theme
@@ -2216,7 +2215,8 @@ def cmd_build(a):
             else:
                 print(f"WARN: renderer or pdftotext missing, so {fmt} TOC page numbers not filled")
         made[fmt] = out
-        print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)})")
+        note_info = f", merged footnote references {b.notes.merged}" if a.footnote_merge else ""
+        print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)}{note_info})")
     if len(made) == 2:  # both formats produced together: compare the character order of paragraphs
         diffs = check_parity(made["hwpx"], made["docx"])
         if diffs:
@@ -2499,6 +2499,10 @@ def main():
     p.add_argument("--page-number", action="store_true", help="footer page numbers (default OFF)")
     p.add_argument("--cover", help='cover: "title=title;subtitle=subtitle;date=YYYY. M.;org=organization"')
     p.add_argument("--header", help='header: "text;align=RIGHT"')
+    p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),
+                   help="source footnote merging (set only when the user chose merging in the kickoff questions, off by default). "
+                        "Replaces a footnote that repeats the same text inside the scope with a cross-reference to the first footnote number. "
+                        "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="table width unification: manual=apply only (폭: ...) directives in manuscripts (default), auto=also group tables of the same layout automatically")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="band color theme: navy (default), mono (black and gray). Table format does not depend on the theme")
     p.add_argument("--labels", help="label file (JSON). Overrides the document's fixed strings, manuscript notation, language tags, and delivered file names. For a workspace it is recorded in state.json (none clears the record)")
