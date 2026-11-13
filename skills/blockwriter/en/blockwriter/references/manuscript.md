@@ -32,7 +32,7 @@ This is how a footnote that cites the same source again is written. The default 
     - In the flat form `#` is the single document title, so the chapter scope equals the whole document
 - (Off) Every footnote gives the full source
 - (Short form) The first footnote in the scope gives the full source. Later footnotes for the same source put a short form that fits the document type after the organization or author name (year), written directly in the footnote definition
-    - (Examples) `한국개발연구원(2024), 앞의 보고서`, `홍길동(2023), 앞의 논문, p. 12`, `홍길동(2022), 앞의 책`, `국토교통부(2025), 앞의 자료`, `Atkinson(2020), op. cit., p. 79`, and so on
+    - (Examples) `기관명(연도), 앞의 보고서`, `저자명(연도), 앞의 논문, p. 12`, `저자명(연도), 앞의 책`, `기관명(연도), 앞의 자료`, `저자명(연도), op. cit., p. 79`, and so on
     - Choose the short-form word by document type: 보고서 for a research report, 논문 or 글 for a journal article, 책 for a book, 자료 for press releases, ministry materials and web materials, and so on
     - Some documents use `위의`, as in `위의 보고서`, `위의 자료` or `Ibid.`, for the same source as the footnote just before. Use one convention within a document
     - When the cited page differs, write the page after the short form
