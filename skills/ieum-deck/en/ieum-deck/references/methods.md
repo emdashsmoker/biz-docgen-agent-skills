@@ -114,11 +114,11 @@ M4 실행계획 수립 (execution plan development)                            A
 ## Program planning
 
 ```
-M1 정책과 환경 분석 (policy and environment analysis)              Fit with higher-level plans, policy and technology trends, problems and issues
-M2 기존 사업과 사례 분석 (existing program and case analysis)      Review of similar programs, overlap and differentiation, findings on prior planning
-M3 목표 체계와 논리모형 설계 (goal system and logic model design)  Goal system of purpose, goals and performance indicators, logic model, alignment check of detailed activities
-M4 타당성 확보 (securing feasibility)                              Governance, funding, legal and institutional risks, cost estimation and economic analysis
-M5 심사와 보고 대응 (review and reporting response)                Planning report writing, in-person meetings and question response (only when the RFP requires it)
+M1 정책과 환경 분석 (policy and environment analysis)                    Fit with higher-level plans, policy and technology trends, problems and issues
+M2 기존 사업과 사례 분석 (existing program and case analysis)            Review of similar programs, overlap and differentiation, findings on prior planning
+M3 목표 체계 및 논리모형 수립 (goal system and logic model development)  Goal system of purpose, goals and performance indicators, logic model, alignment check of detailed activities
+M4 타당성 확보 (securing feasibility)                                    Governance, funding, legal and institutional risks, cost estimation and economic analysis
+M5 심사와 보고 대응 (review and reporting response)                      Planning report writing, in-person meetings and question response (only when the RFP requires it)
 ```
 
 - (Applicant variant) Business plans written by applicant organizations (corporate R&D projects, commercialization support programs, consortium applications) adjust the content per module within the same skeleton
@@ -329,7 +329,7 @@ M5 운영과 집행 (operation and execution)                                 Go
 - A plan item without a matching slide is a lint FAIL
 - (Planning research exception) Survey and planning tasks commissioned under R&D budgets and frameworks (technology development planning research, pre-planning, detailed planning) design the work content as modules and Tasks
     + The document form and table of contents follow the R&D plan
-    + The content design uses the program planning skeleton (M1 policy and environment analysis, M2 existing program and case analysis, M3 goal system and logic model design, M4 securing feasibility)
+    + The content design uses the program planning skeleton (M1 policy and environment analysis, M2 existing program and case analysis, M3 goal system and logic model development, M4 securing feasibility)
     + Place modules and Tasks inside the research content item of the plan
     + Apply the module overview and full Task coverage rules
     + Judgment signals are 기획연구, 사전기획, 상세기획 or 기획과제 in the engagement name and a planning report as output

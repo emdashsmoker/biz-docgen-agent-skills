@@ -286,7 +286,7 @@
 | Step | Content |
 |------|---------|
 | 1 대상사업 현황분석 (target program status analysis) | Review of the strategic plan and annual reports, review of the linkage of the performance system (purpose, strategic goals, performance goals, indicators) |
-| 2 분석 프레임워크 수립 (analysis framework development) | A four-column table of performance type × analysis item × analysis indicator × measurement method, with points |
+| 2 분석 프레임워크 설계 (analysis framework design) | A four-column table of performance type × analysis item × analysis indicator × measurement method, with points |
 | 3 성과 조사 및 검증 (performance survey and verification) | Specialized agency data, principal investigator survey, beneficiary survey, comparison with raw data |
 | 4 투입 및 과정 분석 (input and process analysis) | Appropriateness of the purpose and government support, implementation structure, budget scale and portfolio |
 | 5 산출의 효율성 분석 (output efficiency analysis) | Output per input presented with comparison groups (overall average, similar programs) |
