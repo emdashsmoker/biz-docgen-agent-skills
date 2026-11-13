@@ -88,6 +88,7 @@ build options
 - (`--page-break chapter|section|none`) The heading unit that starts a new page. chapter starts a new page at each chapter (`#`), and section at each chapter and section (`##`). none breaks pages only at `---` lines. Default chapter
     - (flat) `#` is the single document title, so chapter breaks pages only at `---` lines, the same as none. section starts a new page at each N. heading (`##`)
 - (`--long-table engine|split`) How tables over 25 rows including the header rows (long tables) are handled. engine splits one table at page boundaries and repeats the unit row and header rows on every page. split divides it into several tables, each with the header row. Default engine
+- (`--footnote-merge square|section|chapter|document`) Source footnote merging. Footnotes with the same text inside the scope become one footnote, and the later citation positions show the number of that first footnote. The scope is □ (square), section (section), chapter (chapter), or the whole document (document). Default OFF. Set it only when the user chose merging in step 1 (the source footnote inheritance section of references/manuscript.md)
 - (`--merge auto|explicit|none`) How table cells are merged. auto merges consecutive identical values in leading label columns and the `^` and `<` directives, and explicit merges only the directives. Default auto
 - (`--numbered-square`) Prints `□ 1. title` lines as numbered headings without the □ bullet. When the title wraps to two lines, the second line aligns with the text after the number
 - (`--page-number`) Footer page number `- N -` at center. Default OFF, so that page numbers do not clash when several documents are combined into one
@@ -128,6 +129,10 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (Long tables) How tables over 25 rows including the header rows are handled. Choose engine (default) or split. build reports those tables on a `HITL: [long table]` line
         - (engine) Splits one table at page boundaries and repeats the unit row and header rows on every page
         - (split) Divides the table into several tables, each with the header row
+    - (Source footnote inheritance) How a footnote that cites the same source again is written. Choose off (default), short form, or merging. When the user chooses short form or merging, also ask the scope (□, section, chapter, whole document). The notation rules are in the source footnote inheritance section of references/manuscript.md
+        - (off) Every footnote gives the full source
+        - (short form) Only the first footnote in the scope gives the full source, and later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
+        - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the TOC depth (chapter, section, subsection), the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
@@ -170,7 +175,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 | `※ remark` | note | ※ | ※ |
 | Source lines such as `출처: ` | source | after a table or figure: source row. After body text: footnote of the previous paragraph | same |
 
-- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, table and figure notation, and source and unit lines are in references/manuscript.md
+- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, and source and unit lines are in references/manuscript.md
 - The rules for statements under □, keyword versus sentence style, and the use of section numbers and 가나다 are also in references/manuscript.md
 
 ## Differences between formats

@@ -23,6 +23,25 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - build reports a reference without a definition with the `[footnote undefined]` lint, and a definition that no body paragraph references with the `[footnote unused]` lint
 - HWPX bullet symbols take the character shape of the line's first character. A line that starts with `**bold**` prints its symbol in bold too
 
+## Source footnote inheritance
+
+This is how a footnote that cites the same source again is written. The default is off, and it applies only when the user chose short form or merging in the planning questions of step 1.
+
+- (Scope) The unit the user chose among □, section, chapter, and whole document. When the scope changes, the same source counts as a first citation and the full source is written again
+    - The □ scope runs from a □ line to just before the next □ line or heading. The section scope runs from a `##` heading to just before the next `##` or `#` heading. The chapter scope runs from a `#` heading to just before the next `#` heading
+    - In the flat form `#` is the single document title, so the chapter scope equals the whole document
+- (Off) Every footnote gives the full source
+- (Short form) The first footnote in the scope gives the full source. Later footnotes for the same source put a short form that fits the document type after the organization or author name (year), written directly in the footnote definition
+    - (Examples) `한국개발연구원(2024), 앞의 보고서`, `홍길동(2023), 앞의 논문, p. 12`, `홍길동(2022), 앞의 책`, `국토교통부(2025), 앞의 자료`, `Atkinson(2020), op. cit., p. 79`, and so on
+    - Choose the short-form word by document type: 보고서 for a research report, 논문 or 글 for a journal article, 책 for a book, 자료 for press releases, ministry materials and web materials, and so on
+    - Some documents use `위의`, as in `위의 보고서`, `위의 자료` or `Ibid.`, for the same source as the footnote just before. Use one convention within a document
+    - When the cited page differs, write the page after the short form
+    - When the user gives a citation rule or the user form shows a notation, follow it
+- (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, footnotes with the same text inside the scope become the first footnote, and the later citation positions show the first footnote number in superscript
+    - A footnote with different text stays a separate footnote. Write the same source in the same text, and keep citations of different pages as separate footnotes
+    - Footnotes moved from source lines after body paragraphs are merged too
+    - Check the number of merged citations on the build completion line (`merged footnote references`)
+    - The number is a Hangul cross-reference in HWPX and a Word footnote number reference field in DOCX. The typesetting is in the object placement section of references/layout.md
 ## Tables
 
 - A table is written as a `<표> title` caption line followed by a pipe table. build assigns the caption number automatically

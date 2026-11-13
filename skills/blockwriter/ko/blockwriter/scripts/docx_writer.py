@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import io
+import math
 import re
 import sys
 
@@ -35,11 +36,12 @@ except ImportError:   # pragma: no cover
 ALIGN = {"JUSTIFY": "both", "LEFT": "left", "CENTER": "center", "RIGHT": "right", "DISTRIBUTE": "distribute"}
 FOOTNOTES_CT = "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"
 EMU_PER_HWPUNIT = 127             # 914400 EMU / 7200 HWPUNIT
+HWPUNIT_PER_TWIP = 5              # 7200 HWPUNIT / 1440 twip
 
 
 def tw(hwpunit: float) -> int:
     """HWPUNIT(1/7200 in) → twip(1/1440 in)"""
-    return round(hwpunit / 5)
+    return round(hwpunit / HWPUNIT_PER_TWIP)
 
 
 def el(tag: str, **attrs) -> "OxmlElement":
@@ -125,6 +127,7 @@ class DocxBuilder:
         self.caption_n = {"TABLE": 0, "PICTURE": 0}
         self.fn_part = None
         self.fn_count = 0
+        self.notes = M.NoteRegistry(None)   # 출처 각주 통합 (build --footnote-merge)
         self.last_para = None
         self.body_w = self.form.page.width - self.form.page.left - self.form.page.right
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
@@ -389,7 +392,12 @@ class DocxBuilder:
         return self.fn_part.element
 
     def _footnote_ref(self, p, text: str):
-        """본문 각주 번호는 위 첨자, 번호 뒤 문자(한/글 각주 모양의 ')')를 같은 첨자로 붙인다"""
+        """본문 각주 번호는 위 첨자, 번호 뒤 문자(한/글 각주 모양의 ')')를 같은 첨자로 붙인다.
+        출처 각주 통합 범위 안에서 문구가 같은 각주는 첫 각주 번호의 상호참조로 대체한다"""
+        first = self.notes.lookup(text)
+        if first is not None:
+            self._note_crossref(p, *first)
+            return
         notes = self._footnotes()
         self.fn_count += 1
         nid = self.fn_count
@@ -398,6 +406,7 @@ class DocxBuilder:
         sub(rpr, "w:rStyle", w__val="FootnoteReference")
         sub(r, "w:footnoteReference", w__id=nid)
         p.append(r)
+        self.notes.remember(text, (nid, r))
         sup = el("w:rPr")
         sub(sup, "w:vertAlign", w__val="superscript")
         p.append(self._run(self.form.page.note_suffix, sup))
@@ -411,6 +420,26 @@ class DocxBuilder:
         sub(fr, "w:footnoteRef")
         np_.append(self._run(self.form.page.note_suffix + "\t"))
         self._append_inline(np_, text)   # 각주 본문도 본문과 같은 인라인 서식 적용
+
+    def _note_crossref(self, p, nid: int, ref_run):
+        """각주 번호 상호참조(Word NOTEREF 필드). 첫 각주의 참조 run을 책갈피로 감싸고 그 책갈피를 가리킨다.
+        번호는 저장값이며 Word가 필드를 갱신할 때 다시 매긴다. 각주는 문서 전체 연속 번호라 순번이 곧 번호"""
+        name = C.DOCX_NOTE_BOOKMARK.format(n=nid)
+        prev = ref_run.getprevious()
+        if prev is None or prev.tag != qn("w:bookmarkStart"):
+            mark_id = C.DOCX_NOTE_BOOKMARK_ID_BASE + nid
+            ref_run.addprevious(el("w:bookmarkStart", w__id=mark_id, w__name=name))
+            ref_run.addnext(el("w:bookmarkEnd", w__id=mark_id))
+
+        def ref_rpr():   # 각주 참조와 같은 글자 스타일(위 첨자)
+            rpr = el("w:rPr")
+            sub(rpr, "w:rStyle", w__val="FootnoteReference")
+            return rpr
+        for r in field_runs(f" NOTEREF {name} \\f \\h ", str(nid), ref_rpr):
+            p.append(r)
+        sup = el("w:rPr")
+        sub(sup, "w:vertAlign", w__val="superscript")
+        p.append(self._run(self.form.page.note_suffix, sup))
 
     # ── 헤더 계위 ───────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
@@ -472,10 +501,12 @@ class DocxBuilder:
         widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
-        pos = self.form.style("table_pos")
+        pos = self.form.style(M.table_pos_role(bool(e.text), self.form.style("fig_pos") is not None))
         long_table = nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done")
         if e.text:
             self._caption("TABLE", e.text, before=pos.para.margin[3], after=C.CAPTION_GAP, obj_w=sum(widths))
+        elif not self.pending_break:   # 캡션 없는 표: 그림 위치 스타일의 위 여백을 빈 문단으로 옮김 (쪽 첫머리는 제외)
+            self._spacer(pos.para.margin[3])
         for ri, c0, c1 in plan["skipped"]:
             print(msg("warn_hmerge_overlap", row=ri, c0=c0, c1=c1))
         # 격자: (행, 열) → 셀 정보. 병합으로 가려지는 칸은 None
@@ -659,12 +690,14 @@ class DocxBuilder:
         if loaded is None:
             return
         data, fmt, (w_mm, h_mm) = loaded
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = M.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         pos = self.form.style("fig_pos")
         sources = e.data.get("sources", [])
         # 그림 문단: python-docx로 그림을 넣은 뒤 표 셀로 옮긴다 (관계는 문서 파트에 남는다)
         holder = self.doc.add_paragraph()
-        holder.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HWPUNIT), height=Emu(h_hu * EMU_PER_HWPUNIT))
+        shape = holder.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HWPUNIT),
+                                             height=Emu(h_hu * EMU_PER_HWPUNIT))
+        zero_picture_distance(shape)
         pic_p = holder._p
         pic_p.getparent().remove(pic_p)
         ppr = pic_p.get_or_add_pPr()
@@ -680,8 +713,8 @@ class DocxBuilder:
             for src in sources:
                 self.para("source", src)
         else:
-            # 셀 좌우 여백을 더해야 그림이 셀 안 폭에 들어간다 (고정 폭 표라 넘치는 부분이 잘림)
-            cell_w = w_hu + 2 * C.CELL_MARGIN_LR
+            # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
+            cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
             tbl = self._tbl([cell_w])
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
@@ -690,12 +723,15 @@ class DocxBuilder:
             tcpr = sub(tc, "w:tcPr")
             sub(tcpr, "w:tcW", w__w=tw(cell_w), w__type="dxa")
             self._cell_borders(tcpr, [])
+            mar = sub(tcpr, "w:tcMar")   # 표 폭 산정에 쓴 좌우 여백을 셀에 직접 기록
+            sub(mar, "w:left", w__w=tw(C.CELL_MARGIN_LR), w__type="dxa")
+            sub(mar, "w:right", w__w=tw(C.CELL_MARGIN_LR), w__type="dxa")
             tc.append(pic_p)
             for src in sources:
                 self._transparent_row(tbl, [cell_w], src, "source", "left")
             self._body_append(tbl)
         if e.text:
-            fig_w = w_hu + 2 * C.CELL_MARGIN_LR if C.FIGURE_IN_TABLE else w_hu   # HWPX 캡션 개체 폭과 같게
+            fig_w = table_w if C.FIGURE_IN_TABLE else w_hu   # HWPX 캡션 개체 폭과 같게
             self._caption("PICTURE", e.text, before=C.CAPTION_GAP, after=pos.para.margin[4], obj_w=fig_w)
         else:
             self._spacer(pos.para.margin[4])
@@ -893,6 +929,7 @@ class DocxBuilder:
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
@@ -915,6 +952,13 @@ class DocxBuilder:
 
 
 # ── 보조 함수 ───────────────────────────────────────────────────────────────
+def zero_picture_distance(shape):
+    """그림 바깥 여백을 0으로 기록. python-docx는 이 속성을 쓰지 않으며, 속성이 없으면 LibreOffice가
+    좌우 0.125인치를 그림 폭에 더해 그림이 셀 안 폭을 넘고 오른쪽이 잘림 (Word는 글자처럼 놓인 그림의 이 값을 쓰지 않음)"""
+    for side in ("distT", "distB", "distL", "distR"):
+        shape._inline.set(side, "0")
+
+
 def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
     """복합 필드(begin, 명령, separate, 결과, end) 실행 요소. result가 None이면 end 없이 앞 3개만."""
     def run():
@@ -1002,6 +1046,7 @@ def build_docx(a, elems, footnotes, out: str):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table
+        b.notes = M.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.build(elems, footnotes, out)
         return b
