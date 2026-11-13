@@ -157,6 +157,7 @@
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
     + Whether to insert a table of contents, page numbers, a cover, and divider pages
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
+    + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design
@@ -215,7 +216,7 @@
 
 ## Typesetting
 
-- The command is `build workspace --title "document title" --format format --page-break handling`
+- The command is `build workspace --title "document title" --format format --page-break handling`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
 - For a document whose chapters are mostly half a page or less, use `--page-break none`. A new page per chapter makes large empty spaces
 - Table of contents, page numbers, cover, and divider pages are OFF by default. Turn them on by the kickoff answers
 - If table of contents page numbers are missing, follow the handling in the references/report.md Typesetting section. Keep the table of contents and state the missing entries and the refresh guidance in the final report

@@ -135,6 +135,13 @@ TOC_SUB_INDENT = 3000           # TOC subsection indent
 TOC_MAX_PASSES = 2              # maximum re-typesetting passes when the re-render check after filling TOC page numbers still finds mismatches
 TOC_FIRST_LINE_KEY = 10         # number of leading characters (spaces excluded) of the first body line used for the stranded-heading check; found on its starting page even if the line runs onto the next page
 BLOCK_GAP_LINES = 0             # blank paragraphs before and after table/figure blocks. Spacing is handled by the table/figure position style margins
+# empty body-style paragraphs before and after a long table with treat-as-character off (HWPX engine).
+# Such a table is placed apart from the text flow, so the table position paragraph margins alone leave it touching the neighboring paragraphs
+LONG_TABLE_GAP_LINES = 1
+# scope of source footnote merging (build --footnote-merge): □, section (##), chapter (#), whole document
+NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
+NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # the scope changes at headings of this level or above
+HWPX_CROSSREF_FIELD_ID = "628650598"   # field kind id of Hangul cross-reference fields (control id "%xrf" as an integer)
 
 # ── HWPX renderer (rhwp) ───────────────────────────────────────────────────
 RHWP_REPO = "https://github.com/edwardkim/rhwp"
@@ -197,6 +204,8 @@ DOCX_HALFWIDTH_BULLET = 0.5     # half-width bullet symbol width
 DOCX_SPACER_PT = 1              # line height of the empty paragraph used as spacing below tables
 # heading bookmark name. Word treats names starting with an underscore as hidden bookmarks. The PAGEREF fields of TOC entries find heading pages through these bookmarks
 DOCX_TOC_BOOKMARK = "_Toc{n:09d}"
+DOCX_NOTE_BOOKMARK = "_RefNote{n}"      # name of the bookmark that wraps the first footnote reference in source footnote merging (n is the footnote sequence number)
+DOCX_NOTE_BOOKMARK_ID_BASE = 1000000    # first id of footnote bookmarks. A range that does not overlap the heading bookmark ids (from 1)
 # values written to the font table (fontTable). When a document font is missing, Word uses this information to pick a substitute of the same family
 # Recorded as roman (serif family) when the English name contains Myeongjo, otherwise swiss (sans-serif family). Character set is Hangul (charset 81)
 DOCX_FONT_ALT_NAMES = {"나눔고딕": "NanumGothic", "나눔바른고딕": "NanumBarunGothic"}
@@ -299,6 +308,8 @@ MESSAGES = {
         "ko": "WARN: 렌더러 또는 pdftotext 부재, 또는 제목 탐색 실패로 목차 쪽번호 미기입",
         "en": "WARN: TOC page numbers not filled (renderer or pdftotext missing, or headings not found)"},
     "build_ok": {"ko": "OK: {out} (요소 {n}, 각주 {fn})", "en": "OK: {out} ({n} elements, {fn} footnotes)"},
+    "build_ok_merged": {"ko": "OK: {out} (요소 {n}, 각주 {fn}, 각주 통합 {merged}건)",
+                        "en": "OK: {out} ({n} elements, {fn} footnotes, {merged} merged footnote references)"},
     "err_docx_builtin_only": {
         "ko": "ERROR: DOCX는 내장 양식(chapter, flat)만 지원. 유저 HWPX 양식은 HWPX 산출에만 사용",
         "en": "ERROR: DOCX supports the built-in forms (chapter, flat) only. User HWPX forms apply to HWPX output"},

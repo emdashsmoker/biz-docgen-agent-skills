@@ -732,6 +732,55 @@ def image_size_mm(data: bytes) -> tuple[float, float]:
     return round(w_mm * scale, 1), round(h_mm * scale, 1)
 
 
+def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
+    """그림 크기와 그림을 담는 투명 표의 폭 (HWPUNIT). 반환: (그림 폭, 그림 높이, 표 폭)
+    그림이 놓이는 줄의 폭은 셀 폭에서 셀 좌우 여백을 뺀 값이므로 표 폭은 그림 폭 + 셀 좌우 여백.
+    여백을 더하지 않으면 여백만큼 그림 오른쪽이 잘리고, 더 넓게 주면 손 편집 때 표와 그림이 어긋남.
+    표가 본문 폭을 넘으면 쪽 밖으로 나가므로 그림을 비율대로 줄임"""
+    pad = 2 * C.CELL_MARGIN_LR
+    max_w = body_w - pad
+    if w_hu > max_w:
+        w_hu, h_hu = max_w, round(h_hu * max_w / w_hu)
+    return w_hu, h_hu, w_hu + pad
+
+
+def table_pos_role(has_caption: bool, has_fig_pos: bool) -> str:
+    """표를 담는 문단의 역할. 표 위치 스타일은 표 위에 캡션이 오는 것을 전제로 위 여백을 두지 않음.
+    캡션 없는 표는 위 문단에 붙으므로 위 여백이 있는 그림 위치 스타일을 씀 (양식에 그림 위치가 없으면 표 위치)"""
+    return "table_pos" if has_caption or not has_fig_pos else "fig_pos"
+
+
+# ── 출처 각주 통합 ────────────────────────────────────────────────────────────
+class NoteRegistry:
+    """출처 각주 통합의 범위 판단과 첫 각주 기록. HWPX와 DOCX 조판기가 같은 판단을 쓰도록 형식 무관으로 둠.
+    범위 안에서 문구가 같은 각주가 다시 나오면 조판기가 새 각주 대신 첫 각주 번호의 상호참조를 기록"""
+
+    def __init__(self, scope: str | None):
+        self.scope = scope            # None이면 통합하지 않음
+        self.first: dict[str, object] = {}
+
+    @staticmethod
+    def _key(text: str) -> str:
+        return " ".join(text.split())
+
+    def enter(self, kind: str, level: int = 0):
+        """요소를 조판하기 전에 호출. 범위 경계를 넘으면 첫 각주 기록을 비움"""
+        if self.scope == "square":
+            edge = kind in ("heading", "square")
+        else:
+            edge = kind == "heading" and level <= C.NOTE_SCOPE_HEADING_LEVEL.get(self.scope, 0)
+        if edge:
+            self.first.clear()
+
+    def lookup(self, text: str):
+        """같은 범위에서 먼저 나온 같은 문구 각주의 기록. 없으면 None"""
+        return self.first.get(self._key(text)) if self.scope else None
+
+    def remember(self, text: str, handle):
+        if self.scope and self._key(text):
+            self.first[self._key(text)] = handle
+
+
 # ── 인라인 서식 ───────────────────────────────────────────────────────────────
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """인라인 서식을 (종류, 문자열) 목록으로 나눈다.

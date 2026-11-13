@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import io
+import math
 import os
 import sys
 from datetime import datetime
@@ -46,6 +47,7 @@ JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIG
       "JUSTIFY": WD_ALIGN_PARAGRAPH.JUSTIFY, "DISTRIBUTE": WD_ALIGN_PARAGRAPH.DISTRIBUTE} if Document else {}
 FOOTNOTE_SUFFIX = ")"      # 각주 번호 뒤 글자. hwpx 각주 번호 형식(숫자와 닫는 괄호)과 같게 둠
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # 표 기본 셀 여백 좌, 우, 위, 아래 (python-hwpx 표 기본값과 같음)
+NOTE_BOOKMARK_PREFIX = "_RefNote"   # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름의 접두 (뒤에 각주 순번)
 # 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 판정함
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -99,6 +101,13 @@ def _w(tag: str, **attrs) -> "OxmlElement":
     return el
 
 
+def zero_picture_distance(shape):
+    """그림 바깥 여백을 0으로 기록. python-docx는 이 속성을 쓰지 않으며, 속성이 없으면 LibreOffice가
+    좌우 0.125인치를 그림 폭에 더해 그림이 셀 안 폭을 넘고 오른쪽이 잘림 (Word는 글자처럼 놓인 그림의 이 값을 쓰지 않음)"""
+    for side in ("distT", "distB", "distL", "distR"):
+        shape._inline.set(side, "0")
+
+
 class DocxBuilder:
     """lib.Builder(hwpx)와 같은 기록 함수를 docx로 구현. 판단 함수(표 배치, 인라인, 목차 순서)는 lib를 호출"""
 
@@ -117,6 +126,7 @@ class DocxBuilder:
         self.last_para = None
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
+        self.notes = lib.NoteRegistry(None)   # 출처 각주 통합. 조판 명령이 범위를 지정하면 교체
         page = spec["page"]
         self.body_w = page["width"] - page["left"] - page["right"]
         self.table_max_w = self.body_w - lib.TABLE_INDENT_MARGIN
@@ -358,13 +368,49 @@ class DocxBuilder:
         return p
 
     def add_footnote(self, p, text: str):
-        """각주 참조. 번호는 Word 자동 번호, 뒤의 닫는 괄호는 글자로 붙여 hwpx 각주 번호 형식(1))과 맞춤"""
+        """각주 참조. 번호는 Word 자동 번호, 뒤의 닫는 괄호는 글자로 붙여 hwpx 각주 번호 형식(1))과 맞춤
+        출처 각주 통합 범위 안에서 문구가 같은 각주는 첫 각주 번호의 상호참조로 대체"""
+        first = self.notes.lookup(text)
+        if first is not None:
+            self._note_crossref(p, *first)
+            return
         fid = len(self._footnotes) + 1
         r = p.add_run()
         r.font.superscript = True
         r._r.append(_w("footnoteReference", id=fid))
         p.add_run(FOOTNOTE_SUFFIX).font.superscript = True
         self._footnotes.append((fid, text))
+        self.notes.remember(text, (fid, r._r))
+
+    def _note_crossref(self, p, fid: int, ref_run):
+        """각주 번호 상호참조(Word NOTEREF 필드). 첫 각주의 참조 run을 책갈피로 감싸고 그 책갈피를 가리킴
+        번호는 저장값이며 Word가 필드를 갱신할 때 다시 매김. 각주는 문서 전체 연속 번호라 순번이 곧 번호"""
+        name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
+        if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
+            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # 이 문서의 책갈피는 각주 참조뿐이라 순번이 유일한 id
+            ref_run.addnext(_w("bookmarkEnd", id=fid))
+
+        def sup_run(*children):
+            r = OxmlElement("w:r")
+            r.append(OxmlElement("w:rPr"))
+            r[0].append(_w("vertAlign", val="superscript"))
+            for c in children:
+                r.append(c)
+            p._p.append(r)
+
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" NOTEREF {name} \\f \\h "
+        result = OxmlElement("w:t")
+        result.text = str(fid)
+        suffix = OxmlElement("w:t")
+        suffix.text = FOOTNOTE_SUFFIX
+        sup_run(_w("fldChar", fldCharType="begin"))
+        sup_run(instr)
+        sup_run(_w("fldChar", fldCharType="separate"))
+        sup_run(result)
+        sup_run(_w("fldChar", fldCharType="end"))
+        sup_run(suffix)
 
     def gap(self):
         for _ in range(lib.BLOCK_GAP_LINES):
@@ -492,7 +538,8 @@ class DocxBuilder:
         unit, sources = e.data.get("unit"), e.data.get("sources", [])
         head = 1 if unit else 0
         long = nrow > lib.LONG_TABLE_ROWS and not e.data.get("split_done")
-        self._spacer("table_pos", "before")
+        pos_role = lib.table_pos_role(self.p, bool(e.text))   # 캡션 없는 표는 그림위치 스타일의 여백
+        self._spacer(pos_role, "before")
         if e.text:
             self._caption("TABLE", e.text, "TOP")
         t = self._new_table(nrow + head + len(sources), widths)
@@ -541,7 +588,7 @@ class DocxBuilder:
                 for cell in row.cells:
                     for p in cell.paragraphs:
                         p.paragraph_format.keep_with_next = True
-        self._spacer("table_pos", "after")
+        self._spacer(pos_role, "after")
         self.after_block = True
 
     @staticmethod
@@ -561,7 +608,7 @@ class DocxBuilder:
             return
         data, _fmt, w_mm, h_mm = prepared
         self.gap()
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = lib.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         sources = e.data.get("sources", [])
         self._spacer("fig_pos", "before")
         if e.text and lib.FIG_CAPTION_SIDE == "TOP":
@@ -569,18 +616,20 @@ class DocxBuilder:
         if not lib.FIGURE_IN_TABLE:
             p = self._new_para("fig_pos", "CENTER")
             p.paragraph_format.line_spacing = 1.0  # 고정 줄 간격은 그림을 잘라 표시함
-            p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU))
+            zero_picture_distance(p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU)))
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
                 self.para("source", src)
         else:  # 투명 1열 표에 그림과 자료 행을 담음 (hwpx와 같은 구성)
-            t = self._new_table(1 + len(sources), [w_hu])
+            # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
+            t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])
             cell = t.cell(0, 0)
             p = self._cell_para(cell, "", "fig_pos", "CENTER")
             p.paragraph_format.line_spacing = 1.0
-            p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU))
-            self._tc_style(cell._tc, [], None, None)
+            zero_picture_distance(p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU)))
+            # 표 폭 산정에 쓴 좌우 여백을 셀에 직접 기록 (위아래는 표 기본 여백 유지)
+            self._tc_style(cell._tc, [], None, (lib.CELL_MARGIN[0], lib.CELL_MARGIN[1], TABLE_IN_MARGIN[2], TABLE_IN_MARGIN[3]))
             self._row_height(t.rows[0], h_hu + 2 * lib.ROW_LINE_H, cant_split=True)
             for k, src in enumerate(sources):
                 self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")

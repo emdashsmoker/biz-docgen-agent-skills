@@ -135,6 +135,13 @@ TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기
 TOC_MAX_PASSES = 2              # 목차 쪽번호 기입 후 재렌더링 대조에서 불일치가 남을 때 다시 조판하는 최대 횟수
 TOC_FIRST_LINE_KEY = 10         # 제목 고립 판정에 쓰는 첫 본문 줄의 앞 글자 수 (빈칸 제외). 줄이 쪽을 넘어가도 시작 쪽에서 찾음
 BLOCK_GAP_LINES = 0             # 표·그림 블록 앞뒤 빈 문단 수. 간격은 표 위치·그림 위치 스타일 여백이 담당
+# 글자처럼 취급을 해제한 장표(HWPX engine) 앞뒤의 바탕글 빈 문단 수.
+# 해제된 표는 본문과 따로 배치되어 표 위치 문단 여백만으로는 앞뒤 문단과 붙어 보임
+LONG_TABLE_GAP_LINES = 1
+# 출처 각주 통합 범위 (build --footnote-merge): □, 절(##), 장(#), 문서 전체
+NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
+NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # 이 수준 이상의 제목에서 범위가 바뀜
+HWPX_CROSSREF_FIELD_ID = "628650598"   # 한/글 상호참조 필드의 종류 id (제어 id "%xrf"의 정수 표기)
 
 # ── HWPX 렌더러 (rhwp) ─────────────────────────────────────────────────────
 RHWP_REPO = "https://github.com/edwardkim/rhwp"
@@ -197,6 +204,8 @@ DOCX_HALFWIDTH_BULLET = 0.5     # 반각 글머리 기호 폭
 DOCX_SPACER_PT = 1              # 표 아래 간격용 빈 문단의 줄 높이
 # 제목 책갈피 이름. 밑줄로 시작하는 이름은 Word가 숨은 책갈피로 다룸. 목차 항목의 PAGEREF 필드가 이 책갈피로 제목 쪽을 찾음
 DOCX_TOC_BOOKMARK = "_Toc{n:09d}"
+DOCX_NOTE_BOOKMARK = "_RefNote{n}"      # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름 (n은 각주 순번)
+DOCX_NOTE_BOOKMARK_ID_BASE = 1000000    # 각주 책갈피 id 시작값. 제목 책갈피 id(1부터)와 겹치지 않는 범위
 # 글꼴 표(fontTable) 기록값. Word는 문서 글꼴이 없는 환경에서 이 정보로 같은 계열의 대체 글꼴을 고른다
 # 영문 이름에 Myeongjo가 있으면 roman(명조 계열), 그 외 swiss(고딕 계열)로 기록. 문자 집합은 한글(charset 81)
 DOCX_FONT_ALT_NAMES = {"나눔고딕": "NanumGothic", "나눔바른고딕": "NanumBarunGothic"}
@@ -299,6 +308,8 @@ MESSAGES = {
         "ko": "WARN: 렌더러 또는 pdftotext 부재, 또는 제목 탐색 실패로 목차 쪽번호 미기입",
         "en": "WARN: TOC page numbers not filled (renderer or pdftotext missing, or headings not found)"},
     "build_ok": {"ko": "OK: {out} (요소 {n}, 각주 {fn})", "en": "OK: {out} ({n} elements, {fn} footnotes)"},
+    "build_ok_merged": {"ko": "OK: {out} (요소 {n}, 각주 {fn}, 각주 통합 {merged}건)",
+                        "en": "OK: {out} ({n} elements, {fn} footnotes, {merged} merged footnote references)"},
     "err_docx_builtin_only": {
         "ko": "ERROR: DOCX는 내장 양식(chapter, flat)만 지원. 유저 HWPX 양식은 HWPX 산출에만 사용",
         "en": "ERROR: DOCX supports the built-in forms (chapter, flat) only. User HWPX forms apply to HWPX output"},

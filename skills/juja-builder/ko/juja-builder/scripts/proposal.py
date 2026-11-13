@@ -627,6 +627,7 @@ class ProposalLayout:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind == "band":
@@ -821,9 +822,6 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
         tbl = self._last_tbl()
         if tbl is not None and self.p.get("caption_prefix") and not e.text and tbl.get("numberingType") == "PICTURE":
             tbl.set("numberingType", "NONE")
-
-    def add_footnote(self, p, text: str):
-        p.add_footnote(text)
 
     def save(self, out: str):
         report = self.doc.validate()
@@ -2186,6 +2184,7 @@ def cmd_build(a):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
+        b.notes = lib.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.unify_mode = a.unify
         b.theme = a.theme
@@ -2216,7 +2215,8 @@ def cmd_build(a):
             else:
                 print(f"WARN: 렌더러 또는 pdftotext 부재로 {fmt} 목차 쪽번호 미기입")
         made[fmt] = out
-        print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)})")
+        note_info = f", 각주 통합 {b.notes.merged}건" if a.footnote_merge else ""
+        print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)}{note_info})")
     if len(made) == 2:  # 두 형식 동시 산출: 문단 글자 순서 대조
         diffs = check_parity(made["hwpx"], made["docx"])
         if diffs:
@@ -2499,6 +2499,9 @@ def main():
     p.add_argument("--page-number", action="store_true", help="꼬리말 쪽번호 (기본 OFF)")
     p.add_argument("--cover", help='표지: "title=제목;subtitle=부제;date=YYYY. M.;org=기관"')
     p.add_argument("--header", help='머리말: "텍스트;align=RIGHT"')
+    p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),
+                   help="출처 각주 통합(착수 질의에서 통합을 고른 경우에만 지정, 기본 미적용). 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
+                        "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="표 폭 통일: manual=원고의 (폭: ...) 지시만 적용(기본), auto=같은 양식 표 자동 그룹 추가")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="밴드 색 테마: navy(기본), mono(검정과 회색). 표 서식은 테마와 무관")
     p.add_argument("--labels", help="라벨 파일(JSON). 문서의 고정 문자열, 원고 표기, 언어 태그, 납품 파일명을 덮어씀. 작업폴더면 state.json에 기록 (none은 기록 해제)")

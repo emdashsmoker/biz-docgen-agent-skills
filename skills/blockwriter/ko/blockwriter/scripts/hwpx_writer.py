@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -98,6 +99,7 @@ class Builder:
         self.header_spec = None
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
+        self.notes = M.NoteRegistry(None)   # 출처 각주 통합 (build --footnote-merge)
 
     def _manual_symbols(self) -> dict[str, str]:
         """스타일의 heading이 BULLET이면 한/글이 기호를 그리고, 아니면 본문에 기호를 넣는다."""
@@ -187,8 +189,17 @@ class Builder:
 
     def _add_footnote(self, p, text: str, body_cp: str):
         """각주 참조를 문단 기본 글자 모양의 run에 두고 각주 본문에도 본문과 같은 인라인 서식을 적용한다.
-        라이브러리는 참조를 문단의 마지막 run(첨자, 굵게 등)에 두고 각주 본문을 run 하나의 글자 모양으로만 만든다"""
+        라이브러리는 참조를 문단의 마지막 run(첨자, 굵게 등)에 두고 각주 본문을 run 하나의 글자 모양으로만 만든다.
+        출처 각주 통합 범위 안에서 문구가 같은 각주는 첫 각주 번호의 상호참조로 대체한다"""
+        first = self.notes.lookup(text)
+        if first is not None:
+            self._note_crossref(p, str(body_cp), *first)
+            return
         note = p.add_footnote("", run_attributes={"charPrIDRef": str(body_cp)})
+        if not note.element.get("instId"):   # 상호참조가 가리킬 id. 구버전 라이브러리는 기록하지 않음
+            note.element.set("instId", new_object_id())
+        self.notes.remember(text, (note.element.get("instId"), note.element.get("number"),
+                                   chr(int(note.element.get("suffixChar", str(ord(")")))))))
         run = note.element.find(f".//{HP}subList/{HP}p/{HP}run")   # 각주 번호가 든 run
         base_cp = run.get("charPrIDRef")
         empty_t = run.find(f"{HP}t")
@@ -200,6 +211,67 @@ class Builder:
             cp = self._run_style(base_cp, **INLINE_STYLE[kind]) if kind in INLINE_STYLE else base_cp
             new_run = ET.SubElement(run.getparent(), f"{HP}run", charPrIDRef=str(cp))
             ET.SubElement(new_run, f"{HP}t").text = seg
+
+    def _note_crossref(self, p, base_cp: str, inst_id: str, number: str, suffix: str):
+        """각주 번호 상호참조. 한/글이 저장하는 구조(필드 시작 run, 위 첨자 run 안의 번호와 필드 끝과 번호 뒤 문자)와 같게 기록한다.
+        번호는 저장값이며 한/글이 상호참조를 갱신할 때 다시 매긴다"""
+        pe = p.element
+        runs = pe.findall(f"{HP}run")
+        at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # 줄 배치 저장값보다 앞, 마지막 run 뒤
+        field_id = new_object_id()
+        begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
+        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                              name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
+        # 매개변수 이름과 값은 한/글 저장 파일 그대로 ("Fiexde" 철자 포함). Command의 뒤 숫자는 각주 번호 참조를 뜻하는 저장값
+        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
+                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
+                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+        for tag, name, value in params:
+            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
+        ET.SubElement(sup_run, f"{HP}t").text = number
+        ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id,
+                      fieldid=C.HWPX_CROSSREF_FIELD_ID)
+        ET.SubElement(sup_run, f"{HP}t").text = suffix
+        pe.insert(at, begin_run)
+        pe.insert(at + 1, sup_run)
+        pe.set("paraPrIDRef", self._bullet_shape_pp(pe.get("paraPrIDRef"), base_cp))
+        p.section.mark_dirty()
+
+    def _bullet_shape_pp(self, base_pp: str, cp: str) -> str:
+        """글머리표의 글자 모양을 cp로 지정한 문단 모양. 글머리표 없는 문단 모양은 그대로 돌려준다.
+        글머리표 글자 모양이 '본문 따름'이면 한/글이 문단 안 위 첨자 run을 따라 글머리표까지 줄여 그린다"""
+        key = (str(base_pp), "BULLETSHAPE", str(cp))
+        if key in self._pp_cache:
+            return self._pp_cache[key]
+        root = self.header.element
+        pp = root.find(f".//{HH}paraPr[@id='{base_pp}']")
+        hd = pp.find(f"{HH}heading") if pp is not None else None
+        src = root.find(f".//{HH}bullet[@id='{hd.get('idRef')}']") if hd is not None and hd.get("type") == "BULLET" else None
+        head = src.find(f"{HH}paraHead") if src is not None else None
+        if head is None or head.get("charPrIDRef") == str(cp):
+            self._pp_cache[key] = str(base_pp)
+            return self._pp_cache[key]
+        bullets = src.getparent()
+        fixed = copy.deepcopy(src)
+        fixed.set("id", str(max(int(b.get("id")) for b in bullets) + 1))
+        fixed.find(f"{HH}paraHead").set("charPrIDRef", str(cp))
+        bullets.append(fixed)
+        bullets.set("itemCnt", str(len(bullets)))
+        self._pp_cache[key] = self.header.ensure_paragraph_format(
+            base_para_pr_id=base_pp, heading={"type": "BULLET", "idRef": fixed.get("id"), "level": hd.get("level", "0")})
+        return self._pp_cache[key]
+
+    def _flush_pp(self, base_pp: str) -> str:
+        """좌우 여백과 첫 줄 들여쓰기가 0인 문단 모양. 그림을 담는 셀 문단용.
+        유저 양식의 그림 위치 스타일에 여백이 있으면 그 폭만큼 줄이 좁아져 그림이 잘린다"""
+        key = (str(base_pp), "FLUSH")
+        if key not in self._pp_cache:
+            self._pp_cache[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=base_pp, margins={"left": 0, "right": 0, "intent": 0})
+        return self._pp_cache[key]
 
     def _inline_runs(self, pe, base_cp: str):
         """셀 문단의 인라인 서식 표기(굵게, 기울임, 첨자)를 글자 모양이 다른 run으로 나눈다.
@@ -521,11 +593,15 @@ class Builder:
         widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         table_w = sum(widths)
         self.gap()
-        r = self._centered_refs("table_pos")
+        r = self._centered_refs(M.table_pos_role(bool(e.text), bool(self.p.get("fig_pos"))))
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
         head = 1 if unit else 0   # 단위 행: 머리글 위 투명 병합 셀 (표 우측 끝 정렬)
-        t = self.doc.add_table(nrow + head + len(sources), ncol, width=table_w, **r, **self._take_break())
+        engine_long = nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done")   # 장표: 글자처럼 취급 해제 대상
+        break_attrs = self._take_break()   # 쪽 나눔은 표를 담은 문단에 적용 (앞의 빈 문단은 앞 쪽 끝에 남음)
+        if engine_long:
+            self._long_table_gap()
+        t = self.doc.add_table(nrow + head + len(sources), ncol, width=table_w, **r, **break_attrs)
         if e.text:
             self.attach_caption(t, "TABLE", e.text, "TOP", table_w)
         t.set_column_widths(widths)
@@ -599,7 +675,7 @@ class Builder:
                 continue   # 단위 행과 출처 행은 투명
             sides = cell_sides(c0, c1, ncol)
             tc.set("borderFillIDRef", self._border_fill(sides, C.HEADER_FILL if r0 < head + hdr else None))
-        if nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done"):   # 장표: 한/글이 쪽 경계에서 행 단위로 나누고 제목행 반복
+        if engine_long:   # 장표: 한/글이 쪽 경계에서 행 단위로 나누고 제목행 반복
             t.element.set("repeatHeader", "1")
             t.element.set("pageBreak", "CELL")
             if head:   # 한/글은 표 맨 위부터 이어진 제목 셀 행만 반복하므로 단위 행도 제목 셀로 지정
@@ -611,6 +687,13 @@ class Builder:
                 pos.set("treatAsChar", "0")
                 pos.set("flowWithText", "1")
         t.mark_dirty()
+        if engine_long:
+            self._long_table_gap()
+
+    def _long_table_gap(self):
+        """글자처럼 취급을 해제한 장표의 앞뒤에 두는 바탕글 빈 문단"""
+        for _ in range(C.LONG_TABLE_GAP_LINES):
+            self.doc.add_paragraph("", **self.refs("body"))
 
     # ── 그림 ────────────────────────────────────────────────────────────
     def image(self, e: M.Element):
@@ -620,17 +703,17 @@ class Builder:
         data, fmt, (w_mm, h_mm) = loaded
         self.gap()
         r = self._centered_refs("fig_pos")
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = M.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         sources = e.data.get("sources", [])
         if not C.FIGURE_IN_TABLE:
-            pic = self.doc.add_picture(data, fmt, width_mm=w_mm, height_mm=h_mm, **r, **self._take_break())
+            pic = self.doc.add_picture(data, fmt, width_mm=w_hu * 25.4 / 7200, height_mm=h_hu * 25.4 / 7200,
+                                       **r, **self._take_break())
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             for src in sources:
                 self.para("source", src)
             return
         # 투명 1열 표에 그림을 넣고 표를 그림 번호 유형으로 지정. 내부 그림은 번호 집계에서 제외
-        table_w = w_hu + 2 * C.CELL_MARGIN_LR   # 셀 좌우 여백을 더해야 그림이 셀 안 폭에 들어감
         t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r, **self._take_break())
         item = self.doc.media.add_image(data, fmt)
         item_id = getattr(item, "item_id", item)   # 라이브러리 버전에 따라 객체 또는 문자열
@@ -641,9 +724,15 @@ class Builder:
             sys.exit(msg("err_image_ref", path=e.data["path"]))
         pic.element.set("numberingType", "NONE")
         for pe in cell.element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", str(r["para_pr_id_ref"]))
+            pe.set("paraPrIDRef", self._flush_pp(str(r["para_pr_id_ref"])))
             pe.set("styleIDRef", str(r["style_id_ref"]))
         cell.element.set("borderFillIDRef", self._border_fill([]))
+        # 표 폭 산정에 쓴 좌우 여백을 셀에 직접 기록. 라이브러리의 표 기본 여백이 바뀌어도 그림 폭과 셀 안 폭이 같음
+        cell.element.set("hasMargin", "1")
+        cm = cell.element.find(f"{HP}cellMargin")
+        if cm is not None:
+            cm.set("left", str(C.CELL_MARGIN_LR))
+            cm.set("right", str(C.CELL_MARGIN_LR))
         cell.set_size(height=h_hu + 2 * C.ROW_LINE_H)
         for k, src in enumerate(sources):
             self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
@@ -661,6 +750,7 @@ class Builder:
     # ── 실행 ────────────────────────────────────────────────────────────
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
         for e in M.attach_block_notes(elems):
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
@@ -693,6 +783,11 @@ class Builder:
                 print("   ", it)
         save_hwpx(self.doc, out)
         self.doc.close()
+
+
+def new_object_id() -> str:
+    """개체와 필드의 인스턴스 id (python-hwpx가 표와 각주에 쓰는 범위와 같은 31비트 난수)"""
+    return str(uuid.uuid4().int & 0x7FFFFFFF)
 
 
 def save_hwpx(doc, path: str):
@@ -783,6 +878,7 @@ def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table
+        b.notes = M.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.build(elems, footnotes, out)
         return b

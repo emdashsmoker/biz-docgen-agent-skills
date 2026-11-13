@@ -62,7 +62,10 @@ def cmd_build(a):
             sys.exit(msg("err_docx_builtin_only"))
         import docx_writer
         docx_writer.build_docx(a, elems, footnotes, out)
-    print(msg("build_ok", out=out, n=len(elems), fn=count_footnotes(out)))
+    if a.footnote_merge:
+        print(msg("build_ok_merged", out=out, n=len(elems), fn=count_footnotes(out), merged=count_merged_notes(out)))
+    else:
+        print(msg("build_ok", out=out, n=len(elems), fn=count_footnotes(out)))
 
 
 def count_footnotes(path: str) -> int:
@@ -77,6 +80,13 @@ def count_footnotes(path: str) -> int:
         return len(re.findall(r"<w:footnote\b(?![^>]*w:type=)", z.read("word/footnotes.xml").decode("utf-8")))
 
 
+def count_merged_notes(path: str) -> int:
+    """Number of footnote references in the output file replaced by a cross-reference to the first footnote number (source footnote merging)"""
+    with zipfile.ZipFile(path) as z:
+        if path.lower().endswith(".hwpx"):
+            return sum(len(re.findall(r'<hp:fieldBegin\b[^>]*type="CROSSREF"', z.read(n).decode("utf-8")))
+                       for n in z.namelist() if re.match(r"Contents/section\d+\.xml$", n))
+        return len(re.findall(r"<w:instrText[^>]*>\s*NOTEREF\b", z.read("word/document.xml").decode("utf-8")))
 def cmd_form(a):
     from hwpx_form import write_skeleton
     write_skeleton(FORMS[a.form], a.output)
@@ -146,6 +156,10 @@ def main():
                    help="new page unit: chapter=each chapter (default), section=each chapter and section, none=continuous")
     b.add_argument("--long-table", choices=["engine", "split"],
                    help=f"tables over {C.LONG_TABLE_ROWS} rows: engine=split at page boundaries with repeated title rows (default), split=physically split into chunk tables")
+    b.add_argument("--footnote-merge", choices=list(C.NOTE_MERGE_SCOPES),
+                   help="source footnote merging (default OFF): replaces a footnote that repeats the same text inside the scope "
+                        "with a cross-reference to the first footnote number. "
+                        "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
     b.add_argument("--toc", action="store_true", help="insert a table of contents at the front (default OFF)")
     b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="TOC depth: 1=chapter, 2=section (default), 3=subsection")
     b.add_argument("--page-number", action="store_true", help="footer page number '- N -' at center (default OFF)")

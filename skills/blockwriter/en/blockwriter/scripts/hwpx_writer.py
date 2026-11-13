@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -98,6 +99,7 @@ class Builder:
         self.header_spec = None
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
+        self.notes = M.NoteRegistry(None)   # source footnote merging (build --footnote-merge)
 
     def _manual_symbols(self) -> dict[str, str]:
         """If the style's heading is BULLET, Hangul draws the symbol; otherwise the symbol is written into the text."""
@@ -188,7 +190,15 @@ class Builder:
     def _add_footnote(self, p, text: str, body_cp: str):
         """Places the footnote reference in a run with the paragraph's base character shape and applies the same inline formatting as body text to the footnote text.
         The library puts the reference in the paragraph's last run (subscript, bold, etc.) and builds the footnote text with a single character shape"""
+        first = self.notes.lookup(text)   # inside the source footnote merging scope, the same text becomes a cross-reference to the first footnote number
+        if first is not None:
+            self._note_crossref(p, str(body_cp), *first)
+            return
         note = p.add_footnote("", run_attributes={"charPrIDRef": str(body_cp)})
+        if not note.element.get("instId"):   # the id a cross-reference points to. Older library versions do not write it
+            note.element.set("instId", new_object_id())
+        self.notes.remember(text, (note.element.get("instId"), note.element.get("number"),
+                                   chr(int(note.element.get("suffixChar", str(ord(")")))))))
         run = note.element.find(f".//{HP}subList/{HP}p/{HP}run")   # the run holding the footnote number
         base_cp = run.get("charPrIDRef")
         empty_t = run.find(f"{HP}t")
@@ -201,6 +211,66 @@ class Builder:
             new_run = ET.SubElement(run.getparent(), f"{HP}run", charPrIDRef=str(cp))
             ET.SubElement(new_run, f"{HP}t").text = seg
 
+    def _note_crossref(self, p, base_cp: str, inst_id: str, number: str, suffix: str):
+        """Cross-reference to a footnote number. Written in the structure Hangul saves (a field-begin run, then a superscript run holding
+        the number, the field end and the character after the number). The number is a stored value that Hangul renumbers when it updates cross-references"""
+        pe = p.element
+        runs = pe.findall(f"{HP}run")
+        at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # before the stored line layout, after the last run
+        field_id = new_object_id()
+        begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
+        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                              name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
+        # parameter names and values exactly as Hangul saves them (including the "Fiexde" spelling). The numbers after the id in Command are the stored value for a footnote number reference
+        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
+                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
+                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+        for tag, name, value in params:
+            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
+        ET.SubElement(sup_run, f"{HP}t").text = number
+        ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id,
+                      fieldid=C.HWPX_CROSSREF_FIELD_ID)
+        ET.SubElement(sup_run, f"{HP}t").text = suffix
+        pe.insert(at, begin_run)
+        pe.insert(at + 1, sup_run)
+        pe.set("paraPrIDRef", self._bullet_shape_pp(pe.get("paraPrIDRef"), base_cp))
+        p.section.mark_dirty()
+
+    def _bullet_shape_pp(self, base_pp: str, cp: str) -> str:
+        """Paragraph shape whose bullet uses the character shape cp. A paragraph shape without a bullet is returned as is.
+        When the bullet character shape follows the text, Hangul shrinks the bullet along with a superscript run in the paragraph"""
+        key = (str(base_pp), "BULLETSHAPE", str(cp))
+        if key in self._pp_cache:
+            return self._pp_cache[key]
+        root = self.header.element
+        pp = root.find(f".//{HH}paraPr[@id='{base_pp}']")
+        hd = pp.find(f"{HH}heading") if pp is not None else None
+        src = root.find(f".//{HH}bullet[@id='{hd.get('idRef')}']") if hd is not None and hd.get("type") == "BULLET" else None
+        head = src.find(f"{HH}paraHead") if src is not None else None
+        if head is None or head.get("charPrIDRef") == str(cp):
+            self._pp_cache[key] = str(base_pp)
+            return self._pp_cache[key]
+        bullets = src.getparent()
+        fixed = copy.deepcopy(src)
+        fixed.set("id", str(max(int(b.get("id")) for b in bullets) + 1))
+        fixed.find(f"{HH}paraHead").set("charPrIDRef", str(cp))
+        bullets.append(fixed)
+        bullets.set("itemCnt", str(len(bullets)))
+        self._pp_cache[key] = self.header.ensure_paragraph_format(
+            base_para_pr_id=base_pp, heading={"type": "BULLET", "idRef": fixed.get("id"), "level": hd.get("level", "0")})
+        return self._pp_cache[key]
+
+    def _flush_pp(self, base_pp: str) -> str:
+        """Paragraph shape with zero left and right margins and zero first-line indent, for the cell paragraph that holds a figure.
+        When the figure position style of a user form has margins, the line narrows by that amount and the figure is cut"""
+        key = (str(base_pp), "FLUSH")
+        if key not in self._pp_cache:
+            self._pp_cache[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=base_pp, margins={"left": 0, "right": 0, "intent": 0})
+        return self._pp_cache[key]
     def _inline_runs(self, pe, base_cp: str):
         """Splits inline format markup (bold, italic, super/subscript) in a cell paragraph into runs with different character shapes.
         Footnote references in cells are not supported, so their markup stays as written"""
@@ -523,11 +593,15 @@ class Builder:
         widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         table_w = sum(widths)
         self.gap()
-        r = self._centered_refs("table_pos")
+        r = self._centered_refs(M.table_pos_role(bool(e.text), bool(self.p.get("fig_pos"))))
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
         head = 1 if unit else 0   # unit row: transparent merged cell above the header (right-aligned at the table's right edge)
-        t = self.doc.add_table(nrow + head + len(sources), ncol, width=table_w, **r, **self._take_break())
+        engine_long = nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done")   # long table: treat-as-character goes off
+        break_attrs = self._take_break()   # the page break applies to the paragraph that holds the table (the empty paragraph before it stays at the end of the previous page)
+        if engine_long:
+            self._long_table_gap()
+        t = self.doc.add_table(nrow + head + len(sources), ncol, width=table_w, **r, **break_attrs)
         if e.text:
             self.attach_caption(t, "TABLE", e.text, "TOP", table_w)
         t.set_column_widths(widths)
@@ -601,7 +675,7 @@ class Builder:
                 continue   # unit and source rows are transparent
             sides = cell_sides(c0, c1, ncol)
             tc.set("borderFillIDRef", self._border_fill(sides, C.HEADER_FILL if r0 < head + hdr else None))
-        if nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done"):   # long table: Hangul splits it by row at page boundaries and repeats the header row
+        if engine_long:   # long table: Hangul splits it by row at page boundaries and repeats the header row
             t.element.set("repeatHeader", "1")
             t.element.set("pageBreak", "CELL")
             if head:   # Hangul repeats only title-cell rows that run contiguously from the top of the table, so the unit row is marked as title cells too
@@ -613,6 +687,13 @@ class Builder:
                 pos.set("treatAsChar", "0")
                 pos.set("flowWithText", "1")
         t.mark_dirty()
+        if engine_long:
+            self._long_table_gap()
+
+    def _long_table_gap(self):
+        """Empty body-style paragraphs before and after a long table with treat-as-character off"""
+        for _ in range(C.LONG_TABLE_GAP_LINES):
+            self.doc.add_paragraph("", **self.refs("body"))
 
     # ── Figures ────────────────────────────────────────────────────────────
     def image(self, e: M.Element):
@@ -622,17 +703,17 @@ class Builder:
         data, fmt, (w_mm, h_mm) = loaded
         self.gap()
         r = self._centered_refs("fig_pos")
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = M.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         sources = e.data.get("sources", [])
         if not C.FIGURE_IN_TABLE:
-            pic = self.doc.add_picture(data, fmt, width_mm=w_mm, height_mm=h_mm, **r, **self._take_break())
+            pic = self.doc.add_picture(data, fmt, width_mm=w_hu * 25.4 / 7200, height_mm=h_hu * 25.4 / 7200,
+                                       **r, **self._take_break())
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             for src in sources:
                 self.para("source", src)
             return
         # put the figure in a transparent one-column table and set the table's numbering type to figure. The inner picture is excluded from numbering
-        table_w = w_hu + 2 * C.CELL_MARGIN_LR   # add the left and right cell margins so the picture fits the cell's inner width
         t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r, **self._take_break())
         item = self.doc.media.add_image(data, fmt)
         item_id = getattr(item, "item_id", item)   # object or string depending on the library version
@@ -643,9 +724,15 @@ class Builder:
             sys.exit(msg("err_image_ref", path=e.data["path"]))
         pic.element.set("numberingType", "NONE")
         for pe in cell.element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", str(r["para_pr_id_ref"]))
+            pe.set("paraPrIDRef", self._flush_pp(str(r["para_pr_id_ref"])))
             pe.set("styleIDRef", str(r["style_id_ref"]))
         cell.element.set("borderFillIDRef", self._border_fill([]))
+        # write the left and right margins used for the table width into the cell. The figure width equals the inner cell width even if the library's default table margins change
+        cell.element.set("hasMargin", "1")
+        cm = cell.element.find(f"{HP}cellMargin")
+        if cm is not None:
+            cm.set("left", str(C.CELL_MARGIN_LR))
+            cm.set("right", str(C.CELL_MARGIN_LR))
         cell.set_size(height=h_hu + 2 * C.ROW_LINE_H)
         for k, src in enumerate(sources):
             self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
@@ -663,6 +750,7 @@ class Builder:
     # ── Run ────────────────────────────────────────────────────────────────
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
         for e in M.attach_block_notes(elems):
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
@@ -697,6 +785,9 @@ class Builder:
         self.doc.close()
 
 
+def new_object_id() -> str:
+    """Instance id for objects and fields (a 31-bit random number, the range python-hwpx uses for tables and footnotes)"""
+    return str(uuid.uuid4().int & 0x7FFFFFFF)
 def save_hwpx(doc, path: str):
     """The library saves by moving a temporary file (mode 0600), so restore normal file permissions after saving"""
     doc.save_to_path(os.path.abspath(path))
@@ -785,6 +876,7 @@ def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table
+        b.notes = M.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.build(elems, footnotes, out)
         return b

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import io
+import math
 import os
 import sys
 from datetime import datetime
@@ -46,6 +47,7 @@ JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIG
       "JUSTIFY": WD_ALIGN_PARAGRAPH.JUSTIFY, "DISTRIBUTE": WD_ALIGN_PARAGRAPH.DISTRIBUTE} if Document else {}
 FOOTNOTE_SUFFIX = ")"      # character after the footnote number. Same as the hwpx footnote number format (number and closing parenthesis)
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # default table cell margins left, right, top, bottom (same as the python-hwpx table default)
+NOTE_BOOKMARK_PREFIX = "_RefNote"   # prefix of the bookmark name that wraps the first footnote reference in source footnote merging (followed by the footnote sequence number)
 # Schema order of formatting elements. Word judges elements out of order as corruption
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -99,6 +101,14 @@ def _w(tag: str, **attrs) -> "OxmlElement":
     return el
 
 
+def zero_picture_distance(shape):
+    """Write zero outer distances for a picture. python-docx does not write these attributes, and without them LibreOffice adds
+    0.125 inch on the left and right to the picture width, so the picture exceeds the inner cell width and its right side is cut
+    (Word does not use these values for a picture placed as a character)"""
+    for side in ("distT", "distB", "distL", "distR"):
+        shape._inline.set(side, "0")
+
+
 class DocxBuilder:
     """Implements the same record functions as lib.Builder (hwpx) for docx. Judgment functions (table layout, inline, TOC order) call lib"""
 
@@ -117,6 +127,7 @@ class DocxBuilder:
         self.last_para = None
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
+        self.notes = lib.NoteRegistry(None)   # source footnote merging. The build command replaces it when a scope is given
         page = spec["page"]
         self.body_w = page["width"] - page["left"] - page["right"]
         self.table_max_w = self.body_w - lib.TABLE_INDENT_MARGIN
@@ -359,12 +370,47 @@ class DocxBuilder:
 
     def add_footnote(self, p, text: str):
         """Footnote reference. The number is Word's automatic number, and the closing parenthesis after it is attached as text to match the hwpx footnote number format (1))"""
+        first = self.notes.lookup(text)   # inside the source footnote merging scope, the same text becomes a cross-reference to the first footnote number
+        if first is not None:
+            self._note_crossref(p, *first)
+            return
         fid = len(self._footnotes) + 1
         r = p.add_run()
         r.font.superscript = True
         r._r.append(_w("footnoteReference", id=fid))
         p.add_run(FOOTNOTE_SUFFIX).font.superscript = True
         self._footnotes.append((fid, text))
+        self.notes.remember(text, (fid, r._r))
+
+    def _note_crossref(self, p, fid: int, ref_run):
+        """Cross-reference to a footnote number (Word NOTEREF field). Wraps the reference run of the first footnote in a bookmark and points to it
+        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the sequence number is the number"""
+        name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
+        if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
+            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # footnote references are the only bookmarks in this document, so the sequence number is a unique id
+            ref_run.addnext(_w("bookmarkEnd", id=fid))
+
+        def sup_run(*children):
+            r = OxmlElement("w:r")
+            r.append(OxmlElement("w:rPr"))
+            r[0].append(_w("vertAlign", val="superscript"))
+            for c in children:
+                r.append(c)
+            p._p.append(r)
+
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" NOTEREF {name} \\f \\h "
+        result = OxmlElement("w:t")
+        result.text = str(fid)
+        suffix = OxmlElement("w:t")
+        suffix.text = FOOTNOTE_SUFFIX
+        sup_run(_w("fldChar", fldCharType="begin"))
+        sup_run(instr)
+        sup_run(_w("fldChar", fldCharType="separate"))
+        sup_run(result)
+        sup_run(_w("fldChar", fldCharType="end"))
+        sup_run(suffix)
 
     def gap(self):
         for _ in range(lib.BLOCK_GAP_LINES):
@@ -492,7 +538,8 @@ class DocxBuilder:
         unit, sources = e.data.get("unit"), e.data.get("sources", [])
         head = 1 if unit else 0
         long = nrow > lib.LONG_TABLE_ROWS and not e.data.get("split_done")
-        self._spacer("table_pos", "before")
+        pos_role = lib.table_pos_role(self.p, bool(e.text))   # a table without a caption takes the margins of the figure position style
+        self._spacer(pos_role, "before")
         if e.text:
             self._caption("TABLE", e.text, "TOP")
         t = self._new_table(nrow + head + len(sources), widths)
@@ -541,7 +588,7 @@ class DocxBuilder:
                 for cell in row.cells:
                     for p in cell.paragraphs:
                         p.paragraph_format.keep_with_next = True
-        self._spacer("table_pos", "after")
+        self._spacer(pos_role, "after")
         self.after_block = True
 
     @staticmethod
@@ -561,7 +608,7 @@ class DocxBuilder:
             return
         data, _fmt, w_mm, h_mm = prepared
         self.gap()
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = lib.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         sources = e.data.get("sources", [])
         self._spacer("fig_pos", "before")
         if e.text and lib.FIG_CAPTION_SIDE == "TOP":
@@ -569,18 +616,20 @@ class DocxBuilder:
         if not lib.FIGURE_IN_TABLE:
             p = self._new_para("fig_pos", "CENTER")
             p.paragraph_format.line_spacing = 1.0  # fixed line spacing clips pictures
-            p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU))
+            zero_picture_distance(p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU)))
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
                 self.para("source", src)
         else:  # put the picture and the source row in a transparent one-column table (same composition as hwpx)
-            t = self._new_table(1 + len(sources), [w_hu])
+            # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
+            t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])
             cell = t.cell(0, 0)
             p = self._cell_para(cell, "", "fig_pos", "CENTER")
             p.paragraph_format.line_spacing = 1.0
-            p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU))
-            self._tc_style(cell._tc, [], None, None)
+            zero_picture_distance(p.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HU), height=Emu(h_hu * EMU_PER_HU)))
+            # write the left and right margins used for the table width into the cell (top and bottom keep the table default margins)
+            self._tc_style(cell._tc, [], None, (lib.CELL_MARGIN[0], lib.CELL_MARGIN[1], TABLE_IN_MARGIN[2], TABLE_IN_MARGIN[3]))
             self._row_height(t.rows[0], h_hu + 2 * lib.ROW_LINE_H, cant_split=True)
             for k, src in enumerate(sources):
                 self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")

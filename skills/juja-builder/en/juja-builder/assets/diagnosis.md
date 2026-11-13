@@ -18,6 +18,7 @@
 | Output range | All or selected chapters [확인] |
 | Delivery format | hwpx or docx (both allowed after the notice) [확인] |
 | Long-table handling | engine or split [확인] |
+| Source footnote inheritance | One of off, short form, or merging. For short form and merging, add the scope (□, section, chapter, whole document) [확인] |
 | Web search | Allowed or not allowed [확인] |
 
 ## Agency Naming

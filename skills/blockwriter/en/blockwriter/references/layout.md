@@ -89,6 +89,7 @@ Row layout
 - Cell padding is 510 HWPUNIT left and right and 141 HWPUNIT top and bottom (CELL_MARGIN_LR, CELL_MARGIN_TB)
 - A table whose row count, including the header rows, is over 25 (LONG_TABLE_ROWS) is a long table. The unit row and source rows are not counted
     - (engine) Splits the table by row at page boundaries and marks the unit row and header rows as title rows (rows that appear again at the top of the table on each new page). Hangul and Word repeat only title rows that run contiguously from the top of the table, so the unit row above the header is included in the title rows
+    - (engine, HWPX) Treat-as-character goes off for the table, and one empty paragraph in the body style (바탕글) goes before and after it (LONG_TABLE_GAP_LINES). Such a table is placed apart from the text flow, so the margins of the table position paragraph alone leave it touching the neighboring paragraphs
     - (split) Divides the rows after the first row (header) into groups of 24 as separate tables and repeats the first row at the top of each table. The caption gets a sequence number (1), (2) at its end
 
 Figure layout
@@ -97,8 +98,20 @@ Figure layout
     - (HWPX caption) A caption object attached to the table, so it moves with the table. HWPX sets the table's numbering type to figure and excludes the inner picture from the numbering count
     - (DOCX caption) A caption paragraph right after the figure table. Every paragraph in the table is set to stay on the same page as the next paragraph, so the caption stays on the figure's page
 - The figure table width is the picture width plus the left and right cell margins (CELL_MARGIN_LR x 2), so the picture fits the cell's inner width as is
+    - The left and right margins used for the width are written into the figure cell. The cell paragraph that holds the figure has zero left and right margins and zero first-line indent
+    - When the figure table is wider than the body width, the figure is scaled down in proportion to fit the body width
+    - (DOCX) The table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
 - Figure size depends on the width to height ratio. A landscape figure (1.4 or more) is 140mm wide, a portrait figure (0.8 or less) is 110mm high, and anything in between is 90mm wide. Without resolution information, 96dpi is assumed
 - Tables and figures are centered in the body. The spacing before and after them comes from the paragraph margins of the table position and figure position styles
+    - A table without a caption is placed with the figure position style. The table position style has no top margin because a caption sits above the table, so a table without a caption touches the paragraph above
+
+Source footnote merging
+
+- Applies only to a build with `--footnote-merge`. The scope and the manuscript notation are in the source footnote inheritance section of references/manuscript.md
+- (HWPX) A Hangul cross-reference field that points to the first footnote goes at each repeated citation position, with the footnote number and the `)` after it in superscript
+    - A paragraph with a cross-reference uses a paragraph shape whose bullet takes the style's character shape. When the bullet character shape follows the text, Hangul shrinks the bullet along with the superscript characters
+- (DOCX) The first footnote reference is wrapped in a bookmark, and a NOTEREF field that points to the bookmark goes at each repeated citation position
+- The number stored in the field is the footnote number at typesetting time. When editing changes the footnote numbers, a field update in Hangul or Word brings the numbers along
 
 HWPX package
 
@@ -120,8 +133,9 @@ DOCX converts the same form.py definitions into Word units.
 - (Other roles) Custom styles named after the form styles
 - (Caption numbers) Word number fields (SEQ 표, SEQ 그림; the name follows the caption label of a label file) with prefilled results. chapter adds the chapter number as text, and the field restarts at 1 at each Heading 1. The first caption field of each chapter also carries a switch that resets the number to 1 (`\r 1`). LibreOffice does not restart numbering at Heading 1. flat numbers continuously through the document
 - (Caption width) The caption paragraph is indented on both sides by half the difference between the body width and the table width, so it wraps at the same width as the HWPX caption object
-- (Footnotes) Word footnotes with `)` after the footnote number
+- (Footnotes) Word footnotes with `)` after the footnote number. Repeated citations under source footnote merging are NOTEREF fields
 - (Tables) A single row does not split across two pages. For tables of 25 rows or fewer, every row is kept with the next row so the table stays on one page. Long tables (engine) repeat the unit row and header rows as title rows
+- (Tables without a caption) The top margin of the figure position style moves into an empty paragraph before the table. It is left out for a table right after a page break
 - (Page settings) Hangul keeps a separate header area between the top margin and the body. The Word top margin is the Hangul top margin plus the header area, and the header position is the Hangul top margin. The bottom works the same way
 - (Front section) The cover and TOC go in a front section that starts on a new page, and the body section's page numbers start at 1. The page header and page numbers appear only in the body section. The page number is `- N -` at the footer center
 - (Font table) For each form font, the English name (NanumGothic for 나눔고딕, NanumBarunGothic for 나눔바른고딕), the Hangul character set, and the family are recorded. The family is roman (serif) when the English name contains Myeongjo and swiss (sans-serif) otherwise. When a font is missing, Word uses this information to pick a font of the same family
@@ -239,8 +253,10 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
+- Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
+- For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
 - If a TOC was inserted, confirm that the build check result is a full match, and check the entries, dotted leaders, and page-number alignment on the TOC page PNG. If build prints the `[stranded TOC heading]` WARN, fix the manuscript as it says
-- For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, and footnotes and whether a TOC field exists match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
+- For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, and footnotes and whether a TOC field exists match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
 - Decide whether a difference found in the page PNGs is a defect with the judgment method in references/renderers.md
 - After the item checks, set the list aside and do one free review. Fix at your discretion anything that would look odd to a practitioner receiving the document for the first time, even if no rule covers it
     - (Design and alignment) Left alignment lines between levels, the balance of table and figure widths against the body width, the alignment lines of captions, unit lines, and source lines, consistent spacing, and the distribution of visual weight on a page

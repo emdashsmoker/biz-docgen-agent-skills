@@ -732,6 +732,54 @@ def image_size_mm(data: bytes) -> tuple[float, float]:
     return round(w_mm * scale, 1), round(h_mm * scale, 1)
 
 
+def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
+    """Figure size and the width of the transparent table that holds it (HWPUNIT). Returns (figure width, figure height, table width)
+    The line that holds the figure is as wide as the cell minus the left and right cell margins, so table width = figure width + those margins.
+    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure in hand editing.
+    A table wider than the body width leaves the page, so the figure is scaled down in proportion"""
+    pad = 2 * C.CELL_MARGIN_LR
+    max_w = body_w - pad
+    if w_hu > max_w:
+        w_hu, h_hu = max_w, round(h_hu * max_w / w_hu)
+    return w_hu, h_hu, w_hu + pad
+
+
+def table_pos_role(has_caption: bool, has_fig_pos: bool) -> str:
+    """Role of the paragraph that holds a table. The table position style has no top margin because a caption sits above the table.
+    A table without a caption touches the paragraph above, so it uses the figure position style, which has a top margin
+    (the table position style when the form has no figure position style)"""
+    return "table_pos" if has_caption or not has_fig_pos else "fig_pos"
+
+
+# ── Source footnote merging ────────────────────────────────────────────────────────────
+class NoteRegistry:
+    """Scope decision and first-footnote record for source footnote merging. Format-agnostic so the HWPX and DOCX typesetters decide alike.
+    When a footnote with the same text appears again inside the scope, the typesetter records a cross-reference to the first footnote number instead of a new footnote"""
+
+    def __init__(self, scope: str | None):
+        self.scope = scope            # None means no merging
+        self.first: dict[str, object] = {}
+
+    @staticmethod
+    def _key(text: str) -> str:
+        return " ".join(text.split())
+
+    def enter(self, kind: str, level: int = 0):
+        """Call before typesetting an element. Clears the first-footnote record when a scope boundary is crossed"""
+        if self.scope == "square":
+            edge = kind in ("heading", "square")
+        else:
+            edge = kind == "heading" and level <= C.NOTE_SCOPE_HEADING_LEVEL.get(self.scope, 0)
+        if edge:
+            self.first.clear()
+
+    def lookup(self, text: str):
+        """Record of the earlier footnote with the same text in the same scope, or None"""
+        return self.first.get(self._key(text)) if self.scope else None
+
+    def remember(self, text: str, handle):
+        if self.scope and self._key(text):
+            self.first[self._key(text)] = handle
 # ── Inline formatting ───────────────────────────────────────────────────────────────
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """Splits inline formatting into a list of (kind, text).

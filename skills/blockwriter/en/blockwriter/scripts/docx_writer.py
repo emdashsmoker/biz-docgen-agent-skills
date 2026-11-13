@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import io
+import math
 import re
 import sys
 
@@ -35,11 +36,12 @@ except ImportError:   # pragma: no cover
 ALIGN = {"JUSTIFY": "both", "LEFT": "left", "CENTER": "center", "RIGHT": "right", "DISTRIBUTE": "distribute"}
 FOOTNOTES_CT = "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"
 EMU_PER_HWPUNIT = 127             # 914400 EMU / 7200 HWPUNIT
+HWPUNIT_PER_TWIP = 5              # 7200 HWPUNIT / 1440 twip
 
 
 def tw(hwpunit: float) -> int:
     """HWPUNIT(1/7200 in) → twip(1/1440 in)"""
-    return round(hwpunit / 5)
+    return round(hwpunit / HWPUNIT_PER_TWIP)
 
 
 def el(tag: str, **attrs) -> "OxmlElement":
@@ -125,6 +127,7 @@ class DocxBuilder:
         self.caption_n = {"TABLE": 0, "PICTURE": 0}
         self.fn_part = None
         self.fn_count = 0
+        self.notes = M.NoteRegistry(None)   # source footnote merging (build --footnote-merge)
         self.last_para = None
         self.body_w = self.form.page.width - self.form.page.left - self.form.page.right
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
@@ -390,6 +393,10 @@ class DocxBuilder:
 
     def _footnote_ref(self, p, text: str):
         """The body footnote number is superscript; the character after the number (')' as in Hangul footnote shape) gets the same superscript"""
+        first = self.notes.lookup(text)   # inside the source footnote merging scope, the same text becomes a cross-reference to the first footnote number
+        if first is not None:
+            self._note_crossref(p, *first)
+            return
         notes = self._footnotes()
         self.fn_count += 1
         nid = self.fn_count
@@ -398,6 +405,7 @@ class DocxBuilder:
         sub(rpr, "w:rStyle", w__val="FootnoteReference")
         sub(r, "w:footnoteReference", w__id=nid)
         p.append(r)
+        self.notes.remember(text, (nid, r))
         sup = el("w:rPr")
         sub(sup, "w:vertAlign", w__val="superscript")
         p.append(self._run(self.form.page.note_suffix, sup))
@@ -412,6 +420,25 @@ class DocxBuilder:
         np_.append(self._run(self.form.page.note_suffix + "\t"))
         self._append_inline(np_, text)   # footnote text gets the same inline formatting as body text
 
+    def _note_crossref(self, p, nid: int, ref_run):
+        """Cross-reference to a footnote number (Word NOTEREF field). Wraps the reference run of the first footnote in a bookmark and points to it.
+        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the sequence number is the number"""
+        name = C.DOCX_NOTE_BOOKMARK.format(n=nid)
+        prev = ref_run.getprevious()
+        if prev is None or prev.tag != qn("w:bookmarkStart"):
+            mark_id = C.DOCX_NOTE_BOOKMARK_ID_BASE + nid
+            ref_run.addprevious(el("w:bookmarkStart", w__id=mark_id, w__name=name))
+            ref_run.addnext(el("w:bookmarkEnd", w__id=mark_id))
+
+        def ref_rpr():   # the same character style as a footnote reference (superscript)
+            rpr = el("w:rPr")
+            sub(rpr, "w:rStyle", w__val="FootnoteReference")
+            return rpr
+        for r in field_runs(f" NOTEREF {name} \\f \\h ", str(nid), ref_rpr):
+            p.append(r)
+        sup = el("w:rPr")
+        sub(sup, "w:vertAlign", w__val="superscript")
+        p.append(self._run(self.form.page.note_suffix, sup))
     # ── Heading levels ─────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
         text = M.NUM_PREFIX_RE.sub("", text).strip()
@@ -472,10 +499,12 @@ class DocxBuilder:
         widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
-        pos = self.form.style("table_pos")
+        pos = self.form.style(M.table_pos_role(bool(e.text), self.form.style("fig_pos") is not None))
         long_table = nrow > C.LONG_TABLE_ROWS and not e.data.get("split_done")
         if e.text:
             self._caption("TABLE", e.text, before=pos.para.margin[3], after=C.CAPTION_GAP, obj_w=sum(widths))
+        elif not self.pending_break:   # table without a caption: the top margin of the figure position style moves into an empty paragraph (not at the top of a page)
+            self._spacer(pos.para.margin[3])
         for ri, c0, c1 in plan["skipped"]:
             print(msg("warn_hmerge_overlap", row=ri, c0=c0, c1=c1))
         # grid: (row, column) → cell info. Cells hidden by merging are None
@@ -659,12 +688,14 @@ class DocxBuilder:
         if loaded is None:
             return
         data, fmt, (w_mm, h_mm) = loaded
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = M.fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         pos = self.form.style("fig_pos")
         sources = e.data.get("sources", [])
         # figure paragraph: insert the picture with python-docx, then move it into a table cell (the relationship stays in the document part)
         holder = self.doc.add_paragraph()
-        holder.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HWPUNIT), height=Emu(h_hu * EMU_PER_HWPUNIT))
+        shape = holder.add_run().add_picture(io.BytesIO(data), width=Emu(w_hu * EMU_PER_HWPUNIT),
+                                             height=Emu(h_hu * EMU_PER_HWPUNIT))
+        zero_picture_distance(shape)
         pic_p = holder._p
         pic_p.getparent().remove(pic_p)
         ppr = pic_p.get_or_add_pPr()
@@ -680,8 +711,8 @@ class DocxBuilder:
             for src in sources:
                 self.para("source", src)
         else:
-            # add the left and right cell margins so the picture fits the cell's inner width (the fixed-width table clips any overflow)
-            cell_w = w_hu + 2 * C.CELL_MARGIN_LR
+            # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
+            cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
             tbl = self._tbl([cell_w])
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
@@ -690,12 +721,15 @@ class DocxBuilder:
             tcpr = sub(tc, "w:tcPr")
             sub(tcpr, "w:tcW", w__w=tw(cell_w), w__type="dxa")
             self._cell_borders(tcpr, [])
+            mar = sub(tcpr, "w:tcMar")   # write the left and right margins used for the table width into the cell
+            sub(mar, "w:left", w__w=tw(C.CELL_MARGIN_LR), w__type="dxa")
+            sub(mar, "w:right", w__w=tw(C.CELL_MARGIN_LR), w__type="dxa")
             tc.append(pic_p)
             for src in sources:
                 self._transparent_row(tbl, [cell_w], src, "source", "left")
             self._body_append(tbl)
         if e.text:
-            fig_w = w_hu + 2 * C.CELL_MARGIN_LR if C.FIGURE_IN_TABLE else w_hu   # same as the HWPX caption object width
+            fig_w = table_w if C.FIGURE_IN_TABLE else w_hu   # same as the HWPX caption object width
             self._caption("PICTURE", e.text, before=C.CAPTION_GAP, after=pos.para.margin[4], obj_w=fig_w)
         else:
             self._spacer(pos.para.margin[4])
@@ -893,6 +927,7 @@ class DocxBuilder:
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
@@ -915,6 +950,12 @@ class DocxBuilder:
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+def zero_picture_distance(shape):
+    """Write zero outer distances for a picture. python-docx does not write these attributes, and without them LibreOffice adds
+    0.125 inch on the left and right to the picture width, so the picture exceeds the inner cell width and its right side is cut
+    (Word does not use these values for a picture placed as a character)"""
+    for side in ("distT", "distB", "distL", "distR"):
+        shape._inline.set(side, "0")
 def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
     """Runs of a complex field (begin, instruction, separate, result, end). If result is None, only the first three without end."""
     def run():
@@ -1002,6 +1043,7 @@ def build_docx(a, elems, footnotes, out: str):
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table
+        b.notes = M.NoteRegistry(a.footnote_merge)
         b.toc_numbers = numbers or {}
         b.build(elems, footnotes, out)
         return b

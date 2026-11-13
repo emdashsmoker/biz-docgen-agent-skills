@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 import warnings
 import zipfile
 from dataclasses import dataclass, field
@@ -127,6 +128,13 @@ TOC_UNIT_W = (700, 600)         # width of one weighted unit for estimating TOC 
 TOC_LIST_INDENT = 0             # left margin of list of tables and list of figures entries (overrides the TOC section style margin)
 CAPTION_GAP = 850               # gap between caption and table (python-hwpx default, the value most common in the real corpus)
 BLOCK_GAP_LINES = 0             # empty paragraphs before and after table and figure blocks. Spacing is handled by paragraph margins of the table position and figure position styles
+# empty body-style paragraphs before and after a long table with treat-as-character off. Such a table is placed apart from the text flow,
+# so the paragraph margins of the table position style alone leave it touching the neighboring paragraphs
+LONG_TABLE_GAP_LINES = 1
+# scope of source footnote merging (build --footnote-merge): □, section (##), chapter (#), whole document
+NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
+NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # the scope changes at headings of this level or above
+CROSSREF_FIELD_ID = "628650598"  # field kind id of 한/글 cross-reference fields (control id "%xrf" as an integer)
 
 # Labels: fixed strings printed into documents, manuscript notation the parser recognizes, and docx language tags. Defaults are the current Korean notation
 # A label file (JSON, proposal.py `build --labels`) overrides some keys. Missing keys keep the default, unknown keys are an ERROR
@@ -159,6 +167,7 @@ RHWP_RELEASE_PAGE = "https://github.com/edwardkim/rhwp/releases/latest"
 RENDER_DPI = 80
 
 HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+HH = "{http://www.hancom.co.kr/hwpml/2011/head}"
 MANUAL_SYMBOLS = {"square": "□ ", "circle": "○ ", "dash": "- ", "dot": "ㆍ ", "note": "※ "}
 
 
@@ -777,6 +786,64 @@ def image_mm(data: bytes) -> tuple[float, float]:
     return round(w_mm * scale, 1), round(h_mm * scale, 1)
 
 
+def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
+    """Figure size and the width of the transparent table that holds it (HWPUNIT). Returns (figure width, figure height, table width)
+    The line that holds the figure is as wide as the cell minus the left and right cell margins, so table width = figure width + those margins.
+    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure in hand editing.
+    A table wider than the body width leaves the page, so the figure is scaled down in proportion"""
+    pad = CELL_MARGIN[0] + CELL_MARGIN[1]
+    max_w = body_w - pad
+    if w_hu > max_w:
+        w_hu, h_hu = max_w, round(h_hu * max_w / w_hu)
+    return w_hu, h_hu, w_hu + pad
+
+
+def table_pos_role(profile: dict, has_caption: bool) -> str:
+    """Role of the paragraph that holds a table. The table position style keeps a small top margin because a caption sits above the table.
+    A table without a caption touches the paragraph above, so it uses the figure position style, which has a top margin
+    (the table position style when the profile has no figure position style)"""
+    return "table_pos" if has_caption or not profile.get("fig_pos") else "fig_pos"
+
+
+def new_object_id() -> str:
+    """Instance id for objects and fields (a 31-bit random number, the range python-hwpx uses for tables and footnotes)"""
+    return str(uuid.uuid4().int & 0x7FFFFFFF)
+
+
+class NoteRegistry:
+    """Scope decision and first-footnote record for source footnote merging. Format-agnostic so the hwpx and docx writers decide alike.
+    When a footnote with the same text appears again inside the scope, the writer records a cross-reference to the first footnote number instead of a new footnote"""
+
+    def __init__(self, scope: str | None):
+        self.scope = scope            # None means no merging
+        self.first: dict[str, object] = {}
+        self.merged = 0
+
+    @staticmethod
+    def _key(text: str) -> str:
+        return " ".join(text.split())
+
+    def enter(self, kind: str, level: int = 0):
+        """Call before recording an element. Clears the first-footnote record when a scope boundary is crossed"""
+        if self.scope == "square":
+            edge = kind in ("heading", "band", "square")
+        else:
+            edge = kind == "heading" and level <= NOTE_SCOPE_HEADING_LEVEL.get(self.scope, 0)
+        if edge:
+            self.first.clear()
+
+    def lookup(self, text: str):
+        """Record of the earlier footnote with the same text in the same scope, or None"""
+        found = self.first.get(self._key(text)) if self.scope else None
+        if found is not None:
+            self.merged += 1
+        return found
+
+    def remember(self, text: str, handle):
+        if self.scope and self._key(text):
+            self.first[self._key(text)] = handle
+
+
 def cell_line_role(line: str, profile: dict) -> str | None:
     """Map ◦ and - lines inside a cell to cell bullet roles (only when the profile has the roles)."""
     st = line.lstrip()
@@ -828,6 +895,7 @@ class Builder:
         self.toc = False
         self.long_table_mode = "engine"
         self.after_block = False
+        self.notes = NoteRegistry(None)   # source footnote merging. The build command replaces it when a scope is given
 
     def _manual_symbols(self) -> dict[str, str]:
         """If the style's heading is BULLET, 한/글 draws the symbol. If NONE, the symbol must be written into the body."""
@@ -918,10 +986,86 @@ class Builder:
                 p.add_run(seg, char_pr_id_ref=self._run_style(cp, script=kind))
             elif kind == "footnote":
                 if footnotes is not None:
-                    p.add_footnote(footnotes.get(seg, ""))
+                    self.add_footnote(p, footnotes.get(seg, ""))
             else:  # text, code
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
+
+    def add_footnote(self, p, text: str):
+        """Attach a footnote at the current end of the paragraph. Inside the source footnote merging scope, a footnote with the same text
+        becomes a cross-reference to the first footnote number"""
+        first = self.notes.lookup(text)
+        if first is not None:
+            self._note_crossref(p, *first)
+            return
+        el = p.add_footnote(text).element
+        if not el.get("instId"):   # the id a cross-reference points to. Older library versions do not write it
+            el.set("instId", new_object_id())
+        self.notes.remember(text, (el.get("instId"), el.get("number"), chr(int(el.get("suffixChar", "41")))))
+
+    def _note_crossref(self, p, inst_id: str, number: str, suffix: str):
+        """Cross-reference to a footnote number. Written in the structure 한/글 saves (a field-begin run, then a superscript run holding
+        the number, the field end and the character after the number). The number is a stored value that 한/글 renumbers when it updates cross-references"""
+        import lxml.etree as ET
+        pe = p.element
+        style = self.header.element.find(f".//{HH}style[@id='{pe.get('styleIDRef')}']")
+        base_cp = style.get("charPrIDRef") if style is not None else "0"
+        runs = pe.findall(f"{HP}run")
+        at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # before the stored line layout, after the last run
+        field_id = new_object_id()
+        begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
+        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                              name="", editable="0", dirty="0", zorder="-1", fieldid=CROSSREF_FIELD_ID)
+        # parameter names and values exactly as 한/글 saves them (including the "Fiexde" spelling). The numbers after the id in Command are the stored value for a footnote number reference
+        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
+                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
+                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+        for tag, name, value in params:
+            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
+        ET.SubElement(sup_run, f"{HP}t").text = number
+        ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=CROSSREF_FIELD_ID)
+        ET.SubElement(sup_run, f"{HP}t").text = suffix
+        pe.insert(at, begin_run)
+        pe.insert(at + 1, sup_run)
+        pe.set("paraPrIDRef", self._bullet_shape_pp(pe.get("paraPrIDRef"), base_cp))
+        p.section.mark_dirty()
+
+    def _bullet_shape_pp(self, base_pp: str, cp: str) -> str:
+        """Paragraph shape whose bullet uses the character shape cp. A paragraph shape without a bullet is returned as is.
+        Why: when the bullet character shape follows the text, 한/글 shrinks the bullet along with a superscript run in the paragraph"""
+        import copy
+        key = (str(base_pp), "BULLETSHAPE", str(cp))
+        if key in self._align_pp:
+            return self._align_pp[key]
+        root = self.header.element
+        pp = root.find(f".//{HH}paraPr[@id='{base_pp}']")
+        hd = pp.find(f"{HH}heading") if pp is not None else None
+        src = root.find(f".//{HH}bullet[@id='{hd.get('idRef')}']") if hd is not None and hd.get("type") == "BULLET" else None
+        head = src.find(f"{HH}paraHead") if src is not None else None
+        if head is None or head.get("charPrIDRef") == str(cp):
+            self._align_pp[key] = str(base_pp)
+            return self._align_pp[key]
+        bullets = src.getparent()
+        fixed = copy.deepcopy(src)
+        fixed.set("id", str(max(int(b.get("id")) for b in bullets) + 1))
+        fixed.find(f"{HH}paraHead").set("charPrIDRef", str(cp))
+        bullets.append(fixed)
+        bullets.set("itemCnt", str(len(bullets)))
+        self._align_pp[key] = self.header.ensure_paragraph_format(
+            base_para_pr_id=base_pp, heading={"type": "BULLET", "idRef": fixed.get("id"), "level": hd.get("level", "0")})
+        return self._align_pp[key]
+
+    def _flush_pp(self, base_pp: str) -> str:
+        """Paragraph shape with zero left and right margins and zero first-line indent, for the cell paragraph that holds a figure.
+        When the figure position style of a client template has margins, the line narrows by that amount and the figure is cut"""
+        key = (str(base_pp), "FLUSH")
+        if key not in self._align_pp:
+            self._align_pp[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=base_pp, margins={"left": 0, "right": 0, "intent": 0})
+        return self._align_pp[key]
 
     def _centered_refs(self, role: str) -> dict:
         """Table and figure paragraphs are centered regardless of style alignment. Even if a custom template's table position style is left-aligned, the table does not stick to the left."""
@@ -1181,10 +1325,13 @@ class Builder:
                 self.table(sub)
             return
         self.gap()
-        r = self._centered_refs("table_pos")
+        r = self._centered_refs(table_pos_role(self.p, bool(e.text)))
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
         head = 1 if unit else 0  # unit row: a transparent merged cell above the header (hand-editing convention, aligned to the table's right end)
+        engine_long = nrow > LONG_TABLE_ROWS and not e.data.get("split_done")   # long table: treat-as-character goes off
+        if engine_long:
+            self._long_table_gap()
         t = self.doc.add_table(nrow + head + len(sources), ncol, width=table_w, **r)
         if e.text:
             self.attach_caption(t, "TABLE", e.text, "TOP", table_w)
@@ -1258,14 +1405,21 @@ class Builder:
                 continue  # unit rows and source rows are transparent (nrow counts rows including the header)
             is_head = r0 < head + hdr
             tc.set("borderFillIDRef", self._border_fill(edge_sides(c0, c1, ncol), HEADER_FILL if is_head else None))
-        if nrow > LONG_TABLE_ROWS and not e.data.get("split_done"):  # long table: treat-as-character off, 한/글 splits by rows at the page boundary
+        if engine_long:  # long table: treat-as-character off, 한/글 splits by rows at the page boundary
             t.element.set("repeatHeader", "1")
             t.element.set("pageBreak", "CELL")
             if pos is not None:
                 pos.set("treatAsChar", "0")
                 pos.set("flowWithText", "1")
         t.mark_dirty()
+        if engine_long:
+            self._long_table_gap()
         self.after_block = True
+
+    def _long_table_gap(self):
+        """Empty body-style paragraphs before and after a long table with treat-as-character off"""
+        for _ in range(LONG_TABLE_GAP_LINES):
+            self.doc.add_paragraph("", **self.refs("body"))
 
     # ── Figures ────────────────────────────────────────────────────────────
     def image(self, e: Element):
@@ -1275,10 +1429,10 @@ class Builder:
         data, fmt, w_mm, h_mm = prepared
         self.gap()
         r = self._centered_refs("fig_pos")
-        w_hu, h_hu = round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4)
+        w_hu, h_hu, table_w = fit_figure(round(w_mm * 7200 / 25.4), round(h_mm * 7200 / 25.4), self.body_w)
         sources = e.data.get("sources", [])
         if not FIGURE_IN_TABLE:
-            pic = self.doc.add_picture(data, fmt, width_mm=w_mm, height_mm=h_mm, **r)
+            pic = self.doc.add_picture(data, fmt, width_mm=w_hu * 25.4 / 7200, height_mm=h_hu * 25.4 / 7200, **r)
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             for src in sources:
@@ -1286,7 +1440,7 @@ class Builder:
             self.after_block = True
             return
         # put the figure in a transparent one-column table and set the table to the figure numbering type. The inner figure is excluded from the number count
-        t = self.doc.add_table(1 + len(sources), 1, width=w_hu, **r)
+        t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r)
         item = self.doc.media.add_image(data, fmt)
         item_id = getattr(item, "item_id", item)  # an object or a string depending on the library version
         cell = t.cell(0, 0)
@@ -1296,9 +1450,15 @@ class Builder:
             sys.exit(f"ERROR: missing figure binary reference ({e.data['path']}). Check the return value of python-hwpx media.add_image")
         pic.element.set("numberingType", "NONE")
         for pe in cell.element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", str(r["para_pr_id_ref"]))
+            pe.set("paraPrIDRef", self._flush_pp(str(r["para_pr_id_ref"])))
             pe.set("styleIDRef", str(r["style_id_ref"]))
         cell.element.set("borderFillIDRef", self._border_fill([]))
+        # write the left and right margins used for the table width into the cell. The figure width equals the inner cell width even if the library's default table margins change
+        cell.element.set("hasMargin", "1")
+        cm = cell.element.find(f"{HP}cellMargin")
+        if cm is not None:
+            cm.set("left", str(CELL_MARGIN[0]))
+            cm.set("right", str(CELL_MARGIN[1]))
         cell.set_size(height=h_hu + 2 * ROW_LINE_H)
         for k, src in enumerate(sources):
             self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
@@ -1310,7 +1470,7 @@ class Builder:
         if sz is not None:
             sz.set("height", str(h_hu + 2 * ROW_LINE_H + ROW_BASE_H * len(sources)))
         if e.text:
-            self.attach_caption(t, "PICTURE", e.text, FIG_CAPTION_SIDE, w_hu)
+            self.attach_caption(t, "PICTURE", e.text, FIG_CAPTION_SIDE, table_w)
         t.mark_dirty()
         self.after_block = True
 
@@ -1337,6 +1497,7 @@ class Builder:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
@@ -1345,7 +1506,7 @@ class Builder:
                 self.para("unit", e.text)
             elif e.kind == "source":  # a source line not attached to a table or figure moves into a footnote of the preceding paragraph
                 if self.last_para is not None:
-                    self.last_para.add_footnote(e.text)
+                    self.add_footnote(self.last_para, e.text)
                 else:
                     self.para("note", e.text, footnotes)
             elif e.kind == "table":

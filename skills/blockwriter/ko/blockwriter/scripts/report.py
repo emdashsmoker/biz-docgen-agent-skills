@@ -61,7 +61,10 @@ def cmd_build(a):
             sys.exit(msg("err_docx_builtin_only"))
         import docx_writer
         docx_writer.build_docx(a, elems, footnotes, out)
-    print(msg("build_ok", out=out, n=len(elems), fn=count_footnotes(out)))
+    if a.footnote_merge:
+        print(msg("build_ok_merged", out=out, n=len(elems), fn=count_footnotes(out), merged=count_merged_notes(out)))
+    else:
+        print(msg("build_ok", out=out, n=len(elems), fn=count_footnotes(out)))
 
 
 def count_footnotes(path: str) -> int:
@@ -74,6 +77,15 @@ def count_footnotes(path: str) -> int:
             return 0
         # 구분선용 각주(w:type 지정)를 뺀 본문 각주
         return len(re.findall(r"<w:footnote\b(?![^>]*w:type=)", z.read("word/footnotes.xml").decode("utf-8")))
+
+
+def count_merged_notes(path: str) -> int:
+    """산출 파일에서 첫 각주 번호의 상호참조로 대체된 각주 참조 수 (출처 각주 통합)"""
+    with zipfile.ZipFile(path) as z:
+        if path.lower().endswith(".hwpx"):
+            return sum(len(re.findall(r'<hp:fieldBegin\b[^>]*type="CROSSREF"', z.read(n).decode("utf-8")))
+                       for n in z.namelist() if re.match(r"Contents/section\d+\.xml$", n))
+        return len(re.findall(r"<w:instrText[^>]*>\s*NOTEREF\b", z.read("word/document.xml").decode("utf-8")))
 
 
 def cmd_form(a):
@@ -145,6 +157,9 @@ def main():
                    help="새 쪽 시작 단위: chapter=장마다(기본), section=장과 절마다, none=이어 쓰기")
     b.add_argument("--long-table", choices=["engine", "split"],
                    help=f"{C.LONG_TABLE_ROWS}행 초과 표: engine=쪽 경계 분할과 제목행 반복(기본), split=청크별 표로 물리 분할")
+    b.add_argument("--footnote-merge", choices=list(C.NOTE_MERGE_SCOPES),
+                   help="출처 각주 통합 (기본 OFF): 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
+                        "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
     b.add_argument("--toc", action="store_true", help="문서 앞에 목차 삽입 (기본 OFF)")
     b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="목차 깊이: 1=장, 2=절(기본), 3=소절")
     b.add_argument("--page-number", action="store_true", help="꼬리말 가운데 쪽번호 '- N -' (기본 OFF)")
