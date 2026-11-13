@@ -27,6 +27,40 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-13
+
+### blockwriter
+- Added a source footnote inheritance item to the planning questions (off by default) with a choice of short form or merging and a scope of □, section, chapter or whole document (#136)
+- Added the `--footnote-merge` build option that replaces footnotes repeating the same text inside the scope with a cross-reference to the first footnote number (#136)
+- Fixed DOCX figures that lost their right side in LibreOffice renders (#136)
+- Changed figures wider than the body width to scale down to the body width (#136)
+- Changed tables without a caption to the figure position style, which has a top margin (#136)
+- Added an empty body-style paragraph before and after HWPX long tables handled in engine mode (#136)
+
+* 기획안 질문에 출처 각주 상속 항목(기본 미적용, 약칭과 통합 중 선택, 범위는 □, 절, 장, 문서 전체) 추가 (#136)
+* 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체하는 build 옵션 `--footnote-merge` 추가 (#136)
+* LibreOffice 렌더에서 DOCX 그림의 오른쪽이 잘리던 현상 수정 (#136)
+* 본문 폭을 넘는 그림의 크기를 본문 폭에 맞춰 줄이도록 변경 (#136)
+* 캡션 없는 표의 문단 스타일을 위 여백이 있는 그림 위치 스타일로 변경 (#136)
+* engine 방식으로 처리한 HWPX 장표의 앞뒤에 바탕글 빈 문단 추가 (#136)
+
+### juja-builder
+- Added a source footnote inheritance item to the kickoff questions (off by default) with a choice of short form or merging and a scope of □, section, chapter or whole document (#136)
+- Added the `--footnote-merge` build option that replaces footnotes repeating the same text inside the scope with a cross-reference to the first footnote number (#136)
+- Fixed hwpx and docx figures that lost their right side by the width of the cell margins of the transparent figure table (#136)
+- Fixed docx figures that lost their right side in LibreOffice renders (#136)
+- Changed figures wider than the body width to scale down to the body width (#136)
+- Changed tables without a caption to the figure position style for their paragraph margins (#136)
+- Added an empty body-style paragraph before and after hwpx long tables handled by `(장표: engine)` (#136)
+
+* 착수 질의에 출처 각주 상속 항목(기본 미적용, 약칭과 통합 중 선택, 범위는 □, 절, 장, 문서 전체) 추가 (#136)
+* 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체하는 build 옵션 `--footnote-merge` 추가 (#136)
+* 그림을 담는 투명 표의 셀 여백만큼 hwpx와 docx 그림의 오른쪽이 잘리던 현상 수정 (#136)
+* LibreOffice 렌더에서 docx 그림의 오른쪽이 잘리던 현상 수정 (#136)
+* 본문 폭을 넘는 그림의 크기를 본문 폭에 맞춰 줄이도록 변경 (#136)
+* 캡션 없는 표의 문단 여백을 그림 위치 스타일 기준으로 변경 (#136)
+* `(장표: engine)`으로 처리한 hwpx 장표의 앞뒤에 바탕글 빈 문단 추가 (#136)
+
 ## 2026-11-12
 
 ### ieum-deck
