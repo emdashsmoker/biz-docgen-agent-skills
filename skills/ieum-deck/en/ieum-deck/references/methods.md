@@ -70,10 +70,10 @@
 ## Strategic planning
 
 ```
-M1 대내외 환경분석 (internal and external environment analysis)          Policy, market and technology trends. Facts only. Place outlooks and alternatives in M3 and later
-M2 내부현황과 사례분석 (internal status and case analysis)               Diagnosis of the target region and organization, leading domestic and overseas cases. Separate the agency introduction status from the capability diagnosis
-M3 시사점과 전략체계 도출 (implications and strategy system derivation)  Implication synthesis, SWOT or gap analysis, vision, goals and strategies
-M4 실행계획 수립 (execution plan development)                            Action task discovery, priorities (necessity, urgency, feasibility), short- and mid- to long-term roadmap, ripple effects
+M1 대내외 환경분석 (internal and external environment analysis)           Policy, market and technology trends. Facts only. Place outlooks and alternatives in M3 and later
+M2 내부현황 및 사례분석 (internal status and case analysis)               Diagnosis of the target region and organization, leading domestic and overseas cases. Separate the agency introduction status from the capability diagnosis
+M3 시사점 및 전략체계 도출 (implications and strategy system derivation)  Implication synthesis, SWOT or gap analysis, vision, goals and strategies
+M4 실행계획 수립 (execution plan development)                             Action task discovery, priorities (necessity, urgency, feasibility), short- and mid- to long-term roadmap, ripple effects
 ```
 
 - (SWOT factor sources) Internal status implications go only to strengths and weaknesses
@@ -114,11 +114,11 @@ M4 실행계획 수립 (execution plan development)                            A
 ## Program planning
 
 ```
-M1 정책과 환경 분석 (policy and environment analysis)                   Fit with higher-level plans, policy and technology trends, problems and issues
-M2 기존 사업과 사례 분석 (existing program and case analysis)           Review of similar programs, overlap and differentiation, findings on prior planning
+M1 정책 및 환경 분석 (policy and environment analysis)                  Fit with higher-level plans, policy and technology trends, problems and issues
+M2 기존 사업 및 사례 분석 (existing program and case analysis)          Review of similar programs, overlap and differentiation, findings on prior planning
 M3 목표체계 및 논리모형 수립 (goal system and logic model development)  Goal system of purpose, goals and performance indicators, logic model, alignment check of detailed activities
 M4 타당성 확보 (securing feasibility)                                   Governance, funding, legal and institutional risks, cost estimation and economic analysis
-M5 심사와 보고 대응 (review and reporting response)                     Planning report writing, in-person meetings and question response (only when the RFP requires it)
+M5 심사 및 보고 대응 (review and reporting response)                    Planning report writing, in-person meetings and question response (only when the RFP requires it)
 ```
 
 - (Applicant variant) Business plans written by applicant organizations (corporate R&D projects, commercialization support programs, consortium applications) adjust the content per module within the same skeleton
@@ -295,11 +295,11 @@ M5 통합 이행계획 수립 (integrated implementation plan development)      
 ## Support program operation (business support, commercialization, startups, workforce training operators)
 
 ```
-M1 정책과 사업 배경 분석 (policy and program background analysis)        Higher-level policies and the parent program, regional and sector conditions, program purpose
-M2 수요자 현황과 애로 조사 (beneficiary status and difficulties survey)  Statistics on target companies and participants, fact-finding surveys and questionnaires, difficulties and requests
-M3 프로그램 설계 (program design)                                        Diagnosis and selection, training, consulting, networking, market access and investment linkage
-M4 성과관리 (performance management)                                     Performance goal system, indicators and target values, evidence and check method
-M5 운영과 집행 (operation and execution)                                 Governance and staff, annual schedule, budget and execution plan
+M1 정책 및 사업 배경 분석 (policy and program background analysis)        Higher-level policies and the parent program, regional and sector conditions, program purpose
+M2 수요자 현황 및 애로 조사 (beneficiary status and difficulties survey)  Statistics on target companies and participants, fact-finding surveys and questionnaires, difficulties and requests
+M3 프로그램 설계 (program design)                                         Diagnosis and selection, training, consulting, networking, market access and investment linkage
+M4 성과관리 (performance management)                                      Performance goal system, indicators and target values, evidence and check method
+M5 운영 및 집행 (operation and execution)                                 Governance and staff, annual schedule, budget and execution plan
 ```
 
 - Beneficiary difficulties carry statistical evidence (number surveyed, response rate, share of top answers)
