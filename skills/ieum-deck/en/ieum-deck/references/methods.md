@@ -247,20 +247,21 @@ M3 개선안 도출 (improvement plan)        Setting and comparing alternatives
 ## IT planning (statutory ISP, intelligent information society master plan, general IT planning)
 
 ```
-M1 환경분석 (environment analysis)                                  Policy and technology trends, alignment with higher-level plans, peer agency cases
-M2 현황분석 (current state analysis)                                Business status (business procedure map, business function definition), information system status (applications, data, infrastructure, security), user requirements survey
-M3 목표모델 설계 (target model design)                              To-Be business process, To-Be information system architecture, To-Be data architecture, To-Be technology and security architecture
-M4 통합 이행계획 수립 (integrated implementation plan development)  Implementation task definition, priorities, phased roadmap, total build cost estimate, effect analysis
+M1 환경분석 (environment analysis)                                             Policy and technology trends, alignment with higher-level plans, peer agency cases
+M2 현황분석 (current state analysis)                                           Business status (business procedure map, business function definition), information system status (applications, data, infrastructure, security), user requirements survey
+M3 정보화 비전 및 전략 수립 (informatization vision and strategy development)  Informatization vision and goals, phased execution strategy, information system build principles, applicable technology requirements and information management strategy
+M4 목표모델 설계 (target model design)                                         To-Be business process, To-Be information system architecture, To-Be data architecture, To-Be technology and security architecture
+M5 통합 이행계획 수립 (integrated implementation plan development)             Implementation task definition, priorities, phased roadmap, total build cost estimate, effect analysis
 ```
 
 - (Statutory ISP judgment) Check the governing law, program budget size and output list (IT strategic plan, draft RFP, etc.) of the RFP
 - If the judgment is unclear, confirm with the user in the kickoff questions
-- (What the framework sets for statutory targets) The 4-stage skeleton (environment analysis, current state analysis, target model design, integrated implementation plan), the requirement classification system, budget estimation criteria (software project cost estimation guide) and public IT security design (national network security framework grade classification)
+- (What the framework sets for statutory targets) The 5-stage skeleton (environment analysis, current state analysis, informatization vision and strategy development, target model design, integrated implementation plan), the requirement classification system, budget estimation criteria (software project cost estimation guide) and public IT security design (national network security framework grade classification)
 - (What remains discretionary even for statutory targets) Module names and split, Task composition, survey design, level of detail of the target model, implementation task priority criteria
 - (IT planning outside the statutory scope) Compose modules and Tasks for the scope the contracting agency requires
 - Output names of IT planning outside the statutory scope use the RFP spelling
-- The 4-stage skeleton is the default for statutory engagements
-- For engagements outside the statutory scope, the 4-stage skeleton is a reference example
+- The 5-stage skeleton is the default for statutory engagements
+- For engagements outside the statutory scope, the 5-stage skeleton is a reference example
 - The current state analysis states gaps in an As-Is and To-Be comparison table
 - Show the business procedure map and the To-Be business process with flowchart symbols (`flowchart` block)
 - Split requirements into functional, non-functional, technical and project support requirements and assign IDs
