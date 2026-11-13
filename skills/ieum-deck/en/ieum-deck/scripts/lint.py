@@ -595,7 +595,7 @@ def mask_standards(tx, standards):
         tx = tx.replace(std, STANDARD_MASK)
     return tx
 # methods sample module names that are a defect when copied as is in non-R&D tracks
-METHODS_EXAMPLE_MODULES = ["대내외 환경분석", "내부현황과 사례분석", "시사점과 전략체계", "실행계획", "정책과 환경 분석", "기존 사업과 사례 분석", "목표 체계와 논리모형", "타당성 확보", "현황 진단", "갭 분석", "개선안 도출", "환경분석", "현황분석", "목표모델 수립", "이행계획"]
+METHODS_EXAMPLE_MODULES = ["대내외 환경분석", "내부현황과 사례분석", "시사점과 전략체계 도출", "실행계획 수립", "정책과 환경 분석", "기존 사업과 사례 분석", "목표 체계와 논리모형 설계", "타당성 확보", "현황 진단", "갭 분석", "개선안 도출", "환경분석", "현황분석", "목표모델 설계", "통합 이행계획 수립"]
 
 
 def texts_of(sl):

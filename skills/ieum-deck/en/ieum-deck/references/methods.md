@@ -40,8 +40,8 @@
 - Private business planning, service planning and internal reports use the same table to judge the type
 - New business, service and product planning apply the program planning skeleton
 - Adjust the module names of the program planning skeleton to the subject
-- Service planning becomes M1 market and user research, M2 competitor and case analysis, M3 service model and feature definition, M4 business viability and execution plan
-- IT planning becomes the IT planning skeleton without the statutory ISP procedure: M1 current state and requirements analysis, M2 target system design, M3 build and operation plan
+- Service planning becomes M1 market and user research, M2 competitor and case analysis, M3 service model and feature definition, M4 business viability review and execution plan development
+- IT planning becomes the IT planning skeleton without the statutory ISP procedure: M1 current state and requirements analysis, M2 target system design, M3 build and operation plan development
 - For engagements that match no RFP signal, judge by the starting point of thinking the engagement requires
     + An engagement that asks to define a target state defaults to the strategic planning skeleton
     + An engagement that asks to find the causes of a current problem defaults to the problem solving skeleton
@@ -49,6 +49,10 @@
 
 ## Common norms
 
+- When naming a module or Task, put an action word after the object: 분석 (analysis), 진단 (diagnosis), 조사 (survey), 도출 (derivation), 수립 (development), 설계 (design), 운영 (operation), 지원 (support) and so on (e.g. write "정책환경" as "정책환경 분석" (policy environment analysis), "중장기 전략" as "중장기 전략 수립" (mid- to long-term strategy development) and "이행과제" as "이행과제 도출" (implementation task derivation))
+    + (Unit of work) The action word at the end of the name shows the work of the module or Task
+    + (Output names) Output names go in the output row of the module overview and the deliverable item of the Task slide (a name without an action word repeats the content of the output row)
+    + (RFP names) When taking an RFP task name or output name, also put the action word after the original spelling (the original spelling stays inside the name)
 - A module opens with a module overview slide
 - The module overview columns are Tasks, and the rows are process, data used and outputs
 - The output row holds the official output names
@@ -66,10 +70,10 @@
 ## Strategic planning
 
 ```
-M1 대내외 환경분석 (internal and external environment analysis)   Policy, market and technology trends. Facts only. Place outlooks and alternatives in M3 and later
-M2 내부현황과 사례분석 (internal status and case analysis)         Diagnosis of the target region and organization, leading domestic and overseas cases. Separate the agency introduction status from the capability diagnosis
-M3 시사점과 전략체계 (implications and strategy system)           Implication synthesis, SWOT or gap analysis, vision, goals and strategies
-M4 실행계획 (execution plan)                                       Action task discovery, priorities (necessity, urgency, feasibility), short- and mid- to long-term roadmap, ripple effects
+M1 대내외 환경분석 (internal and external environment analysis)          Policy, market and technology trends. Facts only. Place outlooks and alternatives in M3 and later
+M2 내부현황과 사례분석 (internal status and case analysis)               Diagnosis of the target region and organization, leading domestic and overseas cases. Separate the agency introduction status from the capability diagnosis
+M3 시사점과 전략체계 도출 (implications and strategy system derivation)  Implication synthesis, SWOT or gap analysis, vision, goals and strategies
+M4 실행계획 수립 (execution plan development)                            Action task discovery, priorities (necessity, urgency, feasibility), short- and mid- to long-term roadmap, ripple effects
 ```
 
 - (SWOT factor sources) Internal status implications go only to strengths and weaknesses
@@ -110,11 +114,11 @@ M4 실행계획 (execution plan)                                       Action ta
 ## Program planning
 
 ```
-M1 정책과 환경 분석 (policy and environment analysis)          Fit with higher-level plans, policy and technology trends, problems and issues
-M2 기존 사업과 사례 분석 (existing program and case analysis)  Review of similar programs, overlap and differentiation, findings on prior planning
-M3 목표 체계와 논리모형 (goal system and logic model)          Goal system of purpose, goals and performance indicators, logic model, alignment check of detailed activities
-M4 타당성 확보 (securing feasibility)                          Governance, funding, legal and institutional risks, cost estimation and economic analysis
-M5 심사와 보고 대응 (review and reporting response)            Planning report writing, in-person meetings and question response (only when the RFP requires it)
+M1 정책과 환경 분석 (policy and environment analysis)              Fit with higher-level plans, policy and technology trends, problems and issues
+M2 기존 사업과 사례 분석 (existing program and case analysis)      Review of similar programs, overlap and differentiation, findings on prior planning
+M3 목표 체계와 논리모형 설계 (goal system and logic model design)  Goal system of purpose, goals and performance indicators, logic model, alignment check of detailed activities
+M4 타당성 확보 (securing feasibility)                              Governance, funding, legal and institutional risks, cost estimation and economic analysis
+M5 심사와 보고 대응 (review and reporting response)                Planning report writing, in-person meetings and question response (only when the RFP requires it)
 ```
 
 - (Applicant variant) Business plans written by applicant organizations (corporate R&D projects, commercialization support programs, consortium applications) adjust the content per module within the same skeleton
@@ -243,10 +247,10 @@ M3 개선안 도출 (improvement plan)        Setting and comparing alternatives
 ## IT planning (statutory ISP, intelligent information society master plan, general IT planning)
 
 ```
-M1 환경분석 (environment analysis)        Policy and technology trends, alignment with higher-level plans, peer agency cases
-M2 현황분석 (current state analysis)      Business status (business procedure map, business function definition), information system status (applications, data, infrastructure, security), user requirements survey
-M3 목표모델 설계 (target model design)    To-Be business process, To-Be information system architecture, To-Be data architecture, To-Be technology and security architecture
-M4 통합 이행계획 (integrated implementation plan)   Implementation task definition, priorities, phased roadmap, total build cost estimate, effect analysis
+M1 환경분석 (environment analysis)                                  Policy and technology trends, alignment with higher-level plans, peer agency cases
+M2 현황분석 (current state analysis)                                Business status (business procedure map, business function definition), information system status (applications, data, infrastructure, security), user requirements survey
+M3 목표모델 설계 (target model design)                              To-Be business process, To-Be information system architecture, To-Be data architecture, To-Be technology and security architecture
+M4 통합 이행계획 수립 (integrated implementation plan development)  Implementation task definition, priorities, phased roadmap, total build cost estimate, effect analysis
 ```
 
 - (Statutory ISP judgment) Check the governing law, program budget size and output list (IT strategic plan, draft RFP, etc.) of the RFP
@@ -290,11 +294,11 @@ M4 통합 이행계획 (integrated implementation plan)   Implementation task de
 ## Support program operation (business support, commercialization, startups, workforce training operators)
 
 ```
-M1 정책과 사업 배경 (policy and program background)        Higher-level policies and the parent program, regional and sector conditions, program purpose
-M2 수요자 현황과 애로 (beneficiary status and difficulties) Statistics on target companies and participants, fact-finding surveys and questionnaires, difficulties and requests
-M3 프로그램 설계 (program design)                          Diagnosis and selection, training, consulting, networking, market access and investment linkage
-M4 성과관리 (performance management)                       Performance goal system, indicators and target values, evidence and check method
-M5 운영과 집행 (operation and execution)                   Governance and staff, annual schedule, budget and execution plan
+M1 정책과 사업 배경 분석 (policy and program background analysis)        Higher-level policies and the parent program, regional and sector conditions, program purpose
+M2 수요자 현황과 애로 조사 (beneficiary status and difficulties survey)  Statistics on target companies and participants, fact-finding surveys and questionnaires, difficulties and requests
+M3 프로그램 설계 (program design)                                        Diagnosis and selection, training, consulting, networking, market access and investment linkage
+M4 성과관리 (performance management)                                     Performance goal system, indicators and target values, evidence and check method
+M5 운영과 집행 (operation and execution)                                 Governance and staff, annual schedule, budget and execution plan
 ```
 
 - Beneficiary difficulties carry statistical evidence (number surveyed, response rate, share of top answers)
@@ -324,7 +328,7 @@ M5 운영과 집행 (operation and execution)                   Governance and s
 - A plan item without a matching slide is a lint FAIL
 - (Planning research exception) Survey and planning tasks commissioned under R&D budgets and frameworks (technology development planning research, pre-planning, detailed planning) design the work content as modules and Tasks
     + The document form and table of contents follow the R&D plan
-    + The content design uses the program planning skeleton (M1 policy and environment analysis, M2 existing program and case analysis, M3 goal system and logic model, M4 securing feasibility)
+    + The content design uses the program planning skeleton (M1 policy and environment analysis, M2 existing program and case analysis, M3 goal system and logic model design, M4 securing feasibility)
     + Place modules and Tasks inside the research content item of the plan
     + Apply the module overview and full Task coverage rules
     + Judgment signals are 기획연구, 사전기획, 상세기획 or 기획과제 in the engagement name and a planning report as output

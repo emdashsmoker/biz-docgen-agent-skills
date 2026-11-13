@@ -132,7 +132,7 @@
 | M1 외부 환경 분석 (external environment analysis) | Select only the items that fit the topic among policy, economic, social, technology, and legal system trends. International first, then domestic | List of environmental change factors |
 | M2 내부현황 및 사례 분석 (internal status and case analysis) | Capability diagnosis of the target organization, analysis of leading domestic and international cases | Diagnosis results, case implications |
 | M3 비전 및 전략 도출 (vision and strategy derivation) | Synthesis of implications, vision system, strategies and strategic initiatives by field | Vision system diagram, strategic initiative list |
-| M4 실행계획 및 로드맵 (action plan and roadmap) | Discovery of implementation initiatives, priorities, roadmap, funding and implementation structure, performance indicators | Implementation initiative cards, roadmap, indicator table |
+| M4 실행계획 및 로드맵 수립 (action plan and roadmap development) | Discovery of implementation initiatives, priorities, roadmap, funding and implementation structure, performance indicators | Implementation initiative cards, roadmap, indicator table |
 
 ## Rules by Stage
 
@@ -292,7 +292,7 @@
 | 5 산출의 효율성 분석 (output efficiency analysis) | Output per input presented with comparison groups (overall average, similar programs) |
 | 6 성과의 효과성 분석 (outcome effectiveness analysis) | Qualitative excellence, goal attainment, influencing factors, ripple effects |
 | 7 대표성과 도출 (representative outcome derivation) | Setting selection criteria, collecting outcome information, writing descriptions (3-5 at most) |
-| 8 종합분석 및 개선방안 (comprehensive analysis and improvements) | Improvements and action plans per weak area, feedback plan |
+| 8 종합분석 및 개선방안 도출 (comprehensive analysis and improvement derivation) | Improvements and action plans per weak area, feedback plan |
 | 9 보고서 및 점검 대응 (report and inspection response) | Report writing, response to the self-inspection committee and higher-level inspection |
 
 - R&D performance types are scientific, technological, economic, social, and infrastructural. Refer to the national R&D standard performance indicator system. Add outcomes specific to the program
@@ -345,7 +345,7 @@
 | M1 환경 분석 (environment analysis) | Policy and technology trends, informatization cases of similar institutions | Environmental factors and implications |
 | M2 현황 분석 (current state analysis) | Business status, information system status, infrastructure and security, user requirements | Current state diagnosis and list of improvement requirements |
 | M3 목표모델 설계 (target model design) | Business model, information model, application model, technology model, security model | Target architecture |
-| M4 이행계획 (transition plan) | Definition of implementation initiatives, priorities, schedule per stage, required budget, expected effects | Implementation roadmap, initiative cards, budget calculation table |
+| M4 이행계획 수립 (transition plan development) | Definition of implementation initiatives, priorities, schedule per stage, required budget, expected effects | Implementation roadmap, initiative cards, budget calculation table |
 
 - For public plans such as intelligent information society plans, replace M3 with a policy initiative system. Add the implementation structure and performance indicators to M4
 - For user requirements in the current state analysis, specify the scale of questionnaires and interviews in figures. Present system status as a table of real system names, year of introduction, and operator
@@ -364,8 +364,8 @@
 
 | Module | Content | Work products |
 |--------|---------|---------------|
-| M1 정책 및 사업 배경 (policy and program background) | Higher-level policy and the underlying program, regional and field conditions, program purpose | Program purpose definition |
-| M2 수요자 현황 및 애로 (beneficiary status and difficulties) | Status statistics of target companies and participants, status surveys and questionnaires, difficulties and requests | Demand tally table |
+| M1 정책 및 사업 배경 분석 (policy and program background analysis) | Higher-level policy and the underlying program, regional and field conditions, program purpose | Program purpose definition |
+| M2 수요자 현황 및 애로 조사 (beneficiary status and difficulties survey) | Status statistics of target companies and participants, status surveys and questionnaires, difficulties and requests | Demand tally table |
 | M3 프로그램 설계 (program design) | Diagnosis and selection, education, consulting, networking, market access and investment linkage | Program design document |
 | M4 성과관리 (performance management) | Performance goal system, performance indicators and target values, evidence and inspection method | Performance indicator table |
 | M5 운영 및 집행 (operation and execution) | Implementation structure and staffing, annual schedule, program budget and execution plan | Execution plan table |
