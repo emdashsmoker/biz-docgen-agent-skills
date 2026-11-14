@@ -123,7 +123,7 @@ Adjust directives
 - (Width and spacing) The character shapes of the target paragraph runs are copied, and the adjustment is added to the width and spacing of every language slot. Values are clipped to the range Hangul allows (width 50-200%, spacing -50-50%). DOCX writes the same values as the run character scale (w:w) and character spacing (w:spacing)
 - (Line spacing) The paragraph shape of the target paragraph is copied, and the adjustment is added to its percentage line spacing. DOCX recalculates the minimum line height with the same percentage
 - Tables and figures cover all of their cell paragraphs. Captions and footnote bodies are left out
-- build prints the applied count in an `INFO:` line and directives beyond the conservative range (ADJUST_WARN) in a `WARN:` line
+- build prints the applied count in an `INFO:` line. It does not check the size of the values
 
 HWPX package
 

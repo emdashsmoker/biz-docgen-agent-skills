@@ -681,9 +681,9 @@ pip install -U python-hwpx pillow python-docx pdfplumber fonttools --break-syste
     + (When) Write the directives in the stage 6 render review after finding the target spots in the rendered PNGs. Then run `check all` again and retypeset. Run the first build without directives
     + (Width and spacing targets) Paragraphs where one or two characters are left alone on the next line, spots where one line differs in length and breaks the evenness of a paragraph, and so on
     + (Line spacing targets) Spots where the bottoms of the two pages of a spread do not line up, spots where a table or paragraph moves to the next page by a few lines, and so on
-    + (Conservative range) Width down to -5 (95%), spacing down to -8, and line spacing down to -20. build reports directives beyond this range in a `WARN:` line. If an adjusted spot looks more squeezed than the paragraphs around it, reduce the value
+    + (Conservative judgment) Start with small values. Set each value within a range that does not look more squeezed than the paragraphs around it in the rendered PNG. build does not check the size of the values, so judge flexibly by the document and the spot
     + (Approximate renderer margin) Approximate renderers tend to fit slightly more characters on a line than 한/글. Adjust so that one or two characters of room remain at the end of the line in the rendered PNG. A line fitted with no room may wrap again in 한/글
-    + (Shortening) If adjustment within the conservative range does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
+    + (Shortening) If adjustment that does not look squeezed does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
     + List the spots with adjustments or shortening in one line of the final report. Record the answer (on or off) in the same row as source footnote inheritance
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break

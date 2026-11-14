@@ -162,8 +162,6 @@ REGULAR_WEIGHT = 400            # 같은 이름의 파일이 여럿이면 보통
 # 조정 지시 (원고의 '(조정: )' 줄). 값은 스타일 값에 더하는 %p. 장평과 자간은 --adjust-chars, 줄 간격은 --adjust-lines를 지정한 build에만 적용
 ADJUST_OPTION_KEYS = {"chars": ("ratio", "spacing"), "lines": ("line",)}
 ADJUST_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글 문단과 글자 모양의 허용 범위
-# 이 폭을 넘는 조정은 build가 WARN으로 알림. 넘는 조정은 글자와 줄이 눈에 띄게 눌려 보임
-ADJUST_WARN = {"ratio": 5, "spacing": 8, "line": 20}
 
 # 라벨: 문서에 찍히는 고정 문자열, 원고에서 인식하는 표기, docx 언어 태그. 기본값은 현행 한국어 표기
 # 라벨 파일(JSON, proposal.py `build --labels`)이 일부 키를 덮어씀. 빠진 키는 기본값, 모르는 키는 ERROR
@@ -489,7 +487,7 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
     장평과 자간, 줄 간격은 기본 OFF이므로 착수 질의에서 고른 조정만 문서에 반영"""
     allowed = {"chars": chars, "lines": lines}
     off = {k: 0 for k in allowed}
-    applied, large = {k: 0 for k in allowed}, 0
+    applied = {k: 0 for k in allowed}
     for e in elems:
         adj = e.data.get("adjust")
         if not adj:
@@ -502,7 +500,6 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
                     off[kind] += 1
                     for k in keys:
                         adj.pop(k, None)
-        large += any(abs(v) > ADJUST_WARN[k] for k, v in adj.items())
         if not adj:
             del e.data["adjust"]
     out = []
@@ -510,10 +507,6 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
         out.append(f"WARN: 조정 지시 {off['chars']}건의 장평과 자간 값을 적용하지 않음. 착수 질의에서 장평과 자간 조정을 고른 경우에만 --adjust-chars를 지정")
     if off["lines"]:
         out.append(f"WARN: 조정 지시 {off['lines']}건의 줄 간격 값을 적용하지 않음. 착수 질의에서 줄 간격 조정을 고른 경우에만 --adjust-lines를 지정")
-    if large:
-        w = ADJUST_WARN
-        out.append(f"WARN: 조정 지시 {large}건이 보수 범위(장평 ±{w['ratio']}, 자간 ±{w['spacing']}, 줄 간격 ±{w['line']})를 넘음. "
-                   "글자와 줄이 눌려 보이는지 렌더 PNG에서 확인")
     total = sum(1 for e in elems if e.data.get("adjust"))
     if total:
         out.append(f"INFO: 조정 지시 적용 {total}건 (장평과 자간 {applied['chars']}건, 줄 간격 {applied['lines']}건)")

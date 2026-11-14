@@ -246,7 +246,7 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
     Width, spacing and line spacing are OFF by default, so only the adjustments chosen in the plan reach the document"""
     allowed = {"chars": chars, "lines": lines}
     off = {k: 0 for k in allowed}
-    applied, large = {k: 0 for k in allowed}, 0
+    applied = {k: 0 for k in allowed}
     for e in elems:
         adj = e.data.get("adjust")
         if not adj:
@@ -259,12 +259,9 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
                     off[kind] += 1
                     for k in keys:
                         adj.pop(k, None)
-        large += any(abs(v) > C.ADJUST_WARN[k] for k, v in adj.items())
         if not adj:
             del e.data["adjust"]
     out = [msg(f"warn_adjust_off_{kind}", n=n) for kind, n in off.items() if n]
-    if large:
-        out.append(msg("warn_adjust_large", n=large, **C.ADJUST_WARN))
     total = sum(1 for e in elems if e.data.get("adjust"))
     if total:
         out.append(msg("info_adjust", n=total, chars=applied["chars"], lines=applied["lines"]))

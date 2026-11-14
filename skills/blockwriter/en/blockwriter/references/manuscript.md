@@ -151,7 +151,7 @@ This manuscript notation adjusts character width (장평), spacing (자간), and
 - (When) In the step 4 review, find the target spots in the rendered PNGs, add the directives, and build again. Run the first build without directives
 - (Width and spacing targets) Paragraphs where one or two characters are left alone on the next line, spots where one line differs in length and breaks the evenness of a paragraph, and so on
 - (Line spacing targets) Spots where the bottoms of the two pages of a spread do not line up, spots where a table or paragraph moves to the next page by a few lines, and so on
-- (Conservative range) Width down to -5 (95%), spacing down to -8, and line spacing down to -20 form the conservative range. build reports directives beyond it in a `WARN:` line. If an adjusted spot looks more squeezed than the paragraphs around it, reduce the value
+- (Conservative judgment) Start with small values. Set each value within a range that does not look more squeezed than the paragraphs around it in the rendered PNG. build does not check the size of the values, so judge flexibly by the document and the spot
 - (Approximate renderer margin) The review renderers tend to fit slightly more characters on a line than Hangul. Adjust so that one or two characters of room remain at the end of the line in the rendered PNG. A line fitted with no room may wrap again in Hangul
-- (Shortening) If adjustment within the conservative range does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
+- (Shortening) If adjustment that does not look squeezed does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
 - (Report) List the spots with adjustments or shortening in one line of the final report

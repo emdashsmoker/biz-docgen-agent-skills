@@ -156,8 +156,6 @@ REGULAR_WEIGHT = 400            # when several files share a name, the regular w
 # adjust directives ('(조정: )' lines in the manuscript). Values are %p added to the style values. Width and spacing apply only with --adjust-chars, line spacing only with --adjust-lines
 ADJUST_OPTION_KEYS = {"chars": ("ratio", "spacing"), "lines": ("line",)}
 ADJUST_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # ranges Hangul allows for paragraph and character shapes
-# build warns about adjustments beyond these sizes. Larger adjustments make characters and lines look visibly squeezed
-ADJUST_WARN = {"ratio": 5, "spacing": 8, "line": 20}
 
 # Labels: fixed strings printed into documents, manuscript notation the parser recognizes, and docx language tags. Defaults are the current Korean notation
 # A label file (JSON, proposal.py `build --labels`) overrides some keys. Missing keys keep the default, unknown keys are an ERROR
@@ -483,7 +481,7 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
     Width, spacing and line spacing are OFF by default, so only the adjustments chosen in the kickoff questions reach the document"""
     allowed = {"chars": chars, "lines": lines}
     off = {k: 0 for k in allowed}
-    applied, large = {k: 0 for k in allowed}, 0
+    applied = {k: 0 for k in allowed}
     for e in elems:
         adj = e.data.get("adjust")
         if not adj:
@@ -496,7 +494,6 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
                     off[kind] += 1
                     for k in keys:
                         adj.pop(k, None)
-        large += any(abs(v) > ADJUST_WARN[k] for k, v in adj.items())
         if not adj:
             del e.data["adjust"]
     out = []
@@ -504,10 +501,6 @@ def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
         out.append(f"WARN: width and spacing values of {off['chars']} adjust directives not applied. Set --adjust-chars only when the kickoff answer chose this adjustment")
     if off["lines"]:
         out.append(f"WARN: line spacing values of {off['lines']} adjust directives not applied. Set --adjust-lines only when the kickoff answer chose this adjustment")
-    if large:
-        w = ADJUST_WARN
-        out.append(f"WARN: {large} adjust directives exceed the conservative range (width ±{w['ratio']}, spacing ±{w['spacing']}, line spacing ±{w['line']}). "
-                   "Check the rendered PNG for squeezed characters and lines")
     total = sum(1 for e in elems if e.data.get("adjust"))
     if total:
         out.append(f"INFO: adjust directives applied to {total} elements (width and spacing {applied['chars']}, line spacing {applied['lines']})")

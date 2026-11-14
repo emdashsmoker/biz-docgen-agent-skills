@@ -159,8 +159,6 @@ SOURCE_MARKS = ("※", "*")       # marks of note lines in source rows. They are
 # adjust directives ('(조정: )' lines in the manuscript). Values are %p added to the style values. Width and spacing apply only with --adjust-chars, line spacing only with --adjust-lines
 ADJUST_OPTION_KEYS = {"chars": ("ratio", "spacing"), "lines": ("line",)}
 ADJUST_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # ranges Hangul allows for paragraph and character shapes
-# build warns about adjustments beyond these sizes. Larger adjustments make characters and lines look visibly squeezed
-ADJUST_WARN = {"ratio": 5, "spacing": 8, "line": 20}
 # scope of source footnote merging (build --footnote-merge): □, section (##), chapter (#), whole document
 NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
 NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # the scope changes at headings of this level or above
@@ -279,10 +277,6 @@ MESSAGES = {
     "warn_adjust_off_lines": {
         "ko": "WARN: 조정 지시 {n}건의 줄 간격 값을 적용하지 않음. 기획안에서 줄 간격 조정을 고른 경우에만 --adjust-lines를 지정",
         "en": "WARN: line spacing values of {n} adjust directives not applied. Set --adjust-lines only when the plan chose this adjustment"},
-    "warn_adjust_large": {
-        "ko": "WARN: 조정 지시 {n}건이 보수 범위(장평 ±{ratio}, 자간 ±{spacing}, 줄 간격 ±{line})를 넘음. 글자와 줄이 눌려 보이는지 렌더 PNG에서 확인",
-        "en": "WARN: {n} adjust directives exceed the conservative range (width ±{ratio}, spacing ±{spacing}, line spacing ±{line}). "
-              "Check the rendered PNG for squeezed characters and lines"},
     "info_adjust": {
         "ko": "INFO: 조정 지시 적용 {n}건 (장평과 자간 {chars}건, 줄 간격 {lines}건)",
         "en": "INFO: adjust directives applied to {n} elements (width and spacing {chars}, line spacing {lines})"},
