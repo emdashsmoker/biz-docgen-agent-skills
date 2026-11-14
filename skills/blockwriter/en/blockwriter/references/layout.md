@@ -162,7 +162,7 @@ Page numbers (when both `--toc` and `--page-number` are given)
 - (DOCX bookmark) The whole target paragraph is wrapped in a bookmark. Headings use the heading paragraph; tables and figures use the caption paragraph. The name is `toc_number_text` (only letters, digits, and underscores, within 40 characters, to meet Word's rules). Names starting with an underscore are not used because Word treats them as hidden bookmarks
 - (DOCX page reference) A `PAGEREF bookmarkname \h` complex field. Word does not recalculate PAGEREF when it opens a document; it updates with select all (Ctrl+A) then F9
     - The result value is the placeholder `?`. An approximation calculated by another layout engine such as LibreOffice differs from Word's pages and looks like a plausible wrong number, so none is written
-    - Settings that update on open (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1
+    - Settings that update on open (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1. Putting a TOC field with the dirty flag before the page references gave the same result
 - build prints one line with the number of TOC entries and the number of bookmarks and page references
 
 Static conversion (`toc-static`; the procedure is in the TOC static conversion section of SKILL.md)
