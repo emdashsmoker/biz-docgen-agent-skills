@@ -877,7 +877,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 글 상자나 표 셀의 안쪽 폭보다 넓은 어절은 모든 렌더러에서 중간이 잘림 (check_layout WARN, 글자 단위 덱은 검사 제외)
 - 넓은 어절은 띄어 쓰거나 줄여 쓰거나 상자를 넓혀 해소
 - 줄 끝에 걸린 어절은 LibreOffice 가 수치와 단위 사이('60|분'), 괄호 안('(|연구개발)', '가|정)'), 쉼표 앞('협|약,')에서 나누기도 함 (check_layout WARN, 글자 단위 덱은 검사 제외)
-    + 한글로만 된 어절은 통째로 다음 줄로 넘어감
+    + 한글로만 된 어절은 나뉘지 않고 다음 줄로 넘어감
     + `colW` 를 지정하지 않은 표는 빌드가 열 사이 폭을 옮겨 회피
     + 남은 경고는 문구를 고쳐 써서 해소 (디자인 시스템의 판형 항목)
 - PowerPoint 는 LibreOffice 보다 줄 높이를 크게 잡으므로 불릿 상자의 간격 분배는 PowerPoint 줄 높이(글꼴 크기의 1.4배)를 기준으로 계산

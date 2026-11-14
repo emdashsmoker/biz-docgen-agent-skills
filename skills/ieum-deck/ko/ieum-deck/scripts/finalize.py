@@ -494,7 +494,7 @@ def set_paragraph_line_break(xml: str) -> tuple[str, int]:
 
     WHY: 두 속성은 PowerPoint 가 문단마다 읽는 줄바꿈 옵션(한글 단어 잘림 허용, 영문 단어 잘림 허용).
          soffice 재직렬화는 마스터의 txStyles 와 presentation.xml 의 defaultTextStyle 을 지우므로
-         상속에 맡긴 값은 PowerPoint 의 프로그램 기본값으로 바뀜. 문단마다 직접 기록해야 PowerPoint 에서 같은 결과가 나옴.
+         상속에 맡긴 값은 PowerPoint 의 프로그램 기본값으로 바뀜. 문단마다 직접 기록해야 PowerPoint 에서 같은 줄바꿈이 유지됨.
          기존 값도 덮어써서 빌드 기록의 줄바꿈 단위와 어긋난 값이 남지 않게 함
     """
     attrs = line_break_attrs()
@@ -826,7 +826,7 @@ TC_BLOCK = re.compile(r"<a:tc\b[^>]*>.*?</a:tc>", re.S)
 TC_PR_OPEN = re.compile(r"<a:tcPr\b([^>]*?)(/?)>")
 BODY_PR_OPEN = re.compile(r"<a:bodyPr\b([^>]*?)/?>")
 # 셀 채움 = tcPr 직계 채움 요소(noFill, solidFill 등 이름이 Fill 로 끝남). 스키마 순서상 테두리(lnL, lnR, lnT, lnB, lnTlToBr, lnBlToTr)가
-# 채움보다 앞서고 테두리마다 선 색 solidFill 을 품으므로 테두리 요소를 통째로 건너뜀
+# 채움보다 앞서고 테두리마다 선 색 solidFill 을 품으므로 테두리 요소 전체를 건너뜀
 CELL_FILL = re.compile(r'<a:tcPr\b[^>]*>(?:<a:(ln\w*)\b(?:[^>]*?/>|.*?</a:\1>))*'
                        r'(?P<fill><a:(?P<kind>\w+Fill)\b(?:[^>]*?/>|.*?</a:(?P=kind)>))', re.S)
 CELL_TEXT = re.compile(r"<a:t\b[^>]*>([^<]*)</a:t>")

@@ -639,7 +639,7 @@ class DocxBuilder(lib.TocMarks):
                     self._tc_style(tc, sides, style_fill, lib.CELL_MARGIN)
         if long and head:  # Word는 표 첫 행부터 이어진 행만 반복하므로 단위 행도 반복 대상에 넣음
             t.rows[0]._tr.get_or_add_trPr().append(_w("tblHeader"))
-        if not long:  # 한/글 글자취급 표처럼 쪽을 넘기지 않고 통째로 이동
+        if not long:  # 한/글 글자취급 표처럼 쪽 경계에서 나누지 않고 표 전체를 다음 쪽으로 이동
             for row in t.rows[:-1]:
                 for cell in row.cells:
                     for p in cell.paragraphs:
