@@ -39,6 +39,12 @@ Changelog rules
 - Added a TOC scope item and a bookmark notice to the planning questions (#140)
 - Changed the DOCX TOC from a Word TOC field to ordinary paragraphs, so Word no longer asks to update fields on open (#140)
 - Removed the TOC page check lines and the `[stranded TOC heading]` warning from the build output (#140)
+- Added source rows written over several lines, where a source line that ends with `;` continues on the next line (#142)
+- Changed source rows that start with a source label to a hanging indent, so lines after a break and wrapped lines start where the first source starts (#142)
+- Added the `--source-layout` build option that fixes the line layout of source rows, with `auto` as the default and `break` and `inline` as choices (#142)
+- Added adjustment lines such as `(조판 조정: 장평 -3, 자간 -2)` that change the ratio, letter spacing and line spacing of the next element or a range by %p against the style value (#142)
+- Added source line layout, line tidying and line spacing adjustment items to the planning questions, with no tidying and no line spacing adjustment as the defaults (#142)
+- Added page fill guidance for facing pages to the layout rules and review items (#142)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
@@ -49,6 +55,12 @@ Changelog rules
 * 기획안 질문에 목차 수록 범위 항목과 책갈피 안내 추가 (#140)
 * DOCX 목차를 Word 목차 필드에서 일반 문단으로 변경 (Word가 문서를 열 때 필드 갱신을 묻지 않음) (#140)
 * build 출력의 목차 쪽번호 대조 줄과 `[목차 제목 고립]` 경고 삭제 (#140)
+* `;`로 끝낸 출처 줄을 다음 줄에 이어 쓰는 출처 줄 나눔 표기 추가 (#142)
+* 출처 표기로 시작하는 출처 행을 내어쓰기로 변경 (나눈 줄과 접힌 줄이 첫 출처의 시작 위치에서 시작) (#142)
+* 출처 행의 줄 나눔 방식을 고정하는 build 옵션 `--source-layout` 추가 (기본 `auto`, 선택 `break`와 `inline`) (#142)
+* 다음 요소나 구간의 장평, 자간, 줄 간격을 스타일 값 대비 증감(%p)으로 바꾸는 조판 조정 줄 `(조판 조정: 장평 -3, 자간 -2)` 추가 (#142)
+* 기획안 질문에 출처 줄 나눔, 줄 정리, 줄 간격 조정 항목 추가 (줄 정리와 줄 간격 조정은 기본 미적용) (#142)
+* 조판 규칙과 검수 항목에 펼쳐 본 두 쪽의 쪽 채움 지침 추가 (#142)
 
 ### ieum-deck
 - Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
@@ -64,6 +76,15 @@ Changelog rules
 - Added the `toc-static` command that turns the TOC page numbers of chosen items into plain text and removes their bookmarks after delivery (#140)
 - Added a TOC scope item and a bookmark notice to the kickoff questions (#140)
 - Changed the ISP work product item to stop naming the source document while keeping the work product names (#140)
+- Added source rows written over several lines, where a source line that ends with `;` continues on the next line (#142)
+- Changed source rows that start with a source label to a hanging indent, so lines after a break and wrapped lines start where the first source starts (#142)
+- Added the `--source-layout` build option that fixes the line layout of source rows, with `auto` as the default and `break` and `inline` as choices (#142)
+- Added adjustment lines such as `(조판 조정: 장평 -3, 자간 -2)` that change the ratio, letter spacing and line spacing of the next element or a range by %p against the style value (#142)
+- Added source line layout, line tidying and line spacing adjustment items to the kickoff questions, with no tidying and no line spacing adjustment as the defaults (#142)
+- Added source line layout, line tidying and line spacing adjustment rows to the diagnosis and planning design templates (#142)
+- Added page fill guidance for facing pages to the typesetting rules and render review items (#142)
+- Fixed bullets that start with bold being typeset as ※ notes (#142)
+- Fixed the paragraph mismatch warning printed for figures with a caption and a source row when both formats are built (#142)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
@@ -73,6 +94,15 @@ Changelog rules
 * 납품 뒤 선택한 항목의 목차 쪽번호를 일반 글자로 바꾸고 책갈피를 지우는 `toc-static` 명령 추가 (#140)
 * 착수 질의에 목차 수록 범위 항목과 책갈피 안내 추가 (#140)
 * ISP 산출물 항목에서 출처 문헌의 이름을 빼도록 변경 (산출물명은 유지) (#140)
+* `;`로 끝낸 출처 줄을 다음 줄에 이어 쓰는 출처 줄 나눔 표기 추가 (#142)
+* 출처 표기로 시작하는 출처 행을 내어쓰기로 변경 (나눈 줄과 접힌 줄이 첫 출처의 시작 위치에서 시작) (#142)
+* 출처 행의 줄 나눔 방식을 고정하는 build 옵션 `--source-layout` 추가 (기본 `auto`, 선택 `break`와 `inline`) (#142)
+* 다음 요소나 구간의 장평, 자간, 줄 간격을 스타일 값 대비 증감(%p)으로 바꾸는 조판 조정 줄 `(조판 조정: 장평 -3, 자간 -2)` 추가 (#142)
+* 착수 질의에 출처 줄 나눔, 줄 정리, 줄 간격 조정 항목 추가 (줄 정리와 줄 간격 조정은 기본 미적용) (#142)
+* 진단서와 기획설계 양식에 출처 줄 나눔, 줄 정리, 줄 간격 조정 행 추가 (#142)
+* 조판 규칙과 렌더링 검수 항목에 펼쳐 본 두 쪽의 쪽 채움 지침 추가 (#142)
+* 굵게로 시작하는 불릿이 ※ 주석으로 조판되던 오류 수정 (#142)
+* 두 형식을 함께 산출할 때 캡션과 출처가 있는 그림에서 문단 불일치 경고가 출력되던 오류 수정 (#142)
 
 ## 2026-11-13
 
