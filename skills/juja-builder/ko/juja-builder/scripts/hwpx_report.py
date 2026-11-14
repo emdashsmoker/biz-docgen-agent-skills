@@ -37,6 +37,8 @@ import warnings
 import zipfile
 from dataclasses import dataclass, field
 
+import toc_refs
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 # python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
@@ -68,7 +70,7 @@ PROFILES = {
         "table_pos": "표 위치", "table_cell": "표 본문", "table_cell_left": "표 본문 왼쪽",
         "table_title": "표 캡션", "unit": "단위", "source": "출처",
         "fig_pos": "그림 위치", "fig_title": "그림 캡션", "body": "바탕글",
-        "toc_chapter": "목차 장", "toc_section": "목차 절",  # 선택: --toc 정적 목차
+        "toc_chapter": "목차 장", "toc_section": "목차 절",  # 선택: --toc 목차
         "table_cell_bullet": "표 글머리", "table_cell_dash": "표 하이픈",  # 선택: 셀 글머리 줄
     },
     "flat": {  # 장 구분 없는 문서 (N.N / N.N.N / 가. / □ / ◦ / - / ․ / *)
@@ -126,6 +128,14 @@ TOC_TAB_POS = 48100             # 목차 스타일의 오른쪽 점선 탭 위�
 TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기 (절 1500의 2배, 정책보고서 관행 값)
 TOC_UNIT_W = (700, 600)         # 목차 탭 폭 추정용 가중 1단위 폭 (장, 절). 한/글은 탭을 다시 계산하므로 근사 렌더러 표시용
 TOC_LIST_INDENT = 0             # 표 목차와 그림 목차 항목의 왼쪽 여백 (목차 절 스타일 여백을 덮어씀)
+# 목차 수록 범위 (build --toc-scope). 종류는 제목 4수준, 밴드 2종, 번호 캡션이 붙은 표와 그림. 값은 toc_refs.KINDS와 같은 순서
+TOC_SCOPE_DEFAULT = ("chapter", "section", "table", "figure")
+TOC_LIST_KINDS = {"table": "toc.tables", "figure": "toc.figures"}   # 별도 목차로 싣는 종류 → 목차 제목 라벨 키
+# 목차 항목의 왼쪽 여백 (HWPUNIT). 장은 목차 장 스타일, 그 밖은 목차 절 스타일에 이 여백을 적용
+TOC_INDENT = {"chapter": 0, "section": 1500, "subsection": TOC_SUB_INDENT, "ganada": 4500, "module": TOC_SUB_INDENT, "task": 4500}
+BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값이 구분 문자와 표식으로 씀
+DOCX_BOOKMARK_MAX = 40          # Word 책갈피 이름 길이 상한
+DOCX_BOOKMARK_NAME = "toc_{n:03d}_{slug}"   # 밑줄로 시작하는 이름은 Word가 숨은 책갈피로 다루므로 쓰지 않음
 CAPTION_GAP = 850               # 캡션과 표 사이 간격 (python-hwpx 기본값, 실코퍼스 다수 값)
 BLOCK_GAP_LINES = 0             # 표·그림 블록 앞뒤 빈 문단 수. 간격은 표위치·그림위치 스타일의 문단 여백이 담당
 # 글자취급을 해제한 장표 앞뒤의 바탕글 빈 문단 수. 해제된 표는 본문과 따로 배치되어 표위치 문단 여백만으로는 앞뒤 문단과 붙어 보임
@@ -707,10 +717,75 @@ def split_table(e: Element, rows: list[list[str]]) -> list[Element]:
             for k, chunk in enumerate(chunks, 1)]
 
 
-def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, str]], toc_depth: int,
-                       lists: list[tuple[str, list[str]]] | None = None) -> list[dict]:
+def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
+    """항목 종류 목록(쉼표 구분)을 검증하여 돌려줌. option은 오류 안내에 쓸 옵션 이름"""
+    kinds = tuple(k.strip() for k in spec.split(",") if k.strip())
+    unknown = [k for k in kinds if k not in allowed]
+    if unknown or not kinds:
+        sys.exit(f"ERROR: {option}에 쓸 수 없는 항목 {unknown}. 쓸 수 있는 항목: {', '.join(allowed)}")
+    return kinds
+
+
+def parse_toc_scope(spec: str | None) -> tuple[str, ...]:
+    """build --toc-scope 값. 생략하면 기본 범위"""
+    return parse_toc_kinds(spec, toc_refs.KINDS, "--toc-scope") if spec else TOC_SCOPE_DEFAULT
+
+
+def toc_bookmark_name(text: str) -> str:
+    """HWPX 책갈피 이름. 목차 항목 문구에서 쪽 참조 경로의 구분 문자만 지움"""
+    return "".join(ch for ch in text if ch not in BOOKMARK_DROP_CHARS).strip()
+
+
+def docx_bookmark_name(n: int, text: str) -> str:
+    """Word 책갈피 이름 (글자로 시작, 글자와 숫자와 밑줄, 길이 상한). 순번이 이름을 유일하게 함"""
+    slug = re.sub(r"[^0-9A-Za-z가-힣]+", "_", text).strip("_")
+    return DOCX_BOOKMARK_NAME.format(n=n, slug=slug)[:DOCX_BOOKMARK_MAX].rstrip("_")
+
+
+class BookmarkNames:
+    """HWPX 책갈피 이름 발급. 한/글은 같은 이름의 책갈피를 둘 이상 등록하지 않으므로 같은 문구가 다시 나오면 (2)부터 순번을 붙임"""
+
+    def __init__(self):
+        self.used: set[str] = set()
+
+    def issue(self, text: str) -> str:
+        base = toc_bookmark_name(text)
+        name, n = base, 1
+        while name in self.used:
+            n += 1
+            name = f"{base}({n})"
+        self.used.add(name)
+        return name
+
+
+class TocMarks:
+    """목차 수록 항목의 등록. hwpx와 docx 작성기가 함께 상속하고 책갈피 기록(add_bookmark)만 작성기가 구현
+    toc_items: (종류, 목차 문구, 책갈피 이름) 목록 (문서 순서). 쪽번호를 싣지 않는 목차는 책갈피 이름이 None"""
+
+    def toc_mark(self, kind: str, text: str, host):
+        """수록 범위에 든 항목을 목차에 등록하고 쪽 참조가 가리킬 책갈피를 host 문단에 붙임
+        Why 쪽번호 조건: 책갈피는 쪽 참조의 대상으로만 쓰이므로 쪽번호 없는 목차에는 붙이지 않음"""
+        if not self.toc or kind not in self.toc_scope:
+            return
+        name = self.add_bookmark(host, text) if self.page_number else None
+        self.toc_items.append((kind, text, name))
+
+    def check_toc_styles(self):
+        """목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음"""
+        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
+            print("WARN: 프로파일에 목차 스타일(toc_chapter, toc_section)이 없어 --toc 생략")
+            self.toc = False
+
+    def mark_caption(self, kind: str, label: dict, host):
+        """번호 캡션을 표 목차나 그림 목차에 등록 (label은 caption_label 반환값). 번호 없는 캡션은 수록하지 않음"""
+        if label["num"] is not None:
+            self.toc_mark("table" if kind == "TABLE" else "figure", label["text"], host)
+
+
+def front_matter_items(cover: dict | None, toc: bool, toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
     """표지와 목차(표 목차, 그림 목차 포함)의 문단 순서. 작성기는 이 목록을 순서대로 기록만 함
-    kind: blank, cover(text, pt, bold), toc_title(text, page_break), toc_entry(level, text), list_entry(text)"""
+    kind: blank, cover(text, pt, bold), toc_title(text, page_break), toc_entry(item, text, name), list_entry(text, name)
+    item은 수록 항목의 종류, name은 쪽 참조가 가리킬 책갈피 이름(쪽번호 없는 목차는 None)"""
     items: list[dict] = []
     if cover:
         items += [{"kind": "blank"}] * COVER_TOP_LINES
@@ -725,11 +800,13 @@ def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, 
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
         items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
-        items += [{"kind": "toc_entry", "level": lv, "text": text} for lv, text in headings if lv <= toc_depth]
-        for title, entries in lists or []:
+        items += [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
+                  for kind, text, name in toc_items if kind not in TOC_LIST_KINDS]
+        for list_kind, title_key in TOC_LIST_KINDS.items():
+            entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
             if entries:
-                items.append({"kind": "toc_title", "text": title, "page_break": True})
-                items += [{"kind": "list_entry", "text": t} for t in entries]
+                items.append({"kind": "toc_title", "text": label(title_key), "page_break": True})
+                items += [{"kind": "list_entry", "text": text, "name": name} for text, name in entries]
     return items
 
 
@@ -803,6 +880,33 @@ def table_pos_role(profile: dict, has_caption: bool) -> str:
     return "table_pos" if has_caption or not profile.get("fig_pos") else "fig_pos"
 
 
+def crossref_begin(field_id: str, command: str, ref_path: str, ref_type: str, content_type: str):
+    """상호참조 필드 시작 컨트롤(hp:ctrl). 한/글이 저장하는 구조와 같게 기록
+    매개변수 이름과 값은 한/글 저장 파일 그대로 ("Fiexde" 철자 포함). Command의 뒤 숫자는 참조 내용을 뜻하는 저장값"""
+    import lxml.etree as ET
+    ctrl = ET.Element(f"{HP}ctrl")
+    begin = ET.SubElement(ctrl, f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                          name="", editable="0", dirty="0", zorder="-1", fieldid=CROSSREF_FIELD_ID)
+    params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+              ("stringParam", "Command", command), ("stringParam", "RefPath", ref_path),
+              ("stringParam", "RefType", ref_type), ("stringParam", "RefContentType", content_type),
+              ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+    holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+    for tag, name, value in params:
+        ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+    return ctrl
+
+
+def toc_page_ref(run, name: str, value: str):
+    """책갈피 쪽 번호 상호참조를 run에 기록 (필드 시작, 저장값 글자, 필드 끝 순서)
+    저장값은 한/글이 문서를 불러올 때 책갈피 위치의 쪽번호로 다시 계산함"""
+    import lxml.etree as ET
+    field_id = new_object_id()
+    run.append(crossref_begin(field_id, f"?{name};6;0;0;0;", f"?{name};", "TARGET_BOOKMARK", "OBJECT_TYPE_PAGE"))
+    ET.SubElement(run, f"{HP}t").text = value
+    ET.SubElement(ET.SubElement(run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=CROSSREF_FIELD_ID)
+
+
 def new_object_id() -> str:
     """개체와 필드의 인스턴스 id (python-hwpx가 표와 각주에 쓰는 범위와 같은 31비트 난수)"""
     return str(uuid.uuid4().int & 0x7FFFFFFF)
@@ -852,7 +956,7 @@ def cell_line_role(line: str, profile: dict) -> str | None:
     return None
 
 
-class Builder:
+class Builder(TocMarks):
     def __init__(self, skeleton: str, profile: dict, page_break: str = "chapter"):
         try:
             from hwpx import HwpxDocument
@@ -875,8 +979,9 @@ class Builder:
         self.styles = {s.name: (sid, s) for sid, s in self.doc.styles.items()}
         missing = [v for k, v in profile.items()
                    if k not in ("numbering", "chapter_format", "section_format", "subsection_format", "caption_prefix") and v is not None and v not in self.styles]
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[str, int] = {}
+        self.toc_items: list[tuple[str, str, str | None]] = []   # 목차 수록 항목 (TocMarks)
+        self.toc_scope = TOC_SCOPE_DEFAULT
+        self.bookmark_names = BookmarkNames()
         if missing:
             sys.exit(f"ERROR: 스켈레톤에 없는 스타일 {missing}: profile 수정 또는 `skeleton` 명령으로 목록 확인")
         self.n = {"chapter": 0, "section": 0, "subsection": 0, "ganada": 0, "table": 0, "figure": 0,
@@ -891,6 +996,7 @@ class Builder:
         self._warned: set[str] = set()
         self.numbered_square = False
         self.toc = False
+        self.page_number = False
         self.long_table_mode = "engine"
         self.after_block = False
         self.notes = NoteRegistry(None)   # 출처 각주 통합. 조판 명령이 범위를 지정하면 교체
@@ -989,6 +1095,30 @@ class Builder:
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
 
+    def add_bookmark(self, p, text: str) -> str:
+        """책갈피를 문단 첫 run의 첫 컨트롤로 기록하고 이름을 돌려줌. 표를 담은 문단에서는 표보다 앞에 놓임
+        p는 문단 객체 또는 문단 요소 (표 셀과 캡션의 문단은 요소로 받음)"""
+        import lxml.etree as ET
+        pe = getattr(p, "element", p)
+        name = self.bookmark_names.issue(text)
+        run = pe.find(f"{HP}run")
+        if run is None:   # 글자가 없는 문단. 줄 배치 저장값보다 앞에 run을 둠
+            run = ET.Element(f"{HP}run", charPrIDRef=str(self.refs("body")["char_pr_id_ref"]))
+            pe.insert(0, run)
+        ctrl = ET.Element(f"{HP}ctrl")
+        ET.SubElement(ctrl, f"{HP}bookmark", name=name)
+        run.insert(0, ctrl)
+        return name
+
+    def object_host(self, holder):
+        """표나 그림 개체의 목차 책갈피를 둘 문단. 개체가 표이면 첫 셀의 첫 문단, 그 밖은 개체를 담은 문단
+        Why 첫 셀: 책갈피가 표 개체 안에 있어 표를 옮기면 함께 이동. 캡션 문단 안에 두면 rhwp가 캡션을 표와 겹쳐 그림
+        셀 글자를 모두 기록한 뒤에 호출 (셀 글자를 기록할 때 run을 다시 만듦)"""
+        cell = next(holder.element.iter(f"{HP}tc"), None)
+        if cell is not None:
+            return next(cell.iter(f"{HP}p"))
+        return next(a for a in holder.element.iterancestors() if a.tag == f"{HP}p")
+
     def add_footnote(self, p, text: str):
         """각주를 문단의 현재 끝에 붙임. 출처 각주 통합 범위 안에서 문구가 같은 각주는 첫 각주 번호의 상호참조로 대체"""
         first = self.notes.lookup(text)
@@ -1011,16 +1141,7 @@ class Builder:
         at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # 줄 배치 저장값보다 앞, 마지막 run 뒤
         field_id = new_object_id()
         begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
-        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
-                              name="", editable="0", dirty="0", zorder="-1", fieldid=CROSSREF_FIELD_ID)
-        # 매개변수 이름과 값은 한/글 저장 파일 그대로 ("Fiexde" 철자 포함). Command의 뒤 숫자는 각주 번호 참조를 뜻하는 저장값
-        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
-                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
-                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
-                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
-        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
-        for tag, name, value in params:
-            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        begin_run.append(crossref_begin(field_id, f"?#{inst_id};3;1;0;0;", f"?#{inst_id};", "TARGET_FOOTNOTE", "OBJECT_TYPE_NUMBER"))
         sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
         ET.SubElement(sup_run, f"{HP}t").text = number
         ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=CROSSREF_FIELD_ID)
@@ -1136,11 +1257,8 @@ class Builder:
                 p.add_run(text, char_pr_id_ref=cp or str(body_ref["char_pr_id_ref"]))
             s0.element.append(p.element)  # add_paragraph는 마지막 구역에 붙이므로 앞부분 구역으로 이동
             return p
-        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-            print("WARN: 프로파일에 목차 스타일(toc_chapter, toc_section)이 없어 --toc 생략")
-            self.toc = False
-        sub_pp = list_pp = None
-        for it in front_matter_items(cover, self.toc, self.headings, getattr(self, "toc_depth", 2), self.toc_lists()):
+        indent_pp: dict[int, str] = {}   # 왼쪽 여백 → 목차 절 스타일에서 파생한 문단 모양
+        for it in front_matter_items(cover, self.toc, self.toc_items):
             kind = it["kind"]
             if kind == "blank":
                 front()
@@ -1151,34 +1269,28 @@ class Builder:
                 front(it["text"], str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
                       pageBreak="1" if it["page_break"] else "0")
             else:  # toc_entry, list_entry
-                lv = it.get("level", 2)
+                item = it.get("item")
                 text = it["text"]
-                role = "toc_chapter" if lv == 1 else "toc_section"
-                r = self.refs(role)
-                pp = str(r["para_pr_id_ref"])
-                left = TOC_SUB_INDENT if lv >= 3 else (0 if lv == 1 else 1500)
-                if kind == "list_entry":
-                    if list_pp is None:
-                        list_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": TOC_LIST_INDENT})
-                    pp, left = list_pp, TOC_LIST_INDENT
-                elif lv >= 3:
-                    if sub_pp is None:
-                        sub_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": TOC_SUB_INDENT})
-                    pp = sub_pp
-                p = front(text, str(r["char_pr_id_ref"]), pp)
+                r = self.refs("toc_chapter" if item == "chapter" else "toc_section")
+                pp, cp = str(r["para_pr_id_ref"]), str(r["char_pr_id_ref"])
+                left = TOC_LIST_INDENT if kind == "list_entry" else TOC_INDENT[item]
+                if kind == "list_entry" or item not in ("chapter", "section"):   # 장과 절은 스타일의 여백 그대로
+                    if left not in indent_pp:
+                        indent_pp[left] = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": left})
+                    pp = indent_pp[left]
+                p = front(text, cp, pp)
                 p.element.set("styleIDRef", str(r["style_id_ref"]))
-                num = self.toc_numbers.get(text)
-                if num:
+                if it["name"]:   # 항목 문구, 오른쪽 점선 탭, 쪽 참조 순서
                     tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
-                    unit = TOC_UNIT_W[0] if lv == 1 else TOC_UNIT_W[1]
-                    width = max(TOC_TAB_POS - left - _weighted_len(text) * unit - len(str(num)) * unit, 1000)
-                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2").tail = str(num)
+                    unit = TOC_UNIT_W[0] if item == "chapter" else TOC_UNIT_W[1]
+                    width = max(TOC_TAB_POS - left - _weighted_len(text) * unit - len(toc_refs.PLACEHOLDER) * unit, 1000)
+                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2")
+                    runs = p.element.findall(f"{HP}run")
+                    ref_run = ET.Element(f"{HP}run", charPrIDRef=cp)
+                    runs[-1].addnext(ref_run)
+                    toc_page_ref(ref_run, it["name"], toc_refs.PLACEHOLDER)
         for sec in (s0, s1):
             sec.mark_dirty() if hasattr(sec, "mark_dirty") else None
-
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        """표 목차와 그림 목차 (제목, 항목 목록). 기본 조판기는 목록 없음"""
-        return []
 
     def set_header(self, spec: str | None):
         """머리말 (기본 OFF). "텍스트;align=LEFT|CENTER|RIGHT". 본문 구역에만 적용.
@@ -1258,7 +1370,7 @@ class Builder:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
     def attach_caption(self, holder, kind: str, text: str, side: str, width: int):
-        """개체 부착 캡션(한/글 캡션 기능). 번호는 autoNum 필드이며 장 시작 시 재시작."""
+        """개체 부착 캡션(한/글 캡션 기능). 번호는 autoNum 필드이며 장 시작 시 재시작. 캡션 문단을 돌려줌"""
         role = "table_title" if kind == "TABLE" else "fig_title"
         r = self.refs(role)
         cap = holder.set_caption("", side=side, width=width, gap=CAPTION_GAP, char_pr_id_ref=r["char_pr_id_ref"])
@@ -1275,6 +1387,7 @@ class Builder:
         an = ET.SubElement(ET.SubElement(run.element, f"{HP}ctrl"), f"{HP}autoNum", num="1", numType=kind)
         ET.SubElement(an, f"{HP}autoNumFormat", type="DIGIT", userChar="", prefixChar="", suffixChar="", supscript="0")
         cp.add_run(close_b + text, char_pr_id_ref=r["char_pr_id_ref"])
+        return cp
 
     # ── 헤더 계위 ───────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
@@ -1303,8 +1416,7 @@ class Builder:
             self.n["ganada"] += 1
             label = f"{letter_label(self.n['ganada'])} {text}"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
-        if level <= 3:
-            self.headings.append((level, label))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):  # 장별 <표 N-1>부터 재시작
             p.add_new_num(kind="TABLE", number=1)
             p.add_new_num(kind="PICTURE", number=1)
@@ -1477,6 +1589,7 @@ class Builder:
 
     # ── 실행 ────────────────────────────────────────────────────────────
     def build(self, elems: list[Element], footnotes: dict, out: str):
+        self.check_toc_styles()
         skip = 0
         for idx, e in enumerate(elems):
             if skip:
@@ -1571,144 +1684,34 @@ def cmd_build(a):
     for msg in lint(elems):
         print("LINT:", msg)
     out = a.output or os.path.splitext(a.input)[0] + ".hwpx"
-    def make(numbers=None):
-        b = Builder(skeleton, profile, page_break=a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc = a.toc
-        b.page_number = a.page_number
-        b.toc_depth = a.toc_depth
-        b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
+    b = Builder(skeleton, profile, page_break=a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc = a.toc
+    b.page_number = a.page_number
+    b.toc_scope = parse_toc_scope(a.toc_scope)
+    b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.build(elems, footnotes, out)
     fixed = repair_manifest(out)
     if fixed:
         print(f"WARN: 매니페스트 미등록 이미지 {fixed}건 자동 보정 (python-hwpx 버전 확인 권장)")
-    if a.toc and a.page_number:  # 2패스: 렌더링으로 제목의 쪽 위치를 찾아 목차에 기입 (근사값, 한/글에서 확정)
-        numbers = toc_page_numbers(out, [t for _, t in b.headings], a.rhwp)
-        if numbers:
-            make(numbers)
-            repair_manifest(out)
-            listed = [t for lv, t in b.headings if lv <= b.toc_depth]  # Why: 제목 수집은 항까지, 목차는 toc_depth까지
-            print(f"목차 쪽번호 {sum(t in numbers for t in listed)}/{len(listed)}건 기입 (근사 렌더러 기준)")
-        else:
-            print("WARN: rhwp 또는 pdftotext 부재로 목차 쪽번호 미기입")
+    print(toc_notice(b.toc_items, "hwpx"))
     print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)})")
 
 
-def toc_page_numbers(hwpx_path: str, headings: list[str], rhwp_opt: str | None) -> dict[str, int]:
-    if not shutil.which("pdftotext") or not (rhwp_opt or find_rhwp() or find_soffice()):
-        return {}
-    pdf = os.path.splitext(hwpx_path)[0] + ".toc.pdf"
-    engine = resolve_engine("auto", rhwp_opt)
-    work = render_copy(hwpx_path, strip_newnum=(engine == "soffice"))
-    try:
-        to_pdf(work, pdf, engine, rhwp_opt, text_as_paths=False)
-    except SystemExit:
-        os.remove(work)
-        return {}
-    os.remove(work)
-    txt = subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True).stdout
-    os.remove(pdf)
-    return match_toc_pages(txt.split("\f"), headings)
-
-
-def _toc_norm(t: str) -> str:
-    return re.sub(r"[\s.]+", "", t)  # 밴드는 번호와 제목을 다른 칸에 두므로 마침표도 무시
-
-
-CHAPTER_TOKEN_RE = re.compile(r"제\d+장|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]")   # 간지와 밴드에서 제목 사이에 끼어드는 장 번호
-TOC_TOP_LINES = 6   # 장 제목을 우선 찾는 쪽 머리 줄 수. 장은 새 쪽에서 시작하므로 쪽 머리에 제목이 옴
-TOC_TITLE_WRAP_LINES = 3   # 장 제목 1개가 걸치는 최대 줄 수. 간지의 긴 제목은 두 줄로 접히고 그 사이에 장 번호 줄이 끼어듦
-
-
-def toc_titles() -> set[str]:
-    """목차 쪽의 제목 줄(공백 제거 후 전체 일치). 목차, 표 목차, 그림 목차 라벨을 따름"""
-    return {_toc_norm(label(k)) for k in ("toc.title", "toc.tables", "toc.figures")} - {""}
-
-
-def chapter_token_re() -> re.Pattern:
-    """장 번호 표기. 기본 표기에 formats.chapter와 formats.chapter_label 덮어쓰기의 번호 부분({t} 앞)을 더함"""
-    pats = [CHAPTER_TOKEN_RE.pattern]
-    for k in ("chapter", "chapter_label"):
-        head = _toc_norm((label(f"formats.{k}") or "").split("{t}")[0])
-        if "{n}" in head or "{r}" in head:
-            pats.append(re.escape(head).replace(r"\{n\}", r"\d+").replace(r"\{r\}", "[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]"))
-    return re.compile("|".join(pats))
-
-
-def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[str, str]] | None = None,
-                    top_titles: set[str] | None = None) -> dict[str, int]:
-    """렌더링 PDF의 쪽별 텍스트에서 목차 항목의 본문 쪽번호(본문 첫 쪽 = 1)를 찾음
-    headings: 제목 문구. extras: (목차 항목 문구, 찾을 문구) 목록. 캡션은 번호를 빼고 닫는 괄호와 제목으로 찾음
-    top_titles: 쪽 머리에서 먼저 찾을 제목(장 제목). 본문 표에 같은 문구가 앞서 나와도 장 시작 쪽을 고름
-    Why: 근사 렌더러는 캡션 자동번호를 비워서 그림. 번호 없이도 찾도록 닫는 괄호 뒤 제목을 찾을 문구로 씀.
-    간지의 긴 장 제목은 두 줄로 접히고 pdftotext가 장 번호를 두 줄 사이에 끼워 넣으므로 장 번호를 지우고 찾음"""
-    norm = _toc_norm
-    chapter_re, titles = chapter_token_re(), toc_titles()
-
-    def clean(t: str) -> str:  # 렌더러가 "제 1장"처럼 글자 사이에 빈칸을 넣으므로 빈칸 제거 후 장 번호를 지움
-        return chapter_re.sub("", norm(t))
-
-    def is_title_page(page: str) -> bool:  # 본문 문장 속 "목차" 낱말은 제목 줄이 아니므로 제외
-        return any(norm(ln) in titles for ln in page.splitlines())
-    keys = [norm(t) for t in headings + [e for e, _ in extras or []]]
-
-    def entry_index(line: str) -> int | None:
-        return next((i for i, k in enumerate(keys) if k and line.startswith(k)), None)
-
-    def page_indexes(page: str) -> list[int | None]:
-        return [entry_index(ln) for ln in (norm(x) for x in page.splitlines()) if ln]
-    # 목차 구간: 첫 목차 제목 쪽부터 제목 쪽과 이어짐 쪽이 연속되는 곳까지
-    # 이어짐 쪽은 모든 줄이 목차 항목이고 첫 줄이 앞 쪽 마지막 항목보다 뒤의 항목인 쪽
-    # Why 순서 조건: 간지 쪽(장 제목 1줄)도 목차 항목 줄만 있는 쪽이라 순서로 구분
-    first = next((i for i, page in enumerate(pages) if is_title_page(page)), None)
-    body_start = 0
-    if first is not None:
-        i, last = first, -1
-        while i < len(pages):
-            idx = page_indexes(pages[i])
-            if is_title_page(pages[i]):
-                last = max([x for x in idx if x is not None] + [last])
-            elif idx and None not in idx and idx[0] > last:
-                last = max(idx)
-            else:
-                break
-            i += 1
-        body_start = i
-    top = top_titles or set()
-
-    def top_lines(page: str) -> list[str]:
-        return [x for x in page.splitlines() if x.strip()][:TOC_TOP_LINES]
-
-    def title_alone_at_top(page: str, key: str) -> bool:
-        # Why: 밴드와 간지의 장 제목은 줄을 단독으로 차지함. 표 셀 줄은 같은 행의 다른 열 글자와 한 줄에 추출됨.
-        # 부분 일치만 쓰면 쪽 머리 표 셀의 장 제목 문구를 장 시작으로 오판함(6차 시범 R 트랙 재현)
-        lines = top_lines(page)
-        return any(clean("".join(lines[i:j])) == key
-                   for i in range(len(lines)) for j in range(i + 1, min(i + TOC_TITLE_WRAP_LINES, len(lines)) + 1))
-    found: dict[str, int] = {}
-    for group in ([(h, h) for h in headings], extras or []):
-        pos = body_start
-        for entry, needle in group:
-            key = clean(needle)
-            if not key:
-                continue
-            hit = None
-            if entry in top:
-                hit = next((i for i in range(pos, len(pages)) if title_alone_at_top(pages[i], key)), None)
-            if entry in top and hit is None:  # 제목 줄이 다른 글자와 섞여 추출된 쪽은 종전의 부분 일치로 찾음
-                hit = next((i for i in range(pos, len(pages)) if key in clean("\n".join(top_lines(pages[i])))), None)
-            if hit is None:
-                hit = next((i for i in range(pos, len(pages)) if key in clean(pages[i])), None)
-            if hit is not None:
-                found[entry] = hit - body_start + 1
-                pos = hit
-    return found
+def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str, filled: int | None = None) -> str:
+    """build가 출력하는 목차 쪽번호 안내 1줄. filled는 docx에 근사값을 기록한 건수 (기록을 시도하지 않았으면 None)"""
+    refs = sum(1 for _, _, name in toc_items if name)
+    if not refs:
+        return f"목차 항목 {len(toc_items)}건 ({fmt}, 쪽번호 없음)" if toc_items else f"목차 없음 ({fmt})"
+    head = f"목차 항목 {len(toc_items)}건, 책갈피와 쪽 참조 {refs}건 ({fmt})."
+    if fmt == "hwpx":
+        return f"{head} 쪽번호는 자리 표시 값 '{toc_refs.PLACEHOLDER}'이며 한/글이 문서를 불러올 때 실제 쪽으로 계산"
+    if filled:
+        return f"{head} 쪽번호는 LibreOffice 근사값 {filled}건이며 Word에서 Ctrl+A 후 F9로 갱신"
+    return f"{head} 쪽번호는 자리 표시 값 '{toc_refs.PLACEHOLDER}'이며 Word에서 Ctrl+A 후 F9로 갱신 (LibreOffice 연동 부재로 근사값 미기록)"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1960,10 +1963,8 @@ def resolve_engine(engine: str, rhwp_opt: str | None) -> str:
     return engine
 
 
-def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_as_paths: bool = True) -> str:
-    """hwpx → PDF. engine: rhwp | soffice (auto는 resolve_engine으로 사전 확정). 사용한 엔진명을 반환.
-    text_as_paths=False: 글자를 path로 굳히지 않아 PDF에 텍스트 레이어가 남는다.
-    Why: 목차 쪽번호는 pdftotext로 제목의 쪽 위치를 읽어 산정한다. path 변환본은 추출 결과가 0자."""
+def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None) -> str:
+    """hwpx → PDF. engine: rhwp | soffice (auto는 resolve_engine으로 사전 확정). 사용한 엔진명을 반환."""
     rhwp = rhwp_opt or find_rhwp()
     soffice = find_soffice()
     engine = resolve_engine(engine, rhwp_opt)
@@ -1973,7 +1974,7 @@ def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_as_paths:
         if not rhwp_supports(rhwp, "export-pdf"):
             sys.exit("ERROR: 이 rhwp 버전에 export-pdf 명령이 없음: `rhwp --help`로 PDF 출력 명령을 확인하여 수동 실행")
         cmd = [rhwp, "export-pdf", src, "-o", pdf]
-        if text_as_paths and rhwp_supports(rhwp, "export-pdf", "--text-as-paths"):
+        if rhwp_supports(rhwp, "export-pdf", "--text-as-paths"):
             cmd.append("--text-as-paths")
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0 or not os.path.exists(pdf):
@@ -2165,14 +2166,13 @@ def main():
                    help="새 쪽 시작 단위: chapter=# 장마다(기본), section=# 장과 ## 절마다, none=붙여쓰기 (유저 택일)")
     b.add_argument("--long-table", default="engine", choices=["engine", "split"],
                    help="25행 초과 표: engine=한/글 엔진 분할+제목행 반복, split=청크별 표로 물리 분할 (유저 택일)")
-    b.add_argument("--toc", action="store_true", help="문서 앞에 장과 절의 정적 목차 삽입 (기본 OFF, 유저 요청 시)")
+    b.add_argument("--toc", action="store_true", help="문서 앞에 목차 삽입 (기본 OFF, 유저 요청 시). 쪽번호는 --page-number와 함께 켠 경우 책갈피와 쪽 참조로 기록")
     b.add_argument("--page-number", action="store_true", help="꼬리말 가운데 쪽번호 '- N -' (기본 OFF, 취합 시 충돌 방지)")
-    b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="목차 계위 깊이: 1=장, 2=절(기본), 3=소절 (유저 택일)")
+    b.add_argument("--toc-scope", help=f"목차 수록 범위 (쉼표 구분, 기본 {','.join(TOC_SCOPE_DEFAULT)}). 이 명령은 제목 항목(chapter, section, subsection, ganada)만 수록")
     b.add_argument("--cover", help='표지 (기본 OFF): "title=제목;subtitle=부제;date=YYYY. M.;org=기관명"')
     b.add_argument("--header", help='머리말 (기본 OFF): "텍스트;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="셀 병합: auto=선행 라벨 열 연속 동일값 + '^'(세로)·'<'(가로) 지시(기본), explicit=지시만, none=병합 없음")
-    b.add_argument("--rhwp", help="목차 쪽번호 산정에 쓸 rhwp 경로")
     b.add_argument("--numbered-square", action="store_true",
                    help="'□ 1. 제목' 처럼 숫자로 시작하는 □ 줄을 글머리 없는 숫자 헤더로 출력 (장 없는 문서용)")
     b.set_defaults(func=cmd_build)

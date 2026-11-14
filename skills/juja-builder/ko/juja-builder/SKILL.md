@@ -263,16 +263,18 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `check all 작업폴더 [--skip 점검,점검] [--skip-reason 사유]` | 산출 유형별 판정 일괄 실행(제안서는 위 판정 전부, 사전진단보고서와 기획보고서는 각 참조 파일의 점검 절). 05_점검기록.md 기록. 전부 PASS면 종료 코드 0. `--skip`은 지정 점검 생략(점검 절) |
 | `build 작업폴더 [산출 경로]` | 원고/*.md를 파일명 순으로 합본. 납품/{제안서, 사전진단보고서, 기획보고서}.hwpx와 .docx 조판(파일명은 라벨 output.*). 기본 스켈레톤은 실행마다 재생성. 두 형식을 함께 산출하면 문단 글자 순서를 대조하여 결과를 출력 |
 | `render 산출.hwpx 또는 산출.docx` | PDF와 페이지 PNG 산출 (`--engine auto\|rhwp\|soffice`, `--rhwp 경로`, `--outdir 폴더`. docx는 LibreOffice). 기본 산출 위치는 원본 옆. `--outdir`를 주면 PDF와 PNG를 그 폴더에 산출 |
+| `toc-static 제출파일 [--scope 항목,...\|all] [-o 산출]` | 산출 이후의 목차 정적화. 지정한 항목의 책갈피를 지우고 목차 쪽번호를 일반 글자로 바꾼 사본을 생성. `--scope`를 생략하면 항목 현황만 출력 (조판 절의 목차 정적화) |
 | `selftest 작업폴더` | 표본 원고의 hwpx와 docx 조판, 렌더링으로 렌더 경로를 판정. 산출은 작업폴더/_렌더시험/. 판정은 state.json checks.render와 checks.render_docx에 기록 (`--engine`, `--rhwp` 옵션은 render와 같음) |
 | `skeleton 양식.hwpx 스켈레톤.hwpx` | 발주처 지정 양식에서 스켈레톤과 프로파일 초안 추출 |
 | `python3 <SKILL>/scripts/extract_images.py 원본 출력폴더 [--min-px 64] [--min-kb 2]` | RFP와 유저 제출 문헌(pdf, hwpx, pptx, docx)에서 삽입 후보 이미지와 manifest.json 추출 |
 
-- build 옵션은 `--format hwpx|docx|both`(산출 형식, 기본 hwpx), `--page-break chapter|section|none`(기본 chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-depth 1|2|3`(기본 2), `--page-number`, `--cover`, `--header`, `--unify manual|auto`(표 폭 통일 방식, 기본 manual), `--theme navy|mono`(밴드 색 테마, 기본 navy), `--footnote-merge square|section|chapter|document`(출처 각주 통합, 기본 미적용), `--labels 파일.json`(문서 라벨, 조판 절의 문서 라벨). `--cover`와 `--header`의 값 형식은 `build --help`로 확인
+- build 옵션은 `--format hwpx|docx|both`(산출 형식, 기본 hwpx), `--page-break chapter|section|none`(기본 chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-scope 항목,...`(목차 수록 범위, 기본 chapter,section,table,figure), `--page-number`, `--cover`, `--header`, `--unify manual|auto`(표 폭 통일 방식, 기본 manual), `--theme navy|mono`(밴드 색 테마, 기본 navy), `--footnote-merge square|section|chapter|document`(출처 각주 통합, 기본 미적용), `--labels 파일.json`(문서 라벨, 조판 절의 문서 라벨). `--cover`와 `--header`의 값 형식은 `build --help`로 확인
     + `--title "문서 제목"`은 본문 첫 줄의 문서 제목(기획보고서. 간지를 켜면 생략). `--chapter-start N`은 첫 장 번호(사전진단보고서의 장 단위 산출)
     + `--divider on|off`는 장 간지. 기본값은 사전진단보고서 on, 제안서와 기획보고서 off
     + `--long-table`은 긴 표의 기본 처리 방식. 값은 착수 질의 답변으로 항상 지정
     + 장표 대상 표가 있는 원고에 `--long-table`을 지정하지 않으면 build가 중단. 표별 `(장표: )` 지시 줄은 `--long-table`보다 우선
     + `--footnote-merge`는 착수 질의에서 유저가 출처 각주 상속의 통합을 고른 경우에만 지정. 값은 유저가 고른 범위(square는 □, section은 절, chapter는 장, document는 문서 전체). 정의는 원고 계위 절
+    + `--toc-scope`는 착수 질의에서 받은 목차 수록 범위. 항목은 chapter(장), section(절), subsection(항), ganada(목), module, task, table, figure. 쉼표로 이어 지정. 정의는 조판 절
 - 목차, 쪽번호, 표지는 기본 OFF. 표지는 유저가 요청한 경우에만 ON. 목차와 쪽번호를 켜는 조건은 조판 절
 - build 린트의 `[쪽 나눔 HITL]`은 범용 조판기의 알림. 기본값 chapter는 유저가 쪽 나눔 변경을 요청한 경우에만 바꿈
 - 발주처 양식을 쓰면 `--profile 경로`와 `--skeleton 경로`를 함께 지정. 발주처 양식 조판은 hwpx 전용
@@ -299,6 +301,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 연구책임자 후보와 참여인력 후보
     + 자문위원회 운영 여부와 후보
     + 납품 형식. 산출 형식(hwpx 또는 docx 중 1개 권장. 둘 다는 산출 유형 절의 고지 후 허용), 발주처 양식 지정 여부, 분량 상한, 목차, 쪽번호, 표지의 삽입 여부. 목차와 쪽번호를 켜는 조건은 조판 절
+    + 목차 수록 범위. 목차를 넣는 경우에 질의. 기본은 장, 절, 표, 그림. 추가로 수록할 수 있는 항목의 예시로 항, 목, Module, Task를 제시. 표와 그림은 번호 캡션이 붙은 것만 수록(사전진단보고서). 질의에 조판 절의 책갈피 안내를 함께 제시
     + 밴드 색 테마. navy(네이비 블루, 기본) 또는 mono(검정과 회색)
     + PDF 동봉 여부. 기본은 미동봉. 질의에 근사 렌더링 안내를 함께 제시(렌더링 검수 절의 PDF 동봉)
     + 한 쪽을 넘는 표의 장표 처리 방식. engine(한/글이 쪽 경계에서 행 단위로 나눔) 또는 split(표를 여러 개로 물리 분할). 차이와 임의 결정 제한은 장표 처리 절
@@ -996,7 +999,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + 스타일 수치(글꼴, 크기, 굵기, 정렬, 여백, 줄 간격), 계위 기호, 밴드, 표(열 폭, 괘선, 머리글 채움, 병합, 셀 여백), 캡션, 그림, 각주, 머리말, 쪽번호, 목차가 hwpx와 같음
     + 계위 기호는 Word 글머리 기능으로 표시. 줄 간격은 한/글 퍼센트 값을 고정 간격으로 옮김. 빈칸 폭은 한/글 기준(글자 크기의 절반)에 맞춤
     + 두 형식을 함께 산출하면 build가 문단 글자 순서를 대조. `WARN: hwpx와 docx 문단 글자 불일치`는 조판 코드 결함 신호. 유저에게 보고. 원고 수정으로 WARN을 없애는 처리는 결함
-    + 한/글과 Word는 줄바꿈과 쪽 나눔의 계산 방식이 달라 줄 끝 위치와 쪽 경계가 일부 다름. 목차 쪽번호는 형식마다 자기 렌더링으로 산정
+    + 한/글과 Word는 줄바꿈과 쪽 나눔의 계산 방식이 달라 줄 끝 위치와 쪽 경계가 일부 다름. 목차 쪽번호는 책갈피의 쪽 참조이며 한/글과 Word가 각자 계산
 - 그림을 담는 투명 표의 폭은 그림 폭에 좌우 셀 여백을 더한 값. 그림이 셀 안 폭에 그대로 들어감
     + 표 폭 산정에 쓴 좌우 여백은 그림 셀에 직접 기록. 본문 폭을 넘는 그림은 같은 비율로 줄여 본문 폭에 맞춤
     + docx는 표 폭을 twip 단위로 올림하고 그림의 바깥 여백을 0으로 기록. 바깥 여백 기록이 없으면 LibreOffice가 좌우 0.125인치를 그림 폭에 더하여 그림 오른쪽을 자름
@@ -1028,8 +1031,34 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - build의 `--toc`(목차)와 `--page-number`(쪽번호)는 서로 다른 옵션. 둘 다 기본 OFF. 사전진단보고서의 기본값은 references/report.md 조판 절
     + 유저가 요청했거나 RFP 작성 규정이 명시 요구한 경우에만 켬. 켜는 근거(착수 질의 답변 또는 RFP 작성 규정)는 00_제안전략서.md 사업 기본조건의 작성 규정 행에 기록. 사전진단보고서는 00_진단서.md, 기획보고서는 00_기획설계.md의 기본 정보 표에 기록
     + RFP가 쪽번호만 요구한 경우 `--page-number`만 켬
-    + `--toc`를 켠 경우 렌더링 후 목차의 쪽번호 기입 건수를 전수 확인. 근사 렌더러가 장 제목 일부를 찾지 못하면 쪽번호가 빈 칸으로 남음. 쪽번호 기입은 `--page-number`를 함께 켠 경우에만 수행. build 로그의 `목차 쪽번호 n/m건 기입`과 목차 쪽 PNG를 함께 대조
-    + 제안서는 누락이 1건이라도 있으면 목차 해제 후 재조판. 목차 유지가 필요하면 한/글의 목차 갱신 필요 문구를 최종 보고에 기재. 사전진단보고서와 기획보고서의 처리는 report.md 조판 절
+    + 목차 쪽번호는 `--page-number`를 함께 켠 경우에만 기록. build 로그의 `목차 항목 n건, 책갈피와 쪽 참조 m건`에서 n이 수록 범위의 항목 수와 맞는지 확인하고 목차 쪽 PNG에서 항목 문구, 점선, 정렬을 확인
+- 목차 수록 범위는 `--toc-scope`로 지정. 기본은 장, 절, 표, 그림(`chapter,section,table,figure`)
+    + 추가할 수 있는 항목은 항(subsection), 목(ganada), Module(module), Task(task). 장, 절, 항, 목, Module, Task는 문서 순서대로 목차에 수록
+    + 표와 그림은 번호 캡션(`<표 1-1>`, `[그림 1-1]`)만 수록. 목차 뒤에 표 목차와 그림 목차가 새 쪽으로 이어짐. 캡션에 번호가 없는 제안서와 기획보고서는 표와 그림 항목이 생기지 않음
+    + 목차 항목의 왼쪽 여백은 장 0, 절 1500, 항과 Module 3000, 목과 Task 4500(HWPUNIT). Module과 Task의 문구는 원고 줄 그대로
+- 목차 쪽번호는 책갈피와 쪽 참조 필드로 기록. 쪽번호는 조판 엔진이 문서를 배치해야 나오는 값이므로 한/글과 Word가 계산한 값만 실제 쪽과 일치
+    + (책갈피 위치) 절, 항, 목은 제목 문단. 장, 간지, Module, Task는 밴드의 번호 칸 문단. 표와 그림은 hwpx에서 표 개체의 첫 셀 문단, docx에서 캡션 문단. 밴드와 표 안에 두어 밴드와 표를 옮기면 책갈피가 함께 이동
+    + (책갈피 이름) hwpx는 목차 항목 문구. `;` `?` `#`은 지우고 같은 문구가 다시 나오면 `(2)`부터 순번을 붙임. docx는 `toc_순번_문구`(글자, 숫자, 밑줄, 40자 이내)
+    + (hwpx 초기값) 쪽 참조의 저장값은 자리 표시 값 `?`. 한/글이 문서를 불러올 때 실제 쪽으로 다시 계산. 근사 렌더러는 저장값을 그대로 그리므로 검수 PNG와 PDF에는 `?`가 보임. 판정 대상에서 제외
+    + (docx 초기값) LibreOffice가 계산한 근사값을 기록. LibreOffice나 파이썬 연동(uno)이 없으면 `?`. Word는 문서를 열 때 쪽 참조를 다시 계산하지 않으며 전체 선택(Ctrl+A) 후 F9로 갱신
+    + (갱신 표식) docx 근사값 뒤에 폭 없는 문자(U+200B)를 붙임. Word가 필드를 갱신하면 표식이 사라지며 정적화가 이 표식으로 갱신 여부를 판별
+    + 한/글의 차례 만들기와 Word의 목차 필드는 쓰지 않음. Word가 목차 필드를 갱신하면 조판한 항목을 지우고 다시 만듦
+- (책갈피 안내) 목차를 넣는 과업은 착수 질의와 최종 보고에 아래 내용을 제시
+    + 쪽번호 있는 목차를 넣으면 수록 항목(제목 문단, 장 밴드와 간지 밴드, Module과 Task 밴드, 번호 캡션이 붙은 표와 그림)마다 책갈피가 붙고 목차 쪽번호가 그 책갈피를 따라감
+    + 책갈피는 화면과 인쇄물에 보이지 않음. 내용을 옮길 때 책갈피 조판부호도 함께 옮겨야 쪽번호 추적이 유지됨. 밴드와 표는 통째로 옮기면 책갈피가 함께 이동
+    + 쪽번호는 한/글이 문서를 불러올 때 자동으로 갱신. Word는 전체 선택(Ctrl+A) 후 F9로 갱신
+    + 산출물이 확정된 뒤 원하는 항목의 책갈피를 지우고 쪽번호를 일반 글자로 바꾸는 정적화를 요청할 수 있음
+    + 최종 보고에는 형식별 초기값(hwpx는 `?`, docx는 근사값)을 함께 기재
+- 목차 정적화는 파일 산출 이후 유저가 요청할 때만 수행하는 후처리. 착수 질의에는 넣지 않음
+    + (목적) 책갈피가 있으면 편집이 불편하므로 산출물이 확정된 뒤 유저가 고른 항목의 책갈피를 지우고 목차 쪽번호를 일반 글자로 바꿈
+    + (1 갱신 요청) 산출된 파일을 한/글이나 Word에서 한 번 열어 쪽번호를 갱신한 뒤 저장하여 다시 제출하도록 안내. 한/글은 불러오면 갱신되므로 그대로 저장. Word는 전체 선택(Ctrl+A) 후 F9를 누른 뒤 저장. 실제 쪽은 한/글과 Word만 계산하므로 build 산출물을 바로 정적화하면 자리 표시 값이나 근사값이 굳음
+    + (2 범위 확인) `toc-static 제출파일`로 항목 종류별 건수와 현재 쪽번호를 확인하고 정적화할 범위를 유저에게 받음. 범위는 항목 종류(chapter, section, subsection, ganada, module, task, table, figure)의 조합 또는 전체(all)
+    + (3 정적화) `toc-static 제출파일 --scope 항목,...|all [-o 산출]` 실행. 대상 항목의 쪽 참조를 일반 글자로 바꾸고 대상 책갈피를 지운 사본을 생성. 산출 경로를 생략하면 제출 파일 이름에 `_static`을 붙인 파일. 제출 파일은 바꾸지 않음
+    + (4 결과 전달) 출력의 정적화, 건너뜀, 유지 건수와 산출 경로를 유저에게 전달
+    + 대상이 아닌 항목의 책갈피와 쪽 참조는 그대로 남아 한/글과 Word에서 계속 갱신됨
+    + 쪽번호가 `?`이거나 갱신 전 근사값인 항목은 정적화하지 않고 `WARN:` 줄로 알림. 유저에게 갱신 요청을 다시 안내
+    + 항목 종류는 책갈피가 놓인 자리(캡션이 딸린 표 안, 밴드 칸)와 문단 스타일로 판별. 발주처 양식은 `--profile 프로파일.json`을 함께 지정. 판별하지 못한 책갈피는 other로 출력되며 all에 들지 않음(`--scope other`로 지정 가능)
+    + 유저가 편집기에서 직접 넣은 참조도 대상 책갈피를 가리키면 함께 일반 글자로 바뀜. 각주 번호 상호참조와 각주 통합용 책갈피는 바뀌지 않음. 한/글이 저장한 줄 배치 값은 그대로 둠
 - 발주처 양식은 `skeleton 양식.hwpx 스켈레톤.hwpx`로 추출. 프로파일 초안의 null 역할에 스타일명 기입 후 `build --profile 프로파일.json --skeleton 스켈레톤.hwpx` 실행
 
 ### 문서 라벨
@@ -1083,6 +1112,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - (근사 렌더링 안내) 착수 질의와 PDF를 동봉한 최종 보고에 아래 내용을 제시
     + PDF는 근사 렌더러가 그린 파일이므로 한/글과 Word의 표시와 다를 수 있음
     + hwpx의 PDF는 줄바꿈, 간격, 쪽 경계의 표시 결함이 포함될 가능성이 높음
+    + 쪽번호 있는 목차를 넣은 hwpx의 PDF에는 목차 쪽번호가 자리 표시 값 `?`로 남음
     + 제출용 PDF는 한/글 또는 Word에서 저장
 
 ## 실패 패턴

@@ -155,7 +155,7 @@
     + Whether web search is allowed. If not, figures outside the materials get the `[확인]` marker
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), page breaks (chapter, none), band color theme (navy by default, mono is black and gray)
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
-    + Whether to insert a table of contents, page numbers, a cover, and divider pages
+    + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added) and give the bookmark notice of the SKILL.md Typesetting section
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
@@ -219,7 +219,7 @@
 - The command is `build workspace --title "document title" --format format --page-break handling`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
 - For a document whose chapters are mostly half a page or less, use `--page-break none`. A new page per chapter makes large empty spaces
 - Table of contents, page numbers, cover, and divider pages are OFF by default. Turn them on by the kickoff answers
-- If table of contents page numbers are missing, follow the handling in the references/report.md Typesetting section. Keep the table of contents and state the missing entries and the refresh guidance in the final report
+- With the table of contents on, set its scope with `--toc-scope`. How the page numbers are recorded, the bookmark notice, and static conversion are in the SKILL.md Typesetting section
 - Turn on divider pages with `--divider on`. A page holding only the chapter number and title goes before each chapter. The typesetting method is in the SKILL.md Typesetting section
     + With divider pages on, the document title line of the body is skipped. The cover (`--cover`) carries the document title
 - Output files are 납품/기획보고서.hwpx and .docx

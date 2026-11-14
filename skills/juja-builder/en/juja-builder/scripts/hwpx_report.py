@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 """hwpx_report.py: a single CLI that typesets Markdown manuscripts on a skeleton extracted from a reference template.
 
-Commands
-  build     manuscript.md → document.hwpx      (python-hwpx 6.x, references skeleton styles)
-  skeleton  reference.hwpx → skeleton.hwpx     (an empty template keeping only header.xml and the body section secPr)
-  export    document.hwpx → manuscript.md      (text.markdown(rich=True))
-  fill      document.hwpx + values.json → document   (placeholder substitution, filling table label paths)
-  render    document.hwpx → PDF + PNG          (rhwp export-pdf + pdftoppm)
-  check     document.hwpx schema validation + rhwp verify expected values
 
 Verified environment: python-hwpx 6.3.0, lxml 6.0.2, pillow 12.1.1, python-docx 1.2.0, openpyxl 3.1.5,
 Python 3.12.3, poppler 24.02, rhwp v0.8.6. Always install the latest versions first. The record above is for tracing regression causes.
@@ -36,6 +29,8 @@ import uuid
 import warnings
 import zipfile
 from dataclasses import dataclass, field
+
+import toc_refs
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 # python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
@@ -68,7 +63,7 @@ PROFILES = {
         "table_pos": "표 위치", "table_cell": "표 본문", "table_cell_left": "표 본문 왼쪽",
         "table_title": "표 캡션", "unit": "단위", "source": "출처",
         "fig_pos": "그림 위치", "fig_title": "그림 캡션", "body": "바탕글",
-        "toc_chapter": "목차 장", "toc_section": "목차 절",  # optional: --toc static TOC
+        "toc_chapter": "목차 장", "toc_section": "목차 절",  # optional: --toc TOC
         "table_cell_bullet": "표 글머리", "table_cell_dash": "표 하이픈",  # optional: cell bullet lines
     },
     "flat": {  # documents without chapters (N.N / N.N.N / 가. / □ / ◦ / - / ․ / *)
@@ -126,6 +121,14 @@ TOC_TAB_POS = 48100             # right dotted tab position of TOC styles (skele
 TOC_SUB_INDENT = 3000           # TOC subsection indent (twice the section's 1500, conventional policy report value)
 TOC_UNIT_W = (700, 600)         # width of one weighted unit for estimating TOC tab width (chapter, section). 한/글 recalculates tabs, so this is for approximate renderer display
 TOC_LIST_INDENT = 0             # left margin of list of tables and list of figures entries (overrides the TOC section style margin)
+# TOC scope (build --toc-scope). Kinds: four heading levels, two band kinds, tables and figures with numbered captions. Same order as toc_refs.KINDS
+TOC_SCOPE_DEFAULT = ("chapter", "section", "table", "figure")
+TOC_LIST_KINDS = {"table": "toc.tables", "figure": "toc.figures"}   # kinds listed in a separate list → label key of the list title
+# left margin of TOC entries (HWPUNIT). Chapters use the TOC chapter style; the others use the TOC section style with this margin
+TOC_INDENT = {"chapter": 0, "section": 1500, "subsection": TOC_SUB_INDENT, "ganada": 4500, "module": TOC_SUB_INDENT, "task": 4500}
+BOOKMARK_DROP_CHARS = ";?#"     # characters removed from HWPX bookmark names. The page reference path uses them as separators and markers
+DOCX_BOOKMARK_MAX = 40          # length limit of Word bookmark names
+DOCX_BOOKMARK_NAME = "toc_{n:03d}_{slug}"   # names starting with an underscore are not used because Word treats them as hidden bookmarks
 CAPTION_GAP = 850               # gap between caption and table (python-hwpx default, the value most common in the real corpus)
 BLOCK_GAP_LINES = 0             # empty paragraphs before and after table and figure blocks. Spacing is handled by paragraph margins of the table position and figure position styles
 # empty body-style paragraphs before and after a long table with treat-as-character off. Such a table is placed apart from the text flow,
@@ -708,10 +711,75 @@ def split_table(e: Element, rows: list[list[str]]) -> list[Element]:
             for k, chunk in enumerate(chunks, 1)]
 
 
-def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, str]], toc_depth: int,
-                       lists: list[tuple[str, list[str]]] | None = None) -> list[dict]:
+def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
+    """Validates a comma-separated list of item kinds and returns it. option is the option name used in the error message"""
+    kinds = tuple(k.strip() for k in spec.split(",") if k.strip())
+    unknown = [k for k in kinds if k not in allowed]
+    if unknown or not kinds:
+        sys.exit(f"ERROR: {option} does not accept {unknown}. Allowed items: {', '.join(allowed)}")
+    return kinds
+
+
+def parse_toc_scope(spec: str | None) -> tuple[str, ...]:
+    """Value of build --toc-scope. The default scope when omitted"""
+    return parse_toc_kinds(spec, toc_refs.KINDS, "--toc-scope") if spec else TOC_SCOPE_DEFAULT
+
+
+def toc_bookmark_name(text: str) -> str:
+    """HWPX bookmark name. Removes only the separator characters of the page reference path from the TOC entry text"""
+    return "".join(ch for ch in text if ch not in BOOKMARK_DROP_CHARS).strip()
+
+
+def docx_bookmark_name(n: int, text: str) -> str:
+    """Word bookmark name (starts with a letter; letters, digits and underscores; length limit). The sequence number keeps names unique"""
+    slug = re.sub(r"[^0-9A-Za-z가-힣]+", "_", text).strip("_")
+    return DOCX_BOOKMARK_NAME.format(n=n, slug=slug)[:DOCX_BOOKMARK_MAX].rstrip("_")
+
+
+class BookmarkNames:
+    """Issues HWPX bookmark names. 한/글 does not register two bookmarks with the same name, so a repeated text gets a sequence number starting at (2)"""
+
+    def __init__(self):
+        self.used: set[str] = set()
+
+    def issue(self, text: str) -> str:
+        base = toc_bookmark_name(text)
+        name, n = base, 1
+        while name in self.used:
+            n += 1
+            name = f"{base}({n})"
+        self.used.add(name)
+        return name
+
+
+class TocMarks:
+    """Registers the items listed in the TOC. The hwpx and docx writers both inherit this and implement only the bookmark recording (add_bookmark)
+    toc_items: list of (kind, TOC text, bookmark name) in document order. A TOC without page numbers has None as the bookmark name"""
+
+    def toc_mark(self, kind: str, text: str, host):
+        """Registers an item that is in the TOC scope and attaches the bookmark that the page reference targets to the host paragraph
+        Why the page-number condition: bookmarks serve only as page reference targets, so a TOC without page numbers gets none"""
+        if not self.toc or kind not in self.toc_scope:
+            return
+        name = self.add_bookmark(host, text) if self.page_number else None
+        self.toc_items.append((kind, text, name))
+
+    def check_toc_styles(self):
+        """Forms without TOC styles skip the TOC. Decided before recording the body so that no unused bookmarks are attached"""
+        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
+            print("WARN: no TOC styles (toc_chapter, toc_section) in the profile, --toc skipped")
+            self.toc = False
+
+    def mark_caption(self, kind: str, label: dict, host):
+        """Registers a numbered caption in the list of tables or list of figures (label is the caption_label return value). Unnumbered captions are not listed"""
+        if label["num"] is not None:
+            self.toc_mark("table" if kind == "TABLE" else "figure", label["text"], host)
+
+
+def front_matter_items(cover: dict | None, toc: bool, toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
     """Paragraph order of the cover and TOC (including the list of tables and list of figures). The writer only records this list in order
-    kind: blank, cover(text, pt, bold), toc_title(text, page_break), toc_entry(level, text), list_entry(text)"""
+    kind: blank, cover(text, pt, bold), toc_title(text, page_break), toc_entry(item, text, name), list_entry(text, name)
+    item is the kind of the listed item; name is the bookmark name that the page reference targets (None for a TOC without page numbers)"""
     items: list[dict] = []
     if cover:
         items += [{"kind": "blank"}] * COVER_TOP_LINES
@@ -726,11 +794,13 @@ def front_matter_items(cover: dict | None, toc: bool, headings: list[tuple[int, 
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
         items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
-        items += [{"kind": "toc_entry", "level": lv, "text": text} for lv, text in headings if lv <= toc_depth]
-        for title, entries in lists or []:
+        items += [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
+                  for kind, text, name in toc_items if kind not in TOC_LIST_KINDS]
+        for list_kind, title_key in TOC_LIST_KINDS.items():
+            entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
             if entries:
-                items.append({"kind": "toc_title", "text": title, "page_break": True})
-                items += [{"kind": "list_entry", "text": t} for t in entries]
+                items.append({"kind": "toc_title", "text": label(title_key), "page_break": True})
+                items += [{"kind": "list_entry", "text": text, "name": name} for text, name in entries]
     return items
 
 
@@ -805,6 +875,33 @@ def table_pos_role(profile: dict, has_caption: bool) -> str:
     return "table_pos" if has_caption or not profile.get("fig_pos") else "fig_pos"
 
 
+def crossref_begin(field_id: str, command: str, ref_path: str, ref_type: str, content_type: str):
+    """Begin control of a cross-reference field (hp:ctrl). Recorded in the structure 한/글 saves
+    Parameter names and values are exactly as in files saved by 한/글 (including the "Fiexde" spelling). The trailing numbers of Command are stored values that denote the referenced content"""
+    import lxml.etree as ET
+    ctrl = ET.Element(f"{HP}ctrl")
+    begin = ET.SubElement(ctrl, f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                          name="", editable="0", dirty="0", zorder="-1", fieldid=CROSSREF_FIELD_ID)
+    params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+              ("stringParam", "Command", command), ("stringParam", "RefPath", ref_path),
+              ("stringParam", "RefType", ref_type), ("stringParam", "RefContentType", content_type),
+              ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+    holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+    for tag, name, value in params:
+        ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+    return ctrl
+
+
+def toc_page_ref(run, name: str, value: str):
+    """Records a bookmark page-number cross-reference in the run (field begin, stored value text, field end, in this order)
+    한/글 recalculates the stored value to the page of the bookmark when it loads the document"""
+    import lxml.etree as ET
+    field_id = new_object_id()
+    run.append(crossref_begin(field_id, f"?{name};6;0;0;0;", f"?{name};", "TARGET_BOOKMARK", "OBJECT_TYPE_PAGE"))
+    ET.SubElement(run, f"{HP}t").text = value
+    ET.SubElement(ET.SubElement(run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=CROSSREF_FIELD_ID)
+
+
 def new_object_id() -> str:
     """Instance id for objects and fields (a 31-bit random number, the range python-hwpx uses for tables and footnotes)"""
     return str(uuid.uuid4().int & 0x7FFFFFFF)
@@ -854,7 +951,7 @@ def cell_line_role(line: str, profile: dict) -> str | None:
     return None
 
 
-class Builder:
+class Builder(TocMarks):
     def __init__(self, skeleton: str, profile: dict, page_break: str = "chapter"):
         try:
             from hwpx import HwpxDocument
@@ -877,8 +974,9 @@ class Builder:
         self.styles = {s.name: (sid, s) for sid, s in self.doc.styles.items()}
         missing = [v for k, v in profile.items()
                    if k not in ("numbering", "chapter_format", "section_format", "subsection_format", "caption_prefix") and v is not None and v not in self.styles]
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[str, int] = {}
+        self.toc_items: list[tuple[str, str, str | None]] = []   # items listed in the TOC (TocMarks)
+        self.toc_scope = TOC_SCOPE_DEFAULT
+        self.bookmark_names = BookmarkNames()
         if missing:
             sys.exit(f"ERROR: styles missing from the skeleton {missing}: fix the profile or check the list with the `skeleton` command")
         self.n = {"chapter": 0, "section": 0, "subsection": 0, "ganada": 0, "table": 0, "figure": 0,
@@ -893,6 +991,7 @@ class Builder:
         self._warned: set[str] = set()
         self.numbered_square = False
         self.toc = False
+        self.page_number = False
         self.long_table_mode = "engine"
         self.after_block = False
         self.notes = NoteRegistry(None)   # source footnote merging. The build command replaces it when a scope is given
@@ -991,6 +1090,30 @@ class Builder:
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
 
+    def add_bookmark(self, p, text: str) -> str:
+        """Records a bookmark as the first control of the first run of the paragraph and returns its name. In a paragraph that holds a table it comes before the table
+        p is a paragraph object or a paragraph element (paragraphs of table cells and captions are passed as elements)"""
+        import lxml.etree as ET
+        pe = getattr(p, "element", p)
+        name = self.bookmark_names.issue(text)
+        run = pe.find(f"{HP}run")
+        if run is None:   # paragraph without text. Put the run before the stored line layout
+            run = ET.Element(f"{HP}run", charPrIDRef=str(self.refs("body")["char_pr_id_ref"]))
+            pe.insert(0, run)
+        ctrl = ET.Element(f"{HP}ctrl")
+        ET.SubElement(ctrl, f"{HP}bookmark", name=name)
+        run.insert(0, ctrl)
+        return name
+
+    def object_host(self, holder):
+        """Paragraph that receives the TOC bookmark of a table or figure object. For a table object it is the first paragraph of the first cell; otherwise the paragraph holding the object
+        Why the first cell: the bookmark sits inside the table object, so it moves with the table. A bookmark inside the caption paragraph makes rhwp draw the caption over the table
+        Call it after all cell text is recorded (recording cell text rebuilds the runs)"""
+        cell = next(holder.element.iter(f"{HP}tc"), None)
+        if cell is not None:
+            return next(cell.iter(f"{HP}p"))
+        return next(a for a in holder.element.iterancestors() if a.tag == f"{HP}p")
+
     def add_footnote(self, p, text: str):
         """Attach a footnote at the current end of the paragraph. Inside the source footnote merging scope, a footnote with the same text
         becomes a cross-reference to the first footnote number"""
@@ -1014,16 +1137,7 @@ class Builder:
         at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # before the stored line layout, after the last run
         field_id = new_object_id()
         begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
-        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
-                              name="", editable="0", dirty="0", zorder="-1", fieldid=CROSSREF_FIELD_ID)
-        # parameter names and values exactly as 한/글 saves them (including the "Fiexde" spelling). The numbers after the id in Command are the stored value for a footnote number reference
-        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
-                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
-                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
-                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
-        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
-        for tag, name, value in params:
-            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        begin_run.append(crossref_begin(field_id, f"?#{inst_id};3;1;0;0;", f"?#{inst_id};", "TARGET_FOOTNOTE", "OBJECT_TYPE_NUMBER"))
         sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
         ET.SubElement(sup_run, f"{HP}t").text = number
         ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=CROSSREF_FIELD_ID)
@@ -1139,11 +1253,8 @@ class Builder:
                 p.add_run(text, char_pr_id_ref=cp or str(body_ref["char_pr_id_ref"]))
             s0.element.append(p.element)  # add_paragraph appends to the last section, so move it to the front section
             return p
-        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-            print("WARN: no TOC styles (toc_chapter, toc_section) in the profile, --toc skipped")
-            self.toc = False
-        sub_pp = list_pp = None
-        for it in front_matter_items(cover, self.toc, self.headings, getattr(self, "toc_depth", 2), self.toc_lists()):
+        indent_pp: dict[int, str] = {}   # left margin → paragraph shape derived from the TOC section style
+        for it in front_matter_items(cover, self.toc, self.toc_items):
             kind = it["kind"]
             if kind == "blank":
                 front()
@@ -1154,34 +1265,28 @@ class Builder:
                 front(it["text"], str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
                       pageBreak="1" if it["page_break"] else "0")
             else:  # toc_entry, list_entry
-                lv = it.get("level", 2)
+                item = it.get("item")
                 text = it["text"]
-                role = "toc_chapter" if lv == 1 else "toc_section"
-                r = self.refs(role)
-                pp = str(r["para_pr_id_ref"])
-                left = TOC_SUB_INDENT if lv >= 3 else (0 if lv == 1 else 1500)
-                if kind == "list_entry":
-                    if list_pp is None:
-                        list_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": TOC_LIST_INDENT})
-                    pp, left = list_pp, TOC_LIST_INDENT
-                elif lv >= 3:
-                    if sub_pp is None:
-                        sub_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": TOC_SUB_INDENT})
-                    pp = sub_pp
-                p = front(text, str(r["char_pr_id_ref"]), pp)
+                r = self.refs("toc_chapter" if item == "chapter" else "toc_section")
+                pp, cp = str(r["para_pr_id_ref"]), str(r["char_pr_id_ref"])
+                left = TOC_LIST_INDENT if kind == "list_entry" else TOC_INDENT[item]
+                if kind == "list_entry" or item not in ("chapter", "section"):   # chapters and sections keep the margin of the style
+                    if left not in indent_pp:
+                        indent_pp[left] = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": left})
+                    pp = indent_pp[left]
+                p = front(text, cp, pp)
                 p.element.set("styleIDRef", str(r["style_id_ref"]))
-                num = self.toc_numbers.get(text)
-                if num:
+                if it["name"]:   # entry text, right dotted tab, page reference, in this order
                     tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
-                    unit = TOC_UNIT_W[0] if lv == 1 else TOC_UNIT_W[1]
-                    width = max(TOC_TAB_POS - left - _weighted_len(text) * unit - len(str(num)) * unit, 1000)
-                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2").tail = str(num)
+                    unit = TOC_UNIT_W[0] if item == "chapter" else TOC_UNIT_W[1]
+                    width = max(TOC_TAB_POS - left - _weighted_len(text) * unit - len(toc_refs.PLACEHOLDER) * unit, 1000)
+                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2")
+                    runs = p.element.findall(f"{HP}run")
+                    ref_run = ET.Element(f"{HP}run", charPrIDRef=cp)
+                    runs[-1].addnext(ref_run)
+                    toc_page_ref(ref_run, it["name"], toc_refs.PLACEHOLDER)
         for sec in (s0, s1):
             sec.mark_dirty() if hasattr(sec, "mark_dirty") else None
-
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        """List of tables and list of figures (title, entry list). The base typesetter has no lists"""
-        return []
 
     def set_header(self, spec: str | None):
         """Header (OFF by default). "text;align=LEFT|CENTER|RIGHT". Applied only to body sections.
@@ -1261,7 +1366,7 @@ class Builder:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
     def attach_caption(self, holder, kind: str, text: str, side: str, width: int):
-        """Object-attached caption (the 한/글 caption feature). The number is an autoNum field and restarts at the start of a chapter."""
+        """Object-attached caption (the 한/글 caption feature). The number is an autoNum field and restarts at the start of a chapter. Returns the caption paragraph"""
         role = "table_title" if kind == "TABLE" else "fig_title"
         r = self.refs(role)
         cap = holder.set_caption("", side=side, width=width, gap=CAPTION_GAP, char_pr_id_ref=r["char_pr_id_ref"])
@@ -1278,6 +1383,7 @@ class Builder:
         an = ET.SubElement(ET.SubElement(run.element, f"{HP}ctrl"), f"{HP}autoNum", num="1", numType=kind)
         ET.SubElement(an, f"{HP}autoNumFormat", type="DIGIT", userChar="", prefixChar="", suffixChar="", supscript="0")
         cp.add_run(close_b + text, char_pr_id_ref=r["char_pr_id_ref"])
+        return cp
 
     # ── Heading levels ───────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
@@ -1306,8 +1412,7 @@ class Builder:
             self.n["ganada"] += 1
             label = f"{letter_label(self.n['ganada'])} {text}"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
-        if level <= 3:
-            self.headings.append((level, label))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):  # restart from <표 N-1> per chapter
             p.add_new_num(kind="TABLE", number=1)
             p.add_new_num(kind="PICTURE", number=1)
@@ -1480,6 +1585,7 @@ class Builder:
 
     # ── Run ────────────────────────────────────────────────────────────
     def build(self, elems: list[Element], footnotes: dict, out: str):
+        self.check_toc_styles()
         skip = 0
         for idx, e in enumerate(elems):
             if skip:
@@ -1574,144 +1680,34 @@ def cmd_build(a):
     for msg in lint(elems):
         print("LINT:", msg)
     out = a.output or os.path.splitext(a.input)[0] + ".hwpx"
-    def make(numbers=None):
-        b = Builder(skeleton, profile, page_break=a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc = a.toc
-        b.page_number = a.page_number
-        b.toc_depth = a.toc_depth
-        b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
+    b = Builder(skeleton, profile, page_break=a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc = a.toc
+    b.page_number = a.page_number
+    b.toc_scope = parse_toc_scope(a.toc_scope)
+    b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.build(elems, footnotes, out)
     fixed = repair_manifest(out)
     if fixed:
         print(f"WARN: {fixed} images not registered in the manifest were corrected automatically (checking the python-hwpx version is recommended)")
-    if a.toc and a.page_number:  # pass 2: find the page positions of titles by rendering and fill them into the TOC (approximate, finalized in 한/글)
-        numbers = toc_page_numbers(out, [t for _, t in b.headings], a.rhwp)
-        if numbers:
-            make(numbers)
-            repair_manifest(out)
-            listed = [t for lv, t in b.headings if lv <= b.toc_depth]  # Why: titles are collected down to subsections, the TOC down to toc_depth
-            print(f"TOC page numbers filled {sum(t in numbers for t in listed)}/{len(listed)} (approximate renderer)")
-        else:
-            print("WARN: TOC page numbers not filled because rhwp or pdftotext is missing")
+    print(toc_notice(b.toc_items, "hwpx"))
     print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)})")
 
 
-def toc_page_numbers(hwpx_path: str, headings: list[str], rhwp_opt: str | None) -> dict[str, int]:
-    if not shutil.which("pdftotext") or not (rhwp_opt or find_rhwp() or find_soffice()):
-        return {}
-    pdf = os.path.splitext(hwpx_path)[0] + ".toc.pdf"
-    engine = resolve_engine("auto", rhwp_opt)
-    work = render_copy(hwpx_path, strip_newnum=(engine == "soffice"))
-    try:
-        to_pdf(work, pdf, engine, rhwp_opt, text_as_paths=False)
-    except SystemExit:
-        os.remove(work)
-        return {}
-    os.remove(work)
-    txt = subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True).stdout
-    os.remove(pdf)
-    return match_toc_pages(txt.split("\f"), headings)
-
-
-def _toc_norm(t: str) -> str:
-    return re.sub(r"[\s.]+", "", t)  # bands put the number and title in different cells, so periods are ignored too
-
-
-CHAPTER_TOKEN_RE = re.compile(r"제\d+장|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]")   # chapter numbers that intrude between titles on divider pages and bands
-TOC_TOP_LINES = 6   # number of top-of-page lines searched first for chapter titles. Chapters start on a new page, so the title sits at the top
-TOC_TITLE_WRAP_LINES = 3   # maximum lines one chapter title spans. A long divider title wraps to two lines with the chapter number line between them
-
-
-def toc_titles() -> set[str]:
-    """Title lines of TOC pages (full match after removing spaces). Follows the labels of the TOC, list of tables, and list of figures"""
-    return {_toc_norm(label(k)) for k in ("toc.title", "toc.tables", "toc.figures")} - {""}
-
-
-def chapter_token_re() -> re.Pattern:
-    """Chapter number notation. Adds the number part (before {t}) of formats.chapter and formats.chapter_label overrides to the default notation"""
-    pats = [CHAPTER_TOKEN_RE.pattern]
-    for k in ("chapter", "chapter_label"):
-        head = _toc_norm((label(f"formats.{k}") or "").split("{t}")[0])
-        if "{n}" in head or "{r}" in head:
-            pats.append(re.escape(head).replace(r"\{n\}", r"\d+").replace(r"\{r\}", "[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]"))
-    return re.compile("|".join(pats))
-
-
-def match_toc_pages(pages: list[str], headings: list[str], extras: list[tuple[str, str]] | None = None,
-                    top_titles: set[str] | None = None) -> dict[str, int]:
-    """Find the body page number (first body page = 1) of TOC entries in the per-page text of the rendered PDF
-    headings: title text. extras: list of (TOC entry text, text to search). Captions are searched without the number, by the closing bracket and title
-    top_titles: titles searched first at the top of pages (chapter titles). Picks the chapter start page even if the same text appears earlier in a body table
-    Why: approximate renderers draw automatic caption numbers blank. The title after the closing bracket is used as the search text so it is found without the number.
-    Long chapter titles on divider pages fold into two lines and pdftotext puts the chapter number between them, so the chapter number is removed before searching"""
-    norm = _toc_norm
-    chapter_re, titles = chapter_token_re(), toc_titles()
-
-    def clean(t: str) -> str:  # renderers insert spaces between characters as in "제 1장", so spaces are removed and then the chapter number
-        return chapter_re.sub("", norm(t))
-
-    def is_title_page(page: str) -> bool:  # the word "목차" inside body sentences is not a title line, so it is excluded
-        return any(norm(ln) in titles for ln in page.splitlines())
-    keys = [norm(t) for t in headings + [e for e, _ in extras or []]]
-
-    def entry_index(line: str) -> int | None:
-        return next((i for i, k in enumerate(keys) if k and line.startswith(k)), None)
-
-    def page_indexes(page: str) -> list[int | None]:
-        return [entry_index(ln) for ln in (norm(x) for x in page.splitlines()) if ln]
-    # TOC span: from the first TOC title page through the consecutive title pages and continuation pages
-    # a continuation page is one where every line is a TOC entry and the first line is an entry after the last entry of the previous page
-    # Why the order condition: divider pages (one chapter title line) are also pages with only TOC entry lines, so order distinguishes them
-    first = next((i for i, page in enumerate(pages) if is_title_page(page)), None)
-    body_start = 0
-    if first is not None:
-        i, last = first, -1
-        while i < len(pages):
-            idx = page_indexes(pages[i])
-            if is_title_page(pages[i]):
-                last = max([x for x in idx if x is not None] + [last])
-            elif idx and None not in idx and idx[0] > last:
-                last = max(idx)
-            else:
-                break
-            i += 1
-        body_start = i
-    top = top_titles or set()
-
-    def top_lines(page: str) -> list[str]:
-        return [x for x in page.splitlines() if x.strip()][:TOC_TOP_LINES]
-
-    def title_alone_at_top(page: str, key: str) -> bool:
-        # Why: band and divider chapter titles occupy their line alone. A table cell line is extracted together with the other
-        # cells of the same row. A substring match alone mistakes a chapter-title phrase in a top-of-page table cell for the chapter start (reproduced in trial 6, R tracks)
-        lines = top_lines(page)
-        return any(clean("".join(lines[i:j])) == key
-                   for i in range(len(lines)) for j in range(i + 1, min(i + TOC_TITLE_WRAP_LINES, len(lines)) + 1))
-    found: dict[str, int] = {}
-    for group in ([(h, h) for h in headings], extras or []):
-        pos = body_start
-        for entry, needle in group:
-            key = clean(needle)
-            if not key:
-                continue
-            hit = None
-            if entry in top:
-                hit = next((i for i in range(pos, len(pages)) if title_alone_at_top(pages[i], key)), None)
-            if entry in top and hit is None:  # a page whose title line was extracted mixed with other text falls back to the previous substring match
-                hit = next((i for i in range(pos, len(pages)) if key in clean("\n".join(top_lines(pages[i])))), None)
-            if hit is None:
-                hit = next((i for i in range(pos, len(pages)) if key in clean(pages[i])), None)
-            if hit is not None:
-                found[entry] = hit - body_start + 1
-                pos = hit
-    return found
+def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str, filled: int | None = None) -> str:
+    """One-line notice about TOC page numbers that build prints. filled is the number of approximations recorded in the docx (None when no recording was attempted)"""
+    refs = sum(1 for _, _, name in toc_items if name)
+    if not refs:
+        return f"{len(toc_items)} TOC entries ({fmt}, no page numbers)" if toc_items else f"no TOC ({fmt})"
+    head = f"{len(toc_items)} TOC entries, {refs} bookmarks and page references ({fmt})."
+    if fmt == "hwpx":
+        return f"{head} Page numbers hold the placeholder '{toc_refs.PLACEHOLDER}'; 한/글 calculates the real pages when it loads the document"
+    if filled:
+        return f"{head} Page numbers hold {filled} LibreOffice approximations; update them in Word with Ctrl+A then F9"
+    return f"{head} Page numbers hold the placeholder '{toc_refs.PLACEHOLDER}'; update them in Word with Ctrl+A then F9 (no approximations: LibreOffice bridge missing)"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1963,10 +1959,8 @@ def resolve_engine(engine: str, rhwp_opt: str | None) -> str:
     return engine
 
 
-def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_as_paths: bool = True) -> str:
-    """hwpx → PDF. engine: rhwp | soffice (auto is settled beforehand by resolve_engine). Returns the name of the engine used.
-    text_as_paths=False: characters are not frozen into paths, so the PDF keeps a text layer.
-    Why: TOC page numbers are computed by reading the page positions of titles with pdftotext. A path conversion yields 0 characters."""
+def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None) -> str:
+    """hwpx → PDF. engine: rhwp | soffice (auto is settled beforehand by resolve_engine). Returns the name of the engine used."""
     rhwp = rhwp_opt or find_rhwp()
     soffice = find_soffice()
     engine = resolve_engine(engine, rhwp_opt)
@@ -1976,7 +1970,7 @@ def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_as_paths:
         if not rhwp_supports(rhwp, "export-pdf"):
             sys.exit("ERROR: this rhwp version has no export-pdf command: find the PDF output command in `rhwp --help` and run it manually")
         cmd = [rhwp, "export-pdf", src, "-o", pdf]
-        if text_as_paths and rhwp_supports(rhwp, "export-pdf", "--text-as-paths"):
+        if rhwp_supports(rhwp, "export-pdf", "--text-as-paths"):
             cmd.append("--text-as-paths")
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0 or not os.path.exists(pdf):
@@ -2168,14 +2162,13 @@ def main():
                    help="new page unit: chapter=every # chapter (default), section=every # chapter and ## section, none=continuous (user's choice)")
     b.add_argument("--long-table", default="engine", choices=["engine", "split"],
                    help="tables over 25 rows: engine=한/글 engine split + header row repetition, split=physical split into chunk tables (user's choice)")
-    b.add_argument("--toc", action="store_true", help="insert a static TOC of chapters and sections before the document (default OFF, on user request)")
+    b.add_argument("--toc", action="store_true", help="insert a TOC before the document (default OFF, on user request). Page numbers are recorded as bookmarks and page references when --page-number is also on")
     b.add_argument("--page-number", action="store_true", help="page number '- N -' centered in the footer (default OFF, prevents conflicts when combining)")
-    b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="TOC level depth: 1=chapter, 2=section (default), 3=subsection (user's choice)")
+    b.add_argument("--toc-scope", help=f"TOC scope (comma-separated, default {','.join(TOC_SCOPE_DEFAULT)}). This command lists heading items only (chapter, section, subsection, ganada)")
     b.add_argument("--cover", help='cover (default OFF): "title=title;subtitle=subtitle;date=YYYY. M.;org=organization"')
     b.add_argument("--header", help='header (default OFF): "text;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="cell merges: auto=consecutive equal values in leading label columns + '^' (vertical) and '<' (horizontal) instructions (default), explicit=instructions only, none=no merges")
-    b.add_argument("--rhwp", help="rhwp path used for computing TOC page numbers")
     b.add_argument("--numbered-square", action="store_true",
                    help="output □ lines that start with a number, like '□ 1. title', as numeric headings without bullets (for documents without chapters)")
     b.set_defaults(func=cmd_build)
