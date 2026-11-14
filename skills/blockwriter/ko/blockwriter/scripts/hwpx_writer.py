@@ -664,16 +664,16 @@ class Builder(M.TocMarks):
 
     # ── 표 ──────────────────────────────────────────────────────────────
     def table(self, e: M.Element):
-        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
-            for sub in M.split_long_table(e):   # 물리 분할: 청크마다 제목행 재부착
-                self.table(sub)
-            return
         plan = M.table_plan(e, self.merge_mode)
         rows, hdr, aligns = plan["rows"], plan["hdr"], plan["aligns"]
         nrow, ncol = len(rows), len(rows[0])
         fit = e.data.get("fit")
         font = self._cell_font(fit)
-        widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        widths = e.data.get("split_widths") or M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
+            for sub in M.split_long_table(e, widths):   # 물리 분할: 청크마다 제목행 재부착, 열 폭은 표 전체 기준
+                self.table(sub)
+            return
         table_w = sum(widths)
         self.gap()
         r = self._centered_refs(M.table_pos_role(bool(e.text), bool(self.p.get("fig_pos"))))
@@ -927,8 +927,11 @@ def cell_sides(c0: int, c1: int, ncol: int) -> list[str]:
 
 
 def parse_header_spec(spec: str) -> tuple[str, str]:
+    """머리말 문구와 정렬값. Why 정렬값 검증: 문서에 없는 값의 처리가 형식마다 달라서(HWPX는 다른 정렬로 대체, DOCX는 트레이스백) 두 형식 모두 같은 오류로 중단"""
     parts = spec.split(";")
     align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+    if align not in C.HEADER_ALIGNS:
+        sys.exit(msg("err_header_align", value=align, allowed="|".join(C.HEADER_ALIGNS)))
     return parts[0].strip(), align
 
 

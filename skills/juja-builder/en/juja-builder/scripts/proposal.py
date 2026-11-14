@@ -398,8 +398,8 @@ def estimate_table_lines(rows: list[list[str]]) -> int:
     return lines
 
 
-def lint(elems: list[Element]) -> list[str]:
-    out = lib.lint(elems) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems)
+def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
+    out = lib.lint(elems, long_table) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems, long_table)
     for e in elems:
         if e.kind != "table" or e.data.get("long_spec"):
             continue
@@ -620,14 +620,18 @@ class ProposalLayout:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            if e.kind == "note" and lib.SOURCE_RE.match(e.text):
+                e.kind = "source"   # a `※ 출처:` line after body text is a source line too. Body sources are footnotes, so it moves like a `출처:` line
             self.notes.enter(e.kind, e.level)
             self.fit = e.data.get("fit")
             if e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined
                 e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
+                self.last_para = None   # cut the link so a source line after a heading or band does not become a footnote of the previous section's paragraph
             elif e.kind == "band":
                 self.band(e)
+                self.last_para = None
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 self.last_para = self.para(e.kind, e.text, footnotes)
             elif e.kind == "unit":
@@ -1912,6 +1916,8 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         elif e.kind == "square":
             cur_sq = {"name": e.text[:30], "title": e.text, "circle": 0, "evidence": 0, "chars": len(e.text), "block_first": False}
             squares.append(cur_sq)
+        elif e.kind == "note" and lib.SOURCE_RE.match(e.text):
+            continue   # a `※ 출처:` line carries bibliographic data like a `출처:` line. Left out of the ※ line cap, evidence lines, and character counts
         elif e.kind in ("circle", "dash", "dot", "note"):
             if len(e.text) > LINE_MAX[e.kind]:
                 warns.append(f"{e.kind} item {len(e.text)} characters ({'1-line' if e.kind == 'note' else '2-line'} cap {LINE_MAX[e.kind]} characters). Split the sentence and add a level, or convert to a table: {e.text[:24]}")
@@ -2179,7 +2185,7 @@ def cmd_build(a):
     if a.toc_scope and profile.get("caption_prefix") is None and set(toc_scope) & set(lib.TOC_LIST_KINDS):
         print("NOTE: captions in this profile have no numbers, so tables and figures are not listed in the TOC (only numbered captions are listed)")
     elems, footnotes = parse_markdown(src)
-    msgs = lint(elems)
+    msgs = lint(elems, a.long_table)
     for msg in msgs:
         print("LINT:", msg)
     if a.long_table is None and any("[long table HITL]" in m for m in msgs):
@@ -2507,7 +2513,7 @@ def main():
     p = sub.add_parser("figure", help="deck page → diagram PNG for insertion (발표자료/figures)")
     p.add_argument("work")
     p.add_argument("page", type=int)
-    p.add_argument("--grid", action="store_true", help="create only a 10% grid PNG for reading crop values")
+    p.add_argument("--grid", action="store_true", help="create only a 10%% grid PNG for reading crop values")
     p.add_argument("--crop", help="left,top,right,bottom percentages (e.g. 4,28,97,96)")
     p.add_argument("--name", help="file name suffix")
     p.add_argument("--no-trim", action="store_true", help="turn off automatic removal of outer margins")
@@ -2541,7 +2547,7 @@ def main():
                                        f"Items: {', '.join(toc_refs.KINDS)}. table and figure list numbered captions only")
     p.add_argument("--page-number", action="store_true", help="footer page numbers (default OFF)")
     p.add_argument("--cover", help='cover: "title=title;subtitle=subtitle;date=YYYY. M.;org=organization"')
-    p.add_argument("--header", help='header: "text;align=RIGHT"')
+    p.add_argument("--header", help='header: "text;align=LEFT|CENTER|RIGHT" (RIGHT by default)')
     p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
                    help="line layout of table and figure source rows (kickoff answer): auto=lines as written (default), break=one line per source, inline=joined into one line")
     p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),

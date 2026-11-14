@@ -497,15 +497,15 @@ class DocxBuilder(M.TocMarks):
 
     # ── Tables ─────────────────────────────────────────────────────────────
     def table(self, e: M.Element):
-        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
-            for sub_e in M.split_long_table(e):
-                self.table(sub_e)
-            return
         plan = M.table_plan(e, self.merge_mode)
         rows, hdr, aligns = plan["rows"], plan["hdr"], plan["aligns"]
         nrow, ncol = len(rows), len(rows[0])
         font = self._cell_font(self.fit)
-        widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        widths = e.data.get("split_widths") or M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
+            for sub_e in M.split_long_table(e, widths):
+                self.table(sub_e)
+            return
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
         pos = self.form.style(M.table_pos_role(bool(e.text), self.form.style("fig_pos") is not None))

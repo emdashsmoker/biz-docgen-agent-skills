@@ -140,6 +140,7 @@ COVER_SUB_PT = 16
 COVER_DATE_PT = 14
 COVER_ORG_PT = 16
 COVER_GAP_LINES = 14            # 일자와 기관 사이 빈 줄 수
+HEADER_ALIGNS = ("LEFT", "CENTER", "RIGHT")   # 머리말 정렬값 (build --header의 align)
 from form import TOC_TAB_POS  # noqa: E402  목차 쪽번호 오른쪽 점선 탭 위치 (양식 정의가 기준)
 TOC_SECTION_INDENT = 1500       # 목차 절 들여쓰기
 TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기
@@ -338,6 +339,9 @@ MESSAGES = {
         "en": "ERROR: {option} does not accept {items}. Allowed items: {allowed}"},
     "err_toc_scope_alone": {
         "ko": "ERROR: --toc-scope는 --toc와 함께 지정", "en": "ERROR: pass --toc-scope together with --toc"},
+    "err_header_align": {
+        "ko": "ERROR: --header의 align에 쓸 수 없는 값 '{value}'. 쓸 수 있는 값: {allowed}",
+        "en": "ERROR: align in --header does not accept '{value}'. Allowed values: {allowed}"},
     "static_state_updated": {"ko": "갱신됨", "en": "updated"},
     "static_state_placeholder": {"ko": "자리 표시 값", "en": "placeholder"},
     "static_counts": {"ko": "항목 종류별 건수: {counts}", "en": "Items by kind: {counts}"},

@@ -97,13 +97,14 @@ build options
 - (`--toc`) Inserts a table of contents at the front. Default OFF
     - (`--toc-scope item,...`) TOC scope. Default `chapter,section,table,figure` (chapters, sections, tables, figures). The items that can be added are `subsection` and `ganada` (가나다 headings). Pass the answer received in step 1
     - `table` and `figure` are tables and figures that have captions. A list of tables and a list of figures follow the TOC, each on a new page
+    - A scope with no heading items (such as `table,figure`) has no page with the TOC title alone. The list of tables or the list of figures takes the first page
     - Entries are the text, a dotted tab, and the page number. Page numbers are written only when `--page-number` is also given
     - A TOC with page numbers attaches a bookmark to every listed item and writes each page number as a page reference field to that bookmark (TOC section of references/layout.md)
     - Forms without TOC styles (including flat) skip the TOC with a warning
 - (`--cover "title=title;subtitle=subtitle;date=date;org=organization"`) Cover page. Default OFF. Title 24pt bold, subtitle 16pt, date 14pt, organization 16pt bold, centered
     - If a long title risks pushing the cover past one page, adjust only the cover values in config.py (the blank line counts and font sizes whose names start with COVER_)
 - The cover and TOC go in a front section and the body starts a new section. Body page numbers start at 1
-- (`--header "text;align=LEFT|CENTER|RIGHT"`) Page header. Default OFF. Alignment defaults to right. Applies only to the body section
+- (`--header "text;align=LEFT|CENTER|RIGHT"`) Page header. Default OFF. Alignment defaults to right. Applies only to the body section. build stops with an ERROR on any other alignment value
 - (`--skeleton skeleton.hwpx`) Skeleton extracted from a user form (HWPX only)
 - (`--labels labels.json`) Label file for a document in another language (Labels section below). Default OFF (Korean labels)
 

@@ -581,11 +581,11 @@ class DocxBuilder(lib.TocMarks):
     def table(self, e: lib.Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
         nrow, ncol = len(rows), len(rows[0])
-        widths = lib.calc_col_widths(rows, self.table_max_w)
+        widths = e.data.get("split_widths") or lib.calc_col_widths(rows, self.table_max_w)
         aligns = lib.col_aligns(rows, e.data["aligns"])
         hdr = lib.header_rows(rows)
         if nrow > lib.LONG_TABLE_ROWS and self.long_table_mode == "split":
-            for sub in lib.split_table(e, rows):
+            for sub in lib.split_table(e, rows, widths):
                 self.table(sub)
             return
         self.gap()
@@ -811,9 +811,7 @@ class DocxBuilder(lib.TocMarks):
     def set_header(self, spec: str | None):
         if not spec:
             return
-        parts = spec.split(";")
-        text = parts[0].strip()
-        align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+        text, align = lib.parse_header_spec(spec)
         header = self._first_body_section().header
         header.is_linked_to_previous = False
         p = header.paragraphs[0]
