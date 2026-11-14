@@ -147,11 +147,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 
 ## Kickoff question items
 
-- For a choice item, present every choice with the default marked "(default)"
-    + (Reason) The user chooses only among the choices the question shows
+- For each choice item, present every choice with the default marked "(default)"
+    + (Reason) The user chooses only among the choices the question shows. An item that shows only its default hides the other choices from the user
+    + (Many items) Present all choices for every choice item, however many items the kickoff questions hold. An item with a recommended default still shows its other choices
     + (Choice description) Describe in one line how each choice changes the output
     + (Question text) Keep setting keys and build behavior out of the question text
-    + (Items outside the question tool) Write any item that does not fit in the question tool in the response body with all of its choices
+    + (Items outside the question tool) Write any item that does not fit in the question tool in the response body as a list by item, with all choices, the default mark and the choice descriptions in the same detail as the items in the question tool
+    + (Check before sending) Before sending the questions, compare the items and choices in them with the list below and add any missing item or choice
 
 1. (Output type) Proposal deck conversion, proposal deck new, report meeting deck (kickoff, interim, final), report-style PPT, briefing deck, general planning PPT
 2. (Execution structure) The output type sets the default structure, so confirm only for documents not in the list of the execution structure selection section

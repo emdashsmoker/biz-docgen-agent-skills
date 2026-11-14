@@ -173,11 +173,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Relaying tool calls and work order, explaining the skill's internal terms and rules
     + Announcing the next task, self-assessment of finished work, offers of unrequested extra work (the one line of deepening options when presenting the storyline is the exception)
 - Report revisions by the changed points only. Report check results as the PASS count, FAIL count, and unresolved items only
-- Bundle questions in one turn. For items with a reasonable default, state the default and proceed
-- In the kickoff questions, present every choice of a choice item and mark the default with "(default)"
-    + (Reason) The user chooses only among the choices the question shows
+- Bundle questions in one turn. In questions other than the kickoff questions, state the default of an item with a reasonable default and proceed
+- In the kickoff questions, present every choice of each choice item and mark the default with "(default)"
+    + (Reason) The user chooses only among the choices the question shows. An item that shows only its default hides the other choices from the user
+    + (Many items) Present all choices for every choice item, however many items the kickoff questions hold. An item with a recommended default still shows its other choices
     + (Choice description) Describe in one line what each choice changes in the output. Keep option names and build behavior out of the question wording
-    + Write any item that does not fit in the question tool in the response body with all of its choices
+    + (Items outside the question tool) Write them in the response body as a list by item, with all choices, the default mark and the choice descriptions in the same detail as the items in the question tool
+    + (Check before sending) Before sending the questions, compare the items and choices in them with the kickoff question list of the output type and add any missing item or choice
 - The reply style is short bullet statements. Keep step completion reports short
 - Deliver files that ask the user for review, confirmation, or approval, and delivered files, through the file delivery feature of the execution environment. In an environment where the workspace is not visible to the user, the user cannot open a file from a path alone
     + The main delivery points are the step 2 approval request and re-presentation, confirmation of source image candidates, the step 6 delivery (hwpx or docx, and the PDF when included), and whenever the user asks for a file
@@ -308,7 +310,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | 5 Full check | 05_점검기록.md | In-depth review after `check all` PASS, zero `[확인]` in 원고/3*.md and 5*.md (handling of misjudged FAILs is in the Checks section) |
 | 6 Typesetting and review | 납품/제안서.hwpx or .docx, page PNGs | Review items passed, discretionary adjustments recorded |
 
-- Ask the items below all at once as kickoff questions. The condition for entering step 1 is receiving the answers and checks.render PASS in state.json. Securing the renderer, `init`, `selftest`, and `rfp` conversion run before the questions (the order is the start sequence in the Preparation section). The `rfp` conversion is used to judge the engagement type (transfer of requirement items and points happens at step 1)
+- Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in the Chat Replies section. The condition for entering step 1 is receiving the answers and checks.render PASS in state.json. Securing the renderer, `init`, `selftest`, and `rfp` conversion run before the questions (the order is the start sequence in the Preparation section). The `rfp` conversion is used to judge the engagement type (transfer of requirement items and points happens at step 1)
     + Whether to allow rhwp. If an rhwp permission denial occurred in the Setup section, put this first in the list. Present the refused command, the rhwp repository (https://github.com/edwardkim/rhwp), and the commands that run once allowed (release download, clone and build if needed, running rhwp). A question that names the source and the commands makes the scope of the user's permission clear
     + Scope of the proposal (all or a specific part)
     + Whether there is a consortium and each member's role
