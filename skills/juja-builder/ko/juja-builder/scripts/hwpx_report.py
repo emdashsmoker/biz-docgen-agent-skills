@@ -339,14 +339,6 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
-def _note_body(text: str) -> str | None:
-    """※ 주석이면 주석 문구, 아니면 None. 인라인 강조(**굵게**, *기울임*)로 시작하는 글은 서술이므로 주석에서 뺀다.
-    기울임 판정에 INLINE_RE를 그대로 써서 조판의 인라인 해석과 어긋나지 않게 한다"""
-    if text.startswith("**") or (text.startswith("*") and INLINE_RE.match(text)):
-        return None
-    return _strip_marker(text, NOTE_MARK)
-
-
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -416,7 +408,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _note_body(stripped)) is not None:
+        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -429,8 +421,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _note_body(body)) is not None:
-                elems.append(Element("note", t))
+            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
+                elems.append(Element("note", t))  # 굵게(**)로 시작하는 서술은 주석 표기 아님
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -458,7 +450,7 @@ def _is_source_tail(line: str) -> bool:
         return False
     if DIRECTIVE_LINE_RE.match(s) or FIT_RE.match(s):
         return False
-    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK) is not None or _note_body(s) is not None:  # 인라인 강조로 시작하는 줄은 주석 줄이 아니므로 이어 붙인다
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
         return False
     return not any(rx.match(s) for rx in (SOURCE_RE, CAPTION_RE, FIG_CAPTION_RE, FOOTNOTE_DEF_RE))
 
