@@ -158,6 +158,8 @@
     + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added) and give the bookmark notice of the SKILL.md Typesetting section
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Source line layout (automatic by default, fixed line breaks, fixed joining). Defined in the SKILL.md Manuscript Hierarchy section
+    + The line tidying level (no tidying by default, shorten the wording, ratio and letter spacing adjustment) and whether to apply the line spacing adjustment (off by default). Defined in the SKILL.md Typesetting section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design
@@ -216,7 +218,7 @@
 
 ## Typesetting
 
-- The command is `build workspace --title "document title" --format format --page-break handling`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
+- The command is `build workspace --title "document title" --format format --page-break handling`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance. Add `--source-layout break` or `--source-layout inline` when the user chose fixed line breaks or fixed joining for the source line layout
 - For a document whose chapters are mostly half a page or less, use `--page-break none`. A new page per chapter makes large empty spaces
 - Table of contents, page numbers, cover, and divider pages are OFF by default. Turn them on by the kickoff answers
 - With the table of contents on, set its scope with `--toc-scope`. How the page numbers are recorded, the bookmark notice, and static conversion are in the SKILL.md Typesetting section

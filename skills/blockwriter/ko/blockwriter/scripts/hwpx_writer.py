@@ -94,6 +94,8 @@ class Builder(M.TocMarks):
         self.pending_caption = None   # 목차 등록을 기다리는 캡션 (종류, 목차 문구, 개체)
         # 조판 옵션 (cmd_build에서 지정)
         self.numbered_square = False
+        self.source_layout = C.DEFAULT_SOURCE_LAYOUT
+        self.fit = None   # 조판 중인 요소의 조판 조정 (원고의 조판 조정 줄)
         self.toc = False
         self.toc_scope = C.TOC_SCOPE_DEFAULT
         self.cover = None
@@ -173,6 +175,8 @@ class Builder(M.TocMarks):
             r["para_pr_id_ref"] = self._no_bullet_pp(str(r["para_pr_id_ref"]))
         else:
             text = self.manual_symbol.get(role, "") + text
+        r["para_pr_id_ref"] = self._fit_pp(r["para_pr_id_ref"], self.fit)
+        r["char_pr_id_ref"] = self._fit_cp(r["char_pr_id_ref"], self.fit)
         p = self.doc.add_paragraph("", **r, **self._take_break(attrs))
         cp = str(r["char_pr_id_ref"])
         for kind, seg in M.inline_segments(text):
@@ -327,6 +331,52 @@ class Builder(M.TocMarks):
         if key not in self._pp_cache:
             self._pp_cache[key] = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment=align)
         return self._pp_cache[key]
+
+    def _hanging_pp(self, base_pp: str, hang: int) -> str:
+        """왼쪽 정렬 내어쓰기 문단 모양. 내어쓰기용 자동 탭을 켜서 첫 줄의 탭 뒤 글자를 둘째 줄의 시작 위치에 맞춘다.
+        양쪽 정렬은 강제 줄 나눔으로 끝난 줄의 빈칸을 늘리므로 왼쪽 정렬"""
+        key = (str(base_pp), "HANG", hang)
+        if key not in self._pp_cache:
+            tab = self.header.ensure_tab_definition(auto_tab_left=True)
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment="LEFT",
+                                                     margins={"intent": -hang}, tab_pr_id_ref=str(tab))
+            legacy = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HP}default/{HH}margin/{HC}intent")
+            if legacy is not None:   # 구형 한/글용 저장값(hp:default)은 새 값의 2배로 기록 (양식 생성 규칙과 동일)
+                legacy.set("value", str(-2 * hang))
+            self._pp_cache[key] = pp
+        return self._pp_cache[key]
+
+    def _line_percent(self, pp) -> int | None:
+        """문단 모양의 줄 간격 (글자 크기 대비 %). 줄 간격 종류가 다르면 None"""
+        ls = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HH}lineSpacing")
+        return int(ls.get("value")) if ls is not None and ls.get("type") == "PERCENT" else None
+
+    def _fit_pp(self, pp, fit: dict | None) -> str:
+        """조판 조정의 줄 간격 증감을 더한 문단 모양. 줄 간격이 글자 크기 대비 %가 아닌 문단 모양은 그대로 둔다"""
+        base = self._line_percent(pp)
+        if not (fit or {}).get("line") or base is None:
+            return str(pp)
+        key = (str(pp), "FIT", fit["line"])
+        if key not in self._pp_cache:
+            self._pp_cache[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=pp, line_spacing_percent=round(M.fit_value("line", base, fit)))
+        return self._pp_cache[key]
+
+    def _fit_cp(self, cp, fit: dict | None) -> str:
+        """조판 조정의 장평과 자간 증감을 더한 글자 모양"""
+        fit = fit or {}
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return str(cp)
+        key = (str(cp), "FIT", fit.get("ratio", 0), fit.get("spacing", 0))
+        if key not in self._cp_cache:
+            def shift(e):
+                for tag in ("ratio", "spacing"):
+                    node = e.find(f"{HH}{tag}")
+                    if node is not None:
+                        for lang, val in node.attrib.items():
+                            node.set(lang, str(round(M.fit_value(tag, int(val), fit))))
+            self._cp_cache[key] = self.header.ensure_char_property(modifier=shift, base_char_pr_id=cp).get("id")
+        return self._cp_cache[key]
 
     def _no_bullet_pp(self, base_pp: str) -> str:
         key = (base_pp, "NOBULLET")
@@ -507,23 +557,33 @@ class Builder(M.TocMarks):
         """표 안의 투명 병합 행 (단위, 출처). 손으로 편집할 때 표와 함께 이동하도록 표 내부에 둔다."""
         no_border = self._border_fill([])
         u = self.refs(role)
+        pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
+        label, body = M.source_label(text) if role == "source" else ("", text)
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
+            text = f"{label}\t{body}"
+            pp = self._hanging_pp(pp, self._line_style(role).label_hang_hu(label, C.SPACE_EM_HWPX))
         t.set_cell_text(ri, 0, text)
         for pe in t.cell(ri, 0).element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", self._aligned_pp(str(u["para_pr_id_ref"]), align))
+            pe.set("paraPrIDRef", pp)
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
-            t.cell(ri, ci).set_size(height=C.ROW_BASE_H)
+            t.cell(ri, ci).set_size(height=self._source_row_h(text) if role == "source" else C.ROW_BASE_H)
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
-    def _cell_font(self) -> M.CellFont:
+    def _source_row_h(self, text: str) -> int:
+        """출처 행의 최소 높이 (HWPUNIT). 줄 높이는 출처 스타일의 글자 크기와 줄 간격으로 구한다"""
+        line = self._line_percent(self.refs("source")["para_pr_id_ref"]) or C.LINE_PERCENT_FALLBACK
+        return M.source_row_height(text.count("\n") + 1, self._line_style("source").size_hu * line / 100)
+
+    def _cell_font(self, fit: dict | None = None) -> M.CellFont:
         """표 셀 줄 스타일 (열 폭과 행 줄 수 산정용)"""
-        bullet = self._line_style("table_cell_bullet") if self.p.get("table_cell_bullet") else None
-        dash = self._line_style("table_cell_dash") if self.p.get("table_cell_dash") else None
-        return M.CellFont(C.SPACE_EM_HWPX, (self._line_style("table_cell"), self._line_style("table_cell_left")),
+        bullet = self._line_style("table_cell_bullet").fitted(fit) if self.p.get("table_cell_bullet") else None
+        dash = self._line_style("table_cell_dash").fitted(fit) if self.p.get("table_cell_dash") else None
+        return M.CellFont(C.SPACE_EM_HWPX, (self._line_style("table_cell").fitted(fit), self._line_style("table_cell_left").fitted(fit)),
                           bullet, dash)
 
     def _line_style(self, role: str) -> M.LineStyle:
@@ -611,7 +671,8 @@ class Builder(M.TocMarks):
         plan = M.table_plan(e, self.merge_mode)
         rows, hdr, aligns = plan["rows"], plan["hdr"], plan["aligns"]
         nrow, ncol = len(rows), len(rows[0])
-        font = self._cell_font()
+        fit = e.data.get("fit")
+        font = self._cell_font(fit)
         widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
         table_w = sum(widths)
         self.gap()
@@ -638,8 +699,9 @@ class Builder(M.TocMarks):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
         total_h = 0
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_scale = M.fit_line_scale(self._line_percent(cell_ref["para_pr_id_ref"]), fit)
         for ri, row in enumerate(rows):
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], line_scale)
             total_h += row_h
             for ci, val in enumerate(row):
                 lines_txt = val.split("\n")
@@ -660,9 +722,9 @@ class Builder(M.TocMarks):
                 for li, pe in enumerate(cell.element.iter(f"{HP}p")):
                     br = bullet_roles[li] if li < len(bullet_roles) and not is_head else None
                     bref = self.refs(br) if br else None
-                    pe.set("paraPrIDRef", str(bref["para_pr_id_ref"]) if bref else pp)
+                    pe.set("paraPrIDRef", self._fit_pp(str(bref["para_pr_id_ref"]) if bref else pp, fit))
                     pe.set("styleIDRef", str(bref["style_id_ref"] if bref else ref["style_id_ref"]))
-                    line_cp = str(bref["char_pr_id_ref"]) if bref else cp
+                    line_cp = self._fit_cp(str(bref["char_pr_id_ref"]) if bref else cp, fit)
                     for run in pe.iter(f"{HP}run"):
                         run.set("charPrIDRef", line_cp)
                     self._inline_runs(pe, line_cp)
@@ -671,7 +733,7 @@ class Builder(M.TocMarks):
                     cell.element.set("header", "1")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:   # 표 높이가 행 높이 합보다 크면 렌더러가 마지막 행을 늘여 그린다
-            sz.set("height", str(total_h + C.ROW_BASE_H * (head + len(sources))))
+            sz.set("height", str(total_h + C.ROW_BASE_H * head + sum(map(self._source_row_h, sources))))
         pos = t.element.find(f"{HP}pos")
         if pos is not None:   # 글자처럼 취급하는 표는 문단 정렬을 따르므로 pos 정렬도 가운데로 맞춰 해석 충돌 제거
             pos.set("horzAlign", "CENTER")
@@ -766,7 +828,7 @@ class Builder(M.TocMarks):
             pos.set("horzAlign", "CENTER")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
-            sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + C.ROW_BASE_H * len(sources)))
+            sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + sum(map(self._source_row_h, sources))))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, "BOTTOM", table_w)
         self._mark_pending_caption()
@@ -778,8 +840,9 @@ class Builder(M.TocMarks):
         if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
             print(msg("warn_no_toc_style"))
             self.toc = False
-        for e in M.attach_block_notes(elems):
+        for e in M.attach_block_notes(elems, self.source_layout):
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
@@ -799,6 +862,7 @@ class Builder(M.TocMarks):
                 self.image(e)
             elif e.kind == "pagebreak":
                 self.pending_break = True
+        self.fit = None
         if self.toc or self.cover:
             self._front_matter(self.cover)
         self.set_page_number(self.page_number)
@@ -923,6 +987,7 @@ def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
         sys.exit(msg("err_no_skeleton", path=skeleton))
     b = Builder(skeleton, profile, page_break=a.page_break)
     b.numbered_square = a.numbered_square
+    b.source_layout = a.source_layout
     b.toc, b.toc_scope = a.toc, a.toc_scope
     b.page_number = a.page_number
     b.cover = parse_cover(a.cover)

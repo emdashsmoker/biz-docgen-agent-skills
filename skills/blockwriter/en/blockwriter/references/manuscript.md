@@ -2,7 +2,7 @@
 
 > Translated from the Korean original (blockwriter). When results differ, the Korean version is the reference.
 
-Save the manuscript file as UTF-8. The role of each notation follows the manuscript level rules table in SKILL.md. Korean tokens shown below (such as `<표>`, `(단위: )`, `출처:`) are part of the notation, are written exactly as shown, and are always recognized. A label file (`--labels`, Labels section of references/layout.md) adds tokens in another language, such as `<Table>`, `(Unit: )`, `Source:`, which work the same way.
+Save the manuscript file as UTF-8. The role of each notation follows the manuscript level rules table in SKILL.md. Korean tokens shown below (such as `<표>`, `(단위: )`, `출처:`, `(조판 조정: )`) are part of the notation, are written exactly as shown, and are always recognized. A label file (`--labels`, Labels section of references/layout.md) adds tokens in another language, such as `<Table>`, `(Unit: )`, `Source:`, which work the same way.
 
 ## Level notation
 
@@ -105,14 +105,38 @@ This is how a footnote that cites the same source again is written. The default 
 Attached lines are the source lines and ※ note lines that belong to a table, a figure, or a body paragraph.
 
 - (Source line) A line starting with `출처:`, `자료:`, `주:`, `(출처)`, or `(자료)`. `(출처)` and `(자료)` are printed as `출처:` and `자료:`. Tokens added by a label file work as `token:` and `(token)` (`(Source)` prints as `Source:`)
+- (Several sources) When one table or figure has two or more sources, write the source label once and separate the sources with `;`. Choose between line breaks and joining
+    - (Line breaks) End a source with `;` and write the next source on the next line. build breaks the lines inside the source row and aligns the second and later lines with the start of the first source
+    - (Joining) Write all sources on one line, separated by `; `. A line that wraps at the row width starts where the first source starts
+    - (Line break example) Write a `자료: Agency(year), Title;` line, then an `Agency(year), Title;` line, then an `Agency(year), Title` line. The last source has no `;`
+    - (Continued lines) After a source line that ends with `;`, a blank line or a line that starts with another manuscript notation (heading, bullet, table, figure, caption, unit, ※ and so on) is not read as a continuation
+- (Choosing the arrangement) When the user chose automatic in step 1, decide the arrangement for each table and figure by the criteria below. The aim is a source row that looks right next to its table or figure
+    - (Default) Line breaks. Long sources and two or three short sources read more easily with one source per line
+    - (Many short sources) When many short sources would make the source row tall with line breaks, join them
+    - (Other cases) Even with long sources, joining is occasionally the better choice depending on the editing situation, such as the width of the table or figure and the page layout
+    - (Check) In the rendered PNGs, check that the height and width of the source row suit the table or figure, and change the arrangement when it looks awkward
+- (Fixed arrangement) When the user chose fixed line breaks or fixed joining in step 1, pass `--source-layout break` or `--source-layout inline` to build. The whole document is typeset one way, whatever line breaks the manuscript has
 - (※ note line) A line starting with `※` or `* ` (an asterisk and a space)
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
-- A source line after a body paragraph becomes a footnote of the previous paragraph. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
+- A source line after a body paragraph becomes a footnote of the previous paragraph. A source line written over several lines is joined into one line in the footnote. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
+
+## Adjustment lines
+
+An adjustment line changes the glyph ratio, letter spacing or line spacing of a paragraph or table slightly from the form style values. Use the ratio and letter spacing items only when the user chose the ratio and letter spacing adjustment level of line tidying in the step 1 plan, and the line spacing item only when the user turned on the line spacing adjustment. The criteria for targets and values follow the Typesetting adjustment section of references/layout.md.
+
+- (Single line) A `(조판 조정: 장평 -3, 자간 -2)` line applies to the one element right after it. An element is a heading, a body paragraph or a table
+- (Range) Applies to every element from a `(조판 조정 시작: 줄 간격 -10)` line to just before the `(조판 조정 끝)` line
+- (Items) Write only the items needed among 장평 (ratio), 자간 (letter spacing) and 줄 간격 (line spacing), separated by commas. The English names `ratio`, `spacing` and `line` and the range words `begin` and `end` are also recognized
+- (Values) A change in %p against the form style value. With a style ratio of 100%, `장평 -3` gives 97%. With a style line spacing of 160%, `줄 간격 -10` gives 150%
+    - (Why changes) The ratio, letter spacing and line spacing differ between styles, and a user form has other values. Written as a change, the same notation gives the same degree of adjustment in any form
+- (Tables) Put the adjustment line of a table before the caption line. It applies to the text of the table cells including the header rows, and not to the caption, unit row or source row
+- (Single line inside a range) A single line inside a range applies to the next element together with the range adjustment. For the same item, the single line value is used
+- (Lint) An unreadable item is reported as `[adjustment value]`, and an end line without a begin line or a begin line without an end line as `[adjustment range]`
 
 ## Content-writing rules
 

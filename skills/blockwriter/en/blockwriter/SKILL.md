@@ -90,6 +90,7 @@ build options
     - (flat) `#` is the single document title, so chapter breaks pages only at `---` lines, the same as none. section starts a new page at each N. heading (`##`)
 - (`--long-table engine|split`) How tables over 25 rows including the header rows (long tables) are handled. engine splits one table at page boundaries and repeats the unit row and header rows on every page. split divides it into several tables, each with the header row. Default engine
 - (`--footnote-merge square|section|chapter|document`) Source footnote merging. Footnotes with the same text inside the scope become one footnote, and the later citation positions show the number of that first footnote. The scope is □ (square), section (section), chapter (chapter), or the whole document (document). Default OFF. Set it only when the user chose merging in step 1 (the source footnote inheritance section of references/manuscript.md)
+- (`--source-layout auto|break|inline`) Line layout of table and figure source rows. auto typesets the line breaks written in the manuscript, break puts each source on its own line, and inline joins them into one line. Default auto. Pass break when the user chose fixed line breaks in step 1, and inline when the user chose fixed joining (Attached lines section of references/manuscript.md)
 - (`--merge auto|explicit|none`) How table cells are merged. auto merges consecutive identical values in leading label columns and the `^` and `<` directives, and explicit merges only the directives. Default auto
 - (`--numbered-square`) Prints `□ 1. title` lines as numbered headings without the □ bullet. When the title wraps to two lines, the second line aligns with the text after the number
 - (`--page-number`) Footer page number `- N -` at center. Default OFF, so that page numbers do not clash when several documents are combined into one
@@ -134,6 +135,17 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (off) Every footnote gives the full source
         - (short form) Only the first footnote in the scope gives the full source, and later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
         - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
+    - (Source line layout) How sources are arranged when one table or figure has two or more. Choose automatic (default), fixed line breaks, or fixed joining. The criteria are in the Attached lines section of references/manuscript.md
+        - (automatic) Picks the arrangement that fits the length and number of sources for each table and figure
+        - (fixed line breaks) Puts each source on its own line and aligns the second and later sources with the start of the first one
+        - (fixed joining) Writes all sources on one line, separated by `;`
+    - (Line tidying) How far to go in tidying cases such as a paragraph or table cell with only 1-2 characters on its last line. Choose no tidying (default), shorten the wording, or ratio and letter spacing adjustment. The criteria are in the Typesetting adjustment section of references/layout.md
+        - (no tidying) Leaves those lines as they are
+        - (shorten the wording) Shortens the wording as long as the meaning stays the same
+        - (ratio and letter spacing adjustment) Adjusts the ratio and letter spacing of the paragraph or table within a narrow range, and shortens the wording when that does not solve it
+    - (Line spacing adjustment) Whether to adjust the line spacing to tidy cases such as a page with only 1-2 lines carried to the next page. Choose off (default) or on. The criteria are in the Typesetting adjustment section of references/layout.md
+        - (off) Typesets every paragraph with the line spacing of the form styles
+        - (on) Adjusts the line spacing within a narrow range, only for pages, paragraphs and tables where the page fill is uneven
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
@@ -158,6 +170,8 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
+    - (Page fill) Check that the body text of two facing pages fills each page evenly down to the bottom, and take measures that fill both pages in balance, such as adjusting the size and position of tables, figures and paragraphs, as long as the content still reads well. The criteria are in the Page fill section of references/layout.md
+    - (Line tidying and line spacing adjustment) Do them only up to what the user chose in step 1. Review closely the pages with a line that has almost no margin at its end and the pages whose fill can come apart. The criteria for targets and values are in the Typesetting adjustment section of references/layout.md
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason
@@ -201,8 +215,9 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 | `        - statement` | detail | ㆍ | ㆍ |
 | `※ remark` | note | ※ | ※ |
 | Source lines such as `출처: ` | source | after a table or figure: source row. After body text: footnote of the previous paragraph | same |
+| `(조판 조정: )` lines | adjustment | changes the ratio, letter spacing and line spacing of the next element or range | same |
 
-- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, and source and unit lines are in references/manuscript.md
+- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, source and unit lines, and adjustment lines are in references/manuscript.md
 - The rules for statements under □, keyword versus sentence style, and the use of section numbers and 가나다 are also in references/manuscript.md
 
 ## Differences between formats
@@ -214,7 +229,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 
 ## Labels
 
-- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC titles (TOC, list of tables, list of figures), caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width), and the language tags of DOCX and HWPX
+- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC titles (TOC, list of tables, list of figures), caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width, adjustment), and the language tags of DOCX and HWPX
 - (How) `build manuscript.md output.docx --profile chapter --labels labels.json`. A nested JSON object; omitted keys keep the defaults. Unknown keys and invalid values stop build with the list of all problems. Works for HWPX and DOCX and for both built-in forms
 - (Defaults) Without `--labels`, documents get the Korean labels (제N장, 가., 목  차, 표, 그림)
 - (Manuscript tokens) The Korean tokens stay recognized. A label file only adds tokens (for example `Source:`, `<Table>`, `(Unit: )`)

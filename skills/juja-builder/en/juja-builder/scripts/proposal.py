@@ -603,7 +603,7 @@ class ProposalLayout:
                 srcs, consumed = [], 0
                 for nx in elems[idx + 1:]:
                     if nx.kind in ("note", "source"):  # source lines as is, other notes keep the ※ marker
-                        text = inline_note_footnotes(nx.text, footnotes)
+                        text = lib.source_text(inline_note_footnotes(nx.text, footnotes), self.source_layout)
                         srcs.append(text if nx.kind == "source" or lib.SOURCE_RE.match(text) else NOTE_PREFIX + text)
                     elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                         e.data["unit"] = nx.text
@@ -613,6 +613,9 @@ class ProposalLayout:
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
+            if e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined
+                e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind == "band":
@@ -634,6 +637,7 @@ class ProposalLayout:
                 self.pending_break = True
             if e.kind != "pagebreak":
                 self._body_started = True
+        self.fit = None
         if self.toc or self.cover:
             self._front_matter(self.cover)
         self.set_page_number(self.page_number)
@@ -700,7 +704,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
     def heading_para(self, role: str, label: str, pt: int | None):
         p = self.para(role, label, no_heading=True)
         if pt:
-            cp = self._sized_char(pt, True)
+            cp = self._fit_cp(self._sized_char(pt, True), self.fit)
             for run in p.element.iter(f"{HP}run"):
                 run.set("charPrIDRef", cp)
         return p
@@ -1769,6 +1773,8 @@ def check_tone(work: str, reset_whitelist: bool = False, kind: str = "proposal")
         for i, raw in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
             ln = _mask_whitelist(raw, terms)
             st = ln.strip()
+            if lib.FIT_RE.match(st):   # an adjustment line is notation for the typesetter, so the tone check skips it
+                continue
             in_cell = st.startswith("|")
             for pat, label in TONE_FAIL + FRAMEWORK_FAIL:
                 if in_cell and "cross reference" in label:  # Task and Module numbers in table cells are normal use in overview, quick-reference, and schedule tables
@@ -2179,6 +2185,7 @@ def cmd_build(a):
         else:
             b = ProposalDocxBuilder(docx_spec(), profile, page_break=a.page_break)
         b.numbered_square = False
+        b.source_layout = a.source_layout
         b.toc = a.toc
         b.page_number = a.page_number
         b.toc_scope = toc_scope
@@ -2228,12 +2235,30 @@ W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references are calculated by the editor, so they are excluded from the comparison
 
 
+HWPX_CAPTION_BELOW = "BOTTOM"   # side value of a caption placed below its object
+
+
+def _hwpx_visual_paragraphs(el):
+    """Walks paragraphs in the order they appear on the page. Why: a caption below is stored before the rows of its object in the XML,
+    so reading in document order disagrees with the docx, where the caption paragraph follows the table. Captions above and everything else keep document order"""
+    if el.tag == f"{HP}p":
+        yield el
+    below = []
+    for c in el:
+        if c.tag == f"{HP}caption" and c.get("side") == HWPX_CAPTION_BELOW:
+            below.append(c)
+        else:
+            yield from _hwpx_visual_paragraphs(c)
+    for c in below:
+        yield from _hwpx_visual_paragraphs(c)
+
+
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
-    """Paragraph text of the hwpx body (including table cells and captions, excluding headers) and footnote text. In document order"""
+    """Paragraph text of the hwpx body (including table cells and captions, excluding headers) and footnote text. In the order shown on the page"""
     body, notes = [], []
     with zipfile.ZipFile(path) as z:
         for n in sorted(x for x in z.namelist() if re.match(r"Contents/section\d+\.xml$", x)):
-            for p in etree.fromstring(z.read(n)).iter(f"{HP}p"):
+            for p in _hwpx_visual_paragraphs(etree.fromstring(z.read(n))):
                 anc = {a.tag for a in p.iterancestors()}
                 if f"{HP}header" in anc or f"{HP}footer" in anc:
                     continue
@@ -2508,6 +2533,8 @@ def main():
     p.add_argument("--page-number", action="store_true", help="footer page numbers (default OFF)")
     p.add_argument("--cover", help='cover: "title=title;subtitle=subtitle;date=YYYY. M.;org=organization"')
     p.add_argument("--header", help='header: "text;align=RIGHT"')
+    p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
+                   help="line layout of table and figure source rows (kickoff answer): auto=lines as written (default), break=one line per source, inline=joined into one line")
     p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),
                    help="source footnote merging (set only when the user chose merging in the kickoff questions, off by default). "
                         "Replaces a footnote that repeats the same text inside the scope with a cross-reference to the first footnote number. "

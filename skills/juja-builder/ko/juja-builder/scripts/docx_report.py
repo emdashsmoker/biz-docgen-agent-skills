@@ -125,6 +125,8 @@ class DocxBuilder(lib.TocMarks):
         self.after_block = False
         self.toc, self.cover, self.page_number, self.header_spec = False, None, False, None
         self.merge_mode, self.long_table_mode = "auto", "engine"
+        self.source_layout = lib.DEFAULT_SOURCE_LAYOUT
+        self.fit = None   # 조판 중인 요소의 조판 조정 (원고의 조판 조정 줄)
         self.last_para = None
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
@@ -313,11 +315,12 @@ class DocxBuilder(lib.TocMarks):
         return p
 
     def _run(self, p, text: str, role: str, pt: float | None = None, bold: bool | None = None,
-             color: str | None = None, font_key: str | None = None):
+             color: str | None = None, font_key: str | None = None, fit: dict | None = None):
         """크기를 바꾼 글자(제목 위계, 밴드, 표지). 문단 줄 간격도 바뀐 크기 기준으로 다시 계산"""
-        if pt is not None:
-            p.paragraph_format.line_spacing = Twips(self._style_line(self._row(role), pt))
-        return self._text(p, text, pt or self._row(role)[3], bold=bold, color=color, font_key=font_key, size=pt)
+        row = self._row(role)
+        if pt is not None or (fit or {}).get("line"):
+            p.paragraph_format.line_spacing = Twips(round(self._style_line(row, pt) * lib.fit_line_scale(row[10], fit)))
+        return self._text(p, text, pt or row[3], bold=bold, color=color, font_key=font_key, size=pt, fit=fit)
 
     def _space_twips(self, pt: float) -> int:
         """한/글 고정 빈칸 폭(글자 크기의 절반)과 글꼴 빈칸 폭의 차이. docx 빈칸에 자간으로 더함"""
@@ -347,10 +350,20 @@ class DocxBuilder(lib.TocMarks):
                 f = self._font(fmt["font_key"])
                 r.font.name = f
                 r._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), f)
-            if part[0] == " " and self._space_twips(pt):
-                _insert_ordered(r._element.get_or_add_rPr(), _w("spacing", val=self._space_twips(pt)), RPR_ORDER)
+            fit = fmt.get("fit") or {}
+            spacing = (self._space_twips(pt) if part[0] == " " else 0) + round(pt * fit.get("spacing", 0) / 100 * TWIP_PER_PT)
+            if spacing:
+                _insert_ordered(r._element.get_or_add_rPr(), _w("spacing", val=spacing), RPR_ORDER)
+            if fit.get("ratio"):
+                _insert_ordered(r._element.get_or_add_rPr(), _w("w", val=round(lib.fit_value("ratio", 100, fit))), RPR_ORDER)
             runs.append(r)
         return runs
+
+    def _fit_line(self, p, role: str, fit: dict | None):
+        """조판 조정의 줄 간격 증감을 문단에 적용"""
+        row = self._row(role)
+        if (fit or {}).get("line"):
+            p.paragraph_format.line_spacing = Twips(round(self._style_line(row) * lib.fit_line_scale(row[10], fit)))
 
     def para(self, role: str, text: str, footnotes: dict | None = None, no_heading: bool = False, **_):
         p = self._new_para(role)
@@ -360,13 +373,14 @@ class DocxBuilder(lib.TocMarks):
         else:
             text = self.manual_symbol.get(role, "") + text
         pt = self._row(role)[3]
+        self._fit_line(p, role, self.fit)
         for kind, seg in lib.inline_segments(text):
             if kind == "footnote":
                 if footnotes is not None:
                     self.add_footnote(p, footnotes.get(seg, ""))
                 continue
             self._text(p, seg, pt, bold=True if kind == "bold" else None, italic=kind == "italic",
-                       script=kind if kind in ("sup", "sub") else None)
+                       script=kind if kind in ("sup", "sub") else None, fit=self.fit)
         return p
 
     def add_footnote(self, p, text: str):
@@ -537,13 +551,15 @@ class DocxBuilder(lib.TocMarks):
         if header:
             trPr.append(_w("tblHeader"))
 
-    def _cell_para(self, cell, text: str, role: str, align: str | None = None, bold: bool | None = None, first: bool = True):
+    def _cell_para(self, cell, text: str, role: str, align: str | None = None, bold: bool | None = None, first: bool = True,
+                   fit: dict | None = None):
         p = cell.paragraphs[0] if first else cell.add_paragraph()
         p.style = self.doc.styles[self.style_names[self._row(role)[0]]]
         if align:
             p.paragraph_format.alignment = JC[align]
+        self._fit_line(p, role, fit)
         if text:
-            self._text(p, text, self._row(role)[3], bold=bold)
+            self._text(p, text, self._row(role)[3], bold=bold, fit=fit)
         return p
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
@@ -551,9 +567,16 @@ class DocxBuilder(lib.TocMarks):
         cell = t.cell(ri, 0).merge(t.cell(ri, ncol - 1)) if ncol > 1 else t.cell(ri, 0)
         if ncol > 1:
             cell.width = Emu(sum(c.width for c in t.columns))
-        self._cell_para(cell, text, role, align)
+        label, body = lib.source_label(text) if role == "source" else ("", text)
+        p = self._cell_para(cell, f"{label}\t{body}" if label else text, role, align)
+        row = self._row(role)
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
+            hang = tw(lib.label_hang_hu(label, row[3] * 100))
+            p.paragraph_format.left_indent = Twips(tw(row[6]) + hang)
+            p.paragraph_format.first_line_indent = Twips(-hang)
         self._tc_style(cell._tc, [], None, None)
-        self._row_height(t.rows[ri], lib.ROW_BASE_H)
+        line_h = row[3] * row[10]   # 글자 크기(pt)와 줄 간격(%)의 곱이 HWPUNIT 줄 높이
+        self._row_height(t.rows[ri], lib.source_row_height(text, line_h) if role == "source" else lib.ROW_BASE_H)
 
     def table(self, e: lib.Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
@@ -591,7 +614,8 @@ class DocxBuilder(lib.TocMarks):
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
-        heights = lib.row_heights(rows, widths, hdr, vspans, hspans)
+        line_scale = lib.fit_line_scale(self._row("table_cell")[10], self.fit)
+        heights = [round(h * line_scale) for h in lib.row_heights(rows, widths, hdr, vspans, hspans, lib.fit_char_scale(self.fit))]
         for ri, row in enumerate(rows):
             is_head = ri < hdr
             self._row_height(t.rows[head + ri], heights[ri], cant_split=not long,
@@ -605,7 +629,8 @@ class DocxBuilder(lib.TocMarks):
                 role, align = lib.cell_role(aligns[ci], is_head)
                 for li, line in enumerate(val.split("\n")):
                     br = roles[li] if li < len(roles) and not is_head else None
-                    self._cell_para(cell, line, br or role, None if br else align, True if is_head else None, first=li == 0)
+                    self._cell_para(cell, line, br or role, None if br else align, True if is_head else None, first=li == 0,
+                                    fit=self.fit)
                 r1, c1 = anchors.get((ri, ci), (ri, ci))
                 sides = lib.edge_sides(ci, c1, ncol)  # 음영 셀도 표 좌우 바깥선 규칙을 따름 (hwpx와 같은 괘선)
                 style_fill = fill or (lib.HEADER_FILL if is_head else None)
@@ -702,7 +727,7 @@ class DocxBuilder(lib.TocMarks):
         p = self._new_para(role)
         numpr = p._p.get_or_add_pPr().get_or_add_numPr()
         numpr.get_or_add_numId().val = 0
-        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None)
+        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None, fit=self.fit)
         return p
 
     def chapter_started(self, p):

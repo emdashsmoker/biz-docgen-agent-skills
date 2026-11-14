@@ -35,12 +35,23 @@ LABEL_DEFAULTS = {
     "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
                 "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
     # 원고 해석기가 인식하는 표기 토큰. 라벨 파일의 토큰은 여기에 추가되며 기본 토큰을 대체하지 않음
-    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"],
+                 "fit": ["조판 조정"]},
     # DOCX 문서 기본 언어(w:lang). 내장 양식 HWPX의 content.hpf 언어와 스타일 langID(Windows LCID)
     "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
 }
 # 괄호로도 쓰는 기본 출처 토큰('(출처)'). '(주)'는 주식회사의 약어이므로 출처 줄로 보지 않음
 SOURCE_PAREN_TOKENS = ("출처", "자료")
+# 출처 행의 줄 나눔. 원고에서 출처 구분 기호로 끝낸 출처 줄은 다음 줄과 같은 출처 행을 이룸
+SOURCE_SEP = ";"
+SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=원고에 쓴 줄 그대로, break=출처마다 줄 나눔, inline=한 줄로 이음
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_LABEL_GAP_EM = 0.5       # 출처 행에서 출처 표기와 첫 출처 사이의 간격 (글자 크기 배수)
+# 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
+FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
+FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
+FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글이 받는 값의 범위 (%)
+LINE_PERCENT_FALLBACK = 100     # 줄 간격이 글자 크기 대비 %가 아닌 스타일의 줄 높이 추정에 쓰는 값 (%)
 # 형식별로 쓸 수 있는 자리표시와 반드시 들어갈 자리표시
 LABEL_FORMAT_FIELDS = {"formats.chapter": (("n", "t"), "t"), "formats.section": (("c", "s", "t"), "t"),
                        "formats.subsection": (("c", "s", "ss", "t"), "t"), "letters.format": (("x",), "x")}
@@ -255,6 +266,15 @@ MESSAGES = {
     "lint_colwidth_alone": {
         "ko": "[열 폭 줄 위치] '{text}' 바로 뒤에 표가 없어 적용 안 됨. 캡션과 표 사이에 둠",
         "en": "[column width line] '{text}' is not followed by a table and is ignored. Put it between the caption and the table"},
+    "lint_fit_value": {
+        "ko": "[조판 조정 값] '{text}'의 '{piece}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재",
+        "en": "[adjustment value] cannot read '{piece}' in '{text}'. Write an item (ratio, spacing, line) and a change, as in 'ratio -3, spacing -2'"},
+    "lint_fit_no_begin": {
+        "ko": "[조판 조정 구간] '{text}' 앞에 시작 줄이 없음",
+        "en": "[adjustment range] '{text}' has no begin line before it"},
+    "lint_fit_no_end": {
+        "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠",
+        "en": "[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},
