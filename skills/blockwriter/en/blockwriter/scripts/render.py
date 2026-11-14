@@ -18,8 +18,6 @@ from enum import Enum
 import config as C
 from config import msg
 
-LO_HELPER = os.path.join(C.SCRIPT_DIR, "lo_convert.py")
-
 
 # ── Renderer lookup ────────────────────────────────────────────────────────
 def find_rhwp() -> str | None:
@@ -46,24 +44,6 @@ def find_soffice() -> str | None:
                  r"C:\Program Files\LibreOffice\program\soffice.exe",
                  "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
         if cand and os.path.isfile(cand):
-            return cand
-    return None
-
-
-def find_lo_python(soffice: str) -> str | None:
-    """Interpreter that can use the LibreOffice Python bridge (uno): the current Python or the Python bundled with LibreOffice."""
-    try:
-        import uno  # noqa: F401
-        return sys.executable
-    except ImportError:
-        pass
-    prog = os.path.dirname(os.path.realpath(soffice))
-    for cand in (os.path.join(prog, "python"), os.path.join(prog, "python.exe"),
-                 os.path.join(os.path.dirname(prog), "Resources", "python")):
-        if os.path.isfile(cand):
-            return cand
-    for cand in ("/usr/bin/python3",):
-        if os.path.isfile(cand) and subprocess.run([cand, "-c", "import uno"], capture_output=True).returncode == 0:
             return cand
     return None
 
@@ -117,27 +97,19 @@ def plain_copy(src: str, dest_dir: str) -> str:
     return work
 
 
-def _soffice_pdf(src: str, pdf: str, update_fields: bool) -> str:
+def _soffice_pdf(src: str, pdf: str) -> str:
     soffice = find_soffice()
     if not soffice:
         sys.exit(msg("err_no_soffice"))
     profile_dir = tempfile.mkdtemp(prefix="lo_profile_")   # a dedicated user profile per render, deleted afterwards
     try:
-        return _soffice_convert(soffice, src, pdf, update_fields, "file://" + profile_dir.replace(os.sep, "/"))
+        return _soffice_convert(soffice, src, pdf, "file://" + profile_dir.replace(os.sep, "/"))
     finally:
         shutil.rmtree(profile_dir, ignore_errors=True)
 
 
-def _soffice_convert(soffice: str, src: str, pdf: str, update_fields: bool, profile: str) -> str:
-    lo_python = find_lo_python(soffice) if update_fields else None
-    if update_fields and lo_python:   # update the TOC field, then save as PDF (a review copy close to what Word shows after updating on open)
-        res = subprocess.run([lo_python, LO_HELPER, soffice, os.path.abspath(src), os.path.abspath(pdf), profile],
-                             capture_output=True, text=True, timeout=C.LIBREOFFICE_TIMEOUT)
-        if res.returncode == 0 and os.path.exists(pdf):
-            return "soffice"
-        sys.exit(msg("err_soffice_failed", detail=(res.stdout + res.stderr)[-300:]))
-    if update_fields:
-        print(msg("warn_fields_not_updated"))
+def _soffice_convert(soffice: str, src: str, pdf: str, profile: str) -> str:
+    """Convert to PDF with LibreOffice. LibreOffice recalculates the PAGEREF page references of a DOCX when it exports to PDF"""
     # a unique suffix per conversion folder so concurrent renders in one folder do not collide; made in the PDF folder so the delivery folder is left alone
     outdir = tempfile.mkdtemp(prefix="_lo_out_", dir=os.path.dirname(os.path.abspath(pdf)))
     try:
@@ -154,8 +126,8 @@ def _soffice_convert(soffice: str, src: str, pdf: str, update_fields: bool, prof
     return "soffice"
 
 
-def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_layer: bool = False) -> str:
-    """Document to PDF. With text_layer=True, creates a PDF from which text can be extracted (for TOC page numbers). Returns the engine name used."""
+def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None) -> str:
+    """Document to PDF. Returns the engine name used."""
     engine = resolve_engine(engine, rhwp_opt, src)
     if engine == "rhwp":
         rhwp = rhwp_opt or find_rhwp()
@@ -166,14 +138,14 @@ def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_layer: bo
         cmd = [rhwp, C.RHWP_PDF_COMMAND, src, "-o", pdf]
         if os.path.isdir(C.USER_FONT_DIR) and rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_FONT_PATH_FLAG):
             cmd += [C.RHWP_FONT_PATH_FLAG, C.USER_FONT_DIR]
-        if not text_layer and rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_PDF_OUTLINE_FLAG):
+        if rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_PDF_OUTLINE_FLAG):
             cmd.append(C.RHWP_PDF_OUTLINE_FLAG)
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0 or not os.path.exists(pdf):
             sys.exit(msg("err_rhwp_failed", detail=(res.stderr or res.stdout)[-400:]))
         return "rhwp"
     if engine == "soffice":
-        _soffice_pdf(src, pdf, update_fields=src.lower().endswith(".docx"))
+        _soffice_pdf(src, pdf)
         return "soffice" if src.lower().endswith(".docx") else "soffice(H2Orestart)"
     sys.exit(msg("err_no_renderer"))
 
@@ -209,124 +181,6 @@ def render(src: str, outdir: str | None, dpi: int, engine: str, rhwp_opt: str | 
         print(msg("render_ok", engine=used, pdf=pdf, outdir=outdir, n=len(page_pngs(outdir))))
     else:
         print(msg("render_pdf_only", engine=used, pdf=pdf))
-
-
-def text_pages(doc_path: str, rhwp_opt: str | None) -> list[str] | None:
-    """Renders the document to a text-extractable PDF and returns the text per page. None if a renderer or pdftotext is missing."""
-    is_docx = doc_path.lower().endswith(".docx")
-    has_renderer = find_soffice() if is_docx else (rhwp_opt or find_rhwp() or find_soffice())
-    if not shutil.which("pdftotext") or not has_renderer:
-        return None
-    tmp = tempfile.mkdtemp(prefix="_toc_check_")   # the check PDF is made outside the delivery folder and removed even if interrupted
-    pdf = os.path.join(tmp, "toc.pdf")
-    engine = resolve_engine("auto", rhwp_opt, doc_path)
-    work = plain_copy(doc_path, tmp) if is_docx else render_copy(doc_path, strip_newnum=(engine == "soffice"), dest_dir=tmp)
-    try:
-        to_pdf(work, pdf, engine, rhwp_opt, text_layer=True)
-        # extract in drawing order. -layout mixes the text of a heading at the page bottom with footnote text drawn over it, so the heading is not found
-        txt = subprocess.run(["pdftotext", "-raw", pdf, "-"], capture_output=True, text=True).stdout
-    except SystemExit:
-        return None
-    finally:
-        if work != doc_path and os.path.exists(work):
-            os.remove(work)
-        shutil.rmtree(tmp, ignore_errors=True)
-    return txt.split("\f")
-
-
-def _norm(text: str) -> str:
-    return re.sub(r"\s+", "", text)
-
-
-def locate_headings(pages: list[str], entries: list[str]) -> list[int | None]:
-    """Counts on which body page each TOC entry (document order) appears. The first body page is 1.
-    Starting from the first page with the TOC title, finds the entries in order; pages up to the one with the last entry are the TOC and the next page is the first body page.
-    This finds the body start even when the TOC spans several pages. Entries are also searched in order in the body, never before the previous heading's page."""
-    found, body = _locate_pages(pages, entries)
-    return [None if q is None else q - body + 1 for q in found]
-
-
-def _locate_pages(pages: list[str], entries: list[str]) -> tuple[list[int | None], int]:
-    """Search behind locate_headings. Returns each entry's zero-based rendered page index and the index of the first body page"""
-    keys = [_norm(e) for e in entries]
-    title = _norm(C.label("toc.title"))
-    toc = next((i for i, page in enumerate(pages) if title in _norm(page)), None)
-    if toc is None or not keys:
-        return [None] * len(keys), 0
-    p = toc
-    for k in keys:
-        while p < len(pages) and k not in _norm(pages[p]):
-            p += 1
-    if p >= len(pages):
-        return [None] * len(keys), 0
-    body = p + 1
-    found, p = [], body
-    for k in keys:
-        q = p
-        while q < len(pages) and k not in _norm(pages[q]):
-            q += 1
-        if q < len(pages):
-            found.append(q)
-            p = q
-        else:
-            found.append(None)
-    return found, body
-
-
-def stranded_headings(pages: list[str], entries: list[str], firsts: list[str | None]) -> list[str]:
-    """Entries whose TOC heading sits at the end of a page while the first body line starts on the next page ('heading (body page N)').
-    This happens when the renderer ignores the keep-with-next setting; Hangul moves the heading to the next page.
-    Only the text after the heading and the very next page are checked, so the same wording earlier on the page does not mislead the check"""
-    found, body = _locate_pages(pages, entries)
-    out = []
-    for entry, q, first in zip(entries, found, firsts):
-        if q is None or not first or q + 1 >= len(pages):
-            continue
-        key = _norm(first)[:C.TOC_FIRST_LINE_KEY]
-        page, head = _norm(pages[q]), _norm(entry)
-        if key in page[page.find(head) + len(head):]:
-            continue
-        if key in _norm(pages[q + 1]):
-            out.append(f"{entry} ({q - body + 1})")
-    return out
-
-
-def heading_pages(doc_path: str, entries: list[str], rhwp_opt: str | None) -> list[int | None]:
-    """List of body page numbers for the TOC entries. All None if rendering is not possible."""
-    pages = text_pages(doc_path, rhwp_opt)
-    return locate_headings(pages, entries) if pages else [None] * len(entries)
-
-
-def fill_toc_numbers(make, out: str, entries: list[str], rhwp_opt: str | None, firsts: list[str | None] | None = None):
-    """Two-pass TOC page numbers. Renders the first-pass document to get page numbers and fills them in, then renders the final document again to check.
-    If mismatches remain, typesets again with the new values (at most C.TOC_MAX_PASSES times). make(numbers) rebuilds the document from index→page number.
-    With firsts (the first body line of each entry), entries whose heading and first body line land on different pages in the final render are reported as a WARN."""
-    used = heading_pages(out, entries, rhwp_opt)
-    if not any(n is not None for n in used):
-        print(msg("warn_toc_numbers"))
-        return
-    pages = None
-    for attempt in range(C.TOC_MAX_PASSES):
-        make({i: n for i, n in enumerate(used) if n is not None})
-        pages = text_pages(out, rhwp_opt)
-        actual = locate_headings(pages, entries) if pages else [None] * len(entries)
-        diff = [i for i, (u, a) in enumerate(zip(used, actual)) if u != a]
-        if not diff or attempt + 1 == C.TOC_MAX_PASSES:
-            break
-        used = actual
-    filled = sum(n is not None for n in used)
-    print(msg("toc_numbers", found=filled, total=len(entries)))
-    missing = [e for e, n in zip(entries, used) if n is None]
-    if missing:
-        print(msg("warn_toc_missing", n=len(missing), items=missing))
-    if diff:
-        items = [f"{entries[i]} ({used[i]}→{actual[i]})" for i in diff]
-        print(msg("warn_toc_mismatch", n=len(diff), items=items))
-    else:   # entries that were not found are not counted as matches
-        print(msg("toc_verified", n=filled, total=len(entries)))
-    stranded = stranded_headings(pages, entries, firsts) if pages and firsts else []
-    if stranded:
-        print(msg("warn_toc_stranded", n=len(stranded), items=stranded))
 
 
 def rhwp_verify(path: str, expect: str) -> bool | None:

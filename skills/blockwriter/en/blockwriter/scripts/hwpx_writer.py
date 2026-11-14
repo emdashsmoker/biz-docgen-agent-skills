@@ -17,6 +17,7 @@ import lxml.etree as ET
 
 import config as C
 import manuscript as M
+import toc_refs
 from config import msg
 from form import FORMS
 from hwpx_form import write_skeleton
@@ -55,7 +56,7 @@ def builtin_skeleton(form_name: str, workdir: str) -> str:
     return write_skeleton(FORMS[form_name], path)
 
 
-class Builder:
+class Builder(M.TocMarks):
     def __init__(self, skeleton: str, profile: dict, page_break: str = "chapter"):
         try:
             from hwpx import HwpxDocument
@@ -77,8 +78,8 @@ class Builder:
         missing = [v for k, v in profile.items() if k not in C.NON_ROLE_KEYS and v is not None and v not in self.styles]
         if missing:
             sys.exit(msg("err_missing_styles", names=missing))
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[int, int] = {}   # TOC entry index → page number
+        self.toc_items: list[tuple[str, str, str | None]] = []   # items listed in the TOC (M.TocMarks)
+        self.bookmark_names = M.BookmarkNames()
         self.header = self.doc.parts.headers[0]
         self.body_w = self._body_width()
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
@@ -90,10 +91,11 @@ class Builder:
         self.last_para = None
         self.last_cp = None   # base character shape of the previous paragraph (used for the reference run of a footnote made from a source line)
         self.caption_counts = {"TABLE": 0, "PICTURE": 0}   # numbers stored in the caption number fields
+        self.pending_caption = None   # caption waiting to be registered in the TOC (kind, TOC text, object)
         # typesetting options (set in cmd_build)
         self.numbered_square = False
         self.toc = False
-        self.toc_depth = 2
+        self.toc_scope = C.TOC_SCOPE_DEFAULT
         self.cover = None
         self.page_number = False
         self.header_spec = None
@@ -187,6 +189,20 @@ class Builder:
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
 
+    def add_bookmark(self, p, text: str) -> str:
+        """Writes a bookmark as the first control of the first run of the paragraph and returns its name. In a paragraph that holds a table it comes before the table.
+        p is a paragraph object or a paragraph element (caption paragraphs are passed as elements)"""
+        pe = getattr(p, "element", p)
+        name = self.bookmark_names.issue(text)
+        run = pe.find(f"{HP}run")
+        if run is None:   # paragraph without text. Put the run before the stored line layout
+            run = ET.Element(f"{HP}run", charPrIDRef=str(self.refs("body")["char_pr_id_ref"]))
+            pe.insert(0, run)
+        ctrl = ET.Element(f"{HP}ctrl")
+        ET.SubElement(ctrl, f"{HP}bookmark", name=name)
+        run.insert(0, ctrl)
+        return name
+
     def _add_footnote(self, p, text: str, body_cp: str):
         """Places the footnote reference in a run with the paragraph's base character shape and applies the same inline formatting as body text to the footnote text.
         The library puts the reference in the paragraph's last run (subscript, bold, etc.) and builds the footnote text with a single character shape"""
@@ -219,16 +235,7 @@ class Builder:
         at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # before the stored line layout, after the last run
         field_id = new_object_id()
         begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
-        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
-                              name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
-        # parameter names and values exactly as Hangul saves them (including the "Fiexde" spelling). The numbers after the id in Command are the stored value for a footnote number reference
-        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
-                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
-                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
-                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
-        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
-        for tag, name, value in params:
-            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        begin_run.append(crossref_begin(field_id, f"?#{inst_id};3;1;0;0;", f"?#{inst_id};", "TARGET_FOOTNOTE", "OBJECT_TYPE_NUMBER"))
         sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
         ET.SubElement(sup_run, f"{HP}t").text = number
         ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id,
@@ -402,29 +409,30 @@ class Builder:
             if cover.get("org"):
                 front(cover["org"], self._cover_char(C.COVER_ORG_PT, True))
         if self.toc:
-            if not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-                print(msg("warn_no_toc_style"))
-            else:
-                ch = self.refs("chapter")
-                front(C.label("toc.title"), str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
-                      pageBreak="1" if cover else "0")
-                sub_pp = None
-                for idx, (lv, text) in enumerate(M.toc_entries(self.headings, self.toc_depth)):
-                    r = self.refs("toc_chapter" if lv == 1 else "toc_section")
-                    pp = str(r["para_pr_id_ref"])
-                    if lv >= 3:
-                        if sub_pp is None:
-                            sub_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": C.TOC_SUB_INDENT})
-                        pp = sub_pp
-                    p = front(text, str(r["char_pr_id_ref"]), pp)
-                    p.element.set("styleIDRef", str(r["style_id_ref"]))
-                    num = self.toc_numbers.get(idx)
-                    if num:
-                        tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
-                        left = C.TOC_SUB_INDENT if lv >= 3 else (0 if lv == 1 else C.TOC_SECTION_INDENT)
-                        unit = 700 if lv == 1 else 600   # estimated width of one character at 14pt (chapter) and 12pt (section) (HWPUNIT)
-                        width = max(C.TOC_TAB_POS - left - M.weighted_len(text) * unit - len(str(num)) * unit, 1000)
-                        ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2").tail = str(num)
+            ch = self.refs("chapter")
+            indent_pp: dict[int, str] = {}   # left margin → paragraph shape derived from the TOC section style
+            for it in M.toc_layout(self.toc_items):
+                if it["kind"] == "title":
+                    front(it["text"], str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
+                          pageBreak="1" if cover or not it["first"] else "0")
+                    continue
+                item, text, left = it["item"], it["text"], it["indent"]
+                r = self.refs("toc_chapter" if item == "chapter" else "toc_section")
+                pp, cp = str(r["para_pr_id_ref"]), str(r["char_pr_id_ref"])
+                if item not in ("chapter", "section"):   # chapters and sections keep the margin of the style
+                    if left not in indent_pp:
+                        indent_pp[left] = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": left})
+                    pp = indent_pp[left]
+                p = front(text, cp, pp)
+                p.element.set("styleIDRef", str(r["style_id_ref"]))
+                if it["name"]:   # entry text, right dotted tab, page reference, in this order
+                    tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
+                    unit = C.TOC_UNIT_W.get(item, C.TOC_UNIT_W_DEFAULT)
+                    width = max(C.TOC_TAB_POS - left - M.weighted_len(text) * unit - len(toc_refs.PLACEHOLDER) * unit, 1000)
+                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2")
+                    ref_run = ET.Element(f"{HP}run", charPrIDRef=cp)
+                    p.element.findall(f"{HP}run")[-1].addnext(ref_run)
+                    toc_page_ref(ref_run, it["name"], toc_refs.PLACEHOLDER)
         for sec in (s0, s1):
             sec.mark_dirty() if hasattr(sec, "mark_dirty") else None
 
@@ -563,6 +571,21 @@ class Builder:
                            num=str(self.caption_counts[kind]), numType=kind)
         ET.SubElement(an, f"{HP}autoNumFormat", type="DIGIT", userChar="", prefixChar="", suffixChar="", supscript="0")
         cp.add_run(close_b + text, char_pr_id_ref=r["char_pr_id_ref"])
+        # the TOC registration happens after the object is written (_mark_pending_caption)
+        self.pending_caption = (C.CAPTION_KINDS[kind], f"{open_b}{prefix}{self.caption_counts[kind]}{close_b}{text}", holder)
+
+    def _mark_pending_caption(self):
+        """Registers a captioned table or figure in the TOC and puts the bookmark inside the object. For a table object it is the first paragraph of the first cell; otherwise the paragraph holding the object.
+        Why the first cell: the bookmark sits inside the table object, so it moves with the table. A bookmark inside the caption paragraph makes rhwp draw the caption over the table.
+        Why after the object is written: writing cell text rebuilds the runs, which would delete a bookmark inserted earlier"""
+        if not self.pending_caption:
+            return
+        kind, text, holder = self.pending_caption
+        self.pending_caption = None
+        cell = next(holder.element.iter(f"{HP}tc"), None)
+        host = next(cell.iter(f"{HP}p")) if cell is not None else next(
+            a for a in holder.element.iterancestors() if a.tag == f"{HP}p")
+        self.toc_mark(kind, text, host)
 
     # ── Heading levels ─────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
@@ -573,8 +596,7 @@ class Builder:
         label = M.heading_label(self.p, self.numbering.n, level, text)
         manual = self.p["numbering"] == "manual"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
-        if level <= 3:
-            self.headings.append((level, label))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):   # restart from <표 N-1> in each chapter
             p.add_new_num(kind="TABLE", number=1)
             p.add_new_num(kind="PICTURE", number=1)
@@ -686,6 +708,7 @@ class Builder:
             if pos is not None:
                 pos.set("treatAsChar", "0")
                 pos.set("flowWithText", "1")
+        self._mark_pending_caption()
         t.mark_dirty()
         if engine_long:
             self._long_table_gap()
@@ -710,6 +733,7 @@ class Builder:
                                        **r, **self._take_break())
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
+            self._mark_pending_caption()
             for src in sources:
                 self.para("source", src)
             return
@@ -745,10 +769,15 @@ class Builder:
             sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + C.ROW_BASE_H * len(sources)))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, "BOTTOM", table_w)
+        self._mark_pending_caption()
         t.mark_dirty()
 
     # ── Run ────────────────────────────────────────────────────────────────
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
+        # forms without TOC styles skip the TOC. Decide before writing the body so that no unused bookmarks are attached
+        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
+            print(msg("warn_no_toc_style"))
+            self.toc = False
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
@@ -783,6 +812,31 @@ class Builder:
                 print("   ", it)
         save_hwpx(self.doc, out)
         self.doc.close()
+
+
+def crossref_begin(field_id: str, command: str, ref_path: str, ref_type: str, content_type: str):
+    """Begin control of a cross-reference field (hp:ctrl). Written in the structure Hangul saves.
+    Parameter names and values are exactly as in files saved by Hangul (including the "Fiexde" spelling). The trailing numbers of Command are stored values that denote the referenced content"""
+    ctrl = ET.Element(f"{HP}ctrl")
+    begin = ET.SubElement(ctrl, f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                          name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
+    params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+              ("stringParam", "Command", command), ("stringParam", "RefPath", ref_path),
+              ("stringParam", "RefType", ref_type), ("stringParam", "RefContentType", content_type),
+              ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+    holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+    for tag, name, value in params:
+        ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+    return ctrl
+
+
+def toc_page_ref(run, name: str, value: str):
+    """Writes a bookmark page-number cross-reference into the run (field begin, stored value text, field end, in this order).
+    Hangul recalculates the stored value to the page of the bookmark when it loads the document"""
+    field_id = new_object_id()
+    run.append(crossref_begin(field_id, f"?{name};6;0;0;0;", f"?{name};", "TARGET_BOOKMARK", "OBJECT_TYPE_PAGE"))
+    ET.SubElement(run, f"{HP}t").text = value
+    ET.SubElement(ET.SubElement(run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=C.HWPX_CROSSREF_FIELD_ID)
 
 
 def new_object_id() -> str:
@@ -852,7 +906,7 @@ def repair_manifest(path: str) -> int:
 
 
 def build_hwpx(a, elems, footnotes, out: str):
-    """HWPX path of the build command. With TOC and page numbers both on, finds heading pages by rendering and typesets twice."""
+    """HWPX path of the build command"""
     workdir = tempfile.mkdtemp(prefix="blockwriter_")   # holds the built-in form skeleton; deleted when typesetting ends
     try:
         _build_hwpx(a, elems, footnotes, out, workdir)
@@ -861,36 +915,28 @@ def build_hwpx(a, elems, footnotes, out: str):
 
 
 def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
-    import render
     profile = load_profile(a.profile)
     skeleton = a.skeleton or (builtin_skeleton(a.profile, workdir) if a.profile in FORMS else None)
     if not skeleton or not os.path.exists(skeleton):
         sys.exit(msg("err_no_skeleton", path=skeleton))
-
-    def make(numbers=None):
-        b = Builder(skeleton, profile, page_break=a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc, b.toc_depth = a.toc, a.toc_depth
-        b.page_number = a.page_number
-        b.cover = parse_cover(a.cover)
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.notes = M.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
+    b = Builder(skeleton, profile, page_break=a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc, b.toc_scope = a.toc, a.toc_scope
+    b.page_number = a.page_number
+    b.cover = parse_cover(a.cover)
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.notes = M.NoteRegistry(a.footnote_merge)
+    b.build(elems, footnotes, out)
     fixed = repair_manifest(out)
     if fixed:
         print(msg("manifest_fixed", n=fixed))
-    has_toc = bool(profile.get("toc_chapter") and profile.get("toc_section"))
-    if a.toc and a.page_number and b.headings and has_toc:   # two-pass typesetting: find heading page positions by rendering and write them into the TOC (approximate)
-        def remake(numbers):
-            make(numbers)
-            repair_manifest(out)
-        render.fill_toc_numbers(remake, out, [t for _, t in M.toc_entries(b.headings, a.toc_depth)], a.rhwp,
-                                M.toc_first_lines(elems, a.toc_depth))   # rhwp does not apply the keep-with-next setting that prevents stranded headings
+    refs = sum(1 for _, _, name in b.toc_items if name)
+    if refs:   # Hangul recalculates page references when it loads the document, so the stored value stays a placeholder
+        print(msg("toc_hwpx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
+    elif b.toc_items:
+        print(msg("toc_no_numbers", n=len(b.toc_items), fmt="hwpx"))
 
 
 # ── Skeleton extraction from a user form ────────────────────────────────────────

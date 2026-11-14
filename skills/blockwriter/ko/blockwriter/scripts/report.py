@@ -53,6 +53,9 @@ def cmd_build(a):
         print("HITL:", notice)
     a.page_break = a.page_break or C.DEFAULT_PAGE_BREAK
     a.long_table = a.long_table or C.DEFAULT_LONG_TABLE
+    if a.toc_scope and not a.toc:
+        sys.exit(msg("err_toc_scope_alone"))
+    a.toc_scope = M.parse_toc_kinds(a.toc_scope, C.TOC_SCOPE_KINDS, "--toc-scope") if a.toc_scope else C.TOC_SCOPE_DEFAULT
     if ext == ".hwpx":
         import hwpx_writer
         hwpx_writer.build_hwpx(a, elems, footnotes, out)
@@ -83,9 +86,54 @@ def count_merged_notes(path: str) -> int:
     """산출 파일에서 첫 각주 번호의 상호참조로 대체된 각주 참조 수 (출처 각주 통합)"""
     with zipfile.ZipFile(path) as z:
         if path.lower().endswith(".hwpx"):
-            return sum(len(re.findall(r'<hp:fieldBegin\b[^>]*type="CROSSREF"', z.read(n).decode("utf-8")))
+            # 목차 쪽 참조도 같은 CROSSREF 필드이므로 참조 대상이 각주인 필드만 센다
+            return sum(z.read(n).decode("utf-8").count(">TARGET_FOOTNOTE<")
                        for n in z.namelist() if re.match(r"Contents/section\d+\.xml$", n))
         return len(re.findall(r"<w:instrText[^>]*>\s*NOTEREF\b", z.read("word/document.xml").decode("utf-8")))
+
+
+def cmd_toc_static(a):
+    """사후 정적화: 제출 파일에서 지정한 종류의 책갈피를 지우고 그 책갈피를 가리키는 쪽 참조를 일반 글자로 바꾼다.
+    쪽번호를 갱신하지 않은 항목(자리 표시 값)은 건너뛰고 알린다. Why: 실제 쪽은 한/글과 Word만 계산함"""
+    import toc_refs
+    style_kinds = static_style_kinds(a.profile, toc_refs.is_docx(a.input))
+    items = toc_refs.scan(a.input, style_kinds)
+    if not items:
+        sys.exit(msg("err_static_no_refs"))
+    for it in items:   # 종류, 쪽번호 저장값, 갱신 상태, 책갈피 이름, 책갈피가 놓인 문단의 글자
+        print(f"{it.kind}\t{'|'.join(it.values)}\t{msg('static_state_' + it.state.value)}\t{it.name}\t{it.text}")
+    kinds = (*toc_refs.KINDS, toc_refs.OTHER)
+    counts = {k: sum(it.kind == k for it in items) for k in kinds}
+    print(msg("static_counts", counts=", ".join(f"{k} {n}" for k, n in counts.items() if n)))
+    if not a.scope:
+        print(msg("static_need_scope", all=C.STATIC_SCOPE_ALL))
+        return
+    wanted = set(toc_refs.KINDS) if a.scope == C.STATIC_SCOPE_ALL else set(M.parse_toc_kinds(a.scope, kinds, "--scope"))
+    chosen = [it for it in items if it.kind in wanted]
+    targets = [it for it in chosen if it.state is toc_refs.RefState.UPDATED]
+    skipped = [it for it in chosen if it.state is not toc_refs.RefState.UPDATED]
+    if skipped:
+        key = "warn_static_skipped_docx" if toc_refs.is_docx(a.input) else "warn_static_skipped_hwpx"
+        print(msg(key, n=len(skipped), items=", ".join(it.name for it in skipped)))
+    if not targets:
+        print(msg("static_none"))
+        return
+    stem, ext = os.path.splitext(a.input)
+    out = a.output or f"{stem}{C.STATIC_SUFFIX}{ext}"
+    if os.path.abspath(out) == os.path.abspath(a.input):
+        sys.exit(msg("err_static_same_path"))
+    toc_refs.make_static(a.input, out, {it.name for it in targets})
+    print(msg("static_ok", out=out, done=len(targets), skipped=len(skipped), kept=len(toc_refs.scan(out, style_kinds))))
+
+
+def static_style_kinds(profile_spec: str, docx: bool) -> dict[str, str]:
+    """문단 스타일 이름 → 목차 항목 종류. HWPX는 프로파일의 스타일 이름, DOCX는 조판기가 만든 Word 스타일 이름"""
+    if not docx:
+        import hwpx_writer
+        profile = hwpx_writer.load_profile(profile_spec)
+        return {profile[role]: kind for role, kind in C.STATIC_STYLE_ROLES.items() if profile.get(role)}
+    import docx_writer
+    return docx_writer.style_kinds(profile_spec)
 
 
 def cmd_form(a):
@@ -160,18 +208,26 @@ def main():
     b.add_argument("--footnote-merge", choices=list(C.NOTE_MERGE_SCOPES),
                    help="출처 각주 통합 (기본 OFF): 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
                         "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
-    b.add_argument("--toc", action="store_true", help="문서 앞에 목차 삽입 (기본 OFF)")
-    b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="목차 깊이: 1=장, 2=절(기본), 3=소절")
+    b.add_argument("--toc", action="store_true",
+                   help="문서 앞에 목차 삽입 (기본 OFF). --page-number와 함께 켜면 수록 항목마다 책갈피를 붙이고 쪽번호를 쪽 참조 필드로 기록")
+    b.add_argument("--toc-scope", help=f"목차 수록 범위 (쉼표 구분, 기본 {','.join(C.TOC_SCOPE_DEFAULT)}). "
+                                       f"항목: {', '.join(C.TOC_SCOPE_KINDS)}. table과 figure는 번호 캡션이 붙은 표와 그림")
     b.add_argument("--page-number", action="store_true", help="꼬리말 가운데 쪽번호 '- N -' (기본 OFF)")
     b.add_argument("--cover", help='표지 (기본 OFF): "title=제목;subtitle=부제;date=작성 연월;org=기관명"')
     b.add_argument("--header", help='머리말 (기본 OFF): "텍스트;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="셀 병합: auto=선행 라벨 열 연속 동일값과 '^' '<' 지시(기본), explicit=지시만, none=병합 없음")
-    b.add_argument("--rhwp", help="목차 쪽번호 산정에 쓸 rhwp 경로")
     b.add_argument("--numbered-square", action="store_true", help="'□ 1. 제목' 줄을 글머리 없는 숫자 헤더로 출력")
     b.add_argument("--labels", help="다른 언어 문서용 라벨 JSON: 번호 형식, 목차 제목, 캡션 라벨, 추가 원고 표기 토큰, "
                                     "언어 태그 (기본: 한국어 라벨)")
     b.set_defaults(func=cmd_build)
+
+    ts = sub.add_parser("toc-static", help="산출 이후 정적화: 지정한 항목의 책갈피를 지우고 목차 쪽번호를 일반 글자로 바꾼 사본 생성")
+    ts.add_argument("input", help="한/글 또는 Word에서 쪽번호를 갱신하여 저장한 hwpx 또는 docx")
+    ts.add_argument("--scope", help=f"정적화할 항목 종류 (쉼표 구분 또는 {C.STATIC_SCOPE_ALL}). 생략하면 항목 현황만 출력")
+    ts.add_argument("-o", "--output", help=f"산출 경로 (기본: 원본 이름에 {C.STATIC_SUFFIX} 접미)")
+    ts.add_argument("--profile", default="chapter", help="스타일 이름으로 항목 종류를 판별할 프로파일 (chapter | flat | 프로파일 JSON)")
+    ts.set_defaults(func=cmd_toc_static)
 
     f = sub.add_parser("form", help="내장 양식을 빈 HWPX 파일로 저장")
     f.add_argument("form", choices=sorted(FORMS))

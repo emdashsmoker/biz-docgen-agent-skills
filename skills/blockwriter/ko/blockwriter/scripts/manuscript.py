@@ -7,6 +7,7 @@ import io
 import math
 import os
 import re
+import sys
 import unicodedata
 import urllib.request
 from dataclasses import dataclass, field
@@ -808,28 +809,67 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
     return out
 
 
-def toc_entries(headings: list[tuple[int, str]], depth: int) -> list[tuple[int, str]]:
-    """목차에 싣는 제목 (문서 순서). 목차 쪽번호는 이 목록의 순번으로 대응한다 (같은 문구의 제목이 여럿이어도 섞이지 않음)."""
-    return [(lv, text) for lv, text in headings if lv <= depth]
+def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
+    """항목 종류 목록(쉼표 구분)을 검증하여 돌려준다. option은 오류 안내에 쓸 옵션 이름"""
+    kinds = tuple(k.strip() for k in spec.split(",") if k.strip())
+    unknown = [k for k in kinds if k not in allowed]
+    if unknown or not kinds:
+        sys.exit(msg("err_toc_scope", option=option, items=unknown, allowed=", ".join(allowed)))
+    return kinds
 
 
-def toc_first_lines(elems: list[Element], depth: int) -> list[str | None]:
-    """목차 항목마다 뒤따르는 첫 본문 줄의 출력 글자 (toc_entries 순서). 한/글은 제목부터 첫 본문 줄까지를 한 쪽에 묶으므로
-    사이의 하위 제목과 □는 건너뜀. 표와 그림은 캡션으로 찾고 찾을 글자가 없거나 쪽 나눔이 끼면 None"""
-    out = []
-    for i, e in enumerate(elems):
-        if e.kind != "heading" or e.level > depth:
-            continue
-        first = None
-        for nx in elems[i + 1:]:
-            if nx.kind in ("heading", "square"):
-                continue
-            if nx.kind in BODY_KINDS or nx.kind == "source":
-                first = shown_text(nx.text)
-            elif nx.kind in ("table", "image"):
-                first = nx.text or None
-            break
-        out.append(first)
+def toc_bookmark_name(text: str) -> str:
+    """HWPX 책갈피 이름. 목차 항목 문구에서 쪽 참조 경로의 구분 문자만 지운다"""
+    return "".join(ch for ch in text if ch not in C.BOOKMARK_DROP_CHARS).strip()
+
+
+def docx_bookmark_name(n: int, text: str) -> str:
+    """Word 책갈피 이름 (글자로 시작, 글자와 숫자와 밑줄, 길이 상한). 순번이 이름을 유일하게 한다"""
+    slug = re.sub(r"[^0-9A-Za-z가-힣]+", "_", text).strip("_")
+    return C.DOCX_TOC_BOOKMARK.format(n=n, slug=slug)[:C.DOCX_BOOKMARK_MAX].rstrip("_")
+
+
+class BookmarkNames:
+    """HWPX 책갈피 이름 발급. 한/글은 같은 이름의 책갈피를 둘 이상 등록하지 않으므로 같은 문구가 다시 나오면 (2)부터 순번을 붙인다"""
+
+    def __init__(self):
+        self.used: set[str] = set()
+
+    def issue(self, text: str) -> str:
+        base = toc_bookmark_name(text)
+        name, n = base, 1
+        while name in self.used:
+            n += 1
+            name = f"{base}({n})"
+        self.used.add(name)
+        return name
+
+
+class TocMarks:
+    """목차 수록 항목의 등록. HWPX와 DOCX 조판기가 함께 상속하고 책갈피 기록(add_bookmark)만 조판기가 구현한다.
+    toc_items: (종류, 목차 문구, 책갈피 이름) 목록 (문서 순서). 쪽번호를 싣지 않는 목차는 책갈피 이름이 None"""
+
+    def toc_mark(self, kind: str, text: str, host):
+        """수록 범위에 든 항목을 목차에 등록하고 쪽 참조가 가리킬 책갈피를 host 문단에 붙인다.
+        Why 쪽번호 조건: 책갈피는 쪽 참조의 대상으로만 쓰이므로 쪽번호 없는 목차에는 붙이지 않음"""
+        if not self.toc or kind not in self.toc_scope:
+            return
+        name = self.add_bookmark(host, text) if self.page_number else None
+        self.toc_items.append((kind, text, name))
+
+
+def toc_layout(toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
+    """목차 문단의 순서 (목차, 표 목차, 그림 목차). 조판기는 이 목록을 순서대로 기록만 한다.
+    kind: title(text, first), entry(item, text, name, indent). first는 첫 목차 제목인지 여부이며 그 밖의 제목은 새 쪽에서 시작"""
+    out = [{"kind": "title", "text": C.label("toc.title"), "first": True}]
+    out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": C.TOC_INDENT[kind]}
+            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS]
+    for list_kind, title_key in C.TOC_LIST_KINDS.items():
+        entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
+        if entries:
+            out.append({"kind": "title", "text": C.label(title_key), "first": False})
+            out += [{"kind": "entry", "item": list_kind, "text": text, "name": name, "indent": C.TOC_LIST_INDENT}
+                    for text, name in entries]
     return out
 
 

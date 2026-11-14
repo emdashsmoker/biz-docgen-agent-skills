@@ -7,6 +7,7 @@ import io
 import math
 import os
 import re
+import sys
 import unicodedata
 import urllib.request
 from dataclasses import dataclass, field
@@ -807,28 +808,67 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
     return out
 
 
-def toc_entries(headings: list[tuple[int, str]], depth: int) -> list[tuple[int, str]]:
-    """Headings listed in the TOC (document order). TOC page numbers are matched by index in this list (headings with the same text do not get mixed up)."""
-    return [(lv, text) for lv, text in headings if lv <= depth]
+def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
+    """Validates a comma-separated list of item kinds and returns it. option is the option name used in the error message"""
+    kinds = tuple(k.strip() for k in spec.split(",") if k.strip())
+    unknown = [k for k in kinds if k not in allowed]
+    if unknown or not kinds:
+        sys.exit(msg("err_toc_scope", option=option, items=unknown, allowed=", ".join(allowed)))
+    return kinds
 
 
-def toc_first_lines(elems: list[Element], depth: int) -> list[str | None]:
-    """Printed text of the first body line after each TOC entry (toc_entries order). Hangul keeps a heading through its first body line on one page,
-    so lower headings and □ in between are skipped. Tables and figures are found by their captions; None when there is no text to find or a page break comes between"""
-    out = []
-    for i, e in enumerate(elems):
-        if e.kind != "heading" or e.level > depth:
-            continue
-        first = None
-        for nx in elems[i + 1:]:
-            if nx.kind in ("heading", "square"):
-                continue
-            if nx.kind in BODY_KINDS or nx.kind == "source":
-                first = shown_text(nx.text)
-            elif nx.kind in ("table", "image"):
-                first = nx.text or None
-            break
-        out.append(first)
+def toc_bookmark_name(text: str) -> str:
+    """HWPX bookmark name. Removes only the separator characters of the page reference path from the TOC entry text"""
+    return "".join(ch for ch in text if ch not in C.BOOKMARK_DROP_CHARS).strip()
+
+
+def docx_bookmark_name(n: int, text: str) -> str:
+    """Word bookmark name (starts with a letter; letters, digits and underscores; length limit). The sequence number keeps names unique"""
+    slug = re.sub(r"[^0-9A-Za-z가-힣]+", "_", text).strip("_")
+    return C.DOCX_TOC_BOOKMARK.format(n=n, slug=slug)[:C.DOCX_BOOKMARK_MAX].rstrip("_")
+
+
+class BookmarkNames:
+    """Issues HWPX bookmark names. Hangul does not register two bookmarks with the same name, so a repeated text gets a sequence number starting at (2)"""
+
+    def __init__(self):
+        self.used: set[str] = set()
+
+    def issue(self, text: str) -> str:
+        base = toc_bookmark_name(text)
+        name, n = base, 1
+        while name in self.used:
+            n += 1
+            name = f"{base}({n})"
+        self.used.add(name)
+        return name
+
+
+class TocMarks:
+    """Registers the items listed in the TOC. The HWPX and DOCX builders both inherit this and implement only the bookmark writing (add_bookmark).
+    toc_items: list of (kind, TOC text, bookmark name) in document order. A TOC without page numbers has None as the bookmark name"""
+
+    def toc_mark(self, kind: str, text: str, host):
+        """Registers an item that is in the TOC scope and attaches the bookmark that the page reference targets to the host paragraph.
+        Why the page-number condition: bookmarks serve only as page reference targets, so a TOC without page numbers gets none"""
+        if not self.toc or kind not in self.toc_scope:
+            return
+        name = self.add_bookmark(host, text) if self.page_number else None
+        self.toc_items.append((kind, text, name))
+
+
+def toc_layout(toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
+    """Order of TOC paragraphs (TOC, list of tables, list of figures). Builders only write this list in order.
+    kind: title(text, first), entry(item, text, name, indent). first tells whether it is the first TOC title; other titles start on a new page"""
+    out = [{"kind": "title", "text": C.label("toc.title"), "first": True}]
+    out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": C.TOC_INDENT[kind]}
+            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS]
+    for list_kind, title_key in C.TOC_LIST_KINDS.items():
+        entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
+        if entries:
+            out.append({"kind": "title", "text": C.label(title_key), "first": False})
+            out += [{"kind": "entry", "item": list_kind, "text": text, "name": name, "indent": C.TOC_LIST_INDENT}
+                    for text, name in entries]
     return out
 
 

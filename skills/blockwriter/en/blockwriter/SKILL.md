@@ -47,7 +47,7 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
     - (rhwp origin) Options 1 and 2 use the releases and source of the rhwp repository (https://github.com/edwardkim/rhwp)
     - (Option 1 release binary) Query the tags with `git ls-remote --tags --refs https://github.com/edwardkim/rhwp`. Get the asset list by downloading `https://github.com/edwardkim/rhwp/releases/download/<tag>/SHA256SUMS.txt` with `curl -fL`. Download the asset from `https://github.com/edwardkim/rhwp/releases/download/<tag>/<file name>` with `curl -fL`. If SHA256SUMS.txt exists, verify the file with `sha256sum -c`. After extracting, make the executable runnable and put it in scripts/rhwp/. Check that it works with `rhwp --version` and `rhwp --help`
     - (Option 2 source build) Get the rhwp repository with `git clone` and build it from source
-- Page PNGs and TOC page numbers need poppler-utils (pdftoppm, pdftotext). Without them render produces only the PDF and build leaves TOC page numbers empty
+- Page PNGs need poppler-utils (pdftoppm). Without it render produces only the PDF
 - The built-in forms use 나눔고딕 (NanumGothic), with 나눔바른고딕 (NanumBarunGothic) only for flat headings. For both fonts, only the NAVER release has Hanja. Check installation and Hanja coverage with `fonts` and set up downloads and substitute fonts with `fonts --setup`. The font policy is in references/renderers.md
 - The start order below is fixed for work that produces a document. Obtaining the renderers and running the render tests come before the planning questions of step 1. Work that only produces a manuscript (export, docx2md, xlsx2md) only installs the dependencies
     - The review in step 4 is where the working context is fullest with the manuscript and typesetting results. Obtaining a renderer at that point fails more often because attempts get cut short and are given up early. Obtaining and testing at the start leaves time to resolve the causes of failure
@@ -79,6 +79,7 @@ pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-sy
 | Convert XLSX to a manuscript | `xlsx2md table.xlsx manuscript.md [--allow-wide]` |
 | Visual review | `render document.hwpx [--engine auto\|rhwp\|soffice] [--rhwp path] [--outdir folder]`, `render document.docx [--outdir folder]` |
 | Structure check | `check document.hwpx [--expect "--expect-min-tables 2"]` (schema, image manifest consistency, rhwp verify), `check document.docx` (structure summary) |
+| TOC static conversion (after delivery) | `toc-static SUBMITTED_FILE [--scope item,...\|all] [-o output] [--profile profile]` (TOC static conversion section) |
 | Font check | `fonts`, `fonts --setup` |
 
 build options
@@ -93,16 +94,16 @@ build options
 - (`--numbered-square`) Prints `□ 1. title` lines as numbered headings without the □ bullet. When the title wraps to two lines, the second line aligns with the text after the number
 - (`--page-number`) Footer page number `- N -` at center. Default OFF, so that page numbers do not clash when several documents are combined into one
 - (`--toc`) Inserts a table of contents at the front. Default OFF
-    - (`--toc-depth 1|2|3`) TOC depth (1 up to chapters, 2 up to sections, 3 up to subsections). Default 2
-    - Entries are the title, a dotted tab, and the page number. Page numbers are written only when `--page-number` is also given
-    - Page numbers are approximations computed by rendering. build fills them in, renders again, and prints the check result (TOC section of references/layout.md)
+    - (`--toc-scope item,...`) TOC scope. Default `chapter,section,table,figure` (chapters, sections, tables, figures). The items that can be added are `subsection` and `ganada` (가나다 headings). Pass the answer received in step 1
+    - `table` and `figure` are tables and figures that have captions. A list of tables and a list of figures follow the TOC, each on a new page
+    - Entries are the text, a dotted tab, and the page number. Page numbers are written only when `--page-number` is also given
+    - A TOC with page numbers attaches a bookmark to every listed item and writes each page number as a page reference field to that bookmark (TOC section of references/layout.md)
     - Forms without TOC styles (including flat) skip the TOC with a warning
 - (`--cover "title=title;subtitle=subtitle;date=date;org=organization"`) Cover page. Default OFF. Title 24pt bold, subtitle 16pt, date 14pt, organization 16pt bold, centered
     - If a long title risks pushing the cover past one page, adjust only the cover values in config.py (the blank line counts and font sizes whose names start with COVER_)
 - The cover and TOC go in a front section and the body starts a new section. Body page numbers start at 1
 - (`--header "text;align=LEFT|CENTER|RIGHT"`) Page header. Default OFF. Alignment defaults to right. Applies only to the body section
 - (`--skeleton skeleton.hwpx`) Skeleton extracted from a user form (HWPX only)
-- (`--rhwp path`) rhwp executable used for TOC page numbers (HWPX)
 - (`--labels labels.json`) Label file for a document in another language (Labels section below). Default OFF (Korean labels)
 
 The fill replacement JSON has the form `{"replace": {"old text": "new text"}, "cells": {"label > right": "value"}}`. A `cells` key finds the table cell that contains the label text and then points to the cell reached by moving in the given directions (left, right, up, down). Directions can be chained with `>` (for example `"합계 > down > right"`). If the label text appears in more than one table cell of the document, the target cell cannot be determined and fill reports it as failed, so use text that appears only once as the label.
@@ -135,7 +136,13 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
-    - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the TOC depth (chapter, section, subsection), the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
+    - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
+    - (TOC scope) When a TOC is inserted, also ask for its scope. The default is chapters, sections, tables, and figures. Offer subsections (N.N.N) and 가나다 headings as examples of items that can be added. Only tables and figures with captions are listed
+    - (Bookmark notice) When asking whether to insert a TOC, give the following notice with the question
+        - A TOC with page numbers attaches a bookmark to every listed item (heading paragraphs, tables and figures with captions), and each TOC page number follows its bookmark
+        - Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. The bookmarks of tables and figures sit inside the table, so they move with the table
+        - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
+        - Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
     - (Choice items) Present every choice and mark the default with "(default)"
         - (Reason) The user chooses only among the choices the question shows
@@ -156,9 +163,29 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - Output path, what was fixed, which renderer was used, and the fallback reason
     - (Renderer limits) One line saying that the review renderers are approximate, so the result may look different in Hangul or Word
     - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
-    - (DOCX TOC) If a TOC with page numbers was inserted, one line saying that Word asks whether to update fields when it opens the document, and that choosing "Yes" updates the TOC with Word's page numbers
+    - (TOC page numbers) If a TOC with page numbers was inserted, repeat the bookmark notice of step 1 and add the initial values of each format
+        - The TOC page numbers of an HWPX are written as the placeholder `?`. They change to the real pages when Hangul loads the document
+        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document, so they change to the real pages only after select all (Ctrl+A) then F9
+        - If a PDF is bundled, the PDF from the HWPX review render keeps `?` as the TOC page numbers
     - (Font notice) If `fonts` can run on the computer where the user opens the documents (the skill runs on that computer or can send commands to it), run it. If every form font (NanumGothic, plus NanumBarunGothic for flat) is installed with all Hanja present, skip the notice. If a font is missing or lacks Hanja, name it and give the installation steps for the user's computer in references/renderers.md
     - (Remote workspace) If the user's computer cannot be checked, skip the font notice and the question about font installation. Give the installation steps when the user mentions a font or Hanja display problem
+
+## TOC static conversion
+
+- Post-processing performed only when the user asks for it after the files are delivered. It is not part of the step 1 plan questions
+- (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
+
+1. (Update request) Ask the user to open the delivered file once in Hangul or Word, update the page numbers, save it, and submit it again. Hangul updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save
+    - Only Hangul and Word calculate the real pages. Static conversion of the build output as it is freezes the placeholder
+2. (Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, table, figure) or all
+3. (Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
+4. (Report) Give the user the counts of items made static, skipped, and kept, and the output path
+
+- The bookmarks and page references of items outside the scope stay and keep updating in Hangul and Word
+- (File not updated) Items whose page number is the placeholder `?` are left as they are and reported in a `WARN:` line. Repeat step 1 to the user
+- (Item kind) Identified from where the bookmark sits (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all. They can be chosen with `--scope other`
+- References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references are not changed
+- The processing rules are in the TOC section of references/layout.md
 
 ## Manuscript level rules
 
@@ -182,12 +209,12 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 
 - Both formats share fonts, sizes, bold, character width ratio, character spacing, alignment, margins, line spacing, bullet symbols, and the table and figure rules
 - DOCX supports only the built-in forms (chapter, flat). User forms (`--skeleton`) and fill are HWPX only
-- DOCX puts the chapter, section, subsection, and 가나다 headings on Word's built-in heading styles so that the navigation pane and the TOC field recognize them
-- DOCX mapping rules such as unit conversion, caption number fields, the TOC field, footnotes, and the font table are in references/layout.md
+- DOCX puts the chapter, section, subsection, and 가나다 headings on Word's built-in heading styles so that the navigation pane recognizes them
+- DOCX mapping rules such as unit conversion, caption number fields, TOC page references, footnotes, and the font table are in references/layout.md
 
 ## Labels
 
-- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC title, caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width), and the language tags of DOCX and HWPX
+- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC titles (TOC, list of tables, list of figures), caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width), and the language tags of DOCX and HWPX
 - (How) `build manuscript.md output.docx --profile chapter --labels labels.json`. A nested JSON object; omitted keys keep the defaults. Unknown keys and invalid values stop build with the list of all problems. Works for HWPX and DOCX and for both built-in forms
 - (Defaults) Without `--labels`, documents get the Korean labels (제N장, 가., 목  차, 표, 그림)
 - (Manuscript tokens) The Korean tokens stay recognized. A label file only adds tokens (for example `Source:`, `<Table>`, `(Unit: )`)

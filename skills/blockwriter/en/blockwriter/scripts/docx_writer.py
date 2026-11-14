@@ -2,10 +2,10 @@
 
 Form mapping principles
 - Style values (font, size, bold, character width ratio, character spacing, alignment, margins, line spacing) are taken from form.py with only the units converted
-- Chapter, section, and subsection headings use Word built-in heading styles so the TOC field and navigation pane recognize them
+- Chapter, section, and subsection headings use Word built-in heading styles so the navigation pane recognizes them
 - Bullets are Word bullet lists so that wrapped second lines align with the text start line
-- Table numbers are SEQ fields and the TOC is a TOC field; field results are prefilled so viewers that do not update fields still show them
-- The TOC has the same structure as a TOC made by Word (heading bookmarks, entry hyperlinks, PAGEREF page-number fields, TOC content control)
+- Table numbers are SEQ fields; field results are prefilled so viewers that do not update fields still show them
+- The TOC is made of ordinary paragraphs (entry text, tab, PAGEREF page reference) and each listed item gets a bookmark. The Word TOC field is not used
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ import sys
 
 import config as C
 import manuscript as M
+import toc_refs
 from config import msg
 from form import FORMS, Char, Para
 from hwpx_writer import MANUAL_SYMBOLS, cell_sides, load_profile, parse_cover, parse_header_spec
@@ -111,7 +112,7 @@ def ppr_xml(para: Para, char: Char, num_id: int | None = None, align: str | None
     return p
 
 
-class DocxBuilder:
+class DocxBuilder(M.TocMarks):
     def __init__(self, form_name: str, page_break: str):
         self.form = FORMS[form_name]
         self.form_name = form_name
@@ -121,9 +122,7 @@ class DocxBuilder:
         self.style_ids: dict[str, str] = {}
         self.num_ids: dict[str, int] = {}
         self.pending_break = False
-        self.headings: list[tuple[int, str]] = []
-        self.heading_marks: list[str] = []      # heading bookmark names in the same order as self.headings
-        self.toc_numbers: dict[int, int] = {}   # TOC entry index → page number
+        self.toc_items: list[tuple[str, str, str | None]] = []   # items listed in the TOC (M.TocMarks)
         self.caption_n = {"TABLE": 0, "PICTURE": 0}
         self.fn_part = None
         self.fn_count = 0
@@ -133,7 +132,7 @@ class DocxBuilder:
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
         self.numbered_square = False
         self.toc = False
-        self.toc_depth = 2
+        self.toc_scope = C.TOC_SCOPE_DEFAULT
         self.cover = None
         self.page_number = False
         self.header_spec = None
@@ -231,18 +230,6 @@ class DocxBuilder:
                 ppr.append(el("w:outlineLvl", w__val=outline))
             el_.append(ppr)
             el_.append(rpr_xml(st.char))
-        toc2 = form.style("toc_section")
-        if toc2:   # TOC subsection entries add only an indent to the section entry shape
-            st3 = self._style_el("TOC3", "toc 3")
-            st3.insert(1, el("w:basedOn", w__val="Normal"))
-            para3 = Para(**{**toc2.para.__dict__, "margin": (0, C.TOC_SUB_INDENT) + toc2.para.margin[2:]})
-            ppr = ppr_xml(para3, toc2.char)
-            tabs = el("w:tabs")
-            sub(tabs, "w:tab", w__val="right", w__leader="dot", w__pos=tw(C.TOC_TAB_POS))
-            ppr.insert(1, tabs)
-            st3.append(ppr)
-            st3.append(rpr_xml(toc2.char))
-            self.style_ids["toc_sub"] = "TOC3"
         ref = self._style_el("FootnoteReference", "footnote reference", "character")
         rpr = el("w:rPr")
         sub(rpr, "w:vertAlign", w__val="superscript")
@@ -447,9 +434,7 @@ class DocxBuilder:
             self.pending_break = True
         label = M.heading_label(self.p, self.numbering.n, level, text)
         p = self.para(role, label)
-        if level <= 3:
-            self.headings.append((level, label))
-            self.heading_marks.append(self._bookmark(p))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):
             self.caption_n = {"TABLE": 0, "PICTURE": 0}
 
@@ -484,6 +469,7 @@ class DocxBuilder:
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
         p.append(self._run(close_b + text))
+        self.toc_mark(C.CAPTION_KINDS[kind], f"{open_b}{prefix}{self.caption_n[kind]}{close_b}{text}", p)
         return self._body_append(p)
 
     # ── Tables ─────────────────────────────────────────────────────────────
@@ -827,14 +813,12 @@ class DocxBuilder:
             if self.cover.get("org"):
                 line(self.cover["org"], cover_char(C.COVER_ORG_PT, True))
         if self.toc:
-            if not (self.form.style("toc_chapter") and self.form.style("toc_section")):
-                print(msg("warn_no_toc_style"))
-            else:
-                line(C.label("toc.title"), chapter.char, chapter.para, page_break=bool(self.cover))
-                front.extend(self._toc_paragraphs())
+            for it in M.toc_layout(self.toc_items):
+                if it["kind"] == "title":
+                    line(it["text"], chapter.char, chapter.para, page_break=bool(self.cover) or not it["first"])
+                else:
+                    front.append(self._toc_paragraph(it))
         # end of the front section: a section break with page settings only (no header, footer, or page number)
-        if front[-1].tag != qn("w:p"):   # after the TOC content control, a minimum-height paragraph holds the section break
-            front.append(self._tiny_para())
         last = front[-1]
         ppr = last.find(qn("w:pPr"))
         if ppr is None:
@@ -849,10 +833,11 @@ class DocxBuilder:
         for i, p in enumerate(front):
             body_el.insert(i, p)
 
-    def _bookmark(self, p) -> str:
-        """Wraps the whole heading paragraph in a bookmark and returns its name. The hyperlink and PAGEREF field of the TOC entry point to this bookmark."""
-        bid = len(self.heading_marks) + 1
-        name = C.DOCX_TOC_BOOKMARK.format(n=bid)
+    def add_bookmark(self, p, text: str) -> str:
+        """Wraps the whole paragraph in a bookmark and returns its name. The PAGEREF fields of TOC entries find the page through this bookmark.
+        Call it after all text of the paragraph is written"""
+        bid = sum(1 for _, _, name in self.toc_items if name) + 1
+        name = M.docx_bookmark_name(bid, text)
         start = el("w:bookmarkStart", w__id=bid, w__name=name)
         ppr = p.find(qn("w:pPr"))
         if ppr is None:
@@ -862,50 +847,21 @@ class DocxBuilder:
         p.append(el("w:bookmarkEnd", w__id=bid))
         return name
 
-    def _tiny_para(self):
-        """Empty paragraph with minimum height"""
+    def _toc_paragraph(self, it: dict):
+        """TOC entry paragraph: an ordinary paragraph with the entry text, a tab and a PAGEREF page reference, in this order.
+        Why no TOC field: when Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles.
+        The PAGEREF result text is a placeholder that Word calculates with Ctrl+A then F9.
+        Why no update-on-open setting (updateFields, the dirty flag of a field): Word updates the fields before it lays out the pages, so every page number becomes 1"""
         p = el("w:p")
         ppr = sub(p, "w:pPr")
-        sub(ppr, "w:spacing", w__before=0, w__after=0, w__line=C.DOCX_SPACER_PT * 20, w__lineRule="exact")
+        sub(ppr, "w:pStyle", w__val="TOC1" if it["item"] == "chapter" else "TOC2")
+        if it["item"] not in ("chapter", "section"):   # chapters and sections keep the margin of the style
+            sub(ppr, "w:ind", w__left=tw(it["indent"]))
+        p.append(self._run(it["text"]))
+        if it["name"]:
+            sub(sub(p, "w:r"), "w:tab")
+            p.extend(field_runs(f" PAGEREF {it['name']} \\h ", toc_refs.PLACEHOLDER))
         return p
-
-    def _toc_paragraphs(self) -> list:
-        """TOC field. Inserted with the same structure as a TOC made by Word, with the result (entries and page numbers) prefilled.
-        Each entry has a hyperlink to the heading bookmark and a PAGEREF page-number field. Choosing 'Update page numbers only' in Word
-        recalculates the PAGEREF fields from the bookmark positions; choosing 'Update entire table' makes Word rebuild the entries."""
-        show_numbers = self.page_number
-        instr = f' TOC \\o "1-{self.toc_depth}" \\h \\z' + ("" if show_numbers else " \\n") + " "
-        entries = [(lv, text, mark) for (lv, text), mark in zip(self.headings, self.heading_marks)
-                   if lv <= self.toc_depth]
-
-        def web_hidden():   # \z switch: hide the tab and page number in Web Layout view (same display as a Word TOC)
-            rpr = el("w:rPr")
-            sub(rpr, "w:webHidden")
-            return rpr
-        sdt = el("w:sdt")
-        part = sub(sub(sdt, "w:sdtPr"), "w:docPartObj")
-        sub(part, "w:docPartGallery", w__val="Table of Contents")
-        sub(part, "w:docPartUnique")
-        content = sub(sdt, "w:sdtContent")
-        last = None
-        for i, (lv, text, mark) in enumerate(entries or [(1, "", None)]):
-            p = sub(content, "w:p")
-            ppr = sub(p, "w:pPr")
-            sub(ppr, "w:pStyle", w__val={1: "TOC1", 2: "TOC2"}.get(lv, "TOC3"))
-            if i == 0:
-                p.extend(field_runs(instr, None))
-            holder = sub(p, "w:hyperlink", w__anchor=mark, w__history=1) if mark else p
-            holder.append(self._run(text))
-            if show_numbers and mark:
-                tab = sub(holder, "w:r")
-                tab.append(web_hidden())
-                sub(tab, "w:tab")
-                num = self.toc_numbers.get(i)
-                holder.extend(field_runs(f" PAGEREF {mark} \\h ", str(num) if num else "", web_hidden))
-            last = p
-        end = sub(last, "w:r")
-        sub(end, "w:fldChar", w__fldCharType="end")
-        return [sdt]
 
     def _finish(self, out: str):
         sect = self.doc.element.body.find(qn("w:sectPr"))
@@ -913,8 +869,6 @@ class DocxBuilder:
         self._header_footer()
         if self.cover or self.toc:
             self._front_matter()
-        if self.toc and self.page_number:   # Word recalculates TOC page numbers when opening the document
-            insert_settings_child(self.doc.settings.element, el("w:updateFields", w__val="true"))
         cp = self.doc.core_properties
         cp.author = cp.last_modified_by = cp.comments = ""
         cp.title = (self.cover or {}).get("title", "")
@@ -925,6 +879,10 @@ class DocxBuilder:
         self.doc.save(out)
 
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
+        # forms without TOC styles skip the TOC. Decide before writing the body so that no unused bookmarks are attached
+        if self.toc and not (self.form.style("toc_chapter") and self.form.style("toc_section")):
+            print(msg("warn_no_toc_style"))
+            self.toc = False
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
@@ -956,8 +914,8 @@ def zero_picture_distance(shape):
     (Word does not use these values for a picture placed as a character)"""
     for side in ("distT", "distB", "distL", "distR"):
         shape._inline.set(side, "0")
-def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
-    """Runs of a complex field (begin, instruction, separate, result, end). If result is None, only the first three without end."""
+def field_runs(instr: str, result: str, rpr_factory=None) -> list:
+    """Runs of a complex field (begin, instruction, separate, result, end)"""
     def run():
         r = el("w:r")
         if rpr_factory:
@@ -971,8 +929,6 @@ def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
     t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
     sep = run()
     sub(sep, "w:fldChar", w__fldCharType="separate")
-    if result is None:
-        return [begin, ins, sep]
     res = run()
     rt = sub(res, "w:t")
     rt.text = result
@@ -1031,26 +987,31 @@ def drop_thumbnail(doc):
 
 
 def build_docx(a, elems, footnotes, out: str):
-    """DOCX path of the build command. With TOC and page numbers both on, finds heading pages by LibreOffice rendering and fills the TOC results."""
-    import render
+    """DOCX path of the build command"""
+    b = DocxBuilder(a.profile, a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc, b.toc_scope = a.toc, a.toc_scope
+    b.page_number = a.page_number
+    b.cover = parse_cover(a.cover)
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.notes = M.NoteRegistry(a.footnote_merge)
+    b.build(elems, footnotes, out)
+    refs = sum(1 for _, _, name in b.toc_items if name)
+    if refs:   # Word does not recalculate PAGEREF when it opens a document, so the user updates with Ctrl+A then F9
+        print(msg("toc_docx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
+    elif b.toc_items:
+        print(msg("toc_no_numbers", n=len(b.toc_items), fmt="docx"))
 
-    def make(numbers=None):
-        b = DocxBuilder(a.profile, a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc, b.toc_depth = a.toc, a.toc_depth
-        b.page_number = a.page_number
-        b.cover = parse_cover(a.cover)
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.notes = M.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
-    has_toc = bool(b.form.style("toc_chapter") and b.form.style("toc_section"))
-    if a.toc and a.page_number and b.headings and has_toc:   # two-pass typesetting: find heading pages by LibreOffice rendering and write them into the TOC results
-        render.fill_toc_numbers(make, out, [t for _, t in M.toc_entries(b.headings, a.toc_depth)], None)
+
+def style_kinds(form_name: str) -> dict[str, str]:
+    """Word style name → TOC item kind. Static conversion uses it to identify the kind of a bookmark in a submitted file"""
+    if form_name not in FORMS:
+        sys.exit(msg("err_docx_builtin_only"))
+    form, heading_map = FORMS[form_name], C.DOCX_HEADING_STYLES[form_name]
+    return {(heading_map[role] if role in heading_map else form.style(role).name): kind
+            for role, kind in C.STATIC_STYLE_ROLES.items() if form.style(role)}
 
 
 def check_docx(path: str) -> int:
@@ -1061,7 +1022,7 @@ def check_docx(path: str) -> int:
     with zipfile.ZipFile(path) as z:
         notes = z.read("word/footnotes.xml").decode("utf-8").count("<w:footnote ") - 2 if "word/footnotes.xml" in z.namelist() else 0
         images = sum(1 for n in z.namelist() if n.startswith("word/media/"))
-    toc = any("TOC" in (t.text or "") for t in body.iter(qn("w:instrText")))
+    toc = len(toc_refs.docx_page_values(path))
     print(msg("docx_check_parts", paras=len(body.findall(qn("w:p"))), tables=len(body.findall(qn("w:tbl"))),
               images=images, notes=max(notes, 0), toc=toc))
     return 0

@@ -2,10 +2,10 @@
 
 양식 대응 원칙
 - 스타일 수치(글꼴, 크기, 굵기, 장평, 자간, 정렬, 여백, 줄 간격)는 form.py 값을 단위만 바꿔 옮긴다
-- 장·절·소절 제목은 Word 기본 제목 스타일에 입혀 목차 필드와 탐색 창이 인식하게 한다
+- 장·절·소절 제목은 Word 기본 제목 스타일에 입혀 탐색 창이 인식하게 한다
 - 글머리 기호는 Word 글머리 목록으로 만들어 줄바꿈 시 둘째 줄이 본문 시작선에 맞게 한다
-- 표 번호는 SEQ 필드, 목차는 TOC 필드로 넣고 필드 결과값을 미리 채워 필드를 갱신하지 않는 뷰어에서도 보이게 한다
-- 목차는 Word가 만드는 목차와 같은 구조(제목 책갈피, 항목 하이퍼링크, PAGEREF 쪽번호 필드, 목차 콘텐츠 컨트롤)로 넣는다
+- 표 번호는 SEQ 필드로 넣고 필드 결과값을 미리 채워 필드를 갱신하지 않는 뷰어에서도 보이게 한다
+- 목차는 일반 문단(항목 문구, 탭, PAGEREF 쪽 참조)으로 넣고 수록 항목마다 책갈피를 둔다. Word 목차 필드(TOC)는 쓰지 않는다
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ import sys
 
 import config as C
 import manuscript as M
+import toc_refs
 from config import msg
 from form import FORMS, Char, Para
 from hwpx_writer import MANUAL_SYMBOLS, cell_sides, load_profile, parse_cover, parse_header_spec
@@ -111,7 +112,7 @@ def ppr_xml(para: Para, char: Char, num_id: int | None = None, align: str | None
     return p
 
 
-class DocxBuilder:
+class DocxBuilder(M.TocMarks):
     def __init__(self, form_name: str, page_break: str):
         self.form = FORMS[form_name]
         self.form_name = form_name
@@ -121,9 +122,7 @@ class DocxBuilder:
         self.style_ids: dict[str, str] = {}
         self.num_ids: dict[str, int] = {}
         self.pending_break = False
-        self.headings: list[tuple[int, str]] = []
-        self.heading_marks: list[str] = []      # self.headings와 같은 순서의 제목 책갈피 이름
-        self.toc_numbers: dict[int, int] = {}   # 목차 항목 순번 → 쪽번호
+        self.toc_items: list[tuple[str, str, str | None]] = []   # 목차 수록 항목 (M.TocMarks)
         self.caption_n = {"TABLE": 0, "PICTURE": 0}
         self.fn_part = None
         self.fn_count = 0
@@ -133,7 +132,7 @@ class DocxBuilder:
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
         self.numbered_square = False
         self.toc = False
-        self.toc_depth = 2
+        self.toc_scope = C.TOC_SCOPE_DEFAULT
         self.cover = None
         self.page_number = False
         self.header_spec = None
@@ -231,18 +230,6 @@ class DocxBuilder:
                 ppr.append(el("w:outlineLvl", w__val=outline))
             el_.append(ppr)
             el_.append(rpr_xml(st.char))
-        toc2 = form.style("toc_section")
-        if toc2:   # 목차 소절은 절 모양에 들여쓰기만 더한다
-            st3 = self._style_el("TOC3", "toc 3")
-            st3.insert(1, el("w:basedOn", w__val="Normal"))
-            para3 = Para(**{**toc2.para.__dict__, "margin": (0, C.TOC_SUB_INDENT) + toc2.para.margin[2:]})
-            ppr = ppr_xml(para3, toc2.char)
-            tabs = el("w:tabs")
-            sub(tabs, "w:tab", w__val="right", w__leader="dot", w__pos=tw(C.TOC_TAB_POS))
-            ppr.insert(1, tabs)
-            st3.append(ppr)
-            st3.append(rpr_xml(toc2.char))
-            self.style_ids["toc_sub"] = "TOC3"
         ref = self._style_el("FootnoteReference", "footnote reference", "character")
         rpr = el("w:rPr")
         sub(rpr, "w:vertAlign", w__val="superscript")
@@ -449,9 +436,7 @@ class DocxBuilder:
             self.pending_break = True
         label = M.heading_label(self.p, self.numbering.n, level, text)
         p = self.para(role, label)
-        if level <= 3:
-            self.headings.append((level, label))
-            self.heading_marks.append(self._bookmark(p))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):
             self.caption_n = {"TABLE": 0, "PICTURE": 0}
 
@@ -486,6 +471,7 @@ class DocxBuilder:
         for r in field_runs(instr, str(self.caption_n[kind])):
             p.append(r)
         p.append(self._run(close_b + text))
+        self.toc_mark(C.CAPTION_KINDS[kind], f"{open_b}{prefix}{self.caption_n[kind]}{close_b}{text}", p)
         return self._body_append(p)
 
     # ── 표 ──────────────────────────────────────────────────────────────
@@ -829,14 +815,12 @@ class DocxBuilder:
             if self.cover.get("org"):
                 line(self.cover["org"], cover_char(C.COVER_ORG_PT, True))
         if self.toc:
-            if not (self.form.style("toc_chapter") and self.form.style("toc_section")):
-                print(msg("warn_no_toc_style"))
-            else:
-                line(C.label("toc.title"), chapter.char, chapter.para, page_break=bool(self.cover))
-                front.extend(self._toc_paragraphs())
+            for it in M.toc_layout(self.toc_items):
+                if it["kind"] == "title":
+                    line(it["text"], chapter.char, chapter.para, page_break=bool(self.cover) or not it["first"])
+                else:
+                    front.append(self._toc_paragraph(it))
         # 앞부분 구역 끝: 쪽 설정만 담은 구역 나눔 (머리말·꼬리말·쪽번호 없음)
-        if front[-1].tag != qn("w:p"):   # 목차 콘텐츠 컨트롤 뒤에는 구역 나눔을 담을 최소 높이 문단을 둔다
-            front.append(self._tiny_para())
         last = front[-1]
         ppr = last.find(qn("w:pPr"))
         if ppr is None:
@@ -851,10 +835,11 @@ class DocxBuilder:
         for i, p in enumerate(front):
             body_el.insert(i, p)
 
-    def _bookmark(self, p) -> str:
-        """제목 문단 전체를 책갈피로 감싸고 이름을 돌려준다. 목차 항목의 하이퍼링크와 PAGEREF 필드가 이 책갈피를 가리킨다."""
-        bid = len(self.heading_marks) + 1
-        name = C.DOCX_TOC_BOOKMARK.format(n=bid)
+    def add_bookmark(self, p, text: str) -> str:
+        """문단 전체를 책갈피로 감싸고 이름을 돌려준다. 목차 항목의 PAGEREF 필드가 이 책갈피로 쪽을 찾는다.
+        문단의 글자를 모두 기록한 뒤에 호출한다"""
+        bid = sum(1 for _, _, name in self.toc_items if name) + 1
+        name = M.docx_bookmark_name(bid, text)
         start = el("w:bookmarkStart", w__id=bid, w__name=name)
         ppr = p.find(qn("w:pPr"))
         if ppr is None:
@@ -864,50 +849,21 @@ class DocxBuilder:
         p.append(el("w:bookmarkEnd", w__id=bid))
         return name
 
-    def _tiny_para(self):
-        """내용 없는 최소 높이 문단"""
+    def _toc_paragraph(self, it: dict):
+        """목차 항목 문단: 항목 문구, 탭, PAGEREF 쪽 참조 순서의 일반 문단.
+        Why 목차 필드(TOC)를 쓰지 않음: Word가 TOC 필드를 갱신하면 조판한 항목을 지우고 제목 스타일에서 항목을 다시 만듦.
+        PAGEREF 결과 글자는 자리 표시 값이며 Word에서 Ctrl+A 후 F9로 계산한다.
+        Why 열 때 갱신 설정(updateFields, 필드의 dirty 표시)을 쓰지 않음: Word가 쪽 배치 전에 필드를 갱신하여 쪽번호가 모두 1이 됨"""
         p = el("w:p")
         ppr = sub(p, "w:pPr")
-        sub(ppr, "w:spacing", w__before=0, w__after=0, w__line=C.DOCX_SPACER_PT * 20, w__lineRule="exact")
+        sub(ppr, "w:pStyle", w__val="TOC1" if it["item"] == "chapter" else "TOC2")
+        if it["item"] not in ("chapter", "section"):   # 장과 절은 스타일의 여백 그대로
+            sub(ppr, "w:ind", w__left=tw(it["indent"]))
+        p.append(self._run(it["text"]))
+        if it["name"]:
+            sub(sub(p, "w:r"), "w:tab")
+            p.extend(field_runs(f" PAGEREF {it['name']} \\h ", toc_refs.PLACEHOLDER))
         return p
-
-    def _toc_paragraphs(self) -> list:
-        """목차 필드. Word가 만드는 목차와 같은 구조로 넣고 결과값(항목과 쪽번호)을 미리 채운다.
-        항목마다 제목 책갈피로 가는 하이퍼링크와 PAGEREF 쪽번호 필드를 둔다. Word에서 '쪽 번호만 업데이트'를 고르면
-        PAGEREF가 책갈피 위치로 쪽번호를 다시 계산하고, '목차 전체 업데이트'를 고르면 Word가 항목을 새로 만든다."""
-        show_numbers = self.page_number
-        instr = f' TOC \\o "1-{self.toc_depth}" \\h \\z' + ("" if show_numbers else " \\n") + " "
-        entries = [(lv, text, mark) for (lv, text), mark in zip(self.headings, self.heading_marks)
-                   if lv <= self.toc_depth]
-
-        def web_hidden():   # \z 스위치: 웹 모양 보기에서 탭과 쪽번호를 숨긴다 (Word 목차와 같은 표시)
-            rpr = el("w:rPr")
-            sub(rpr, "w:webHidden")
-            return rpr
-        sdt = el("w:sdt")
-        part = sub(sub(sdt, "w:sdtPr"), "w:docPartObj")
-        sub(part, "w:docPartGallery", w__val="Table of Contents")
-        sub(part, "w:docPartUnique")
-        content = sub(sdt, "w:sdtContent")
-        last = None
-        for i, (lv, text, mark) in enumerate(entries or [(1, "", None)]):
-            p = sub(content, "w:p")
-            ppr = sub(p, "w:pPr")
-            sub(ppr, "w:pStyle", w__val={1: "TOC1", 2: "TOC2"}.get(lv, "TOC3"))
-            if i == 0:
-                p.extend(field_runs(instr, None))
-            holder = sub(p, "w:hyperlink", w__anchor=mark, w__history=1) if mark else p
-            holder.append(self._run(text))
-            if show_numbers and mark:
-                tab = sub(holder, "w:r")
-                tab.append(web_hidden())
-                sub(tab, "w:tab")
-                num = self.toc_numbers.get(i)
-                holder.extend(field_runs(f" PAGEREF {mark} \\h ", str(num) if num else "", web_hidden))
-            last = p
-        end = sub(last, "w:r")
-        sub(end, "w:fldChar", w__fldCharType="end")
-        return [sdt]
 
     def _finish(self, out: str):
         sect = self.doc.element.body.find(qn("w:sectPr"))
@@ -915,8 +871,6 @@ class DocxBuilder:
         self._header_footer()
         if self.cover or self.toc:
             self._front_matter()
-        if self.toc and self.page_number:   # Word가 열 때 목차 쪽번호를 다시 계산
-            insert_settings_child(self.doc.settings.element, el("w:updateFields", w__val="true"))
         cp = self.doc.core_properties
         cp.author = cp.last_modified_by = cp.comments = ""
         cp.title = (self.cover or {}).get("title", "")
@@ -927,6 +881,10 @@ class DocxBuilder:
         self.doc.save(out)
 
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
+        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음
+        if self.toc and not (self.form.style("toc_chapter") and self.form.style("toc_section")):
+            print(msg("warn_no_toc_style"))
+            self.toc = False
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
@@ -959,8 +917,8 @@ def zero_picture_distance(shape):
         shape._inline.set(side, "0")
 
 
-def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
-    """복합 필드(begin, 명령, separate, 결과, end) 실행 요소. result가 None이면 end 없이 앞 3개만."""
+def field_runs(instr: str, result: str, rpr_factory=None) -> list:
+    """복합 필드(begin, 명령, separate, 결과, end) 실행 요소"""
     def run():
         r = el("w:r")
         if rpr_factory:
@@ -974,8 +932,6 @@ def field_runs(instr: str, result: str | None, rpr_factory=None) -> list:
     t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
     sep = run()
     sub(sep, "w:fldChar", w__fldCharType="separate")
-    if result is None:
-        return [begin, ins, sep]
     res = run()
     rt = sub(res, "w:t")
     rt.text = result
@@ -1034,26 +990,31 @@ def drop_thumbnail(doc):
 
 
 def build_docx(a, elems, footnotes, out: str):
-    """build 명령의 DOCX 경로. 목차와 쪽번호를 함께 켜면 LibreOffice 렌더링으로 제목 쪽을 찾아 목차 결과값을 채운다."""
-    import render
+    """build 명령의 DOCX 경로"""
+    b = DocxBuilder(a.profile, a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc, b.toc_scope = a.toc, a.toc_scope
+    b.page_number = a.page_number
+    b.cover = parse_cover(a.cover)
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.notes = M.NoteRegistry(a.footnote_merge)
+    b.build(elems, footnotes, out)
+    refs = sum(1 for _, _, name in b.toc_items if name)
+    if refs:   # Word는 문서를 열 때 PAGEREF를 다시 계산하지 않으므로 유저가 Ctrl+A 후 F9로 갱신
+        print(msg("toc_docx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
+    elif b.toc_items:
+        print(msg("toc_no_numbers", n=len(b.toc_items), fmt="docx"))
 
-    def make(numbers=None):
-        b = DocxBuilder(a.profile, a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc, b.toc_depth = a.toc, a.toc_depth
-        b.page_number = a.page_number
-        b.cover = parse_cover(a.cover)
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.notes = M.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
-    has_toc = bool(b.form.style("toc_chapter") and b.form.style("toc_section"))
-    if a.toc and a.page_number and b.headings and has_toc:   # 2회 조판: LibreOffice 렌더링으로 제목 쪽을 찾아 목차 결과값에 기입
-        render.fill_toc_numbers(make, out, [t for _, t in M.toc_entries(b.headings, a.toc_depth)], None)
+
+def style_kinds(form_name: str) -> dict[str, str]:
+    """Word 스타일 이름 → 목차 항목 종류. 정적화가 제출 파일의 책갈피 종류를 판별할 때 쓴다"""
+    if form_name not in FORMS:
+        sys.exit(msg("err_docx_builtin_only"))
+    form, heading_map = FORMS[form_name], C.DOCX_HEADING_STYLES[form_name]
+    return {(heading_map[role] if role in heading_map else form.style(role).name): kind
+            for role, kind in C.STATIC_STYLE_ROLES.items() if form.style(role)}
 
 
 def check_docx(path: str) -> int:
@@ -1064,7 +1025,7 @@ def check_docx(path: str) -> int:
     with zipfile.ZipFile(path) as z:
         notes = z.read("word/footnotes.xml").decode("utf-8").count("<w:footnote ") - 2 if "word/footnotes.xml" in z.namelist() else 0
         images = sum(1 for n in z.namelist() if n.startswith("word/media/"))
-    toc = any("TOC" in (t.text or "") for t in body.iter(qn("w:instrText")))
+    toc = len(toc_refs.docx_page_values(path))
     print(msg("docx_check_parts", paras=len(body.findall(qn("w:p"))), tables=len(body.findall(qn("w:tbl"))),
               images=images, notes=max(notes, 0), toc=toc))
     return 0

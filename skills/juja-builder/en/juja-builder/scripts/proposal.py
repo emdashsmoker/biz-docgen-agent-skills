@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 """juja-builder (scripts/proposal.py): the single CLI of the research service proposal writing pipeline.
 
-Commands
-  rfp       RFP (hwpx|pdf|docx|md) → 01_RFP원문.md (converted text), empty 01_요구항목표.md and 01_배점표.md tables (the model reads the source and fills them)
-  deck      proposal deck (pptx|pdf) → 발표자료/ (reference PDF, 원문.md, page PNGs, thumbnail sheets, embedded images)
-  figure    capture a whole deck page or part of it as a diagram PNG for insertion (--grid makes a grid PNG for reading crop values)
-  init      create the workspace (--kind proposal|report|plan. state.json, default skeleton _양식/proposal.hwpx. A proposal adds 00_제안전략서.md, 회사자료.md, and the common part templates 원고/41 61 62. A pre-diagnosis report adds 00_진단서.md, a planning report adds 00_기획설계.md)
-  ledger    tally the deciding sections of 01_배점표.md and update attributed points and status in 02_섹션대장.md
-  check     rfp | density | wording | tone | numbers | fill | volume | all (all is the check list for the output type. --skip leaves out named checks)
-  build     merge 원고/*.md → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. The skeleton is regenerated on every run.
-            --labels is a document label file. The default labels are Korean)
-  render    hwpx or docx → PDF + page PNGs (hwpx uses rhwp first, LibreOffice with H2Orestart if missing. docx uses LibreOffice)
-  selftest  judge the render path by typesetting and rendering a sample manuscript (the start gate. Result in state.json checks.render)
-  skeleton  client template.hwpx → skeleton.hwpx + draft profile
 
 Composition: hwpx_report.py is the format-agnostic typesetting layer (manuscript parser, inline notation, table layout calculation, figure size, TOC order) and the hwpx writer,
 docx_report.py is the docx writer. This file handles judgments per output type (heading numbers, bands, caption numbers, table width directives) and the verdict rules.
@@ -46,6 +34,7 @@ ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 sys.path.insert(0, SCRIPT_DIR)
 import hwpx_report as lib  # noqa: E402  format-agnostic layer such as the parser and table layout calculation, and the hwpx writer
 import docx_report as docx_lib  # noqa: E402  docx writer
+import toc_refs  # noqa: E402  lookup and static conversion of TOC bookmarks and page references
 from lxml import etree  # noqa: E402  installed together as a python-hwpx dependency
 
 HP = lib.HP
@@ -116,7 +105,7 @@ SKELETON_GLYPH_EM = {"□": 0.892, "○": 0.892, "-": 0.583, "·": 0.446, "※":
 # docx adds character spacing to spaces to match the same width
 SKELETON_SPACE_EM = 0.5
 # lib.Builder validates every profile value as a style name, so keys that are not style names are removed before passing to the typesetter (including keys ending in _pt)
-PROFILE_EXTRA_KEYS = ("item_format", "chapter_label", "chapter_band", "toc_lists")
+PROFILE_EXTRA_KEYS = ("item_format", "chapter_label", "chapter_band")
 PROFILES = {
     "proposal": {
         **lib.PROFILES["chapter"],
@@ -134,12 +123,12 @@ PROFILES = {
 }
 # Planning report: the same hierarchy as the proposal (Ⅰ., 1., 가., 1)) and unnumbered captions. The document title is build --title
 PROFILES["plan"] = dict(PROFILES["proposal"])
-# Pre-diagnosis report: final report convention (제1장, 1.1, 1.1.1, 가.) and caption numbers per chapter (<표 1-1>). The TOC includes the list of tables and list of figures
+# Pre-diagnosis report: final report convention (제1장, 1.1, 1.1.1, 가.) and caption numbers per chapter (<표 1-1>). Numbered captions are what the list of tables and list of figures contain
 PROFILES["report"] = {
     **PROFILES["proposal"],
     "chapter_format": "제{n}장 {t}", "chapter_label": "제{n}장",
     "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g} {t}",
-    "caption_prefix": "{c}-", "toc_lists": True,
+    "caption_prefix": "{c}-",
     "chapter_band": {"label_w": 7600, "label_pt": 1800},   # one line up to "제10장". The width equals the Module band so title start lines align
 }
 # Output type: recorded in state.json by init --kind. Sets build's default profile. The delivered file name is the label output.<type> (hwpx_report.py LABEL_DEFAULTS)
@@ -419,8 +408,8 @@ def lint(elems: list[Element]) -> list[str]:
 class ProposalLayout:
     """Typesetting judgments for proposals, pre-diagnosis reports, and planning reports. The hwpx and docx writers both inherit it and record the same results
     Judgment targets: heading numbers and page breaks, band composition, caption text and numbers, table width and long-table directives, notes below tables, element traversal
-    Record functions the writers implement: para, heading_para, band_emit, chapter_started, add_footnote, after_table, after_image,
-    _front_matter, set_page_number, set_header, save"""
+    Record functions the writers implement: para, heading_para, band_emit (records the number-cell paragraph in band_host), chapter_started, add_footnote,
+    add_bookmark, after_table, after_image, _front_matter, set_page_number, set_header, save"""
 
     def _cell_line_role(self, line: str) -> str | None:
         """A cell line with only one symbol (○ in a comparison matrix, and so on) is not treated as a bullet.
@@ -460,21 +449,21 @@ class ProposalLayout:
             self.n["ganada"] += 1
             i = self.n["ganada"]
             label = self.p.get("item_format", "{g} {t}").format(i=i, g=lib.letter_label(i), t=text)
-        if level == 1:  # chapter titles are bands like Module and Task. The label is recorded as is for TOC and page number matching
+        if level == 1:  # chapter titles are bands like Module and Task. The label is recorded as is for the TOC text
             self.cap_n = {"TABLE": 0, "PICTURE": 0}
             band_label = self.p.get("chapter_label", "{r}").format(n=c, r=ROMAN[(c - 1) % len(ROMAN)])
             if getattr(self, "divider", False):  # divider page: a page holding only the chapter title. The body starts from the first section on the next page
                 self.pending_break = False
                 p = self.divider_emit(self.band_spec(lib.Element("band", label, data={"kind": "divider", "label": band_label, "title": text})),
                                       new_page=self._body_started)
+                self.toc_mark("chapter", label, self.band_host)
                 self.after_block = True
                 self.pending_break = True
             else:
                 p = self.band(lib.Element("band", label, data={"kind": "chapter", "label": band_label, "title": text}))
         else:
             p = self.heading_para(role, label, pt)
-        if level <= 3:
-            self.headings.append((level, label))
+            self.toc_mark(role, label, p)
         if level == 1:
             self.chapter_started(p)
 
@@ -495,14 +484,16 @@ class ProposalLayout:
                           (title, st["title_pt"], "#000000", "LEFT", None, None)]}
 
     def band(self, e: Element):
-        """Place a chapter, Module, or Task title as a one-row, three-cell table. Returns the paragraph holding the band (or the first paragraph) for restarting the chapter's caption numbers."""
+        """Place a chapter, Module, or Task title as a one-row, three-cell table. Returns the paragraph holding the band (or the first paragraph) for restarting the chapter's caption numbers.
+        The TOC bookmark goes in the number-cell paragraph (band_host). Why: in the paragraph holding the band table, moving the band would require moving the bookmark control code separately"""
         p = self.band_emit(self.band_spec(e))
+        self.toc_mark(e.data["kind"], e.text.strip(), self.band_host)
         self.after_block = True
         return p
 
     def caption_label(self, kind: str, text: str) -> dict:
         """Caption text. Unnumbered profiles use <title> for tables and [title] for figures. Numbered profiles use <표 1-3> title and [그림 1-3] title
-        Returns: open (before the number), num (the number, None if absent), close (after the number), text (the whole). Numbered captions are registered in the list of tables and list of figures
+        Returns: open (before the number), num (the number, None if absent), close (after the number), text (the whole). Writers register numbered captions in the list of tables and list of figures through mark_caption
         The word and brackets are the caption labels (hwpx_report.py LABEL_DEFAULTS)"""
         prefix = self.p.get("caption_prefix")
         cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
@@ -514,14 +505,7 @@ class ProposalLayout:
         open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         head = open_b + prefix.format(c=max(self.n["chapter"], 1))
         full = f"{head}{num}{close_b}{text}"
-        self.captions.append((kind, full, close_b.strip() + text))
         return {"open": head, "num": num, "close": close_b + text, "text": full}
-
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        if not self.p.get("toc_lists"):
-            return []
-        return [(lib.label("toc.tables"), [t for k, t, _ in self.captions if k == "TABLE"]),
-                (lib.label("toc.figures"), [t for k, t, _ in self.captions if k == "PICTURE"])]
 
     def unify_table_widths(self, elems: list[Element]):
         """Turn table width directives into column widths. A directive is a `(폭: ...)` line in the manuscript that the model sets qualitatively after checking whether a layout repeats.
@@ -602,6 +586,7 @@ class ProposalLayout:
 
     def build(self, elems: list[Element], footnotes: dict, out: str):
         """Element traversal. Notes and source lines right after tables and figures are attached as bottom rows of the block, and source lines after body text move into a footnote of the preceding paragraph"""
+        self.check_toc_styles()
         self.unify_table_widths(elems)
         self.last_para = None
         self._body_started = False   # whether the first body element was recorded. Used for page break decisions of divider pages
@@ -662,7 +647,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cap_n = {"TABLE": 0, "PICTURE": 0}
-        self.captions: list[tuple[str, str, str]] = []
+        self.pending_caption = None   # numbered caption waiting to be registered in the TOC (kind, caption_label return value, object)
 
     def _sized_char(self, height: int, bold: bool) -> str:
         """charPr that changes only size and weight based on the chapter style font (heading hierarchy, band text)."""
@@ -684,6 +669,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
         """If caption_prefix is None, attach an unnumbered caption <title> to the object (proposal convention). If set, lib's automatically numbered caption."""
         label = self.caption_label(kind, text)
         if label["num"] is not None:
+            self.pending_caption = (kind, label, holder)   # the TOC registration happens after the object is recorded (mark_pending_caption)
             return super().attach_caption(holder, kind, text, side, width)
         role = "table_title" if kind == "TABLE" else "fig_title"
         r = self.refs(role)
@@ -755,6 +741,8 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             sub = cell.element.find(f"{HP}subList")
             if sub is not None:
                 sub.set("vertAlign", "CENTER")
+            if ci == 0:
+                self.band_host = next(cell.element.iter(f"{HP}p"))   # paragraph of the number cell. The TOC bookmark goes here so that it moves with the band
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
             sz.set("height", str(height))
@@ -791,12 +779,21 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
                     wb.set("hatchColor", "#" + wb.get("hatchColor")[3:])
         return bid
 
+    def mark_pending_caption(self):
+        """Registers a table or figure with a numbered caption in the TOC and puts the bookmark inside the object
+        Why after the object is recorded: recording cell text rebuilds the runs, which would delete a bookmark inserted earlier"""
+        if self.pending_caption:
+            kind, label, holder = self.pending_caption
+            self.pending_caption = None
+            self.mark_caption(kind, label, self.object_host(holder))
+
     def _last_tbl(self):
         tbls = list(self.doc.sections[-1].element.iter(f"{HP}tbl"))
         return tbls[-1] if tbls else None
 
     def after_table(self, e: Element):
         """Turn ■ cells into shaded cells, and in numbered caption profiles remove tables without captions from the number count (so list of tables numbers match 한/글 automatic numbers)"""
+        self.mark_pending_caption()
         tbl = self._last_tbl()
         if tbl is None:
             return
@@ -819,6 +816,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             tc.set("borderFillIDRef", self._border_fill(lib.edge_sides(c0, c1, ncol), fill))
 
     def after_image(self, e: Element):
+        self.mark_pending_caption()
         tbl = self._last_tbl()
         if tbl is not None and self.p.get("caption_prefix") and not e.text and tbl.get("numberingType") == "PICTURE":
             tbl.set("numberingType", "NONE")
@@ -840,7 +838,6 @@ class ProposalDocxBuilder(ProposalLayout, docx_lib.DocxBuilder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cap_n = {"TABLE": 0, "PICTURE": 0}
-        self.captions: list[tuple[str, str, str]] = []
 
 
 def load_state(work: str) -> dict:
@@ -2162,6 +2159,11 @@ def cmd_build(a):
     else:
         src = a.input
         out_base = os.path.splitext(a.output or a.input)[0]
+    if a.toc_scope and not a.toc:
+        sys.exit("ERROR: pass --toc-scope together with --toc")
+    toc_scope = lib.parse_toc_scope(a.toc_scope)
+    if a.toc_scope and profile.get("caption_prefix") is None and set(toc_scope) & set(lib.TOC_LIST_KINDS):
+        print("NOTE: captions in this profile have no numbers, so tables and figures are not listed in the TOC (only numbered captions are listed)")
     elems, footnotes = parse_markdown(src)
     msgs = lint(elems)
     for msg in msgs:
@@ -2169,8 +2171,8 @@ def cmd_build(a):
     if a.long_table is None and any("[long table HITL]" in m for m in msgs):
         sys.exit("ERROR: a table needs long-table handling but --long-table is not set. Set the kickoff answer (engine or split) with --long-table, then build")
 
-    def make(fmt: str, out: str, numbers: dict[str, int] | None = None) -> ProposalLayout:
-        """One typesetting run. With numbers, rewrite the typeset copy with page numbers filled in the TOC. Manuscript elements change during typesetting, so a copy is passed"""
+    def make(fmt: str, out: str) -> ProposalLayout:
+        """One typesetting run. Manuscript elements change during typesetting, so a copy is passed"""
         if fmt == "hwpx":
             b = ProposalBuilder(skeleton, _profile_for_builder(profile), page_break=a.page_break)
             b.p = profile
@@ -2179,13 +2181,12 @@ def cmd_build(a):
         b.numbered_square = False
         b.toc = a.toc
         b.page_number = a.page_number
-        b.toc_depth = a.toc_depth
+        b.toc_scope = toc_scope
         b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
         b.notes = lib.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
         b.unify_mode = a.unify
         b.theme = a.theme
         b.doc_title = a.title
@@ -2202,18 +2203,8 @@ def cmd_build(a):
             fixed = lib.repair_manifest(out)
             if fixed:
                 print(f"WARN: {fixed} images not registered in the manifest were corrected automatically")
-        if a.toc and a.page_number:  # pass 2: find the page positions of titles and captions by rendering and fill them into the TOC (approximate, finalized in 한/글 and Word)
-            numbers = toc_page_numbers(out, fmt, [t for _, t in b.headings], [(t, needle) for _, t, needle in b.captions],
-                                       {t for lv, t in b.headings if lv == 1})
-            if numbers:
-                make(fmt, out, numbers)
-                if fmt == "hwpx":
-                    lib.repair_manifest(out)
-                # count only entries in the TOC. Why: titles down to subsections (###) and all captions go into detection, but the TOC holds only up to toc_depth and the list of tables setting
-                listed = [t for lv, t in b.headings if lv <= b.toc_depth] + [t for _, items in b.toc_lists() for t in items]
-                print(f"TOC page numbers filled {sum(t in numbers for t in listed)}/{len(listed)} ({fmt}, approximate renderer)")
-            else:
-                print(f"WARN: renderer or pdftotext missing, so {fmt} TOC page numbers not filled")
+        if a.toc:
+            print(lib.toc_notice(b.toc_items, fmt))
         made[fmt] = out
         note_info = f", merged footnote references {b.notes.merged}" if a.footnote_merge else ""
         print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)}{note_info})")
@@ -2234,7 +2225,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t\d+$")   # TOC page numbers depend on each format's rendering, so they are excluded from the comparison
+TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references are calculated by the editor, so they are excluded from the comparison
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2301,31 +2292,48 @@ def check_parity(hwpx_path: str, docx_path: str) -> list[str]:
     return diffs
 
 
-def toc_page_numbers(path: str, fmt: str, headings: list[str], captions: list[tuple[str, str]],
-                     chapters: set[str] | None = None) -> dict[str, int]:
-    """Render the typeset copy into a PDF that keeps a text layer and find the body page numbers of TOC entries. hwpx uses rhwp first, docx uses LibreOffice"""
-    if not shutil.which("pdftotext"):
-        return {}
-    pdf = os.path.splitext(path)[0] + ".toc.pdf"
-    if fmt == "hwpx":
-        if not (lib.find_rhwp() or lib.find_soffice()):
-            return {}
-        engine = lib.resolve_engine("auto", None)
-        src = lib.render_copy(path, strip_newnum=(engine == "soffice"))
-    else:
-        if not lib.find_soffice():
-            return {}
-        engine, src = "soffice", path
-    try:
-        lib.to_pdf(src, pdf, engine, None, text_as_paths=False)
-    except SystemExit:
-        return {}
-    finally:
-        if src != path and os.path.exists(src):
-            os.remove(src)
-    pages = subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True).stdout.split("\f")
-    os.remove(pdf)
-    return lib.match_toc_pages(pages, headings, captions, chapters)
+STATIC_SUFFIX = "_static"   # suffix added to the file name of the static copy. The submitted file is never overwritten
+STATIC_SCOPE_ALL = "all"    # every item whose kind was identified
+STATIC_STYLE_ROLES = {"chapter": "chapter", "section": "section", "subsection": "subsection", "ganada": "ganada",
+                      "table_title": "table", "fig_title": "figure", "fig_pos": "figure"}
+# caption styles are docx caption paragraphs; the figure position style is the hwpx paragraph holding a figure that is not placed in a table (lib.FIGURE_IN_TABLE off)
+REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "updated", toc_refs.RefState.PLACEHOLDER: "placeholder"}
+
+
+def cmd_toc_static(a):
+    """Post-build static conversion: removes bookmarks of the given kinds from the submitted file and turns the page references to them into plain text
+    Items whose page numbers were not updated (placeholder) are skipped and reported. Why: only 한/글 and Word calculate the real pages"""
+    profile = PROFILES[a.profile] if a.profile in PROFILES else json.load(open(a.profile, encoding="utf-8"))
+    style_kinds = {profile[role]: kind for role, kind in STATIC_STYLE_ROLES.items() if profile.get(role)}
+    items = toc_refs.scan(a.input, style_kinds)
+    if not items:
+        sys.exit("ERROR: no bookmark is targeted by a page reference (no TOC page numbers, or the file is already static)")
+    for it in items:   # kind, stored page number, update state, bookmark name, text of the paragraph holding the bookmark
+        print(f"{it.kind}\t{'|'.join(it.values)}\t{REF_STATE_TEXT[it.state]}\t{it.name}\t{it.text}")
+    counts = {k: sum(it.kind == k for it in items) for k in (*toc_refs.KINDS, toc_refs.OTHER)}
+    print("Items by kind: " + ", ".join(f"{k} {n}" for k, n in counts.items() if n))
+    if not a.scope:
+        print(f"Pass the scope to make static with --scope (comma-separated or {STATIC_SCOPE_ALL}). The file is unchanged")
+        return
+    allowed = (*toc_refs.KINDS, toc_refs.OTHER)
+    wanted = set(toc_refs.KINDS) if a.scope == STATIC_SCOPE_ALL else set(lib.parse_toc_kinds(a.scope, allowed, "--scope"))
+    chosen = [it for it in items if it.kind in wanted]
+    targets = [it for it in chosen if it.state is toc_refs.RefState.UPDATED]
+    skipped = [it for it in chosen if it.state is not toc_refs.RefState.UPDATED]
+    if skipped:
+        how = "Update them in Word with Ctrl+A then F9, save" if toc_refs.is_docx(a.input) else "Open the file in 한/글, save it"
+        print(f"WARN: {len(skipped)} items whose page numbers were not updated are left as they are. {how} and submit it again: "
+              + ", ".join(it.name for it in skipped))
+    if not targets:
+        print("Nothing was made static. The file is unchanged")
+        return
+    stem, ext = os.path.splitext(a.input)
+    out = a.output or f"{stem}{STATIC_SUFFIX}{ext}"
+    if os.path.abspath(out) == os.path.abspath(a.input):
+        sys.exit("ERROR: the output must not overwrite the submitted file. Pass another path with -o")
+    toc_refs.make_static(a.input, out, {it.name for it in targets})
+    kept = toc_refs.scan(out, style_kinds)
+    print(f"OK: {out} ({len(targets)} made static, {len(skipped)} skipped, {len(kept)} bookmarks and page references kept)")
 
 
 _ORIGINAL_COL_ALIGNS = lib.col_aligns
@@ -2494,8 +2502,9 @@ def main():
     p.add_argument("--page-break", default="chapter", choices=["chapter", "section", "none"])
     p.add_argument("--long-table", default=None, choices=["engine", "split"], help="default handling of long tables (kickoff answer). split=split into chunk tables with the header row repeated, engine=한/글 engine split. build stops if a table needs it and this is not set")
     p.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"])
-    p.add_argument("--toc", action="store_true", help="insert a static TOC (default OFF. The delivered TOC uses the 한/글 table of contents feature)")
-    p.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3])
+    p.add_argument("--toc", action="store_true", help="insert a TOC (default OFF). With --page-number, each listed item gets a bookmark and its page number is recorded as a page reference field")
+    p.add_argument("--toc-scope", help=f"TOC scope (answer to the kickoff questions, comma-separated). Default {','.join(lib.TOC_SCOPE_DEFAULT)}. "
+                                       f"Items: {', '.join(toc_refs.KINDS)}. table and figure list numbered captions only")
     p.add_argument("--page-number", action="store_true", help="footer page numbers (default OFF)")
     p.add_argument("--cover", help='cover: "title=title;subtitle=subtitle;date=YYYY. M.;org=organization"')
     p.add_argument("--header", help='header: "text;align=RIGHT"')
@@ -2508,6 +2517,13 @@ def main():
     p.add_argument("--labels", help="label file (JSON). Overrides the document's fixed strings, manuscript notation, language tags, and delivered file names. For a workspace it is recorded in state.json (none clears the record)")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("toc-static", help="post-build static conversion: makes a copy in which the bookmarks of the given items are removed and their TOC page numbers are plain text")
+    p.add_argument("input", help="hwpx or docx saved after updating page numbers in 한/글 or Word")
+    p.add_argument("--scope", help=f"item kinds to make static (comma-separated or {STATIC_SCOPE_ALL}). Omit it to print the item status only")
+    p.add_argument("-o", "--output", help=f"output path (default: the source name with the {STATIC_SUFFIX} suffix)")
+    p.add_argument("--profile", default="proposal", help="profile used to identify item kinds from style names (omit for the default template; a profile JSON for a client template)")
+    p.set_defaults(func=cmd_toc_static)
 
     p = sub.add_parser("render", help="hwpx or docx → PDF + PNG (delegated to hwpx_report.py render. docx uses LibreOffice)")
     p.add_argument("input")

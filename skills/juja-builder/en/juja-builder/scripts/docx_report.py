@@ -19,6 +19,7 @@ from datetime import datetime
 from xml.sax.saxutils import escape
 
 import hwpx_report as lib
+import toc_refs
 
 try:
     from docx import Document
@@ -48,6 +49,7 @@ JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIG
 FOOTNOTE_SUFFIX = ")"      # character after the footnote number. Same as the hwpx footnote number format (number and closing parenthesis)
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # default table cell margins left, right, top, bottom (same as the python-hwpx table default)
 NOTE_BOOKMARK_PREFIX = "_RefNote"   # prefix of the bookmark name that wraps the first footnote reference in source footnote merging (followed by the footnote sequence number)
+TOC_BOOKMARK_ID_BASE = 1000000      # first id of TOC bookmarks. A range that does not overlap the footnote-merging bookmark ids (footnote sequence numbers, from 1)
 # Schema order of formatting elements. Word judges elements out of order as corruption
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -109,7 +111,7 @@ def zero_picture_distance(shape):
         shape._inline.set(side, "0")
 
 
-class DocxBuilder:
+class DocxBuilder(lib.TocMarks):
     """Implements the same record functions as lib.Builder (hwpx) for docx. Judgment functions (table layout, inline, TOC order) call lib"""
 
     def __init__(self, spec: dict, profile: dict, page_break: str = "chapter"):
@@ -118,11 +120,11 @@ class DocxBuilder:
         self.doc = Document()
         self.spec, self.p, self.page_break = spec, profile, page_break
         self.n = {"chapter": 0, "section": 0, "subsection": 0, "ganada": 0, "table": 0, "figure": 0, "total_section": 0}
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[str, int] = {}
+        self.toc_items: list[tuple[str, str, str | None]] = []   # items listed in the TOC (lib.TocMarks)
+        self.toc_scope = lib.TOC_SCOPE_DEFAULT
         self.pending_break = False
         self.after_block = False
-        self.toc, self.cover, self.page_number, self.header_spec, self.toc_depth = False, None, False, None, 2
+        self.toc, self.cover, self.page_number, self.header_spec = False, None, False, None
         self.merge_mode, self.long_table_mode = "auto", "engine"
         self.last_para = None
         self._warned: set[str] = set()
@@ -387,7 +389,7 @@ class DocxBuilder:
         The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the sequence number is the number"""
         name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
         if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
-            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # footnote references are the only bookmarks in this document, so the sequence number is a unique id
+            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # the footnote sequence number is the id. TOC bookmarks start at TOC_BOOKMARK_ID_BASE
             ref_run.addnext(_w("bookmarkEnd", id=fid))
 
         def sup_run(*children):
@@ -411,6 +413,34 @@ class DocxBuilder:
         sup_run(result)
         sup_run(_w("fldChar", fldCharType="end"))
         sup_run(suffix)
+
+    def add_bookmark(self, p, text: str) -> str:
+        """Wraps the whole paragraph in a bookmark and returns its name. The PAGEREF fields of TOC entries find the page through this bookmark
+        p is a paragraph object or a paragraph element. Call it after all text of the paragraph is written"""
+        pe = getattr(p, "_p", p)
+        n = sum(1 for _, _, name in self.toc_items if name) + 1
+        name = lib.docx_bookmark_name(n, text)
+        start = _w("bookmarkStart", id=TOC_BOOKMARK_ID_BASE + n, name=name)
+        ppr = pe.find(qn("w:pPr"))
+        if ppr is None:
+            pe.insert(0, start)
+        else:
+            ppr.addnext(start)
+        pe.append(_w("bookmarkEnd", id=TOC_BOOKMARK_ID_BASE + n))
+        return name
+
+    def _page_ref(self, p, name: str, value: str):
+        """Bookmark page reference (Word PAGEREF complex field). The result text is a placeholder that Word calculates with Ctrl+A then F9
+        Why no TOC field: when Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles
+        Why no update-on-open setting (updateFields, the dirty flag of a field): Word updates the fields before it lays out the pages, so every page number becomes 1"""
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" PAGEREF {name} \\h "
+        result = OxmlElement("w:t")
+        result.text = value
+        for child in (_w("fldChar", fldCharType="begin"), instr, _w("fldChar", fldCharType="separate"), result,
+                      _w("fldChar", fldCharType="end")):
+            p.add_run()._r.append(child)
 
     def gap(self):
         for _ in range(lib.BLOCK_GAP_LINES):
@@ -458,6 +488,7 @@ class DocxBuilder:
             fld = parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr="{escape(instr)}"><w:r><w:t>{label["num"]}</w:t></w:r></w:fldSimple>')
             p._p.append(fld)
             self._text(p, label["close"], pt)
+        self.mark_caption(kind, label, p)
         return p
 
     def _new_table(self, nrows: int, widths: list[int]):
@@ -656,6 +687,8 @@ class DocxBuilder:
             p = self._cell_para(cell, "", "band_cell", align)
             p.paragraph_format.keep_with_next = True
             self._run(p, text, "band_cell", pt=pt / HU_PER_PT, bold=True, color=color, font_key=self._row("chapter")[2])
+            if ci == 0:
+                self.band_host = p   # paragraph of the number cell. The TOC bookmark goes here so that it moves with the band
             sides = ["top", "bottom", "left", "right"] if border else []
             self._tc_style(cell._tc, sides, fill, None)
             if border:  # the band border has a different color and width from table rules
@@ -682,18 +715,12 @@ class DocxBuilder:
         """Number counting is handled while recording captions"""
 
     # ── Front matter (cover, TOC), headers, page numbers ─────────────────────────────────
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        return []
-
     def _front_matter(self, cover: dict | None):
         """Put the cover and TOC in a front section and start page numbers of the body section from 1. Paragraph order is lib.front_matter_items"""
-        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-            print("WARN: no TOC styles (toc_chapter, toc_section) in the profile, --toc skipped")
-            self.toc = False
         body = self.doc.element.body
         anchor = body[0]
         made = [self._new_para("body")._p]   # empty 바탕글 line at the start of the front section (same as the first paragraph of an hwpx section)
-        for it in lib.front_matter_items(cover, self.toc, self.headings, self.toc_depth, self.toc_lists()):
+        for it in lib.front_matter_items(cover, self.toc, self.toc_items):
             kind = it["kind"]
             if kind in ("blank", "cover"):
                 p = self._new_para("body", "CENTER")
@@ -704,15 +731,17 @@ class DocxBuilder:
                 p = self._new_para("chapter", "CENTER")
                 p.paragraph_format.page_break_before = it["page_break"]
                 self._text(p, it["text"], self._row("chapter")[3])
-            else:
-                lv = it.get("level", 2)
-                p = self._new_para("toc_chapter" if lv == 1 else "toc_section")
+            else:  # toc_entry, list_entry
+                item = it.get("item")
+                role = "toc_chapter" if item == "chapter" else "toc_section"
+                p = self._new_para(role)
                 if kind == "list_entry":
                     p.paragraph_format.left_indent = Twips(tw(lib.TOC_LIST_INDENT))
-                elif lv >= 3:
-                    p.paragraph_format.left_indent = Twips(tw(lib.TOC_SUB_INDENT))
-                num = self.toc_numbers.get(it["text"])
-                self._text(p, it["text"] + (f"\t{num}" if num else ""), self._row("toc_chapter" if lv == 1 else "toc_section")[3])
+                elif item not in ("chapter", "section"):   # chapters and sections keep the margin of the style
+                    p.paragraph_format.left_indent = Twips(tw(lib.TOC_INDENT[item]))
+                self._text(p, it["text"] + ("\t" if it["name"] else ""), self._row(role)[3])
+                if it["name"]:   # entry text, tab, page reference, in this order
+                    self._page_ref(p, it["name"], toc_refs.PLACEHOLDER)
             made.append(p._p)
         for el in made:
             anchor.addprevious(el)

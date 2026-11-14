@@ -19,6 +19,7 @@ from datetime import datetime
 from xml.sax.saxutils import escape
 
 import hwpx_report as lib
+import toc_refs
 
 try:
     from docx import Document
@@ -48,6 +49,7 @@ JC = {"LEFT": WD_ALIGN_PARAGRAPH.LEFT, "CENTER": WD_ALIGN_PARAGRAPH.CENTER, "RIG
 FOOTNOTE_SUFFIX = ")"      # 각주 번호 뒤 글자. hwpx 각주 번호 형식(숫자와 닫는 괄호)과 같게 둠
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # 표 기본 셀 여백 좌, 우, 위, 아래 (python-hwpx 표 기본값과 같음)
 NOTE_BOOKMARK_PREFIX = "_RefNote"   # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름의 접두 (뒤에 각주 순번)
+TOC_BOOKMARK_ID_BASE = 1000000      # 목차 책갈피 id 시작값. 각주 통합용 책갈피 id(각주 순번, 1부터)와 겹치지 않는 범위
 # 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 판정함
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -108,7 +110,7 @@ def zero_picture_distance(shape):
         shape._inline.set(side, "0")
 
 
-class DocxBuilder:
+class DocxBuilder(lib.TocMarks):
     """lib.Builder(hwpx)와 같은 기록 함수를 docx로 구현. 판단 함수(표 배치, 인라인, 목차 순서)는 lib를 호출"""
 
     def __init__(self, spec: dict, profile: dict, page_break: str = "chapter"):
@@ -117,11 +119,11 @@ class DocxBuilder:
         self.doc = Document()
         self.spec, self.p, self.page_break = spec, profile, page_break
         self.n = {"chapter": 0, "section": 0, "subsection": 0, "ganada": 0, "table": 0, "figure": 0, "total_section": 0}
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[str, int] = {}
+        self.toc_items: list[tuple[str, str, str | None]] = []   # 목차 수록 항목 (lib.TocMarks)
+        self.toc_scope = lib.TOC_SCOPE_DEFAULT
         self.pending_break = False
         self.after_block = False
-        self.toc, self.cover, self.page_number, self.header_spec, self.toc_depth = False, None, False, None, 2
+        self.toc, self.cover, self.page_number, self.header_spec = False, None, False, None
         self.merge_mode, self.long_table_mode = "auto", "engine"
         self.last_para = None
         self._warned: set[str] = set()
@@ -387,7 +389,7 @@ class DocxBuilder:
         번호는 저장값이며 Word가 필드를 갱신할 때 다시 매김. 각주는 문서 전체 연속 번호라 순번이 곧 번호"""
         name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
         if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
-            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # 이 문서의 책갈피는 각주 참조뿐이라 순번이 유일한 id
+            ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # 각주 순번이 id. 목차 책갈피는 TOC_BOOKMARK_ID_BASE부터
             ref_run.addnext(_w("bookmarkEnd", id=fid))
 
         def sup_run(*children):
@@ -411,6 +413,34 @@ class DocxBuilder:
         sup_run(result)
         sup_run(_w("fldChar", fldCharType="end"))
         sup_run(suffix)
+
+    def add_bookmark(self, p, text: str) -> str:
+        """문단 전체를 책갈피로 감싸고 이름을 돌려줌. 목차 항목의 PAGEREF 필드가 이 책갈피로 쪽을 찾음
+        p는 문단 객체 또는 문단 요소. 문단의 글자를 모두 기록한 뒤에 호출"""
+        pe = getattr(p, "_p", p)
+        n = sum(1 for _, _, name in self.toc_items if name) + 1
+        name = lib.docx_bookmark_name(n, text)
+        start = _w("bookmarkStart", id=TOC_BOOKMARK_ID_BASE + n, name=name)
+        ppr = pe.find(qn("w:pPr"))
+        if ppr is None:
+            pe.insert(0, start)
+        else:
+            ppr.addnext(start)
+        pe.append(_w("bookmarkEnd", id=TOC_BOOKMARK_ID_BASE + n))
+        return name
+
+    def _page_ref(self, p, name: str, value: str):
+        """책갈피 쪽 참조(Word PAGEREF 복합 필드). 결과 글자는 자리 표시 값이며 Word에서 Ctrl+A 후 F9로 계산
+        Why 목차 필드(TOC)를 쓰지 않음: Word가 TOC 필드를 갱신하면 조판한 항목을 지우고 제목 스타일에서 항목을 다시 만듦
+        Why 열 때 갱신 설정(updateFields, 필드의 dirty 표시)을 쓰지 않음: Word가 쪽 배치 전에 필드를 갱신하여 쪽번호가 모두 1이 됨"""
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" PAGEREF {name} \\h "
+        result = OxmlElement("w:t")
+        result.text = value
+        for child in (_w("fldChar", fldCharType="begin"), instr, _w("fldChar", fldCharType="separate"), result,
+                      _w("fldChar", fldCharType="end")):
+            p.add_run()._r.append(child)
 
     def gap(self):
         for _ in range(lib.BLOCK_GAP_LINES):
@@ -458,6 +488,7 @@ class DocxBuilder:
             fld = parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr="{escape(instr)}"><w:r><w:t>{label["num"]}</w:t></w:r></w:fldSimple>')
             p._p.append(fld)
             self._text(p, label["close"], pt)
+        self.mark_caption(kind, label, p)
         return p
 
     def _new_table(self, nrows: int, widths: list[int]):
@@ -656,6 +687,8 @@ class DocxBuilder:
             p = self._cell_para(cell, "", "band_cell", align)
             p.paragraph_format.keep_with_next = True
             self._run(p, text, "band_cell", pt=pt / HU_PER_PT, bold=True, color=color, font_key=self._row("chapter")[2])
+            if ci == 0:
+                self.band_host = p   # 번호 칸 문단. 목차 책갈피를 여기에 두어 밴드를 옮기면 함께 이동
             sides = ["top", "bottom", "left", "right"] if border else []
             self._tc_style(cell._tc, sides, fill, None)
             if border:  # 밴드 테두리는 표 괘선과 다른 색과 굵기
@@ -682,18 +715,12 @@ class DocxBuilder:
         """번호 집계는 캡션 기록 중에 처리"""
 
     # ── 앞부분(표지, 목차), 머리말, 쪽번호 ─────────────────────────────────
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        return []
-
     def _front_matter(self, cover: dict | None):
         """표지와 목차를 앞 구역에 두고 본문 구역의 쪽번호를 1부터 시작. 문단 순서는 lib.front_matter_items"""
-        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-            print("WARN: 프로파일에 목차 스타일(toc_chapter, toc_section)이 없어 --toc 생략")
-            self.toc = False
         body = self.doc.element.body
         anchor = body[0]
         made = [self._new_para("body")._p]   # 앞 구역 첫머리의 빈 바탕글 줄 (hwpx 구역 첫 문단과 같음)
-        for it in lib.front_matter_items(cover, self.toc, self.headings, self.toc_depth, self.toc_lists()):
+        for it in lib.front_matter_items(cover, self.toc, self.toc_items):
             kind = it["kind"]
             if kind in ("blank", "cover"):
                 p = self._new_para("body", "CENTER")
@@ -704,15 +731,17 @@ class DocxBuilder:
                 p = self._new_para("chapter", "CENTER")
                 p.paragraph_format.page_break_before = it["page_break"]
                 self._text(p, it["text"], self._row("chapter")[3])
-            else:
-                lv = it.get("level", 2)
-                p = self._new_para("toc_chapter" if lv == 1 else "toc_section")
+            else:  # toc_entry, list_entry
+                item = it.get("item")
+                role = "toc_chapter" if item == "chapter" else "toc_section"
+                p = self._new_para(role)
                 if kind == "list_entry":
                     p.paragraph_format.left_indent = Twips(tw(lib.TOC_LIST_INDENT))
-                elif lv >= 3:
-                    p.paragraph_format.left_indent = Twips(tw(lib.TOC_SUB_INDENT))
-                num = self.toc_numbers.get(it["text"])
-                self._text(p, it["text"] + (f"\t{num}" if num else ""), self._row("toc_chapter" if lv == 1 else "toc_section")[3])
+                elif item not in ("chapter", "section"):   # 장과 절은 스타일의 여백 그대로
+                    p.paragraph_format.left_indent = Twips(tw(lib.TOC_INDENT[item]))
+                self._text(p, it["text"] + ("\t" if it["name"] else ""), self._row(role)[3])
+                if it["name"]:   # 항목 문구, 탭, 쪽 참조 순서
+                    self._page_ref(p, it["name"], toc_refs.PLACEHOLDER)
             made.append(p._p)
         for el in made:
             anchor.addprevious(el)

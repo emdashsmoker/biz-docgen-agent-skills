@@ -272,15 +272,15 @@
 - The command is `build workspace --format format --toc --page-number --long-table handling`. Add `--cover` according to the kickoff answer. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
 - Table of contents, page numbers, and divider pages are the default composition of a report. Turn them off only when the user asks
 - A divider page is a page before the body of each chapter. It holds only the chapter number and title. The body starts from the first section on the next page. Turn off with `--divider off`
-- The list of tables and list of figures follow the table of contents on new pages. They include tables and figures with captions
+- The default table of contents scope is chapters, sections, tables, and figures. If the answer to the kickoff questions differs, set it with `--toc-scope`. The list of tables and list of figures follow the table of contents on new pages and include tables and figures with captions
 - Chapter titles are "제N장" bands. Sections 1.1, subsections 1.1.1, items 가.
 - Output files are 납품/사전진단보고서.hwpx and .docx
 - For partial output, `--chapter-start N` keeps the chapter numbers of the full table of contents. Caption numbers start with the same chapter number
 - Inserting the module overview table is optional. Putting one `(삽입: 모듈총괄표)` line in the execution method section of the engagement overview chapter places it there
-- Table of contents page numbers are approximate values based on rendering. Check in `TOC page numbers filled n/m` of the build log that all m entries were filled
-    + Keep the table of contents even if entries are missing (it is the default composition of a report). Record the missing entries in the final report. Also state that hwpx needs a table of contents refresh in 한/글 and docx needs page numbers filled in Word
+- Table of contents page numbers are recorded as bookmarks and page reference fields. Check in `n TOC entries, m bookmarks and page references` of the build log that n matches the number of items in the scope
+    + The initial page numbers are the placeholder `?` in both formats. 한/글 calculates the real pages when it loads the document, and Word calculates them with select all (Ctrl+A) then F9. The bookmark notice and static conversion are in the SKILL.md Typesetting section
 - The report title goes on the cover (`--cover`). Without a cover, it is reflected in the file name of the output path (`build workspace 납품/보고서명.hwpx`)
 
 ## Final Report
 
-- Record the output range (chapter list), the list of preliminary diagnosis sections and the hypotheses to verify, rejected hypotheses and revised judgment statements, `[확인]` items deleted with user approval, missing table of contents page numbers, and one line on renderer limitations
+- Record the output range (chapter list), the list of preliminary diagnosis sections and the hypotheses to verify, rejected hypotheses and revised judgment statements, `[확인]` items deleted with user approval, the table of contents bookmark notice (SKILL.md Typesetting section), and one line on renderer limitations

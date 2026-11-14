@@ -30,7 +30,7 @@ LABEL_DEFAULTS = {
     # 제목 번호 형식. None이면 현재 프로파일의 형식(PROFILE_FORMATS 또는 프로파일 JSON) 유지
     "formats": {"chapter": None, "section": None, "subsection": None},
     "letters": {"items": "가나다라마바사아자차카타파하", "format": "{x}."},   # 가나다 계위: 글자 순서와 번호 형식({x}가 글자)
-    "toc": {"title": "목  차"},
+    "toc": {"title": "목  차", "tables": "표 목차", "figures": "그림 목차"},
     # 캡션 번호부 = open + label + 공백 + 번호 + close + 공백. seq는 Word SEQ 필드 이름 (None이면 label 사용)
     "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
                 "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
@@ -132,8 +132,22 @@ COVER_GAP_LINES = 14            # 일자와 기관 사이 빈 줄 수
 from form import TOC_TAB_POS  # noqa: E402  목차 쪽번호 오른쪽 점선 탭 위치 (양식 정의가 기준)
 TOC_SECTION_INDENT = 1500       # 목차 절 들여쓰기
 TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기
-TOC_MAX_PASSES = 2              # 목차 쪽번호 기입 후 재렌더링 대조에서 불일치가 남을 때 다시 조판하는 최대 횟수
-TOC_FIRST_LINE_KEY = 10         # 제목 고립 판정에 쓰는 첫 본문 줄의 앞 글자 수 (빈칸 제외). 줄이 쪽을 넘어가도 시작 쪽에서 찾음
+# 목차 수록 범위 (build --toc-scope). 제목 4수준과 번호 캡션이 붙은 표와 그림. 수록 항목마다 책갈피를 붙이고 쪽번호를 쪽 참조 필드로 기록
+TOC_SCOPE_KINDS = ("chapter", "section", "subsection", "ganada", "table", "figure")
+TOC_SCOPE_DEFAULT = ("chapter", "section", "table", "figure")
+TOC_LIST_KINDS = {"table": "toc.tables", "figure": "toc.figures"}   # 별도 목차로 싣는 종류 → 목차 제목 라벨 키
+TOC_LIST_INDENT = 0             # 표 목차와 그림 목차 항목의 왼쪽 여백
+# 목차 항목의 왼쪽 여백. 장은 목차 장 스타일, 그 밖은 목차 절 스타일에 이 여백을 적용
+TOC_INDENT = {"chapter": 0, "section": TOC_SECTION_INDENT, "subsection": TOC_SUB_INDENT, "ganada": 4500}
+TOC_UNIT_W = {"chapter": 700}   # 목차 탭 폭 추정용 글자 1자 폭 (장 14pt). 그 밖은 TOC_UNIT_W_DEFAULT. 한/글은 탭을 다시 계산하므로 근사 렌더러 표시용
+TOC_UNIT_W_DEFAULT = 600        # 절 12pt 글자 1자 폭 추정
+BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값이 구분 문자와 표식으로 씀
+STATIC_SUFFIX = "_static"       # 정적화 산출 파일명에 붙이는 접미. 제출 파일은 덮어쓰지 않음
+STATIC_SCOPE_ALL = "all"        # toc-static --scope 값: 종류를 판별한 항목 전체
+# 정적화가 책갈피의 종류를 판별할 때 쓰는 스타일 역할 → 목차 항목 종류
+# 캡션 스타일은 DOCX의 캡션 문단, 그림 위치 스타일은 표에 담지 않은 그림(FIGURE_IN_TABLE 해제)을 담은 HWPX 문단
+STATIC_STYLE_ROLES = {"chapter": "chapter", "section": "section", "subsection": "subsection", "ganada": "ganada",
+                      "table_title": "table", "fig_title": "figure", "fig_pos": "figure"}
 BLOCK_GAP_LINES = 0             # 표·그림 블록 앞뒤 빈 문단 수. 간격은 표 위치·그림 위치 스타일 여백이 담당
 # 글자처럼 취급을 해제한 장표(HWPX engine) 앞뒤의 바탕글 빈 문단 수.
 # 해제된 표는 본문과 따로 배치되어 표 위치 문단 여백만으로는 앞뒤 문단과 붙어 보임
@@ -149,7 +163,7 @@ RHWP_REPO = "https://github.com/edwardkim/rhwp"
 RHWP_PDF_COMMAND = "export-pdf"          # 문서를 PDF로 출력
 RHWP_VERIFY_COMMAND = "verify"           # 기대 조건 대조
 RHWP_UNKNOWN_COMMAND_MARKERS = ("알 수 없는 명령", "unknown command", "unrecognized")
-RHWP_PDF_OUTLINE_FLAG = "--text-as-paths"   # 글꼴 미설치 환경에서 글자를 윤곽선으로 출력. 글자 추출이 필요한 목차 쪽번호 산정에는 쓰지 않음
+RHWP_PDF_OUTLINE_FLAG = "--text-as-paths"   # 글꼴 미설치 환경에서 글자를 윤곽선으로 출력
 RHWP_FONT_PATH_FLAG = "--font-path"
 RENDER_DPI = 80
 # 검수 사본에서 소프트 하이픈(U+00AD) 글머리를 대체할 글리프. 근사 렌더러가 U+00AD를 그리지 않아 - 계위 기호가 빈칸으로 보인다
@@ -195,17 +209,19 @@ REGULAR_WEIGHT = 400   # 같은 이름의 파일이 여럿이면 보통 굵기 �
 FONT_SOURCES = {"나눔고딕": "src_nanum_auto", "나눔바른고딕": "src_nanum_manual"}   # 값은 MESSAGES 키
 
 # ── DOCX ───────────────────────────────────────────────────────────────────
-DOCX_HEADING_STYLES = {   # 제목 역할 → Word 기본 제목 스타일 (목차 필드와 탐색 창이 인식하는 스타일)
+DOCX_HEADING_STYLES = {   # 제목 역할 → Word 기본 제목 스타일 (탐색 창이 인식하는 스타일)
     "chapter": {"chapter": "Heading 1", "section": "Heading 2", "subsection": "Heading 3", "ganada": "Heading 4"},
     "flat": {"chapter": "Title", "section": "Heading 1", "subsection": "Heading 2", "ganada": "Heading 3"},
 }
 DOCX_FULLWIDTH_BULLET = 1.0     # 전각 글머리 기호 폭 (글자 크기 대비)
 DOCX_HALFWIDTH_BULLET = 0.5     # 반각 글머리 기호 폭
 DOCX_SPACER_PT = 1              # 표 아래 간격용 빈 문단의 줄 높이
-# 제목 책갈피 이름. 밑줄로 시작하는 이름은 Word가 숨은 책갈피로 다룸. 목차 항목의 PAGEREF 필드가 이 책갈피로 제목 쪽을 찾음
-DOCX_TOC_BOOKMARK = "_Toc{n:09d}"
+# 목차 책갈피 이름 (순번과 항목 문구). 목차 항목의 PAGEREF 필드가 이 책갈피로 쪽을 찾음
+# 밑줄로 시작하는 이름은 Word가 숨은 책갈피로 다루므로 쓰지 않음. Word 규칙은 글자로 시작, 글자와 숫자와 밑줄, 길이 상한
+DOCX_TOC_BOOKMARK = "toc_{n:03d}_{slug}"
+DOCX_BOOKMARK_MAX = 40
 DOCX_NOTE_BOOKMARK = "_RefNote{n}"      # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름 (n은 각주 순번)
-DOCX_NOTE_BOOKMARK_ID_BASE = 1000000    # 각주 책갈피 id 시작값. 제목 책갈피 id(1부터)와 겹치지 않는 범위
+DOCX_NOTE_BOOKMARK_ID_BASE = 1000000    # 각주 책갈피 id 시작값. 목차 책갈피 id(1부터)와 겹치지 않는 범위
 # 글꼴 표(fontTable) 기록값. Word는 문서 글꼴이 없는 환경에서 이 정보로 같은 계열의 대체 글꼴을 고른다
 # 영문 이름에 Myeongjo가 있으면 roman(명조 계열), 그 외 swiss(고딕 계열)로 기록. 문자 집합은 한글(charset 81)
 DOCX_FONT_ALT_NAMES = {"나눔고딕": "NanumGothic", "나눔바른고딕": "NanumBarunGothic"}
@@ -289,24 +305,42 @@ MESSAGES = {
     "manifest_fixed": {
         "ko": "이미지 매니페스트 누락 {n}건 등록",
         "en": "Registered {n} image(s) missing from the manifest"},
-    "toc_numbers": {
-        "ko": "목차 쪽번호 {found}/{total}건 기입 (근사 렌더러 기준)",
-        "en": "TOC page numbers filled {found}/{total} (approximate renderer)"},
-    "toc_verified": {
-        "ko": "목차 쪽번호 대조: 기입값과 재렌더링 쪽 위치 일치 {n}/{total}건",
-        "en": "TOC page check: filled numbers match the re-rendered page positions {n}/{total}"},
-    "warn_toc_missing": {
-        "ko": "WARN: 목차 항목 {n}건의 쪽을 찾지 못해 쪽번호 미기입 {items}: 렌더링 PNG에서 해당 제목 확인",
-        "en": "WARN: {n} TOC entries not found in the render, page numbers left blank {items}: check those headings in the rendered PNGs"},
-    "warn_toc_stranded": {
-        "ko": "WARN: [목차 제목 고립] {n}건 {items}: 제목이 쪽 끝에 있고 첫 본문 줄은 다음 쪽에서 시작. 한/글은 제목을 다음 쪽으로 넘겨 목차 쪽번호가 1 작게 보임. 원고의 해당 제목 앞에 --- 를 두어 맞춤",
-        "en": "WARN: [stranded TOC heading] {n} {items}: the heading sits at a page bottom and its first body line starts on the next page. Hangul moves the heading to the next page, so the TOC number shows 1 less. Put --- before that heading in the manuscript"},
-    "warn_toc_mismatch": {
-        "ko": "WARN: 목차 쪽번호 불일치 {n}건 {items}: 렌더링 PNG에서 해당 제목의 쪽을 확인",
-        "en": "WARN: {n} TOC page numbers do not match {items}: check those headings' pages in the rendered PNGs"},
-    "warn_toc_numbers": {
-        "ko": "WARN: 렌더러 또는 pdftotext 부재, 또는 제목 탐색 실패로 목차 쪽번호 미기입",
-        "en": "WARN: TOC page numbers not filled (renderer or pdftotext missing, or headings not found)"},
+    "toc_no_numbers": {
+        "ko": "목차 항목 {n}건 ({fmt}, 쪽번호 없음)", "en": "{n} TOC entries ({fmt}, no page numbers)"},
+    "toc_hwpx": {
+        "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (hwpx). 쪽번호는 자리 표시 값 '{mark}'이며 한/글이 문서를 불러올 때 실제 쪽으로 계산",
+        "en": "{n} TOC entries, {refs} bookmarks and page references (hwpx). Page numbers hold the placeholder '{mark}'; Hangul computes the real pages when it loads the document"},
+    "toc_docx": {
+        "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (docx). 쪽번호는 자리 표시 값 '{mark}'이며 Word에서 Ctrl+A 후 F9로 실제 쪽을 계산",
+        "en": "{n} TOC entries, {refs} bookmarks and page references (docx). Page numbers hold the placeholder '{mark}'; Word computes the real pages with Ctrl+A then F9"},
+    "err_toc_scope": {
+        "ko": "ERROR: {option}에 쓸 수 없는 항목 {items}. 쓸 수 있는 항목: {allowed}",
+        "en": "ERROR: {option} does not accept {items}. Allowed items: {allowed}"},
+    "err_toc_scope_alone": {
+        "ko": "ERROR: --toc-scope는 --toc와 함께 지정", "en": "ERROR: pass --toc-scope together with --toc"},
+    "static_state_updated": {"ko": "갱신됨", "en": "updated"},
+    "static_state_placeholder": {"ko": "자리 표시 값", "en": "placeholder"},
+    "static_counts": {"ko": "항목 종류별 건수: {counts}", "en": "Items by kind: {counts}"},
+    "static_need_scope": {
+        "ko": "정적화할 범위를 --scope로 지정 (쉼표 구분 또는 {all}). 파일은 바꾸지 않음",
+        "en": "Pass the scope to make static with --scope (comma-separated or {all}). The file is unchanged"},
+    "err_static_no_refs": {
+        "ko": "ERROR: 쪽 참조가 가리키는 책갈피 없음 (목차 쪽번호를 넣지 않았거나 이미 정적화한 파일)",
+        "en": "ERROR: no bookmark is targeted by a page reference (no TOC page numbers, or the file is already static)"},
+    "warn_static_skipped_hwpx": {
+        "ko": "WARN: 쪽번호를 갱신하지 않은 {n}건은 정적화하지 않음. 한/글에서 열어 저장한 파일을 다시 제출: {items}",
+        "en": "WARN: {n} items whose page numbers were not updated are left as they are. Open the file in Hangul, save it and submit it again: {items}"},
+    "warn_static_skipped_docx": {
+        "ko": "WARN: 쪽번호를 갱신하지 않은 {n}건은 정적화하지 않음. Word에서 Ctrl+A 후 F9로 갱신하여 저장한 파일을 다시 제출: {items}",
+        "en": "WARN: {n} items whose page numbers were not updated are left as they are. Update them in Word with Ctrl+A then F9, save and submit the file again: {items}"},
+    "static_none": {
+        "ko": "정적화한 항목 없음. 파일은 바꾸지 않음", "en": "Nothing was made static. The file is unchanged"},
+    "err_static_same_path": {
+        "ko": "ERROR: 제출 파일과 같은 경로에는 쓰지 않음. -o로 다른 경로 지정",
+        "en": "ERROR: the output must not overwrite the submitted file. Pass another path with -o"},
+    "static_ok": {
+        "ko": "OK: {out} (정적화 {done}건, 건너뜀 {skipped}건, 책갈피와 쪽 참조 유지 {kept}건)",
+        "en": "OK: {out} ({done} made static, {skipped} skipped, {kept} bookmarks and page references kept)"},
     "build_ok": {"ko": "OK: {out} (요소 {n}, 각주 {fn})", "en": "OK: {out} ({n} elements, {fn} footnotes)"},
     "build_ok_merged": {"ko": "OK: {out} (요소 {n}, 각주 {fn}, 각주 통합 {merged}건)",
                         "en": "OK: {out} ({n} elements, {fn} footnotes, {merged} merged footnote references)"},
@@ -353,9 +387,6 @@ MESSAGES = {
     "render_ok": {"ko": "OK[{engine}]: {pdf} → {outdir}/ ({n}쪽)", "en": "OK[{engine}]: {pdf} -> {outdir}/ ({n} pages)"},
     "render_pdf_only": {
         "ko": "OK[{engine}]: {pdf} (pdftoppm 부재로 PNG 생략)", "en": "OK[{engine}]: {pdf} (pdftoppm missing, PNG skipped)"},
-    "warn_fields_not_updated": {
-        "ko": "WARN: LibreOffice 파이썬 연동(uno) 부재로 목차 필드를 갱신하지 않고 렌더링. 목차는 저장된 값으로 표시",
-        "en": "WARN: LibreOffice Python bridge (uno) missing; rendered without updating the TOC field. The TOC shows stored values"},
     "check_images": {
         "ko": "이미지: BinData {files}, binItem {items}, 매니페스트 {manifest}, 본문 참조 {refs}",
         "en": "Images: BinData {files}, binItem {items}, manifest {manifest}, body references {refs}"},
@@ -369,8 +400,8 @@ MESSAGES = {
     "verify_result": {"ko": "rhwp verify: {verdict} {items}", "en": "rhwp verify: {verdict} {items}"},
     "verify_parse_fail": {"ko": "rhwp verify 출력 해석 실패: {out}", "en": "Could not parse rhwp verify output: {out}"},
     "docx_check_parts": {
-        "ko": "DOCX 구성: 문단 {paras}, 표 {tables}, 그림 {images}, 각주 {notes}, 목차 필드 {toc}",
-        "en": "DOCX parts: {paras} paragraphs, {tables} tables, {images} images, {notes} footnotes, TOC field {toc}"},
+        "ko": "DOCX 구성: 문단 {paras}, 표 {tables}, 그림 {images}, 각주 {notes}, 목차 쪽 참조 {toc}",
+        "en": "DOCX parts: {paras} paragraphs, {tables} tables, {images} images, {notes} footnotes, TOC page references {toc}"},
     "docx2md_keys": {
         "ko": "키 = 스타일명|들여쓰기(pt*10)|자동번호|선두기호  →  건수, 표본. 대응 JSON 예: {{\"본문|0||□\": \"square\"}}",
         "en": "key = style|indent(pt*10)|autonumber|leading symbol  ->  count, sample. Mapping JSON example: {{\"Body|0||□\": \"square\"}}"},

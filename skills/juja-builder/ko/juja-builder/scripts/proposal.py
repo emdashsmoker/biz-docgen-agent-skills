@@ -46,6 +46,7 @@ ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 sys.path.insert(0, SCRIPT_DIR)
 import hwpx_report as lib  # noqa: E402  파서, 표 배치 산정 같은 형식 무관 계층과 hwpx 작성기
 import docx_report as docx_lib  # noqa: E402  docx 작성기
+import toc_refs  # noqa: E402  목차 책갈피와 쪽 참조의 조회와 정적화
 from lxml import etree  # noqa: E402  python-hwpx 의존성으로 함께 설치됨
 
 HP = lib.HP
@@ -116,7 +117,7 @@ SKELETON_GLYPH_EM = {"□": 0.892, "○": 0.892, "-": 0.583, "·": 0.446, "※":
 # docx는 빈칸에 자간을 더해 같은 폭을 맞춤
 SKELETON_SPACE_EM = 0.5
 # lib.Builder는 프로파일 값 전부를 스타일명으로 검증하므로 스타일명이 아닌 키는 조판기에 넘길 때 뺌 (_pt로 끝나는 키 포함)
-PROFILE_EXTRA_KEYS = ("item_format", "chapter_label", "chapter_band", "toc_lists")
+PROFILE_EXTRA_KEYS = ("item_format", "chapter_label", "chapter_band")
 PROFILES = {
     "proposal": {
         **lib.PROFILES["chapter"],
@@ -134,12 +135,12 @@ PROFILES = {
 }
 # 기획보고서: 제안서와 같은 계위(Ⅰ., 1., 가., 1))와 무번호 캡션. 문서 제목은 build --title
 PROFILES["plan"] = dict(PROFILES["proposal"])
-# 사전진단보고서: 최종보고서 관행(제1장, 1.1, 1.1.1, 가.)과 장별 캡션 번호(<표 1-1>). 목차에 표 목차와 그림 목차 포함
+# 사전진단보고서: 최종보고서 관행(제1장, 1.1, 1.1.1, 가.)과 장별 캡션 번호(<표 1-1>). 번호 캡션은 표 목차와 그림 목차의 수록 대상
 PROFILES["report"] = {
     **PROFILES["proposal"],
     "chapter_format": "제{n}장 {t}", "chapter_label": "제{n}장",
     "section_format": "{c}.{s} {t}", "subsection_format": "{c}.{s}.{ss} {t}", "item_format": "{g} {t}",
-    "caption_prefix": "{c}-", "toc_lists": True,
+    "caption_prefix": "{c}-",
     "chapter_band": {"label_w": 7600, "label_pt": 1800},   # "제10장"까지 한 줄. 폭은 Module 밴드와 같아 제목 시작선이 맞음
 }
 # 산출 유형: init --kind로 state.json에 기록. build의 기본 프로파일을 정함. 납품 파일명은 라벨 output.<유형> (hwpx_report.py LABEL_DEFAULTS)
@@ -419,8 +420,8 @@ def lint(elems: list[Element]) -> list[str]:
 class ProposalLayout:
     """제안서, 사전진단보고서, 기획보고서의 조판 판단. hwpx와 docx 작성기가 함께 상속하여 같은 결과를 기록
     판단 대상: 제목 번호와 쪽 나눔, 밴드 구성, 캡션 문구와 번호, 표 폭 지시와 장표 지시, 표 아래 부기, 요소 순회
-    작성기가 구현할 기록 함수: para, heading_para, band_emit, chapter_started, add_footnote, after_table, after_image,
-    _front_matter, set_page_number, set_header, save"""
+    작성기가 구현할 기록 함수: para, heading_para, band_emit(번호 칸 문단을 band_host에 기록), chapter_started, add_footnote,
+    add_bookmark, after_table, after_image, _front_matter, set_page_number, set_header, save"""
 
     def _cell_line_role(self, line: str) -> str | None:
         """기호 하나만 있는 셀 줄(비교 매트릭스의 ○ 등)은 글머리로 보지 않는다.
@@ -460,21 +461,21 @@ class ProposalLayout:
             self.n["ganada"] += 1
             i = self.n["ganada"]
             label = self.p.get("item_format", "{g} {t}").format(i=i, g=lib.letter_label(i), t=text)
-        if level == 1:  # 장 제목은 Module, Task와 같은 밴드. 목차와 쪽번호 대조용 표기는 label 그대로 기록
+        if level == 1:  # 장 제목은 Module, Task와 같은 밴드. 목차 문구는 label 그대로 기록
             self.cap_n = {"TABLE": 0, "PICTURE": 0}
             band_label = self.p.get("chapter_label", "{r}").format(n=c, r=ROMAN[(c - 1) % len(ROMAN)])
             if getattr(self, "divider", False):  # 간지: 장 제목만 담은 쪽. 본문은 다음 쪽의 첫 절부터 시작
                 self.pending_break = False
                 p = self.divider_emit(self.band_spec(lib.Element("band", label, data={"kind": "divider", "label": band_label, "title": text})),
                                       new_page=self._body_started)
+                self.toc_mark("chapter", label, self.band_host)
                 self.after_block = True
                 self.pending_break = True
             else:
                 p = self.band(lib.Element("band", label, data={"kind": "chapter", "label": band_label, "title": text}))
         else:
             p = self.heading_para(role, label, pt)
-        if level <= 3:
-            self.headings.append((level, label))
+            self.toc_mark(role, label, p)
         if level == 1:
             self.chapter_started(p)
 
@@ -495,14 +496,16 @@ class ProposalLayout:
                           (title, st["title_pt"], "#000000", "LEFT", None, None)]}
 
     def band(self, e: Element):
-        """장, Module, Task 제목을 1행 3칸 표로 배치. 밴드가 담긴 문단(또는 첫 문단)을 돌려주어 장의 캡션 번호 재시작에 쓴다."""
+        """장, Module, Task 제목을 1행 3칸 표로 배치. 밴드가 담긴 문단(또는 첫 문단)을 돌려주어 장의 캡션 번호 재시작에 쓴다.
+        목차 책갈피는 번호 칸 문단(band_host)에 둠. Why: 밴드 표를 담은 문단에 두면 밴드를 옮길 때 책갈피 조판부호를 따로 옮겨야 함"""
         p = self.band_emit(self.band_spec(e))
+        self.toc_mark(e.data["kind"], e.text.strip(), self.band_host)
         self.after_block = True
         return p
 
     def caption_label(self, kind: str, text: str) -> dict:
         """캡션 문구. 번호 없는 프로파일은 표 <제목>, 그림 [제목]. 번호 있는 프로파일은 <표 1-3> 제목, [그림 1-3] 제목
-        반환: open(번호 앞), num(번호, 없으면 None), close(번호 뒤), text(전체). 번호 캡션은 표 목차와 그림 목차에 등록
+        반환: open(번호 앞), num(번호, 없으면 None), close(번호 뒤), text(전체). 번호 캡션은 작성기가 mark_caption으로 표 목차와 그림 목차에 등록
         낱말과 괄호는 caption 라벨(hwpx_report.py LABEL_DEFAULTS)"""
         prefix = self.p.get("caption_prefix")
         cap = lib.label("caption.table" if kind == "TABLE" else "caption.figure")
@@ -514,14 +517,7 @@ class ProposalLayout:
         open_b, close_b = f"{cap['open']}{cap['label']} ", f"{cap['close']} "
         head = open_b + prefix.format(c=max(self.n["chapter"], 1))
         full = f"{head}{num}{close_b}{text}"
-        self.captions.append((kind, full, close_b.strip() + text))
         return {"open": head, "num": num, "close": close_b + text, "text": full}
-
-    def toc_lists(self) -> list[tuple[str, list[str]]]:
-        if not self.p.get("toc_lists"):
-            return []
-        return [(lib.label("toc.tables"), [t for k, t, _ in self.captions if k == "TABLE"]),
-                (lib.label("toc.figures"), [t for k, t, _ in self.captions if k == "PICTURE"])]
 
     def unify_table_widths(self, elems: list[Element]):
         """표 폭 지시를 열 폭으로 바꾼다. 지시는 원고의 `(폭: ...)` 줄이며 모델이 양식 반복 여부를 보고 정성적으로 지정한다.
@@ -602,6 +598,7 @@ class ProposalLayout:
 
     def build(self, elems: list[Element], footnotes: dict, out: str):
         """요소 순회. 표와 그림 직후의 부기와 출처 줄은 블록 하단 행으로 붙이고 본문 뒤 출처 줄은 직전 문단의 각주로 옮김"""
+        self.check_toc_styles()
         self.unify_table_widths(elems)
         self.last_para = None
         self._body_started = False   # 본문 첫 요소 기록 여부. 간지의 쪽 나눔 판단에 사용
@@ -662,7 +659,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cap_n = {"TABLE": 0, "PICTURE": 0}
-        self.captions: list[tuple[str, str, str]] = []
+        self.pending_caption = None   # 목차 등록을 기다리는 번호 캡션 (종류, caption_label 반환값, 개체)
 
     def _sized_char(self, height: int, bold: bool) -> str:
         """장 스타일 글꼴을 기준으로 크기와 굵기만 바꾼 charPr (헤더 위계, 밴드 글자)."""
@@ -684,6 +681,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
         """caption_prefix가 None이면 번호 없는 캡션 <제목>을 개체에 부착한다 (제안서 관행). 값이 있으면 lib의 자동번호 캡션."""
         label = self.caption_label(kind, text)
         if label["num"] is not None:
+            self.pending_caption = (kind, label, holder)   # 목차 등록은 개체 기록이 끝난 뒤 (mark_pending_caption)
             return super().attach_caption(holder, kind, text, side, width)
         role = "table_title" if kind == "TABLE" else "fig_title"
         r = self.refs(role)
@@ -755,6 +753,8 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             sub = cell.element.find(f"{HP}subList")
             if sub is not None:
                 sub.set("vertAlign", "CENTER")
+            if ci == 0:
+                self.band_host = next(cell.element.iter(f"{HP}p"))   # 번호 칸 문단. 목차 책갈피를 여기에 두어 밴드를 옮기면 함께 이동
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
             sz.set("height", str(height))
@@ -791,12 +791,21 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
                     wb.set("hatchColor", "#" + wb.get("hatchColor")[3:])
         return bid
 
+    def mark_pending_caption(self):
+        """번호 캡션이 붙은 표나 그림을 목차에 등록하고 책갈피를 개체 안에 둠
+        Why 개체 기록 뒤: 셀 글자를 기록할 때 run을 다시 만들므로 그 전에 넣은 책갈피는 지워짐"""
+        if self.pending_caption:
+            kind, label, holder = self.pending_caption
+            self.pending_caption = None
+            self.mark_caption(kind, label, self.object_host(holder))
+
     def _last_tbl(self):
         tbls = list(self.doc.sections[-1].element.iter(f"{HP}tbl"))
         return tbls[-1] if tbls else None
 
     def after_table(self, e: Element):
         """■ 셀을 음영 셀로 바꾸고, 번호 캡션 프로파일에서 캡션 없는 표는 번호 집계에서 뺌 (표 목차 번호와 한/글 자동번호 일치)"""
+        self.mark_pending_caption()
         tbl = self._last_tbl()
         if tbl is None:
             return
@@ -819,6 +828,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             tc.set("borderFillIDRef", self._border_fill(lib.edge_sides(c0, c1, ncol), fill))
 
     def after_image(self, e: Element):
+        self.mark_pending_caption()
         tbl = self._last_tbl()
         if tbl is not None and self.p.get("caption_prefix") and not e.text and tbl.get("numberingType") == "PICTURE":
             tbl.set("numberingType", "NONE")
@@ -840,7 +850,6 @@ class ProposalDocxBuilder(ProposalLayout, docx_lib.DocxBuilder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cap_n = {"TABLE": 0, "PICTURE": 0}
-        self.captions: list[tuple[str, str, str]] = []
 
 
 def load_state(work: str) -> dict:
@@ -2162,6 +2171,11 @@ def cmd_build(a):
     else:
         src = a.input
         out_base = os.path.splitext(a.output or a.input)[0]
+    if a.toc_scope and not a.toc:
+        sys.exit("ERROR: --toc-scope는 --toc와 함께 지정")
+    toc_scope = lib.parse_toc_scope(a.toc_scope)
+    if a.toc_scope and profile.get("caption_prefix") is None and set(toc_scope) & set(lib.TOC_LIST_KINDS):
+        print("NOTE: 이 프로파일은 캡션에 번호가 없어 표와 그림이 목차에 수록되지 않음 (수록 대상은 번호 캡션)")
     elems, footnotes = parse_markdown(src)
     msgs = lint(elems)
     for msg in msgs:
@@ -2169,8 +2183,8 @@ def cmd_build(a):
     if a.long_table is None and any("[장표 HITL]" in m for m in msgs):
         sys.exit("ERROR: 장표 대상 표가 있으나 --long-table 미지정. 착수 질의 답변(engine 또는 split)을 --long-table로 지정한 뒤 build")
 
-    def make(fmt: str, out: str, numbers: dict[str, int] | None = None) -> ProposalLayout:
-        """조판 1회. numbers를 주면 목차에 쪽번호를 기입한 조판본을 다시 쓴다. 원고 요소는 조판 중에 변하므로 사본을 넘김"""
+    def make(fmt: str, out: str) -> ProposalLayout:
+        """조판 1회. 원고 요소는 조판 중에 변하므로 사본을 넘김"""
         if fmt == "hwpx":
             b = ProposalBuilder(skeleton, _profile_for_builder(profile), page_break=a.page_break)
             b.p = profile
@@ -2179,13 +2193,12 @@ def cmd_build(a):
         b.numbered_square = False
         b.toc = a.toc
         b.page_number = a.page_number
-        b.toc_depth = a.toc_depth
+        b.toc_scope = toc_scope
         b.cover = dict(kv.split("=", 1) for kv in a.cover.split(";") if "=" in kv) if a.cover else None
         b.header_spec = a.header
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
         b.notes = lib.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
         b.unify_mode = a.unify
         b.theme = a.theme
         b.doc_title = a.title
@@ -2202,18 +2215,8 @@ def cmd_build(a):
             fixed = lib.repair_manifest(out)
             if fixed:
                 print(f"WARN: 매니페스트 미등록 이미지 {fixed}건 자동 보정")
-        if a.toc and a.page_number:  # 2패스: 렌더링으로 제목과 캡션의 쪽 위치를 찾아 목차에 기입 (근사값, 한/글과 Word에서 확정)
-            numbers = toc_page_numbers(out, fmt, [t for _, t in b.headings], [(t, needle) for _, t, needle in b.captions],
-                                       {t for lv, t in b.headings if lv == 1})
-            if numbers:
-                make(fmt, out, numbers)
-                if fmt == "hwpx":
-                    lib.repair_manifest(out)
-                # 집계는 목차에 실리는 항목만. Why: 제목은 항(###)까지, 캡션은 전부 탐지 입력에 넣지만 목차는 toc_depth와 표 목차 설정까지만 실음
-                listed = [t for lv, t in b.headings if lv <= b.toc_depth] + [t for _, items in b.toc_lists() for t in items]
-                print(f"목차 쪽번호 {sum(t in numbers for t in listed)}/{len(listed)}건 기입 ({fmt}, 근사 렌더러 기준)")
-            else:
-                print(f"WARN: 렌더러 또는 pdftotext 부재로 {fmt} 목차 쪽번호 미기입")
+        if a.toc:
+            print(lib.toc_notice(b.toc_items, fmt))
         made[fmt] = out
         note_info = f", 각주 통합 {b.notes.merged}건" if a.footnote_merge else ""
         print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)}{note_info})")
@@ -2234,7 +2237,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t\d+$")   # 목차 쪽번호는 형식별 렌더링 기준이므로 대조에서 제외
+TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2301,31 +2304,48 @@ def check_parity(hwpx_path: str, docx_path: str) -> list[str]:
     return diffs
 
 
-def toc_page_numbers(path: str, fmt: str, headings: list[str], captions: list[tuple[str, str]],
-                     chapters: set[str] | None = None) -> dict[str, int]:
-    """조판본을 텍스트 레이어가 남는 PDF로 렌더링하여 목차 항목의 본문 쪽번호를 찾음. hwpx는 rhwp 우선, docx는 LibreOffice"""
-    if not shutil.which("pdftotext"):
-        return {}
-    pdf = os.path.splitext(path)[0] + ".toc.pdf"
-    if fmt == "hwpx":
-        if not (lib.find_rhwp() or lib.find_soffice()):
-            return {}
-        engine = lib.resolve_engine("auto", None)
-        src = lib.render_copy(path, strip_newnum=(engine == "soffice"))
-    else:
-        if not lib.find_soffice():
-            return {}
-        engine, src = "soffice", path
-    try:
-        lib.to_pdf(src, pdf, engine, None, text_as_paths=False)
-    except SystemExit:
-        return {}
-    finally:
-        if src != path and os.path.exists(src):
-            os.remove(src)
-    pages = subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True).stdout.split("\f")
-    os.remove(pdf)
-    return lib.match_toc_pages(pages, headings, captions, chapters)
+STATIC_SUFFIX = "_static"   # 정적화 산출 파일명에 붙이는 접미. 제출 파일은 덮어쓰지 않음
+STATIC_SCOPE_ALL = "all"    # 종류를 판별한 항목 전체
+STATIC_STYLE_ROLES = {"chapter": "chapter", "section": "section", "subsection": "subsection", "ganada": "ganada",
+                      "table_title": "table", "fig_title": "figure", "fig_pos": "figure"}
+# 캡션 스타일은 docx의 캡션 문단, 그림 위치 스타일은 표에 담지 않은 그림(lib.FIGURE_IN_TABLE 해제)을 담은 hwpx 문단
+REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "갱신됨", toc_refs.RefState.PLACEHOLDER: "자리 표시 값"}
+
+
+def cmd_toc_static(a):
+    """사후 정적화: 제출 파일에서 지정한 종류의 책갈피를 지우고 그 책갈피를 가리키는 쪽 참조를 일반 글자로 바꿈
+    쪽번호를 갱신하지 않은 항목(자리 표시 값)은 건너뛰고 알림. Why: 실제 쪽은 한/글과 Word만 계산함"""
+    profile = PROFILES[a.profile] if a.profile in PROFILES else json.load(open(a.profile, encoding="utf-8"))
+    style_kinds = {profile[role]: kind for role, kind in STATIC_STYLE_ROLES.items() if profile.get(role)}
+    items = toc_refs.scan(a.input, style_kinds)
+    if not items:
+        sys.exit("ERROR: 쪽 참조가 가리키는 책갈피 없음 (목차 쪽번호를 넣지 않았거나 이미 정적화한 파일)")
+    for it in items:   # 종류, 쪽번호 저장값, 갱신 상태, 책갈피 이름, 책갈피가 놓인 문단의 글자
+        print(f"{it.kind}\t{'|'.join(it.values)}\t{REF_STATE_TEXT[it.state]}\t{it.name}\t{it.text}")
+    counts = {k: sum(it.kind == k for it in items) for k in (*toc_refs.KINDS, toc_refs.OTHER)}
+    print("항목 종류별 건수: " + ", ".join(f"{k} {n}" for k, n in counts.items() if n))
+    if not a.scope:
+        print(f"정적화할 범위를 --scope로 지정 (쉼표 구분 또는 {STATIC_SCOPE_ALL}). 파일은 바꾸지 않음")
+        return
+    allowed = (*toc_refs.KINDS, toc_refs.OTHER)
+    wanted = set(toc_refs.KINDS) if a.scope == STATIC_SCOPE_ALL else set(lib.parse_toc_kinds(a.scope, allowed, "--scope"))
+    chosen = [it for it in items if it.kind in wanted]
+    targets = [it for it in chosen if it.state is toc_refs.RefState.UPDATED]
+    skipped = [it for it in chosen if it.state is not toc_refs.RefState.UPDATED]
+    if skipped:
+        how = "Word에서 Ctrl+A 후 F9로 갱신하여 저장" if toc_refs.is_docx(a.input) else "한/글에서 열어 저장"
+        print(f"WARN: 쪽번호를 갱신하지 않은 {len(skipped)}건은 정적화하지 않음. {how}한 파일을 다시 제출: "
+              + ", ".join(it.name for it in skipped))
+    if not targets:
+        print("정적화한 항목 없음. 파일은 바꾸지 않음")
+        return
+    stem, ext = os.path.splitext(a.input)
+    out = a.output or f"{stem}{STATIC_SUFFIX}{ext}"
+    if os.path.abspath(out) == os.path.abspath(a.input):
+        sys.exit("ERROR: 제출 파일과 같은 경로에는 쓰지 않음. -o로 다른 경로 지정")
+    toc_refs.make_static(a.input, out, {it.name for it in targets})
+    kept = toc_refs.scan(out, style_kinds)
+    print(f"OK: {out} (정적화 {len(targets)}건, 건너뜀 {len(skipped)}건, 책갈피와 쪽 참조 유지 {len(kept)}건)")
 
 
 _ORIGINAL_COL_ALIGNS = lib.col_aligns
@@ -2494,8 +2514,9 @@ def main():
     p.add_argument("--page-break", default="chapter", choices=["chapter", "section", "none"])
     p.add_argument("--long-table", default=None, choices=["engine", "split"], help="긴 표의 기본 처리(착수 질의 답변). split=청크별 표로 분할하고 제목행 반복, engine=한/글 엔진 분할. 장표 대상 표가 있는데 미지정이면 build 중단")
     p.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"])
-    p.add_argument("--toc", action="store_true", help="정적 목차 삽입 (기본 OFF. 납품 목차는 한/글 차례 기능)")
-    p.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3])
+    p.add_argument("--toc", action="store_true", help="목차 삽입 (기본 OFF). --page-number와 함께 켜면 수록 항목마다 책갈피를 붙이고 쪽번호를 쪽 참조 필드로 기록")
+    p.add_argument("--toc-scope", help=f"목차 수록 범위(착수 질의 답변, 쉼표 구분). 기본 {','.join(lib.TOC_SCOPE_DEFAULT)}. "
+                                       f"항목: {', '.join(toc_refs.KINDS)}. table과 figure는 번호 캡션만 수록")
     p.add_argument("--page-number", action="store_true", help="꼬리말 쪽번호 (기본 OFF)")
     p.add_argument("--cover", help='표지: "title=제목;subtitle=부제;date=YYYY. M.;org=기관"')
     p.add_argument("--header", help='머리말: "텍스트;align=RIGHT"')
@@ -2507,6 +2528,13 @@ def main():
     p.add_argument("--labels", help="라벨 파일(JSON). 문서의 고정 문자열, 원고 표기, 언어 태그, 납품 파일명을 덮어씀. 작업폴더면 state.json에 기록 (none은 기록 해제)")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("toc-static", help="산출 이후 정적화: 지정한 항목의 책갈피를 지우고 목차 쪽번호를 일반 글자로 바꾼 사본 생성")
+    p.add_argument("input", help="한/글 또는 Word에서 쪽번호를 갱신하여 저장한 hwpx 또는 docx")
+    p.add_argument("--scope", help=f"정적화할 항목 종류 (쉼표 구분 또는 {STATIC_SCOPE_ALL}). 생략하면 항목 현황만 출력")
+    p.add_argument("-o", "--output", help=f"산출 경로 (기본: 원본 이름에 {STATIC_SUFFIX} 접미)")
+    p.add_argument("--profile", default="proposal", help="스타일 이름으로 항목 종류를 판별할 프로파일 (기본 양식은 생략, 발주처 양식은 프로파일 JSON)")
+    p.set_defaults(func=cmd_toc_static)
 
     p = sub.add_parser("render", help="hwpx 또는 docx → PDF + PNG (hwpx_report.py render 위임. docx는 LibreOffice)")
     p.add_argument("input")

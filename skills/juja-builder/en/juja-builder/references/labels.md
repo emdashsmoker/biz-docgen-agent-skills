@@ -20,7 +20,7 @@
 
 | Key | Meaning | Default | English example |
 |---|---|---|---|
-| `formats.chapter` | chapter heading format (TOC entries, page number matching) | the active profile value. Proposal and planning report `{r}. {t}`, pre-diagnosis report `제{n}장 {t}` | `Chapter {n}. {t}` |
+| `formats.chapter` | chapter heading format (TOC entries, TOC bookmark names) | the active profile value. Proposal and planning report `{r}. {t}`, pre-diagnosis report `제{n}장 {t}` | `Chapter {n}. {t}` |
 | `formats.chapter_label` | number cell of chapter bands and divider pages | proposal and planning report `{r}`, pre-diagnosis report `제{n}장` | `Chapter {n}` |
 | `formats.section` | section heading format | proposal and planning report `{s}. {t}`, pre-diagnosis report `{c}.{s} {t}` | keep the default |
 | `formats.subsection` | subsection heading format | proposal and planning report `{g} {t}`, pre-diagnosis report `{c}.{s}.{ss} {t}` | keep the default |
