@@ -122,7 +122,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (PDF copy) Ask whether to deliver a PDF with the document. No PDF by default. Give the following notice with the question
         - The PDF is an approximate rendering drawn by the review renderer, so it may look different from Hangul or Word
         - A PDF of an HWPX document is likely to contain display defects in line breaks, spacing, and page breaks
-    - (Purpose) chapter for a chaptered document of a full report. flat for a standalone document or a partial manuscript to insert into a full report. A cover and TOC are optional regardless of purpose
+    - (Purpose) chapter for a chaptered document of a full report. flat for a standalone document or a partial manuscript to insert into a full report. A cover is optional regardless of purpose. A TOC is optional in chapter. flat has no TOC styles, so the TOC is skipped
     - (Form contrast) Show this when asking about the purpose. chapter sets the 제N장, N.N, N.N.N, and 가. headings in NanumGothic bold and restarts caption numbers in each chapter (표 1-3). flat sets the document title, N., and N.N headings in NanumBarunGothic bold and the 가. headings in NanumGothic bold, and numbers captions continuously through the document (표 3). The body levels □, ○, -, ㆍ, ※ and the body font NanumGothic are the same in both forms. Only chapter has TOC styles
     - (Page breaks) Choose chapter (default), section, or none. build reports the number of short sections with fewer than 8 elements on a `HITL: [page-break]` line
         - (chapter) Starts a new page at each chapter. In flat, the same as none
