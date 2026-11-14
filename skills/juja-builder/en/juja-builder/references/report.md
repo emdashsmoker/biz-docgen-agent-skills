@@ -40,6 +40,7 @@
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), whether to insert a cover, band color theme (navy by default, mono is black and gray), long-table handling (engine or split)
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Source layout (automatic by default, always break, always inline), width and spacing adjustment (off by default), and line spacing adjustment (off by default). Definitions and notices are in the kickoff questions of the SKILL.md Procedure section and in the Manuscript Hierarchy section
     + The judged report type and engagement type. Judge with the TOC example table of the Table of Contents Design section and the SKILL.md Module Frameworks by Engagement Type section
 - Step 1 applies the requirement transfer rules of the SKILL.md RFP Dissection section. In a pre-diagnosis report workspace, `rfp` places only the requirement table (no scoring table). After the transfer, fill 00_진단서.md according to the Diagnosis Design section
 - Step 2 writes 02_모듈총괄표.md (SKILL.md Module Overview Table section) and 02_스토리라인.md. For 02_스토리라인.md, copy `<SKILL>/assets/report-storyline.md` into the workspace and fill it
@@ -269,7 +270,7 @@
 
 ## Typesetting
 
-- The command is `build workspace --format format --toc --page-number --long-table handling`. Add `--cover` according to the kickoff answer. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
+- The command is `build workspace --format format --toc --page-number --long-table handling --source-layout layout`. Add `--cover` according to the kickoff answer. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance. Add `--adjust-chars` for width and spacing adjustment and `--adjust-lines` for line spacing adjustment only when the user chose them
 - Table of contents, page numbers, and divider pages are the default composition of a report. Turn them off only when the user asks
 - A divider page is a page before the body of each chapter. It holds only the chapter number and title. The body starts from the first section on the next page. Turn off with `--divider off`
 - The default table of contents scope is chapters, sections, tables, and figures. If the answer to the kickoff questions differs, set it with `--toc-scope`. The list of tables and list of figures follow the table of contents on new pages and include tables and figures with captions

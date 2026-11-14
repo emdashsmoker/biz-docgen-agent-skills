@@ -129,6 +129,8 @@ class DocxBuilder(lib.TocMarks):
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
         self.notes = lib.NoteRegistry(None)   # 출처 각주 통합. 조판 명령이 범위를 지정하면 교체
+        self.source_layout = lib.DEFAULT_SOURCE_LAYOUT
+        self.guessed_fonts: set[str] = set()   # 출처 라벨 폭을 글꼴 파일 없이 추정한 글꼴
         page = spec["page"]
         self.body_w = page["width"] - page["left"] - page["right"]
         self.table_max_w = self.body_w - lib.TABLE_INDENT_MARGIN
@@ -555,6 +557,82 @@ class DocxBuilder(lib.TocMarks):
         self._tc_style(cell._tc, [], None, None)
         self._row_height(t.rows[ri], lib.ROW_BASE_H)
 
+    def _source_row(self, t, ri: int, ncol: int, text: str):
+        """출처 행. 라벨 뒤에 탭을 두고 문단을 라벨 폭만큼 내어 써서 둘째 줄부터 라벨 뒤 글자에 맞춤.
+        여러 출처는 문단 안 줄바꿈으로 나눔. 라벨이 없는 줄은 일반 출처 행으로 둠"""
+        parsed = lib.source_row_lines(text, self.source_layout)
+        if parsed is None:
+            self._transparent_row(t, ri, ncol, lib.source_text_inline(text), "source", "LEFT")
+            return
+        label, lines = parsed
+        self._transparent_row(t, ri, ncol, label + "\t" + "\n".join(lines), "source", "LEFT")
+        row = self._row("source")
+        face = self._font(row[2])
+        gs = lib.GlyphStyle(row[3] * 100, dict.fromkeys(lib.LANGS, face), {}, {}, {}, self.spec["space_em"])
+        hang, _, guessed = lib.label_hang_hu(label, gs)
+        self.guessed_fonts |= guessed
+        left = row[6]
+        pf = t.cell(ri, 0).paragraphs[0].paragraph_format
+        # Word는 탭 위치를 셀 왼쪽 끝에서 잼. 내어쓰기 위치와 같은 탭을 두어 첫 줄의 라벨 뒤 글자가 둘째 줄과 같은 위치에서 시작
+        pf.left_indent, pf.first_line_indent = Twips(tw(left + hang)), Twips(-tw(hang))
+        pf.tab_stops.add_tab_stop(Twips(tw(left + hang)), WD_TAB_ALIGNMENT.LEFT)
+
+    def adjust_mark(self) -> int:
+        """조정 지시 적용 범위의 시작 위치. python-docx는 새 요소를 마지막 구역 설정(sectPr) 앞에 넣음"""
+        body = self.doc.element.body
+        return len(body) - (1 if len(body) and body[-1].tag == qn("w:sectPr") else 0)
+
+    def adjust_apply(self, start: int, adj: dict):
+        """조정 지시를 start 이후 문단에 적용. 장평(w:w)과 자간(w:spacing)은 run에, 줄 간격은 문단에 스타일 값 대비 증감으로 기록.
+        캡션 문단은 대상에서 제외"""
+        body = self.doc.element.body
+        rows = {self.doc.styles[st].style_id: self.rows[name] for name, st in self.style_names.items()}
+        captions = {self.doc.styles[self.style_names[self._row(r)[0]]].style_id for r in ("table_title", "fig_title")
+                    if self.p.get(r)}
+        for node in body[start:self.adjust_mark()]:
+            for p in ([node] if node.tag == qn("w:p") else list(node.iter(qn("w:p")))):
+                ps = p.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
+                sid = ps.get(qn("w:val")) if ps is not None else self.doc.styles["Normal"].style_id
+                if sid in captions:
+                    continue
+                row = rows.get(sid, self._row("body"))
+                if "line" in adj:
+                    self._adjust_line(p, row, adj["line"])
+                if "ratio" in adj or "spacing" in adj:
+                    for r in p.iter(qn("w:r")):
+                        self._adjust_run(r, row, adj.get("ratio", 0), adj.get("spacing", 0))
+
+    @staticmethod
+    def _adjust_run(r, row, d_ratio: int, d_spacing: int):
+        """run의 장평과 자간. 양식 스타일은 장평 100%, 자간 0%이며 빈칸 run의 한/글 빈칸 폭 보정 자간에는 조정분을 더함"""
+        rpr = r.find(qn("w:rPr"))
+        if rpr is None:
+            rpr = _w("rPr")
+            r.insert(0, rpr)
+        if d_spacing:
+            sz = rpr.find(qn("w:sz"))
+            pt = int(sz.get(qn("w:val"))) / 2 if sz is not None else row[3]
+            old = rpr.find(qn("w:spacing"))
+            base = int(old.get(qn("w:val"))) if old is not None else 0
+            delta = round(pt * (lib.adjusted(0, d_spacing, "spacing")) / 100 * TWIP_PER_PT)
+            _insert_ordered(rpr, _w("spacing", val=base + delta), RPR_ORDER)
+        if d_ratio:
+            _insert_ordered(rpr, _w("w", val=lib.adjusted(100, d_ratio, "ratio")), RPR_ORDER)
+
+    def _adjust_line(self, p, row, delta: int):
+        """문단의 고정 줄 높이를 스타일 줄 간격 대비 증감으로 기록. 글자 크기를 바꾼 문단은 그 문단의 줄 높이를 기준으로 함"""
+        ppr = p.find(qn("w:pPr"))
+        if ppr is None:
+            ppr = _w("pPr")
+            p.insert(0, ppr)
+        spacing = ppr.find(qn("w:spacing"))
+        base = int(spacing.get(qn("w:line"))) if spacing is not None and spacing.get(qn("w:line")) else self._style_line(row)
+        line = round(base * lib.adjusted(row[10], delta, "line") / row[10])
+        if spacing is None:
+            spacing = _insert_ordered(ppr, _w("spacing"), PPR_ORDER)
+        spacing.set(qn("w:line"), str(line))
+        spacing.set(qn("w:lineRule"), "exact")
+
     def table(self, e: lib.Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
         nrow, ncol = len(rows), len(rows[0])
@@ -590,7 +668,7 @@ class DocxBuilder(lib.TocMarks):
         if unit:
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):
-            self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
+            self._source_row(t, head + nrow + k, ncol, src)
         heights = lib.row_heights(rows, widths, hdr, vspans, hspans)
         for ri, row in enumerate(rows):
             is_head = ri < hdr
@@ -651,7 +729,7 @@ class DocxBuilder(lib.TocMarks):
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
-                self.para("source", src)
+                self.para("source", lib.source_text_inline(src))
         else:  # 투명 1열 표에 그림과 자료 행을 담음 (hwpx와 같은 구성)
             # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
             t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])
@@ -663,7 +741,7 @@ class DocxBuilder(lib.TocMarks):
             self._tc_style(cell._tc, [], None, (lib.CELL_MARGIN[0], lib.CELL_MARGIN[1], TABLE_IN_MARGIN[2], TABLE_IN_MARGIN[3]))
             self._row_height(t.rows[0], h_hu + 2 * lib.ROW_LINE_H, cant_split=True)
             for k, src in enumerate(sources):
-                self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
+                self._source_row(t, 1 + k, 1, src)
             cap_below = bool(e.text) and lib.FIG_CAPTION_SIDE != "TOP"
             # Why: 아래 캡션은 표 밖의 문단이므로 마지막 행까지 다음 문단과 묶어야 쪽 경계에서 캡션이 떨어지지 않음
             for row in (t.rows if cap_below else t.rows[:-1]):

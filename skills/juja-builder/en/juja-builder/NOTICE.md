@@ -35,6 +35,7 @@ This program bundles no third-party code, fonts or binaries. The components belo
 | [lxml](https://lxml.de/) | XML processing | BSD-3-Clause |
 | [Pillow](https://python-pillow.org/) | Image processing | MIT-CMU |
 | [openpyxl](https://openpyxl.readthedocs.io/) | XLSX reading | MIT |
+| [fontTools](https://github.com/fonttools/fonttools) | Font metrics for source row alignment | MIT |
 | [rhwp](https://github.com/edwardkim/rhwp) | HWPX page rendering for review | MIT |
 | [LibreOffice](https://www.libreoffice.org/) | Document conversion and page rendering | MPL-2.0 |
 | [H2Orestart](https://github.com/ebandal/H2Orestart) | HWP and HWPX import for LibreOffice | GPL-3.0 |

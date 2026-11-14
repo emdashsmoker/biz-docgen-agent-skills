@@ -625,25 +625,10 @@ class ProposalLayout:
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
-            if e.kind == "heading":
-                self.heading(e.level, e.text)
-            elif e.kind == "band":
-                self.band(e)
-            elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
-            elif e.kind == "unit":
-                self.para("unit", e.text)
-            elif e.kind == "source":
-                if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
-                else:
-                    self.para("note", e.text, footnotes)
-            elif e.kind == "table":
-                self.table(e)
-            elif e.kind == "image":
-                self.image(e)
-            elif e.kind == "pagebreak":
-                self.pending_break = True
+            start = self.adjust_mark()
+            self._dispatch(e, footnotes)
+            if e.data.get("adjust"):   # 조정 지시: 이 요소가 만든 문단(표와 그림은 셀 안 문단, Module과 Task 줄은 밴드)에 적용
+                self.adjust_apply(start, e.data["adjust"])
             if e.kind != "pagebreak":
                 self._body_started = True
         if self.toc or self.cover:
@@ -651,6 +636,28 @@ class ProposalLayout:
         self.set_page_number(self.page_number)
         self.set_header(self.header_spec)
         self.save(out)
+
+    def _dispatch(self, e: Element, footnotes: dict):
+        """원고 요소 1개를 조판"""
+        if e.kind == "heading":
+            self.heading(e.level, e.text)
+        elif e.kind == "band":
+            self.band(e)
+        elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            self.last_para = self.para(e.kind, e.text, footnotes)
+        elif e.kind == "unit":
+            self.para("unit", e.text)
+        elif e.kind == "source":
+            if self.last_para is not None:
+                self.add_footnote(self.last_para, lib.source_text_inline(e.text))
+            else:
+                self.para("note", lib.source_text_inline(e.text), footnotes)
+        elif e.kind == "table":
+            self.table(e)
+        elif e.kind == "image":
+            self.image(e)
+        elif e.kind == "pagebreak":
+            self.pending_break = True
 
 
 class ProposalBuilder(ProposalLayout, lib.Builder):
@@ -2180,6 +2187,8 @@ def cmd_build(a):
     msgs = lint(elems)
     for msg in msgs:
         print("LINT:", msg)
+    for line in lib.gate_adjust(elems, a.adjust_chars, a.adjust_lines):   # 기본 OFF인 조정은 옵션을 지정한 경우에만 반영
+        print(line)
     if a.long_table is None and any("[장표 HITL]" in m for m in msgs):
         sys.exit("ERROR: 장표 대상 표가 있으나 --long-table 미지정. 착수 질의 답변(engine 또는 split)을 --long-table로 지정한 뒤 build")
 
@@ -2199,6 +2208,7 @@ def cmd_build(a):
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
         b.notes = lib.NoteRegistry(a.footnote_merge)
+        b.source_layout = a.source_layout
         b.unify_mode = a.unify
         b.theme = a.theme
         b.doc_title = a.title
@@ -2217,6 +2227,9 @@ def cmd_build(a):
                 print(f"WARN: 매니페스트 미등록 이미지 {fixed}건 자동 보정")
         if a.toc:
             print(lib.toc_notice(b.toc_items, fmt))
+        if b.guessed_fonts:
+            print(f"INFO: 출처 라벨 폭을 글꼴 파일 없이 추정 ({', '.join(sorted(f for f in b.guessed_fonts if f) or ['?'])}). "
+                  "줄 정렬은 편집기의 탭이 맞추며 라벨 뒤 간격만 조금 다를 수 있음")
         made[fmt] = out
         note_info = f", 각주 통합 {b.notes.merged}건" if a.footnote_merge else ""
         print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)}{note_info})")
@@ -2237,7 +2250,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외
+TOC_NUM_RE = re.compile(r"\t[^\t\s]{0,8}$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외. 출처 행의 라벨 뒤 탭은 남김
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2255,7 +2268,9 @@ def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
                     if owner is not p:
                         continue
                     buf.append(t.text or "")
-                    buf += ["\t" + (c.tail or "") for c in t if c.tag == f"{HP}tab"]
+                    # 탭과 문단 안 줄바꿈(출처 행)은 docx와 같은 글자로 셈
+                    buf += [{f"{HP}tab": "\t", f"{HP}lineBreak": "\n"}[c.tag] + (c.tail or "") for c in t
+                            if c.tag in (f"{HP}tab", f"{HP}lineBreak")]
                 text = "".join(buf)
                 if text.strip():
                     (notes if f"{HP}footNote" in anc else body).append(text)
@@ -2270,8 +2285,12 @@ def docx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
     body = []
     for p in root.iter(f"{W_NS}p"):
         buf, after_ref = [], False
-        for el in p.iter(f"{W_NS}t", f"{W_NS}tab", f"{W_NS}footnoteReference"):
-            if el.tag == f"{W_NS}footnoteReference":
+        for el in p.iter(f"{W_NS}t", f"{W_NS}tab", f"{W_NS}br", f"{W_NS}footnoteReference"):
+            if el.getparent().tag == f"{W_NS}tabs":   # 문단 모양의 탭 위치 정의는 글자가 아님
+                continue
+            if el.tag == f"{W_NS}br":
+                buf.append("\n")
+            elif el.tag == f"{W_NS}footnoteReference":
                 after_ref = True
             elif any(a.tag == f"{W_NS}fldSimple" for a in el.iterancestors()):
                 continue
@@ -2523,6 +2542,13 @@ def main():
     p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),
                    help="출처 각주 통합(착수 질의에서 통합을 고른 경우에만 지정, 기본 미적용). 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
                         "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
+    p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
+                   help="표와 그림의 다중 출처 배치(착수 질의 답변): auto=원고의 <br> 위치에서 줄바꿈(기본), break=출처마다 줄바꿈, "
+                        "inline=한 줄로 이어쓰기. 둘째 줄부터 라벨 뒤 글자에 맞춤")
+    p.add_argument("--adjust-chars", action="store_true",
+                   help="원고의 '(조정: 장평 N, 자간 N)' 지시 적용(착수 질의에서 고른 경우, 기본 OFF). 값은 스타일 장평과 자간에 더하는 %%p")
+    p.add_argument("--adjust-lines", action="store_true",
+                   help="원고의 '(조정: 줄 간격 N)' 지시 적용(착수 질의에서 고른 경우, 기본 OFF). 값은 스타일 줄 간격에 더하는 %%p")
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="표 폭 통일: manual=원고의 (폭: ...) 지시만 적용(기본), auto=같은 양식 표 자동 그룹 추가")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="밴드 색 테마: navy(기본), mono(검정과 회색). 표 서식은 테마와 무관")
     p.add_argument("--labels", help="라벨 파일(JSON). 문서의 고정 문자열, 원고 표기, 언어 태그, 납품 파일명을 덮어씀. 작업폴더면 state.json에 기록 (none은 기록 해제)")

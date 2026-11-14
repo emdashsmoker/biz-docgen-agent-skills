@@ -613,25 +613,10 @@ class ProposalLayout:
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
-            if e.kind == "heading":
-                self.heading(e.level, e.text)
-            elif e.kind == "band":
-                self.band(e)
-            elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
-            elif e.kind == "unit":
-                self.para("unit", e.text)
-            elif e.kind == "source":
-                if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
-                else:
-                    self.para("note", e.text, footnotes)
-            elif e.kind == "table":
-                self.table(e)
-            elif e.kind == "image":
-                self.image(e)
-            elif e.kind == "pagebreak":
-                self.pending_break = True
+            start = self.adjust_mark()
+            self._dispatch(e, footnotes)
+            if e.data.get("adjust"):   # adjust directive: applies to the paragraphs this element made (cell paragraphs for tables and figures, the band for Module and Task lines)
+                self.adjust_apply(start, e.data["adjust"])
             if e.kind != "pagebreak":
                 self._body_started = True
         if self.toc or self.cover:
@@ -639,6 +624,28 @@ class ProposalLayout:
         self.set_page_number(self.page_number)
         self.set_header(self.header_spec)
         self.save(out)
+
+    def _dispatch(self, e: Element, footnotes: dict):
+        """Typeset one manuscript element"""
+        if e.kind == "heading":
+            self.heading(e.level, e.text)
+        elif e.kind == "band":
+            self.band(e)
+        elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            self.last_para = self.para(e.kind, e.text, footnotes)
+        elif e.kind == "unit":
+            self.para("unit", e.text)
+        elif e.kind == "source":
+            if self.last_para is not None:
+                self.add_footnote(self.last_para, lib.source_text_inline(e.text))
+            else:
+                self.para("note", lib.source_text_inline(e.text), footnotes)
+        elif e.kind == "table":
+            self.table(e)
+        elif e.kind == "image":
+            self.image(e)
+        elif e.kind == "pagebreak":
+            self.pending_break = True
 
 
 class ProposalBuilder(ProposalLayout, lib.Builder):
@@ -2168,6 +2175,8 @@ def cmd_build(a):
     msgs = lint(elems)
     for msg in msgs:
         print("LINT:", msg)
+    for line in lib.gate_adjust(elems, a.adjust_chars, a.adjust_lines):   # adjustments are OFF by default and apply only with their options
+        print(line)
     if a.long_table is None and any("[long table HITL]" in m for m in msgs):
         sys.exit("ERROR: a table needs long-table handling but --long-table is not set. Set the kickoff answer (engine or split) with --long-table, then build")
 
@@ -2187,6 +2196,7 @@ def cmd_build(a):
         b.merge_mode = a.merge
         b.long_table_mode = a.long_table or "split"
         b.notes = lib.NoteRegistry(a.footnote_merge)
+        b.source_layout = a.source_layout
         b.unify_mode = a.unify
         b.theme = a.theme
         b.doc_title = a.title
@@ -2205,6 +2215,9 @@ def cmd_build(a):
                 print(f"WARN: {fixed} images not registered in the manifest were corrected automatically")
         if a.toc:
             print(lib.toc_notice(b.toc_items, fmt))
+        if b.guessed_fonts:
+            print(f"INFO: source label width estimated without the font file ({', '.join(sorted(f for f in b.guessed_fonts if f) or ['?'])}). "
+                  "The editor's tab keeps the lines aligned; only the gap after the label may differ slightly")
         made[fmt] = out
         note_info = f", merged footnote references {b.notes.merged}" if a.footnote_merge else ""
         print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)}{note_info})")
@@ -2225,7 +2238,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references are calculated by the editor, so they are excluded from the comparison
+TOC_NUM_RE = re.compile(r"\t[^\t\s]{0,8}$")   # the stored value of a TOC page reference is computed by the editor and is left out of the comparison. The tab after a source row label stays
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2243,7 +2256,9 @@ def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
                     if owner is not p:
                         continue
                     buf.append(t.text or "")
-                    buf += ["\t" + (c.tail or "") for c in t if c.tag == f"{HP}tab"]
+                    # tabs and line breaks inside a paragraph (source rows) count as the same characters as in docx
+                    buf += [{f"{HP}tab": "\t", f"{HP}lineBreak": "\n"}[c.tag] + (c.tail or "") for c in t
+                            if c.tag in (f"{HP}tab", f"{HP}lineBreak")]
                 text = "".join(buf)
                 if text.strip():
                     (notes if f"{HP}footNote" in anc else body).append(text)
@@ -2258,8 +2273,12 @@ def docx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
     body = []
     for p in root.iter(f"{W_NS}p"):
         buf, after_ref = [], False
-        for el in p.iter(f"{W_NS}t", f"{W_NS}tab", f"{W_NS}footnoteReference"):
-            if el.tag == f"{W_NS}footnoteReference":
+        for el in p.iter(f"{W_NS}t", f"{W_NS}tab", f"{W_NS}br", f"{W_NS}footnoteReference"):
+            if el.getparent().tag == f"{W_NS}tabs":   # tab stop definitions in the paragraph properties are not text
+                continue
+            if el.tag == f"{W_NS}br":
+                buf.append("\n")
+            elif el.tag == f"{W_NS}footnoteReference":
                 after_ref = True
             elif any(a.tag == f"{W_NS}fldSimple" for a in el.iterancestors()):
                 continue
@@ -2512,6 +2531,13 @@ def main():
                    help="source footnote merging (set only when the user chose merging in the kickoff questions, off by default). "
                         "Replaces a footnote that repeats the same text inside the scope with a cross-reference to the first footnote number. "
                         "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
+    p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
+                   help="layout of multiple sources under tables and figures (kickoff answer): auto=break at <br> in the manuscript (default), break=one source per line, "
+                        "inline=one line. Lines after the first align with the text after the label")
+    p.add_argument("--adjust-chars", action="store_true",
+                   help="apply '(조정: 장평 N, 자간 N)' (width, spacing) directives in the manuscript (when chosen at kickoff, default OFF). Values are %%p added to the style values")
+    p.add_argument("--adjust-lines", action="store_true",
+                   help="apply '(조정: 줄 간격 N)' (line spacing) directives in the manuscript (when chosen at kickoff, default OFF). Values are %%p added to the style value")
     p.add_argument("--unify", default="manual", choices=["manual", "auto"], help="table width unification: manual=apply only (폭: ...) directives in manuscripts (default), auto=also group tables of the same layout automatically")
     p.add_argument("--theme", default=DEFAULT_THEME, choices=sorted(THEMES), help="band color theme: navy (default), mono (black and gray). Table format does not depend on the theme")
     p.add_argument("--labels", help="label file (JSON). Overrides the document's fixed strings, manuscript notation, language tags, and delivered file names. For a workspace it is recorded in state.json (none clears the record)")

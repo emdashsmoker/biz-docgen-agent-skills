@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import pathlib
 import re
@@ -32,6 +33,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import uuid
 import warnings
 import zipfile
@@ -144,6 +146,24 @@ LONG_TABLE_GAP_LINES = 1
 NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
 NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # 이 수준 이상의 제목에서 범위가 바뀜
 CROSSREF_FIELD_ID = "628650598"  # 한/글 상호참조 필드의 종류 id (제어 id "%xrf"의 정수 표기)
+# 출처 행 배치 (build --source-layout). auto는 원고의 <br> 위치에서 줄을 바꾸고 break는 출처마다 줄을 바꾸며 inline은 한 줄로 이음
+SOURCE_LAYOUTS = ("auto", "break", "inline")
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_MARKS = ("※", "*")       # 출처 행에 붙은 ※ 주석 줄의 기호. 문장 줄이므로 break에서도 세미콜론으로 나누지 않음
+LANGS = ("hangul", "latin", "hanja", "japanese", "other", "symbol", "user")   # 한/글 글꼴 슬롯 7종
+SPACE_EM_HWPX = 0.5             # 글꼴 빈칸 폭을 쓰지 않는 한/글 글자 모양의 빈칸 폭 (글자 크기 대비)
+# 글꼴 파일 탐색. fontconfig가 없는 Windows와 macOS는 운영체제 글꼴 폴더에서 이름표로 찾음
+FONT_DIRS = {
+    "win32": ["%WINDIR%\\Fonts", "%LOCALAPPDATA%\\Microsoft\\Windows\\Fonts"],
+    "darwin": ["/Library/Fonts", "~/Library/Fonts", "/System/Library/Fonts"],
+}
+FONT_FILE_EXTS = (".ttf", ".otf", ".ttc")
+REGULAR_WEIGHT = 400            # 같은 이름의 파일이 여럿이면 보통 굵기 파일을 씀
+# 조정 지시 (원고의 '(조정: )' 줄). 값은 스타일 값에 더하는 %p. 장평과 자간은 --adjust-chars, 줄 간격은 --adjust-lines를 지정한 build에만 적용
+ADJUST_OPTION_KEYS = {"chars": ("ratio", "spacing"), "lines": ("line",)}
+ADJUST_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글 문단과 글자 모양의 허용 범위
+# 이 폭을 넘는 조정은 build가 WARN으로 알림. 넘는 조정은 글자와 줄이 눈에 띄게 눌려 보임
+ADJUST_WARN = {"ratio": 5, "spacing": 8, "line": 20}
 
 # 라벨: 문서에 찍히는 고정 문자열, 원고에서 인식하는 표기, docx 언어 태그. 기본값은 현행 한국어 표기
 # 라벨 파일(JSON, proposal.py `build --labels`)이 일부 키를 덮어씀. 빠진 키는 기본값, 모르는 키는 ERROR
@@ -177,6 +197,7 @@ RENDER_DPI = 80
 
 HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
 HH = "{http://www.hancom.co.kr/hwpml/2011/head}"
+HC = "{http://www.hancom.co.kr/hwpml/2011/core}"
 MANUAL_SYMBOLS = {"square": "□ ", "circle": "○ ", "dash": "- ", "dot": "ㆍ ", "note": "※ "}
 
 
@@ -196,6 +217,13 @@ BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
+# 조정 지시 줄: (조정: 장평 -3, 자간 -5), (조정 시작: 줄 간격 -10), (조정 끝)
+ADJUST_RE = re.compile(r"^[(（]\s*조정\s*(시작|끝)?\s*(?:[:：]\s*(.*?))?\s*[)）]$")
+ADJUST_ITEM_RE = re.compile(r"(장평|자간|줄\s*간격)\s*([+-]?\d+)")
+ADJUST_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line"}
+ADJUST_MODES = {"시작": "start", "끝": "end"}
+# 조정 지시의 대상 요소. 표와 그림은 셀 안 문단(단위 행과 출처 행 포함)에, Module과 Task 줄은 밴드에 적용
+ADJUST_TARGETS = ("heading", "square", "circle", "dash", "dot", "note", "table", "image")
 NUM_PREFIX_RE = re.compile(r"^(제\s*\d+\s*장|\d+(?:\.\d+)*\.?|[가-힣]\.)\s+")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
@@ -232,7 +260,7 @@ def _alt(tokens: list[str]) -> str:
 
 def _compile_notation():
     """원고 표기 정규식을 현재 라벨로 다시 만듦. 기본 라벨이면 종전 정규식과 같은 판정"""
-    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, SOURCE_RE, SOURCE_PAREN_RE
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, SOURCE_RE, SOURCE_PAREN_RE, SOURCE_LABEL_RE
     n = _labels["notation"]
     paren = _alt([t for t in n["source"] if t not in SOURCE_PAREN_EXCLUDE])
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(n['table'])})\s*[^>＞]*[>＞]\s*(.*)$")
@@ -240,6 +268,8 @@ def _compile_notation():
     UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(n['unit'])})\s*[:：].*\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{paren})\s*[)）]|(?:{_alt(n['source'])})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({paren})\s*[)）]\s*")   # (출처) 표기를 "출처: "로 바꾸는 자리
+    # 출처 행의 라벨. 출처 표기(괄호 표기는 해석 단계에서 '토큰:'으로 바뀜) 또는 출처 행에 붙은 주석 기호
+    SOURCE_LABEL_RE = re.compile(rf"^((?:{_alt(n['source'])})\s*[:：]|[※*])\s*")
 
 
 _compile_notation()
@@ -341,6 +371,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if stripped == "---":
             elems.append(Element("pagebreak"))
             continue
+        if m := ADJUST_RE.match(stripped):
+            elems.append(Element("adjust", m.group(2) or "", data={"mode": ADJUST_MODES.get(m.group(1), "next")}))
+            continue
         if m := HEADING_RE.match(stripped):
             elems.append(Element("heading", m.group(2).strip(), len(m.group(1))))
             continue
@@ -405,7 +438,235 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))  # 일반 문단은 ○ 서술로 처리
-    return elems, footnotes
+    return resolve_adjust(elems), footnotes
+
+
+ADJUST_ISSUES: list[str] = []   # 직전 parse_markdown의 조정 지시 결함. lint가 함께 출력
+
+
+def parse_adjust(text: str) -> dict[str, int] | None:
+    """조정 지시 값. 장평과 자간과 줄 간격은 스타일 값에 더하는 %p. 알 수 없는 글자가 남으면 None"""
+    found = {ADJUST_KEYS[re.sub(r"\s+", "", k)]: int(v) for k, v in ADJUST_ITEM_RE.findall(text)}
+    rest = ADJUST_ITEM_RE.sub("", text).replace(",", "").replace("，", "").strip()
+    return found if found and not rest else None
+
+
+def resolve_adjust(elems: list[Element]) -> list[Element]:
+    """조정 지시 줄을 지우고 대상 요소의 data["adjust"]에 값을 기록.
+    단독 지시는 바로 다음 대상 요소 하나에, 시작과 끝 사이 지시는 그 사이의 대상 요소 전체에 적용. 두 지시가 겹치면 단독 지시 값이 우선"""
+    ADJUST_ISSUES.clear()
+    out, pending, active = [], None, None
+    for e in elems:
+        if e.kind != "adjust":
+            if e.kind in ADJUST_TARGETS and (active or pending):
+                e.data["adjust"] = {**(active or {}), **(pending or {})}
+                pending = None
+            out.append(e)
+            continue
+        if e.data["mode"] == "end":
+            if active is None:
+                ADJUST_ISSUES.append("[조정 지시] 짝이 되는 '(조정 시작: )' 없이 '(조정 끝)'이 있음")
+            active = None
+            continue
+        values = parse_adjust(e.text)
+        if values is None:
+            ADJUST_ISSUES.append(f"[조정 지시] '{e.text[:30]}' 값을 읽지 못함. '(조정: 장평 -3, 자간 -5)', '(조정: 줄 간격 -10)'처럼 항목과 정수를 씀")
+        elif e.data["mode"] == "start":
+            if active is not None:
+                ADJUST_ISSUES.append(f"[조정 지시] '(조정 끝)' 전에 '(조정 시작: {e.text[:30]})'이 다시 나옴. 앞 구간은 여기서 끝남")
+            active = values
+        else:
+            pending = {**(pending or {}), **values}
+    if pending:
+        ADJUST_ISSUES.append("[조정 지시] 마지막 조정 지시 뒤에 적용할 문단이나 표가 없음")
+    if active:
+        ADJUST_ISSUES.append("[조정 지시] '(조정 시작: )' 뒤에 '(조정 끝)'이 없어 문서 끝까지 적용")
+    return out
+
+
+def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
+    """build 옵션으로 허용하지 않은 조정 값을 지우고 적용 현황과 보수 범위 초과를 출력 줄로 돌려줌.
+    장평과 자간, 줄 간격은 기본 OFF이므로 착수 질의에서 고른 조정만 문서에 반영"""
+    allowed = {"chars": chars, "lines": lines}
+    off = {k: 0 for k in allowed}
+    applied, large = {k: 0 for k in allowed}, 0
+    for e in elems:
+        adj = e.data.get("adjust")
+        if not adj:
+            continue
+        for kind, keys in ADJUST_OPTION_KEYS.items():
+            if any(k in adj for k in keys):
+                if allowed[kind]:
+                    applied[kind] += 1
+                else:
+                    off[kind] += 1
+                    for k in keys:
+                        adj.pop(k, None)
+        large += any(abs(v) > ADJUST_WARN[k] for k, v in adj.items())
+        if not adj:
+            del e.data["adjust"]
+    out = []
+    if off["chars"]:
+        out.append(f"WARN: 조정 지시 {off['chars']}건의 장평과 자간 값을 적용하지 않음. 착수 질의에서 장평과 자간 조정을 고른 경우에만 --adjust-chars를 지정")
+    if off["lines"]:
+        out.append(f"WARN: 조정 지시 {off['lines']}건의 줄 간격 값을 적용하지 않음. 착수 질의에서 줄 간격 조정을 고른 경우에만 --adjust-lines를 지정")
+    if large:
+        w = ADJUST_WARN
+        out.append(f"WARN: 조정 지시 {large}건이 보수 범위(장평 ±{w['ratio']}, 자간 ±{w['spacing']}, 줄 간격 ±{w['line']})를 넘음. "
+                   "글자와 줄이 눌려 보이는지 렌더 PNG에서 확인")
+    total = sum(1 for e in elems if e.data.get("adjust"))
+    if total:
+        out.append(f"INFO: 조정 지시 적용 {total}건 (장평과 자간 {applied['chars']}건, 줄 간격 {applied['lines']}건)")
+    return out
+
+
+def adjusted(base: float, delta: int, key: str) -> int:
+    """스타일 값에 조정값을 더하고 한/글이 허용하는 범위로 자름"""
+    low, high = ADJUST_RANGE[key]
+    return int(min(max(base + delta, low), high))
+
+
+# ── 출처 행 배치 ───────────────────────────────────────────────────────────
+SOURCE_BREAK_RE = re.compile(r"<br\s*/?>", re.I)   # 원고의 출처 줄바꿈 표기
+SOURCE_ITEM_RE = re.compile(r";\s+")              # 출처 사이 경계 (세미콜론 뒤 빈칸)
+
+
+def source_text_inline(text: str) -> str:
+    """출처 줄의 줄바꿈 표기를 지우고 한 줄로 잇는다. 각주와 본문 문단으로 옮기는 출처 줄에 사용"""
+    parts = [p.strip() for p in SOURCE_BREAK_RE.split(text) if p.strip()]
+    return " ".join(_end_items(parts))
+
+
+def _end_items(items: list[str]) -> list[str]:
+    """마지막을 뺀 출처 끝에 세미콜론을 둔다. 줄바꿈과 이어쓰기가 같은 구분 기호를 쓰게 하여 편집 중 방식을 바꿔도 표기가 유지됨"""
+    return [t if i == len(items) - 1 or t.endswith((";", "；")) else t + ";" for i, t in enumerate(items)]
+
+
+def source_row_lines(text: str, layout: str) -> tuple[str, list[str]] | None:
+    """출처 행 1개의 라벨과 출력 줄. 라벨이 없으면 None.
+    layout은 SOURCE_LAYOUTS 중 하나. auto는 원고의 <br> 위치에서만 줄을 바꾸고 break는 출처마다, inline은 한 줄로 이음.
+    ※ 주석 줄은 문장이므로 세미콜론에서 나누지 않음"""
+    m = SOURCE_LABEL_RE.match(text)
+    if m is None:
+        return None
+    label, body = m.group(1).strip(), text[m.end():]
+    parts = [p.strip() for p in SOURCE_BREAK_RE.split(body) if p.strip()]
+    if layout == "break" and label not in SOURCE_MARKS:
+        parts = [q.strip() for p in parts for q in SOURCE_ITEM_RE.split(p) if q.strip()]
+    parts = _end_items(parts)
+    if layout == "inline" or not parts:
+        return label, [" ".join(parts)]
+    return label, parts
+
+
+def char_slot(ch: str) -> str:
+    """한/글 글꼴 슬롯(LANGS). 한글, 라틴 문자, 한자, 가나 밖의 문자는 기호 슬롯으로 셈"""
+    cp = ord(ch)
+    if 0xAC00 <= cp <= 0xD7A3 or 0x1100 <= cp <= 0x11FF or 0x3130 <= cp <= 0x318F:
+        return "hangul"
+    if cp < 0x0250:
+        return "latin"
+    if 0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF:
+        return "hanja"
+    if 0x3040 <= cp <= 0x30FF:
+        return "japanese"
+    return "symbol"
+
+
+@dataclass(frozen=True)
+class GlyphStyle:
+    """글자 모양의 슬롯별 글꼴, 장평(%), 자간(%), 상대 크기(%)와 글자 크기(HWPUNIT). 출처 라벨 폭 실측용.
+    space_em이 None이면 빈칸도 글꼴의 빈칸 폭으로 셈(글꼴 빈칸 폭을 쓰는 한/글 글자 모양)"""
+    size_hu: float
+    faces: dict
+    ratios: dict
+    spacings: dict
+    rel_sizes: dict
+    space_em: float | None = None
+
+
+def font_file(face: str) -> tuple[str, int] | None:
+    """설치된 face 글꼴의 파일과 글꼴 번호. fontconfig가 있으면 fc-match, 없으면 운영체제 글꼴 폴더의 이름표로 찾음"""
+    if not face:
+        return None
+    if shutil.which("fc-match"):   # fc-match는 없는 이름에도 대체 글꼴을 돌려주므로 가족 이름을 대조
+        escaped = re.sub(r"([\\\-:,])", r"\\\1", face)
+        out = subprocess.run(["fc-match", "-f", "%{family}\n%{file}\n%{index}", escaped],
+                             capture_output=True, text=True).stdout.split("\n")
+        if len(out) < 3 or face not in (name.strip() for name in out[0].split(",")):
+            return None
+        return out[1], int(out[2] or 0)
+    try:
+        from fontTools.ttLib import TTCollection, TTFont, TTLibError
+    except ImportError:
+        return None
+    found = []
+    for folder in (os.path.expanduser(os.path.expandvars(d)) for d in FONT_DIRS.get(sys.platform, [])):
+        if not os.path.isdir(folder):
+            continue
+        for name in sorted(os.listdir(folder)):
+            if not name.lower().endswith(FONT_FILE_EXTS):
+                continue
+            path = os.path.join(folder, name)
+            try:
+                fonts = TTCollection(path, lazy=True).fonts if name.lower().endswith(".ttc") else [TTFont(path, lazy=True)]
+                for index, font in enumerate(fonts):
+                    families = {r.toUnicode(errors="ignore") for r in font["name"].names if r.nameID in (1, 16)}
+                    if face in families:
+                        found.append((font["OS/2"].usWeightClass != REGULAR_WEIGHT, path, index))
+            except (OSError, TTLibError, KeyError):   # 읽을 수 없거나 이름표가 없는 파일은 건너뜀
+                continue
+    return min(found)[1:] if found else None
+
+
+_GLYPH_WIDTHS: dict[str, dict[int, float] | None] = {}
+
+
+def glyph_em(face: str, ch: str) -> float | None:
+    """글자 1자의 폭(글자 크기 대비). 글꼴 파일이나 글자 모양이 없으면 None"""
+    if face not in _GLYPH_WIDTHS:
+        _GLYPH_WIDTHS[face] = None
+        found = font_file(face)
+        try:
+            from fontTools.ttLib import TTFont, TTLibError
+        except ImportError:
+            found = None
+        if found:
+            try:
+                font = TTFont(found[0], fontNumber=found[1], lazy=True)
+                metrics, upm = font["hmtx"].metrics, font["head"].unitsPerEm
+                _GLYPH_WIDTHS[face] = {cp: metrics[g][0] / upm for cp, g in font.getBestCmap().items() if g in metrics}
+            except (OSError, TTLibError, KeyError):   # 읽을 수 없는 파일은 추정 폭으로 넘어감
+                pass
+    widths = _GLYPH_WIDTHS[face]
+    return widths.get(ord(ch)) if widths else None
+
+
+def text_width_hu(text: str, gs: GlyphStyle) -> tuple[float, set[str]]:
+    """글자 모양 gs로 찍은 text의 폭(HWPUNIT)과 글꼴 파일을 찾지 못해 추정한 글꼴 이름.
+    글꼴 파일이 없으면 전각 문자는 글자 크기, 그 밖은 글자 크기의 절반으로 넉넉하게 추정"""
+    total, guessed = 0.0, set()
+    for ch in text:
+        slot = "hangul" if ch == " " and gs.space_em is not None else char_slot(ch)
+        face = gs.faces.get(slot, "")
+        size = gs.size_hu * gs.rel_sizes.get(slot, 100) / 100
+        if ch == " " and gs.space_em is not None:
+            em = gs.space_em
+        else:
+            em = glyph_em(face, ch)
+            if em is None:
+                guessed.add(face)
+                em = 1.0 if unicodedata.east_asian_width(ch) in ("W", "F") else 0.5
+        total += size * (em * gs.ratios.get(slot, 100) + gs.spacings.get(slot, 0)) / 100
+    return total, guessed
+
+
+def label_hang_hu(label: str, gs: GlyphStyle) -> tuple[int, float, set[str]]:
+    """출처 라벨 뒤 내어쓰기 폭, 라벨 폭, 추정 글꼴. 내어쓰기 폭은 라벨과 빈칸 1자의 폭.
+    편집기가 라벨 뒤 탭을 이 위치로 보내므로 폭의 오차는 라벨 뒤 간격에만 나타나고 줄 정렬은 유지됨"""
+    label_w, guessed = text_width_hu(label, gs)
+    space_w, guessed_space = text_width_hu(" ", gs)
+    return math.ceil(label_w + space_w), label_w, guessed | guessed_space
 
 
 def _parse_table(rows: list[str], elems: list[Element]) -> Element:
@@ -467,7 +728,7 @@ def lint(elems: list[Element]) -> list[str]:
             issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
         if e.kind == "table" and not e.text:
             issues.append("[표 캡션 없음] 표 앞 줄에 '<표> 제목' 형식 캡션 권장")
-    return issues
+    return issues + ADJUST_ISSUES
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1000,6 +1261,9 @@ class Builder(TocMarks):
         self.long_table_mode = "engine"
         self.after_block = False
         self.notes = NoteRegistry(None)   # 출처 각주 통합. 조판 명령이 범위를 지정하면 교체
+        self.source_layout = DEFAULT_SOURCE_LAYOUT
+        self.guessed_fonts: set[str] = set()   # 출처 라벨 폭을 글꼴 파일 없이 추정한 글꼴
+        self._adj_cache: dict[tuple, str] = {}   # 출처 행과 조정 지시가 파생한 글자 모양과 문단 모양
 
     def _manual_symbols(self) -> dict[str, str]:
         """스타일의 heading이 BULLET이면 한/글이 기호를 그리고, NONE이면 본문에 기호를 넣어야 한다."""
@@ -1369,6 +1633,103 @@ class Builder(TocMarks):
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
+    def _source_row(self, t, ri: int, ncol: int, text: str):
+        """출처 행. 라벨 뒤에 탭을 두고 문단을 라벨 폭만큼 내어 써서 둘째 줄부터 라벨 뒤 글자에 맞춤.
+        여러 출처는 줄바꿈으로 나누고 각 줄은 내어쓰기 위치에서 시작. 라벨이 없는 줄은 일반 출처 행으로 둠"""
+        parsed = source_row_lines(text, self.source_layout)
+        if parsed is None:
+            self._transparent_row(t, ri, ncol, source_text_inline(text), "source", "LEFT")
+            return
+        import lxml.etree as ET
+        label, lines = parsed
+        self._transparent_row(t, ri, ncol, label, "source", "LEFT")
+        u = self.refs("source")
+        pp, tab_w = self._source_pp(str(u["para_pr_id_ref"]), str(u["char_pr_id_ref"]), label)
+        pe = next(t.cell(ri, 0).element.iter(f"{HP}p"))
+        pe.set("paraPrIDRef", pp)
+        tnode = next(pe.iter(f"{HP}t"))
+        # 한/글은 탭 폭을 문단 모양으로 다시 계산. 저장값은 근사 렌더러 표시용
+        node = ET.SubElement(tnode, f"{HP}tab", width=str(tab_w), leader="0", type="1")
+        node.tail = lines[0]
+        for line in lines[1:]:
+            node = ET.SubElement(tnode, f"{HP}lineBreak")
+            node.tail = line
+
+    def _glyph_style(self, cp_id: str) -> GlyphStyle:
+        """글자 모양의 슬롯별 글꼴 이름, 장평, 자간, 상대 크기. 빈칸은 글꼴 빈칸 폭을 쓰지 않는 글자 모양이면 글자 크기의 절반"""
+        root = self.header.element
+        cp = root.find(f".//{HH}charPr[@id='{cp_id}']")
+        ref = cp.find(f"{HH}fontRef")
+        faces = {}
+        for lang in LANGS:
+            node = root.find(f".//{HH}fontface[@lang='{lang.upper()}']/{HH}font[@id='{ref.get(lang, '0')}']")
+            faces[lang] = node.get("face") if node is not None else ""
+
+        def per_lang(tag: str, default: int) -> dict:
+            node = cp.find(f"{HH}{tag}")
+            return {lang: int(node.get(lang, default)) if node is not None else default for lang in LANGS}
+        space = None if cp.get("useFontSpace") == "1" else SPACE_EM_HWPX
+        return GlyphStyle(int(cp.get("height")), faces, per_lang("ratio", 100), per_lang("spacing", 0),
+                          per_lang("relSz", 100), space)
+
+    def _source_pp(self, base_pp: str, cp: str, label: str) -> tuple[str, int]:
+        """출처 행 문단 모양과 라벨 뒤 탭 폭. 내어쓰기 폭은 출처 글자 모양의 글꼴로 잰 라벨 폭과 빈칸 폭의 합.
+        내어쓰기용 자동 탭을 켜서 첫 줄의 탭이 내어쓰기 위치로 가게 함. 폭을 하드코딩하지 않아 발주처 양식의 글꼴과 라벨에도 맞음"""
+        hang, label_w, guessed = label_hang_hu(label, self._glyph_style(cp))
+        self.guessed_fonts |= guessed
+        key = (base_pp, "SOURCE", hang)
+        if key not in self._adj_cache:
+            tab = self.header.ensure_tab_definition(auto_tab_left=True)
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=self._aligned_pp(base_pp, "LEFT"),
+                                                     margins={"intent": -hang}, tab_pr_id_ref=tab)
+            legacy = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HP}default/{HH}margin/{HC}intent")
+            if legacy is not None:   # 구형 한/글용 저장값은 새 값의 2배
+                legacy.set("value", str(-2 * hang))
+            self._adj_cache[key] = pp
+        return self._adj_cache[key], max(round(hang - label_w), 1)
+
+    def adjust_mark(self) -> int:
+        """조정 지시 적용 범위의 시작 위치 (본문 구역의 문단 수)"""
+        return len(self.doc.sections[-1].element)
+
+    def adjust_apply(self, start: int, adj: dict):
+        """조정 지시를 start 이후 문단에 적용. 장평과 자간은 run 글자 모양에, 줄 간격은 문단 모양에 스타일 값 대비 증감으로 반영.
+        캡션과 각주 본문은 대상에서 제외"""
+        for node in self.doc.sections[-1].element[start:]:
+            for pe in node.iter(f"{HP}p"):
+                if any(a.tag in (f"{HP}caption", f"{HP}footNote", f"{HP}endNote") for a in pe.iterancestors()):
+                    continue
+                if "line" in adj:
+                    pe.set("paraPrIDRef", self._line_pp(pe.get("paraPrIDRef"), adj["line"]))
+                if "ratio" in adj or "spacing" in adj:
+                    for run in pe.findall(f"{HP}run"):
+                        run.set("charPrIDRef", self._adjusted_cp(run.get("charPrIDRef"), adj.get("ratio", 0), adj.get("spacing", 0)))
+
+    def _adjusted_cp(self, cp: str, d_ratio: int, d_spacing: int) -> str:
+        """글자 모양의 모든 슬롯 장평과 자간에 조정값을 더한 글자 모양"""
+        key = (cp, "ADJUST", d_ratio, d_spacing)
+        if key not in self._adj_cache:
+            def modify(el):
+                for tag, delta, k in (("ratio", d_ratio, "ratio"), ("spacing", d_spacing, "spacing")):
+                    node = el.find(f"{HH}{tag}")
+                    if node is not None and delta:
+                        for lang in LANGS:
+                            node.set(lang, str(adjusted(int(node.get(lang, 100 if k == "ratio" else 0)), delta, k)))
+            self._adj_cache[key] = self.header.ensure_char_property(base_char_pr_id=cp, modifier=modify).get("id")
+        return self._adj_cache[key]
+
+    def _line_pp(self, pp: str, delta: int) -> str:
+        """문단 모양의 줄 간격(글자 크기 대비 %)에 조정값을 더한 문단 모양. 비율이 아닌 줄 간격은 그대로 둠"""
+        key = (pp, "LINE", delta)
+        if key not in self._adj_cache:
+            node = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HH}lineSpacing")
+            if node is None or node.get("type", "PERCENT") != "PERCENT":
+                self._adj_cache[key] = pp
+            else:
+                value = adjusted(int(node.get("value")), delta, "line")
+                self._adj_cache[key] = self.header.ensure_paragraph_format(base_para_pr_id=pp, line_spacing_percent=value)
+        return self._adj_cache[key]
+
     def attach_caption(self, holder, kind: str, text: str, side: str, width: int):
         """개체 부착 캡션(한/글 캡션 기능). 번호는 autoNum 필드이며 장 시작 시 재시작. 캡션 문단을 돌려줌"""
         role = "table_title" if kind == "TABLE" else "fig_title"
@@ -1449,7 +1810,7 @@ class Builder(TocMarks):
         if unit:
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):  # 자료 행: 표 아래 투명 병합 셀, 좌측 정렬
-            self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
+            self._source_row(t, head + nrow + k, ncol, src)
         for ci in range(ncol):
             sides = edge_sides(ci, ci, ncol)
             bf[(ci, True)] = self._border_fill(sides, HEADER_FILL)
@@ -1545,7 +1906,7 @@ class Builder(TocMarks):
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             for src in sources:
-                self.para("source", src)
+                self.para("source", source_text_inline(src))
             self.after_block = True
             return
         # 투명 1열 표에 그림을 넣고 표를 그림 번호 유형으로 지정. 내부 그림은 번호 집계에서 제외
@@ -1570,7 +1931,7 @@ class Builder(TocMarks):
             cm.set("right", str(CELL_MARGIN[1]))
         cell.set_size(height=h_hu + 2 * ROW_LINE_H)
         for k, src in enumerate(sources):
-            self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
+            self._source_row(t, 1 + k, 1, src)
         t.element.set("numberingType", "PICTURE")
         pos = t.element.find(f"{HP}pos")
         if pos is not None:
@@ -1616,9 +1977,9 @@ class Builder(TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":  # 표·그림에 붙지 않은 출처 줄은 직전 문단의 각주로 이동
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, source_text_inline(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", source_text_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":

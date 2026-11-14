@@ -158,6 +158,7 @@
     + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added) and give the bookmark notice of the SKILL.md Typesetting section
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Source layout (automatic by default, always break, always inline), width and spacing adjustment (off by default), and line spacing adjustment (off by default). Definitions and notices are in the kickoff questions of the SKILL.md Procedure section and in the Manuscript Hierarchy section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design
@@ -216,7 +217,7 @@
 
 ## Typesetting
 
-- The command is `build workspace --title "document title" --format format --page-break handling`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance
+- The command is `build workspace --title "document title" --format format --page-break handling --source-layout layout`. Add `--footnote-merge scope` when the user chose merging for source footnote inheritance. Add `--adjust-chars` for width and spacing adjustment and `--adjust-lines` for line spacing adjustment only when the user chose them
 - For a document whose chapters are mostly half a page or less, use `--page-break none`. A new page per chapter makes large empty spaces
 - Table of contents, page numbers, cover, and divider pages are OFF by default. Turn them on by the kickoff answers
 - With the table of contents on, set its scope with `--toc-scope`. How the page numbers are recorded, the bookmark notice, and static conversion are in the SKILL.md Typesetting section

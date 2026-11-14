@@ -127,6 +127,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | filled table (채움본) | A table filled with actual survey values or draft values. Named target list tables, preliminary survey result tables, criteria tables, and work product draft tables qualify |
 | long table (장표) | A table that runs past one page after typesetting |
 | source footnote inheritance (출처 각주 상속) | How a footnote that cites the same source again is written. Off (default), short form, or merging. Defined in the Manuscript Hierarchy section |
+| source layout (출처 배치) | Line layout of multiple sources under tables and figures. Automatic (default), always break, or always inline. Defined in the Manuscript Hierarchy section |
+| adjust directive (조정 지시) | A manuscript directive line that adjusts width, spacing, or line spacing per paragraph or table. Used only when chosen at kickoff. Defined in the Manuscript Hierarchy section |
 | stated needs (표면 니즈) | The procurement purpose written in the RFP text |
 | underlying needs (이면 니즈) | The client's circumstances at the time of procurement that the RFP does not write down |
 | key wording dictionary (핵심 워딩 사전) | The table in 00_제안전략서.md that collects noun phrases of the RFP task items in their original notation |
@@ -196,7 +198,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ## Preparation
 
 ```bash
-pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
+pip install -U python-hwpx pillow python-docx pdfplumber fonttools --break-system-packages
 ```
 
 - Install dependencies before any other work. In a local environment, install inside a virtual environment without `--break-system-packages`. If a script fails because of a recent API change, update only the failing call site to the latest API
@@ -277,13 +279,15 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `skeleton template.hwpx skeleton.hwpx` | Extract a skeleton and a draft profile from a template the client specified |
 | `python3 <SKILL>/scripts/extract_images.py source output_folder [--min-px 64] [--min-kb 2]` | Extract candidate images for insertion and manifest.json from the RFP and user-submitted literature (pdf, hwpx, pptx, docx) |
 
-- build options are `--format hwpx|docx|both` (output format, default hwpx), `--page-break chapter|section|none` (default chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-scope item,...` (table of contents scope, default chapter,section,table,figure), `--page-number`, `--cover`, `--header`, `--unify manual|auto` (table width unification, default manual), `--theme navy|mono` (band color theme, default navy), `--footnote-merge square|section|chapter|document` (source footnote merging, off by default), `--labels file.json` (document labels, Document Labels in the Typesetting section). Check the value format of `--cover` and `--header` with `build --help`
+- build options are `--format hwpx|docx|both` (output format, default hwpx), `--page-break chapter|section|none` (default chapter), `--long-table engine|split`, `--merge auto|explicit|none`, `--toc`, `--toc-scope item,...` (table of contents scope, default chapter,section,table,figure), `--page-number`, `--cover`, `--header`, `--unify manual|auto` (table width unification, default manual), `--theme navy|mono` (band color theme, default navy), `--footnote-merge square|section|chapter|document` (source footnote merging, off by default), `--source-layout auto|break|inline` (source layout, default auto), `--adjust-chars` (apply width and spacing directives, default OFF), `--adjust-lines` (apply line spacing directives, default OFF), `--labels file.json` (document labels, Document Labels in the Typesetting section). Check the value format of `--cover` and `--header` with `build --help`
     + `--title "document title"` is the document title on the first line of the body (planning report; skipped with divider pages on). `--chapter-start N` is the first chapter number (chapter-by-chapter output of the pre-diagnosis report)
     + `--divider on|off` controls chapter divider pages. The default is on for the pre-diagnosis report and off for the proposal and the planning report
     + `--long-table` is the default handling of long tables. Always set its value from the answer to the kickoff questions
     + If a manuscript has a table subject to long-table handling and `--long-table` is not set, build stops. A per-table `(장표: )` directive line takes precedence over `--long-table`
     + Set `--footnote-merge` only when the user chose merging for source footnote inheritance in the kickoff questions. The value is the scope the user chose (square is □, section is a section, chapter is a chapter, document is the whole document). Defined in the Manuscript Hierarchy section
     + `--toc-scope` is the table of contents scope received in the kickoff questions. The items are chapter, section, subsection, ganada (item), module, task, table, figure, joined with commas. Defined in the Typesetting section
+    + `--source-layout` is the source layout answer from the kickoff questions: auto for automatic, break for always break, inline for always inline. Defined in the Manuscript Hierarchy section
+    + Set `--adjust-chars` and `--adjust-lines` only when the user chose width and spacing adjustment or line spacing adjustment, respectively, in the kickoff questions. Defined under adjust directives in the Manuscript Hierarchy section
 - Table of contents, page numbers, and cover are OFF by default. The cover is ON only when the user asks for it. The conditions for turning on the table of contents and page numbers are in the Typesetting section
 - `[page break HITL]` in the build lint is an alert from the general-purpose typesetter. Change the default chapter only when the user asks to change page breaks
 - When using the client's template, set `--profile path` and `--skeleton path` together. Typesetting with a client template is hwpx only
@@ -310,11 +314,14 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Principal investigator candidates and participating staff candidates
     + Whether an advisory committee runs, and its candidates
     + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover. The conditions for turning on the table of contents and page numbers are in the Typesetting section
-    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters, sections, tables, and figures. Offer subsections, items, Module, and Task as examples of items that can be added. Only tables and figures with numbered captions are listed (pre-diagnosis report). Give the bookmark notice of the Typesetting section with the question
+    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters, sections, tables, and figures. Offer subsections, items, Module, Task, and so on as examples of items that can be added. Only tables and figures with numbered captions are listed (pre-diagnosis report). Give the bookmark notice of the Typesetting section with the question
     + Band color theme. navy (navy blue, default) or mono (black and gray)
     + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Source footnote inheritance. How a footnote that cites the same source again is written. Choose off (default, every footnote gives the full source), short form (later footnotes are shortened, as in `기관명(연도), 앞의 보고서`), or merging (one footnote per source, with that footnote number shown again at later citation positions). When the user chooses short form or merging, also ask the scope (□, section, chapter, whole document). Defined in the Manuscript Hierarchy section
+    + Source layout. How multiple sources under a table or figure are laid out. Choose automatic (default; for each source row, line breaks or one line by the length and number of the sources), always break (each source on its own line, the second source onward aligned with the start of the first), or always inline (joined with semicolons into one line). Defined in the Manuscript Hierarchy section
+    + Width and spacing adjustment. A Korean editing practice that narrows character width (장평) and spacing (자간) where one or two characters spill onto the next line or one line breaks the evenness of a paragraph. Choose off (default) or on. Add the notice that heavy adjustment makes characters look squeezed, so adjustment stays conservative and within a range that does not stand out, and that wording is shortened where adjustment does not fit
+    + Line spacing adjustment. A Korean editing practice that reduces the line spacing of a page, paragraph, table, and so on to fill a two-page spread and align the bottoms of both pages. Choose off (default) or on. Add the notice that heavy adjustment makes lines look cramped, so adjustment stays conservative and within a range that does not stand out
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
     + The judged engagement type. Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
@@ -640,6 +647,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `^superscript^`, `<sup>up</sup>`, `<sub>down</sub>` | Superscript and subscript | For units and symbols |
 | `(폭: group name)` or `(폭: 1,3,2)` | Table width directive | Between caption and table. Unifies the widths of tables with the same layout or sets ratios |
 | `(삽입: 모듈총괄표)` | Module overview table | Inserts the table of 02_모듈총괄표.md at this point. Once in the whole manuscript set |
+| `(조정: 자간 -5)`, `(조정 시작: 줄 간격 -10)` and `(조정 끝)` | Adjust directive | Adjusts width, spacing, or line spacing of the next element or of the elements between start and end. Written only when chosen at kickoff |
 | `(장표: engine)` or `(장표: split N)` | Long-table directive | Between caption and table. How to handle a table that runs past one page. Written after the user chooses |
 
 - SKILL.md and the reference files call levels by their manuscript notation (□, ❍, hyphen, ․, ※). The symbols in the typeset result are set by the bullet definitions of the skeleton
@@ -656,10 +664,27 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (Short form examples) `기관명(연도), 앞의 보고서`, `저자명(연도), 앞의 논문, p. 12`, `저자명(연도), 앞의 책`, `기관명(연도), 앞의 자료`, `저자명(연도), op. cit., p. 79`, and so on. Choose the short-form word by document type (보고서 for a research report, 논문 or 글 for a journal article, 책 for a book, 자료 for press releases, ministry materials and web materials, and so on)
     + Some documents use `위의`, as in `위의 보고서`, `위의 자료` or `Ibid.`, for the same source as the footnote just before. Use one convention within a document. When the cited page differs, write the page after the short form. When the RFP writing rules or the client template give a citation rule, follow it
     + For the whole-document scope, check the sources already cited in earlier manuscript files before writing a short form
-    + (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, the typesetter makes footnotes with the same text inside the scope into the first footnote and shows the first footnote number in superscript at later citation positions. Footnotes moved from source lines under paragraphs are merged too
+    + (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, the typesetter makes footnotes with the same text inside the scope into the first footnote. Later citation positions show the first footnote number in superscript. Footnotes moved from source lines under paragraphs are merged too
     + Merging joins only footnotes with the same text. Write the same source in the same text. Citations of different pages stay separate footnotes. Check the number of merged citations on the build completion line (`merged footnote references`)
     + The merged number is a 한/글 cross-reference in hwpx and a Word footnote number reference field in docx. When editing after delivery changes the footnote numbers, a field update in 한/글 or Word brings the numbers along
     + Record the answer (method and scope) in the writing rules row of basic project conditions in 00_제안전략서.md. For the pre-diagnosis report, record it in the basic report information table of 00_진단서.md, and for the planning report in the basic information table of 00_기획설계.md
+- Multiple sources of a table or figure go on one source line, separated by semicolons (`;`). Put the source notation (`출처:`, `자료:`, and so on) only before the first source
+    + Write `<br>` after the semicolon where a line should break, as in `자료: 기관명(연도), 자료명;<br>기관명(연도), 자료명`
+    + Pass the source layout answer from the kickoff questions with `--source-layout`. automatic (auto) breaks lines only at `<br>`. always break (break) puts each source on its own line even without `<br>`, and always inline (inline) joins them into one line even with `<br>`
+    + The typesetter hangs a source row by the label width. The second line and each source after a break start on the same vertical line as the first character after the label. The typesetter adds a missing semicolon at the end of a source
+    + (Automatic judgment) Most multiple sources go one per line. Even two or three short sources read better on separate lines. When many short sources would make the source rows run long if broken, join them into one line. Rarely, long sources also read better on one line. Judge by the balance of source row length, page layout, and so on
+    + A source line under a paragraph becomes a footnote, so it is joined into one line without `<br>`. Record the answer in the same row as source footnote inheritance
+- Adjust directives are directive lines that adjust character width (장평), spacing (자간), and line spacing per paragraph or table. Write them only when the user chose width and spacing adjustment or line spacing adjustment in the kickoff questions. Pass `--adjust-chars` (width, spacing) and `--adjust-lines` (line spacing) to build. Without the option the directives are not applied, and build reports them in a `WARN:` line
+    + (Notation) `(조정: 자간 -5)`, `(조정: 장평 -3, 자간 -5)`, `(조정: 줄 간격 -10)`, and so on. Values are integers in %p added to the style values. Negative values reduce and positive values increase
+    + (Single directive) Applies to the one element right after the directive line (the first heading, paragraph, Module or Task line, table, or figure). For a table, put the directive line before the caption line. Tables and figures apply it to their cell paragraphs (unit and source rows included); captions and footnote bodies stay as they are
+    + (Range directive) Applies to every element between `(조정 시작: 줄 간격 -10)` and `(조정 끝)`. A single directive inside the range wins over the range values for its element
+    + (When) Write the directives in the stage 6 render review after finding the target spots in the rendered PNGs. Then run `check all` again and retypeset. Run the first build without directives
+    + (Width and spacing targets) Paragraphs where one or two characters are left alone on the next line, spots where one line differs in length and breaks the evenness of a paragraph, and so on
+    + (Line spacing targets) Spots where the bottoms of the two pages of a spread do not line up, spots where a table or paragraph moves to the next page by a few lines, and so on
+    + (Conservative range) Width down to -5 (95%), spacing down to -8, and line spacing down to -20. build reports directives beyond this range in a `WARN:` line. If an adjusted spot looks more squeezed than the paragraphs around it, reduce the value
+    + (Approximate renderer margin) Approximate renderers tend to fit slightly more characters on a line than 한/글. Adjust so that one or two characters of room remain at the end of the line in the rendered PNG. A line fitted with no room may wrap again in 한/글
+    + (Shortening) If adjustment within the conservative range does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
+    + List the spots with adjustments or shortening in one line of the final report. Record the answer (on or off) in the same row as source footnote inheritance
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). A single item takes no `◦`, even when it wraps onto several lines. Columns with bullets are left-aligned at typesetting
@@ -1014,6 +1039,11 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + The left and right margins used for the width are written into the figure cell. A figure wider than the body width is scaled down in proportion to fit the body width
     + In docx the table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
 - A table without a caption is placed with the figure position style. The table position style has a small top margin because a caption sits above the table, so a table without a caption looks attached to the paragraph above
+- A source row puts a tab after the label (`출처:`, `자료:`, `주:`, ※, and so on) and hangs the paragraph by the label width. The second line and each source after a break start on the same vertical line as the first character after the label
+    + The hanging width is the label width plus one space, measured with the source style's character shape (font, size, width, spacing). Character widths are read from the installed font file. Without the font file a generous estimate is used and build reports it in an `INFO:` line
+    + hwpx uses the automatic hanging tab, and docx a left tab at the hanging position. The editor sends the tab to the hanging position, so a measuring error shows only in the gap after the label and the lines stay aligned. Client template fonts and labels fit the same way
+    + Breaks between sources are line breaks inside the paragraph. One source row is one paragraph
+- Adjust directives copy the character shapes (width, spacing) and paragraph shapes (line spacing) of the target paragraphs and add the adjustment to the style values. docx writes the same values as the run character scale and spacing and the exact line height of the paragraph. Notation and targets are in the Manuscript Hierarchy section
 - Table width is computed per table by the typesetter's rules. The cap is the body width minus the level indent, and the floor is 50% of the cap
     + If every column fits on one line, each column gets its one-line width. If the table is narrower than the floor, it is scaled up proportionally
     + If not everything fits on one line, the table width is set to the cap. Short columns get their one-line width first. Long columns share the remaining width evenly
@@ -1056,17 +1086,17 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - (Bookmark notice) For a job with a table of contents, give the following in the kickoff questions and in the final report
     + A table of contents with page numbers attaches a bookmark to every listed item (heading paragraphs, chapter bands and divider bands, Module and Task bands, tables and figures with numbered captions), and each page number follows its bookmark
     + Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. A band or table moved as a whole carries its bookmark
-    + Page numbers are first recorded as `?`. 한/글 calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
+    + Page numbers are first recorded as `?`. 한/글 calculates the real pages automatically when it loads the document. Word calculates them with select all (Ctrl+A) then F9
     + Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     + In the final report, also state that the page numbers first show as `?` and how each format updates them
 - Table of contents static conversion is post-processing performed only when the user asks for it after the files are delivered. It is not part of the kickoff questions
     + (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their page numbers become plain text
     + (1 Update request) Ask the user to open the delivered file once in 한/글 or Word, update the page numbers, save it, and submit it again. 한/글 updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save. Only 한/글 and Word calculate the real pages, so static conversion of the build output as it is freezes the placeholder
-    + (2 Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, module, task, table, figure) or all
+    + (2 Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers. Then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, module, task, table, figure) or all
     + (3 Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
     + (4 Report) Give the user the counts of items made static, skipped, and kept, and the output path
     + The bookmarks and page references of items outside the scope stay and keep updating in 한/글 and Word
-    + Items whose page number is `?` are left as they are and reported in a `WARN:` line. Repeat the update request to the user
+    + Items whose page number is `?` are left out. toc-static reports them in a `WARN:` line. Repeat the update request to the user
     + The item kind is identified from where the bookmark sits (inside a captioned table, in a band cell) and from the paragraph style. For a client template, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all (they can be chosen with `--scope other`)
     + References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references and the bookmarks for footnote merging are not changed. The line layout values saved by 한/글 are kept
 - Extract a client template with `skeleton template.hwpx skeleton.hwpx`. Fill style names into the null roles of the draft profile, then run `build --profile profile.json --skeleton skeleton.hwpx`
@@ -1093,10 +1123,15 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + It is a defect if columns of the same nature (periods, amounts, ratios, etc.) are aligned differently in different tables
     + Figure size and caption, clipped and overlapping text. Check that all four sides of each figure are visible
     + For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
+    + Check that the second line of each source row and each source after a break start on the same vertical line as the first character after the label
+    + Check that spots with adjust directives do not look more squeezed than the paragraphs around them
     + Spacing before and after tables and figures. It is a defect if the next numbered title (chapter band, section 1., subsection 가., item 1)), a Module or Task band, □, or ❍ touches the bottom border of a table or figure, or if the table overlaps the paragraph above. Check for each table that it has the same spacing as other tables
     + Spacing defects occur mainly after `(장표: engine)` tables. When found, replace the directive line of that table with `(장표: split N)` and retypeset. Then check the PNG again
     + Tables separated from captions at page boundaries, split positions and header row repetition of tables that run past one page, blank pages right after a section starts, and bands, titles, and □ left alone at the end of a page
 - After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, and differences in font size and weight across levels
+- (Filled spreads) Printed documents are read as two facing pages, so a layout where both pages of a spread are evenly filled to the bottom is recommended. Consider it from manuscript writing and typesetting on, and in the review adjust within a range that does not harm the information
+    + Means include the size and position of figures and tables, the position and order of paragraphs, page break positions, and so on
+    + If the user chose width and spacing adjustment or line spacing adjustment in the kickoff questions, adjust directives (Manuscript Hierarchy section) are among the means
 - If the cause is the manuscript, fix the manuscript. If the cause is a norm, fix the settings part of proposal.py. With three or more defects of the same kind, stop individual fixes and adjust the norm in the settings part of proposal.py
 
 ### Discretionary Adjustment of Defects Outside the Rules
@@ -1110,7 +1145,8 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + With automatic caption numbering, missing numbers (`<표 1- >`), page numbers per section, font substitution, and header row repetition display of `(장표: engine)` tables are excluded from the verdict
     + Known approximate displays of rhwp are also excluded from the verdict. They are narrow display of Latin text in Nanum fonts, lost spacing after ※, footnote separators overlapping body text, line breaks in the middle of words, keep-with-next settings not being applied (titles and □ left alone at page end), the last body line overlapping the page number when page numbers are on, and `(장표: engine)` tables intruding on the bottom margin
     + Cross-check layout defects seen only in rhwp with `render --engine soffice --outdir folder`. `--outdir` preserves the PDF rhwp produced. If soffice shows it correctly, judge it an approximate display. Approximate displays are not a reason to edit manuscripts (manual page breaks change the actual layout in 한/글)
-    + Known approximate displays of H2Orestart are also excluded from the verdict. They are missing captions and ignored cell padding
+    + Known approximate displays of H2Orestart are also excluded from the verdict. They are missing captions, ignored cell padding, and multi-line source rows cut off after the first line
+    + Approximate renderers tend to fit slightly more characters on a line than 한/글. A line break position that differs by one or two characters at the end of a line can change in 한/글
     + Differences in LibreOffice's docx display are also excluded from the verdict. They are automatic spacing between Korean and numbers (it does not read docx's setting that turns off automatic spacing) and header rows not repeating in tables split at page boundaries
     + Final confirmation is the user's check in 한/글 (in Word for docx). State this in one line in the final report
 
