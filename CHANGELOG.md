@@ -45,6 +45,12 @@ Changelog rules
 - Added adjustment lines such as `(조판 조정: 장평 -3, 자간 -2)` that change the ratio, letter spacing and line spacing of the next element or a range by %p against the style value (#142)
 - Added source line layout, line tidying and line spacing adjustment items to the planning questions, with no tidying and no line spacing adjustment as the defaults (#142)
 - Added page fill guidance for facing pages to the layout rules and review items (#142)
+- Fixed literal asterisks such as `*p<0.05, **p<0.01` dropping an asterisk and the last character of the text (#144)
+- Changed bold and italic to be recognized only when both inner ends of the asterisks touch a character, so asterisks with a space inside are written as they are (#144)
+- Added backslash escapes that write a punctuation character after a backslash as it is, such as `\*` and `\|` (#144)
+- Action needed: write the won sign as `원` or `₩` (U+20A9) in manuscripts, because a backslash before a punctuation character is now an escape (#144)
+- Changed the planning question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
+- Changed the renderer margin of line tidying from a range to 2 characters in a paragraph and 3 characters in a table cell (#144)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
@@ -61,11 +67,19 @@ Changelog rules
 * 다음 요소나 구간의 장평, 자간, 줄 간격을 스타일 값 대비 증감(%p)으로 바꾸는 조판 조정 줄 `(조판 조정: 장평 -3, 자간 -2)` 추가 (#142)
 * 기획안 질문에 출처 줄 나눔, 줄 정리, 줄 간격 조정 항목 추가 (줄 정리와 줄 간격 조정은 기본 미적용) (#142)
 * 조판 규칙과 검수 항목에 펼쳐 본 두 쪽의 쪽 채움 지침 추가 (#142)
+* `*p<0.05, **p<0.01` 등 글자 그대로 쓴 별표와 문구의 마지막 글자가 출력되지 않던 오류 수정 (#144)
+* 굵게와 기울임의 인식 조건을 별표 안쪽 양끝이 글자에 붙은 표기로 변경 (안쪽에 빈칸을 둔 별표는 글자 그대로 출력) (#144)
+* 백슬래시를 앞에 둔 문장부호를 글자 그대로 출력하는 이스케이프 표기 추가 (`\*`, `\|` 등) (#144)
+* 원고의 원화 기호를 `원` 또는 `₩`(U+20A9)로 표기 필요 (문장부호 앞의 백슬래시는 이스케이프로 처리) (#144)
+* 기획안 질문의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질문 도구에 담지 못한 항목 포함) (#144)
+* 줄 정리의 렌더러 여유를 범위에서 문단 2글자, 표 셀 3글자의 기준값으로 변경 (#144)
 
 ### ieum-deck
 - Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
+- Changed the kickoff question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
 
 * ISP 항목에서 출처 문헌의 이름을 빼도록 변경 (절차와 산출물명은 유지) (#140)
+* 착수 질의의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질의 도구에 담지 못한 항목 포함) (#144)
 
 ### juja-builder
 - Changed TOC page numbers from renderer estimates to bookmarks and page reference fields that 한/글 and Word calculate, with `?` shown until the first calculation (#140)
@@ -85,6 +99,13 @@ Changelog rules
 - Added page fill guidance for facing pages to the typesetting rules and render review items (#142)
 - Fixed bullets that start with bold being typeset as ※ notes (#142)
 - Fixed the paragraph mismatch warning printed for figures with a caption and a source row when both formats are built (#142)
+- Fixed literal asterisks such as `*p<0.05, **p<0.01` dropping an asterisk and the last character of the text (#144)
+- Fixed bullets and lines that start with italic text being typeset as ※ notes (#144)
+- Changed bold and italic to be recognized only when both inner ends of the asterisks touch a character, so asterisks with a space inside are written as they are (#144)
+- Added backslash escapes that write a punctuation character after a backslash as it is, such as `\*` and `\|` (#144)
+- Action needed: write the won sign as `원` or `₩` (U+20A9) in manuscripts, because a backslash before a punctuation character is now an escape (#144)
+- Changed the kickoff question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
+- Changed the renderer margin of line tidying from a range to 2 characters in a paragraph and 3 characters in a table cell (#144)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
@@ -103,6 +124,13 @@ Changelog rules
 * 조판 규칙과 렌더링 검수 항목에 펼쳐 본 두 쪽의 쪽 채움 지침 추가 (#142)
 * 굵게로 시작하는 불릿이 ※ 주석으로 조판되던 오류 수정 (#142)
 * 두 형식을 함께 산출할 때 캡션과 출처가 있는 그림에서 문단 불일치 경고가 출력되던 오류 수정 (#142)
+* `*p<0.05, **p<0.01` 등 글자 그대로 쓴 별표와 문구의 마지막 글자가 출력되지 않던 오류 수정 (#144)
+* 기울임으로 시작하는 불릿과 줄이 ※ 주석으로 조판되던 오류 수정 (#144)
+* 굵게와 기울임의 인식 조건을 별표 안쪽 양끝이 글자에 붙은 표기로 변경 (안쪽에 빈칸을 둔 별표는 글자 그대로 출력) (#144)
+* 백슬래시를 앞에 둔 문장부호를 글자 그대로 출력하는 이스케이프 표기 추가 (`\*`, `\|` 등) (#144)
+* 원고의 원화 기호를 `원` 또는 `₩`(U+20A9)로 표기 필요 (문장부호 앞의 백슬래시는 이스케이프로 처리) (#144)
+* 착수 질의의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질의 도구에 담지 못한 항목 포함) (#144)
+* 줄 정리의 렌더러 여유를 범위에서 문단 2글자, 표 셀 3글자의 기준값으로 변경 (#144)
 
 ## 2026-11-13
 
