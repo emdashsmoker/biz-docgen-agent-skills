@@ -618,7 +618,27 @@ def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
                 issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: ask the user to choose --long-table engine|split")
         if e.kind == "table" and not e.text:
             issues.append("[table caption missing] a caption of the form '<표> title' on the line before the table is recommended")
-    return [release_escapes(s) for s in issues]
+    return [release_escapes(s) for s in issues + lint_source_position(elems)]
+
+
+def lint_source_position(elems: list[Element]) -> list[str]:
+    """Source lines not attached to a table or figure that have no paragraph before them under the same heading or band.
+    The typesetter cannot move such a line into a footnote and prints it as a ※ note paragraph.
+    Note, source, and unit lines right after a table or figure attach to the block's bottom rows, so they are skipped"""
+    issues, has_para, after_block = [], False, False
+    for e in elems:
+        if after_block and e.kind in ("note", "source", "unit"):
+            continue
+        after_block = e.kind in ("table", "image")
+        if e.kind in ("heading", "band"):   # the typesetter cuts the paragraph link at headings and bands
+            has_para = False
+        elif e.kind == "source" or (e.kind == "note" and SOURCE_RE.match(e.text)):
+            if not has_para:
+                issues.append(f"[source line position] '{e.text[:30]}' has no body paragraph before it under the same heading or band "
+                              "and prints as a ※ note paragraph. Put it right after the paragraph it supports")
+        elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            has_para = True
+    return issues
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1896,6 +1916,7 @@ class Builder(TocMarks):
                 e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
+                self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 self.last_para = self.para(e.kind, e.text, footnotes)
             elif e.kind == "unit":

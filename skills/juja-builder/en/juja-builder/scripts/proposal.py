@@ -628,8 +628,10 @@ class ProposalLayout:
                 e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
+                self.last_para = None   # cut the link so a source line after a heading or band does not become a footnote of the previous section's paragraph
             elif e.kind == "band":
                 self.band(e)
+                self.last_para = None
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 self.last_para = self.para(e.kind, e.text, footnotes)
             elif e.kind == "unit":

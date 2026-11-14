@@ -624,7 +624,27 @@ def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
                 issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
         if e.kind == "table" and not e.text:
             issues.append("[표 캡션 없음] 표 앞 줄에 '<표> 제목' 형식 캡션 권장")
-    return [release_escapes(s) for s in issues]
+    return [release_escapes(s) for s in issues + lint_source_position(elems)]
+
+
+def lint_source_position(elems: list[Element]) -> list[str]:
+    """표와 그림에 붙지 않은 출처 줄 가운데 같은 제목이나 밴드 아래에 앞 문단이 없는 줄.
+    조판기는 이 줄을 각주로 옮기지 못하고 ※ 주석 문단으로 출력.
+    표와 그림 직후의 부기, 출처, 단위 줄은 블록 하단 행으로 붙으므로 판정에서 제외"""
+    issues, has_para, after_block = [], False, False
+    for e in elems:
+        if after_block and e.kind in ("note", "source", "unit"):
+            continue
+        after_block = e.kind in ("table", "image")
+        if e.kind in ("heading", "band"):   # 조판기는 제목과 밴드에서 직전 문단 연결을 끊음
+            has_para = False
+        elif e.kind == "source" or (e.kind == "note" and SOURCE_RE.match(e.text)):
+            if not has_para:
+                issues.append(f"[출처 줄 위치] '{e.text[:30]}' 앞에 같은 제목이나 밴드 아래의 본문 문단이 없어 ※ 주석 문단으로 출력. "
+                              "근거 문단 바로 뒤에 둠")
+        elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            has_para = True
+    return issues
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1898,6 +1918,7 @@ class Builder(TocMarks):
                 e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
+                self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 self.last_para = self.para(e.kind, e.text, footnotes)
             elif e.kind == "unit":

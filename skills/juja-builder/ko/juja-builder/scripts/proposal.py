@@ -640,8 +640,10 @@ class ProposalLayout:
                 e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
+                self.last_para = None   # 제목과 밴드 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
             elif e.kind == "band":
                 self.band(e)
+                self.last_para = None
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
                 self.last_para = self.para(e.kind, e.text, footnotes)
             elif e.kind == "unit":
