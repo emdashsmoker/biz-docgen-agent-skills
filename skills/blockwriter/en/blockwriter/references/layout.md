@@ -280,7 +280,7 @@ Line tidying
     - (No tidying) Leave the target lines as they are. The default level
     - (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit
     - (Ratio and letter spacing adjustment) Use the ratio and letter spacing adjustment first, and shorten the wording when that does not solve it
-- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
+- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 2 characters in a paragraph and 3 characters in a table cell. These counts are a guide, so judge flexibly by the glyph widths, the line length and so on
 - (Method of the ratio and letter spacing adjustment) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
 - (Values of the ratio and letter spacing adjustment) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
 - (Table cells) A table cell holds few characters per line, so the same overflow needs a larger adjustment. When the adjustment needed would make the text look different from its surroundings, consider other means of adjustment first
@@ -306,7 +306,7 @@ Line spacing adjustment
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
 - For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
 - Check the page fill of two facing pages (Page fill section)
-- For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting adjustment section)
+- For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of about 2 characters in a paragraph and 3 characters in a table cell (Typesetting adjustment section)
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML

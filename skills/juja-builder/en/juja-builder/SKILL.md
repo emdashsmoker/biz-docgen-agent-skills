@@ -1051,7 +1051,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (No tidying) Leave the target lines as they are. The default level
     + (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit
     + (Ratio and letter spacing adjustment) Use the ratio and letter spacing adjustment first, and shorten the wording when that does not solve it
-    + (Renderer margin) The approximate renderers tend to fit more characters on a line than 한/글 and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
+    + (Renderer margin) The approximate renderers tend to fit more characters on a line than 한/글 and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 2 characters in a paragraph and 3 characters in a table cell. These counts are a guide, so judge flexibly by the glyph widths, the line length and so on
     + (Values of the ratio and letter spacing adjustment) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
     + (Table cells) A table cell holds few characters per line, so the same overflow needs a larger adjustment. When the adjustment needed would make the text look different from its surroundings, consider other means of adjustment first
 - The line spacing adjustment reduces the line spacing of a page, paragraph or table slightly from the style value to match the page fill. Do it only when the user turned it on in the kickoff questions
@@ -1151,7 +1151,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Tables separated from captions at page boundaries, split positions and header row repetition of tables that run past one page, blank pages right after a section starts, and bands, titles, and □ left alone at the end of a page
     + For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Manuscript Hierarchy section)
     + The page fill of two facing pages (Typesetting section)
-    + For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting section)
+    + For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of about 2 characters in a paragraph and 3 characters in a table cell (Typesetting section)
 - After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, and differences in font size and weight across levels
 - If the cause is the manuscript, fix the manuscript. If the cause is a norm, fix the settings part of proposal.py. With three or more defects of the same kind, stop individual fixes and adjust the norm in the settings part of proposal.py
 
