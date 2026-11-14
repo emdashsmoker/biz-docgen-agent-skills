@@ -173,11 +173,13 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Relaying tool calls and work order, explaining the skill's internal terms and rules
     + Announcing the next task, self-assessment of finished work, offers of unrequested extra work (the one line of deepening options when presenting the storyline is the exception)
 - Report revisions by the changed points only. Report check results as the PASS count, FAIL count, and unresolved items only
-- Bundle questions in one turn. For items with a reasonable default, state the default and proceed
-- In the kickoff questions, present every choice of a choice item and mark the default with "(default)"
-    + (Reason) The user chooses only among the choices the question shows
+- Bundle questions in one turn. In questions other than the kickoff questions, state the default of an item with a reasonable default and proceed
+- In the kickoff questions, present every choice of each choice item and mark the default with "(default)"
+    + (Reason) The user chooses only among the choices the question shows. An item that shows only its default hides the other choices from the user
+    + (Many items) Present all choices for every choice item, however many items the kickoff questions hold. An item with a recommended default still shows its other choices
     + (Choice description) Describe in one line what each choice changes in the output. Keep option names and build behavior out of the question wording
-    + Write any item that does not fit in the question tool in the response body with all of its choices
+    + (Items outside the question tool) Write them in the response body as a list by item, with all choices, the default mark and the choice descriptions in the same detail as the items in the question tool
+    + (Check before sending) Before sending the questions, compare the items and choices in them with the kickoff question list of the output type and add any missing item or choice
 - The reply style is short bullet statements. Keep step completion reports short
 - Deliver files that ask the user for review, confirmation, or approval, and delivered files, through the file delivery feature of the execution environment. In an environment where the workspace is not visible to the user, the user cannot open a file from a path alone
     + The main delivery points are the step 2 approval request and re-presentation, confirmation of source image candidates, the step 6 delivery (hwpx or docx, and the PDF when included), and whenever the user asks for a file
@@ -308,7 +310,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | 5 Full check | 05_점검기록.md | In-depth review after `check all` PASS, zero `[확인]` in 원고/3*.md and 5*.md (handling of misjudged FAILs is in the Checks section) |
 | 6 Typesetting and review | 납품/제안서.hwpx or .docx, page PNGs | Review items passed, discretionary adjustments recorded |
 
-- Ask the items below all at once as kickoff questions. The condition for entering step 1 is receiving the answers and checks.render PASS in state.json. Securing the renderer, `init`, `selftest`, and `rfp` conversion run before the questions (the order is the start sequence in the Preparation section). The `rfp` conversion is used to judge the engagement type (transfer of requirement items and points happens at step 1)
+- Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in the Chat Replies section. The condition for entering step 1 is receiving the answers and checks.render PASS in state.json. Securing the renderer, `init`, `selftest`, and `rfp` conversion run before the questions (the order is the start sequence in the Preparation section). The `rfp` conversion is used to judge the engagement type (transfer of requirement items and points happens at step 1)
     + Whether to allow rhwp. If an rhwp permission denial occurred in the Setup section, put this first in the list. Present the refused command, the rhwp repository (https://github.com/edwardkim/rhwp), and the commands that run once allowed (release download, clone and build if needed, running rhwp). A question that names the source and the commands makes the scope of the user's permission clear
     + Scope of the proposal (all or a specific part)
     + Whether there is a consortium and each member's role
@@ -646,6 +648,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `![caption](path)` | [caption] | Figure. Placed inside a transparent table. The source goes in a transparent row below the figure, and the caption goes below the transparent table |
 | `[^1]` | Footnote | Source of evidence in the body |
 | `^superscript^`, `<sup>up</sup>`, `<sub>down</sub>` | Superscript and subscript | For units and symbols |
+| `\*`, `\[` and other punctuation after a backslash | The punctuation character as it is | For punctuation that would otherwise be read as notation (the backslash escape of standard Markdown). Backtick spans are left alone |
 | `(폭: group name)` or `(폭: 1,3,2)` | Table width directive | Between caption and table. Unifies the widths of tables with the same layout or sets ratios |
 | `(삽입: 모듈총괄표)` | Module overview table | Inserts the table of 02_모듈총괄표.md at this point. Once in the whole manuscript set |
 | `(장표: engine)` or `(장표: split N)` | Long-table directive | Between caption and table. How to handle a table that runs past one page. Written after the user chooses |
@@ -655,6 +658,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - build assigns heading numbers. Manuscript headings hold only the title
 - Do not use code block fences (three backticks) in manuscripts. `check tone` flags them as FAIL. Fences in reference file examples mark the extent of the example
 - The `(단위: )` (unit) line goes between caption and table. Give it only to numeric tables
+- Write the won sign as `원` or `₩` (U+20A9). The backslash that the `₩` key of a Korean keyboard enters is read as an escape before a punctuation character and is not written
 - The source line `※ 출처: ` or `출처: ` goes right after tables and figures. Give it only to tables of external data and external figures
 - When one table or figure has two or more sources, write the source label once and separate the sources with `;`. Choose between line breaks and joining
     + (Line breaks) End a source with `;` and write the next source on the next line. The typesetter breaks the lines inside the source row and aligns the second and later lines with the start of the first source
@@ -1047,13 +1051,15 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (No tidying) Leave the target lines as they are. The default level
     + (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit
     + (Ratio and letter spacing adjustment) Use the ratio and letter spacing adjustment first, and shorten the wording when that does not solve it
-    + (Renderer margin) The approximate renderers tend to fit more characters on a line than 한/글 and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
+    + (Renderer margin) The approximate renderers tend to fit more characters on a line than 한/글 and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 2 characters in a paragraph and 3 characters in a table cell. These counts are a guide, so judge flexibly by the glyph widths, the line length and so on
     + (Values of the ratio and letter spacing adjustment) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
     + (Table cells) A table cell holds few characters per line, so the same overflow needs a larger adjustment. When the adjustment needed would make the text look different from its surroundings, consider other means of adjustment first
 - The line spacing adjustment reduces the line spacing of a page, paragraph or table slightly from the style value to match the page fill. Do it only when the user turned it on in the kickoff questions
     + (Targets) A page where only 1-2 lines carry over to the next page, facing pages whose fill does not match, a table that reads better on one page, and so on. It is a way to match the page fill without cutting content
     + (Values) Stay conservative, at a level where the line spacing does not look different from the pages around it. Try small values first and stop at the smallest value that solves the page layout
-- In a job that does line tidying or the line spacing adjustment, review closely in the rendered PNGs the pages with a line where only 1-2 characters carry over, or a line with almost no margin at its end that can wrap in 한/글 and Word, and the facing pages whose fill does not match or can come apart by 1-2 lines
+- In a job that does line tidying or the line spacing adjustment, review the following pages closely in the rendered PNGs
+    + Pages with a line where only 1-2 characters carry over, or a line with almost no margin at its end that can wrap in 한/글 and Word
+    + Facing pages whose fill does not match or can come apart by 1-2 lines
 - An adjustment line is manuscript notation that changes the glyph ratio, letter spacing or line spacing of a paragraph or table slightly from the style values. Write the ratio and letter spacing items only at the ratio and letter spacing adjustment level of line tidying, and the line spacing item only in a job that applies the line spacing adjustment
     + (Notation) A single line `(조판 조정: 장평 -3, 자간 -2)` applies to the one element right after it (heading, body paragraph or table). From a `(조판 조정 시작: 줄 간격 -10)` line to just before the `(조판 조정 끝)` line, it applies to every element in the range. Put the adjustment line of a table before the caption line. The items are 장평 (ratio), 자간 (letter spacing) and 줄 간격 (line spacing)
     + (Values) A change in %p against the style value. With a style ratio of 100%, `장평 -3` gives 97%. With a style line spacing of 140%, `줄 간격 -10` gives 130%. The same notation gives the same degree of adjustment even when styles and client forms have different base values
@@ -1145,7 +1151,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Tables separated from captions at page boundaries, split positions and header row repetition of tables that run past one page, blank pages right after a section starts, and bands, titles, and □ left alone at the end of a page
     + For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Manuscript Hierarchy section)
     + The page fill of two facing pages (Typesetting section)
-    + For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting section)
+    + For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of about 2 characters in a paragraph and 3 characters in a table cell (Typesetting section)
 - After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, and differences in font size and weight across levels
 - If the cause is the manuscript, fix the manuscript. If the cause is a norm, fix the settings part of proposal.py. With three or more defects of the same kind, stop individual fixes and adjust the norm in the settings part of proposal.py
 

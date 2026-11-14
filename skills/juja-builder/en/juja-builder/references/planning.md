@@ -148,7 +148,7 @@
 
 - The start sequence is dependency installation, securing the renderer, `init workspace --kind plan`, `selftest workspace`, and kickoff questions
     + `init --kind plan` places assets/plan-design.md as 00_기획설계.md
-- Ask the items below all at once as kickoff questions
+- Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in SKILL.md, Chat Replies section
     + Type. If the request wording does not settle it, present the planning type example table and the short-form example table for the user to choose. Types outside the examples are also allowed
     + Document title, report recipient (approver, committee, board, investors, external organizations, and so on. There may be none), users of the result
     + Volume and input materials. If the volume is not set, present the model's design at step 1

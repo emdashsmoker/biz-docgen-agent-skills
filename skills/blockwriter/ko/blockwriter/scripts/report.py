@@ -64,6 +64,7 @@ def cmd_build(a):
             sys.exit(msg("err_docx_builtin_only"))
         import docx_writer
         docx_writer.build_docx(a, elems, footnotes, out)
+    M.release_escapes_in_file(out)
     if a.footnote_merge:
         print(msg("build_ok_merged", out=out, n=len(elems), fn=count_footnotes(out), merged=count_merged_notes(out)))
     else:

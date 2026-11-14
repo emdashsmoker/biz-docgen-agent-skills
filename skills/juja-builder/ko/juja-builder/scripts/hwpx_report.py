@@ -339,8 +339,16 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
+def _note_text(text: str) -> str | None:
+    """주석 기호(※, *)를 뗀 주석 문구. 주석 줄이 아니면 None.
+    Why: '*'는 주석 기호와 강조 표기에 함께 쓰이므로 강조 표기(**굵게**, *기울임*)로 시작하는 줄은 서술로 읽음"""
+    if text.startswith("**") or ((m := INLINE_RE.match(text)) and m.group().startswith("*")):
+        return None
+    return _strip_marker(text, NOTE_MARK)
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
-    lines = open(path, encoding="utf-8").read().splitlines()
+    lines = hold_escapes(open(path, encoding="utf-8").read()).splitlines()
     footnotes: dict[str, str] = {}
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines
                       if (m := BULLET_RE.match(ln))})
@@ -379,7 +387,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(path)}))
+                                 data={"path": release_escapes(m.group(2).strip()), "base": os.path.dirname(path)}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -408,7 +416,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+        if (t := _note_text(stripped)) is not None:
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -421,8 +429,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
-                elems.append(Element("note", t))  # 굵게(**)로 시작하는 서술은 주석 표기 아님
+            elif (t := _note_text(body)) is not None:
+                elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -517,7 +525,7 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
             out.append(e)
             continue
         vals, bad = parse_fit(e.data["spec"])
-        issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재" for p in bad]
+        issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2' 형식으로 기재" for p in bad]
         if e.data["range"] == "end":
             if ranged is None:
                 issues.append(f"[조판 조정 구간] '{e.text}' 앞에 시작 줄이 없음")
@@ -527,7 +535,7 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
         else:
             once = vals
     if ranged is not None:
-        issues.append("[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠")
+        issues.append("[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄 추가 필요")
     if issues and out:
         out[-1].data.setdefault("fit_issues", []).extend(issues)
     return out
@@ -609,7 +617,7 @@ def lint(elems: list[Element]) -> list[str]:
             issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
         if e.kind == "table" and not e.text:
             issues.append("[표 캡션 없음] 표 앞 줄에 '<표> 제목' 형식 캡션 권장")
-    return issues
+    return [release_escapes(s) for s in issues]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -746,18 +754,62 @@ def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
 
 
 # ── 형식 무관 조판 판단 (hwpx와 docx 작성기가 함께 사용) ─────────────────────
-INLINE_RE = re.compile(
-    r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^"
-    r"|\[\^[^\]]+\])")
+# 강조 표기는 별표 안쪽 양끝이 빈칸이 아닌 글자이고 바깥쪽에 별표가 이어지지 않는 경우에만 인식
+# Why: 유의수준 범례('*p<0.05, **p<0.01') 등 글자 그대로 쓴 별표를 강조 표기와 구분
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# 백슬래시 이스케이프. 백슬래시 뒤의 ASCII 문장부호는 표기 역할 없이 글자 그대로 출력 (CommonMark와 같은 대상 문자). 백틱 구간 안은 제외
+# How: 원고를 읽을 때 이스케이프한 글자를 유니코드 비문자(U+FDD0부터 32자)로 바꿔 두고 문서를 저장한 뒤 글자로 되돌림
+# Why: 원고 해석과 조판의 모든 경로가 이스케이프한 글자를 표기로 읽지 않게 함. 비문자는 문서에 쓰이지 않는 코드 값
+ESCAPABLE = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+ESCAPE_RE = re.compile(r"(`[^`\n]+`)|\\([" + re.escape(ESCAPABLE) + "])")
+ESCAPE_HOLD = {ch: chr(0xFDD0 + i) for i, ch in enumerate(ESCAPABLE)}
+ESCAPE_RELEASE = {ord(hold): ch for ch, hold in ESCAPE_HOLD.items()}
+XML_ENTITIES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+ESCAPE_RELEASE_XML = {code: XML_ENTITIES.get(ch, ch) for code, ch in ESCAPE_RELEASE.items()}
+ESCAPE_HOLD_BYTES = b"\xef\xb7"            # 자리 표시 문자의 UTF-8 앞 2바이트 (저장 파일에서 대상 항목을 찾는 용도)
+ESCAPE_XML_SUFFIXES = (".xml", ".hpf")     # 글자를 담는 압축 항목
+
+
+def hold_escapes(text: str) -> str:
+    """이스케이프한 글자를 자리 표시 문자로 바꾼다. 백틱 구간은 그대로 둔다"""
+    return ESCAPE_RE.sub(lambda m: m.group(1) or ESCAPE_HOLD[m.group(2)], text)
+
+
+def release_escapes(text: str) -> str:
+    """자리 표시 문자를 이스케이프한 글자로 되돌린다"""
+    return text.translate(ESCAPE_RELEASE)
+
+
+def release_escapes_in_file(path: str) -> None:
+    """저장한 문서(zip)의 XML 항목에 남은 자리 표시 문자를 글자로 되돌린다. 항목 순서와 압축 방식은 유지한다.
+    Why 저장 뒤: 글자를 문서에 기록하는 경로(문단, 셀, 캡션, 목차, 책갈피 이름 등)가 여럿이므로 저장 파일에서 한 번에 처리"""
+    with zipfile.ZipFile(path) as z:
+        items = [(info, z.read(info)) for info in z.infolist()]
+    held = [i for i, (info, data) in enumerate(items)
+            if info.filename.endswith(ESCAPE_XML_SUFFIXES) and ESCAPE_HOLD_BYTES in data]
+    if not held:
+        return
+    for i in held:
+        info, data = items[i]
+        items[i] = (info, data.decode("utf-8").translate(ESCAPE_RELEASE_XML).encode("utf-8"))
+    with zipfile.ZipFile(path, "w") as z:
+        for info, data in items:
+            z.writestr(info, data)
 
 
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """인라인 표기를 (종류, 글자) 목록으로 분해. 종류는 text, bold, italic, code, sup, sub, footnote(각주 키)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # split 결과의 짝수 번째는 표기 밖 글자. 표기 문자로 시작해도 글자 그대로 둠
+            out.append(("text", seg))
+        elif seg.startswith("***"):   # 굵은 기울임 표기는 굵게로 출력
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -767,11 +819,9 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[5:-6] if seg.startswith("<") else seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("text", seg))
-    return out
+    return [(kind, release_escapes(seg)) for kind, seg in out]
 
 
 def edge_sides(c0: int, c1: int, ncol: int) -> list[str]:
@@ -876,7 +926,7 @@ def parse_toc_scope(spec: str | None) -> tuple[str, ...]:
 
 def toc_bookmark_name(text: str) -> str:
     """HWPX 책갈피 이름. 목차 항목 문구에서 쪽 참조 경로의 구분 문자만 지움"""
-    return "".join(ch for ch in text if ch not in BOOKMARK_DROP_CHARS).strip()
+    return "".join(ch for ch in release_escapes(text) if ch not in BOOKMARK_DROP_CHARS).strip()
 
 
 def docx_bookmark_name(n: int, text: str) -> str:
@@ -1913,6 +1963,7 @@ def cmd_build(a):
     b.merge_mode = a.merge
     b.long_table_mode = a.long_table
     b.build(elems, footnotes, out)
+    release_escapes_in_file(out)
     fixed = repair_manifest(out)
     if fixed:
         print(f"WARN: 매니페스트 미등록 이미지 {fixed}건 자동 보정 (python-hwpx 버전 확인 권장)")

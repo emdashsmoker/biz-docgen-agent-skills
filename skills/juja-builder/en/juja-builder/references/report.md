@@ -32,7 +32,7 @@
 
 - The start sequence is dependency installation, securing the renderer, `init workspace --kind report`, `selftest workspace`, `rfp RFP_file workspace`, and kickoff questions
     + `init --kind report` places assets/diagnosis.md as 00_진단서.md
-- Ask the items below all at once as kickoff questions
+- Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in SKILL.md, Chat Replies section
     + Output range. Full table of contents or selected chapters
     + Report title and the real name notation of the client
     + Whether web search is allowed. If not, figures in literature sections are model knowledge values with a reference year and the `[확인]` marker

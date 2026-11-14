@@ -156,10 +156,12 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
         - Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
-    - (Choice items) Present every choice and mark the default with "(default)"
-        - (Reason) The user chooses only among the choices the question shows
+    - (Choice items) Present every choice of each item and mark the default with "(default)"
+        - (Reason) The user chooses only among the choices the question shows. An item that shows only its default hides the other choices from the user
+        - (Many items) Present all choices for every choice item, however many items the questions hold. An item with a recommended default still shows its other choices
         - (Choice description) Describe in one line what each choice changes in the output. Keep option names and build behavior out of the question text
-        - Write any item that does not fit in the question tool in the response body with all of its choices
+        - (Items outside the question tool) Write them in the response body as a list by item, with all choices, the default mark and the choice descriptions in the same detail as the items in the question tool
+        - (Check before sending) Before sending the questions, compare the items and choices in them with the item list of step 1 and add any missing item or choice
     - (Render test results) Report the render test result of each format (engine, pass or fail) in one line with the questions. If a source build is running, add its progress to the same line. For a format without a renderer, also state that its rendering review is skipped and why
 2. (Manuscript) Write the Markdown manuscript with the level rules below and the writing rules in references/manuscript.md
 3. (Typesetting) Run build and act on each output line prefix

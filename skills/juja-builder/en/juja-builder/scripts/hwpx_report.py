@@ -333,8 +333,16 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
+def _note_text(text: str) -> str | None:
+    """The note text without its note mark (※, *). None when the line is not a note.
+    Why: '*' serves as both a note mark and an emphasis mark, so a line that starts with emphasis (**bold**, *italic*) is read as a statement"""
+    if text.startswith("**") or ((m := INLINE_RE.match(text)) and m.group().startswith("*")):
+        return None
+    return _strip_marker(text, NOTE_MARK)
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
-    lines = open(path, encoding="utf-8").read().splitlines()
+    lines = hold_escapes(open(path, encoding="utf-8").read()).splitlines()
     footnotes: dict[str, str] = {}
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines
                       if (m := BULLET_RE.match(ln))})
@@ -373,7 +381,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(path)}))
+                                 data={"path": release_escapes(m.group(2).strip()), "base": os.path.dirname(path)}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -402,7 +410,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+        if (t := _note_text(stripped)) is not None:
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -415,8 +423,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
-                elems.append(Element("note", t))  # text that starts with bold (**) is not a note mark
+            elif (t := _note_text(body)) is not None:
+                elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -603,7 +611,7 @@ def lint(elems: list[Element]) -> list[str]:
             issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: ask the user to choose --long-table engine|split")
         if e.kind == "table" and not e.text:
             issues.append("[table caption missing] a caption of the form '<표> title' on the line before the table is recommended")
-    return issues
+    return [release_escapes(s) for s in issues]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -740,18 +748,62 @@ def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
 
 
 # ── Format-agnostic typesetting judgments (shared by the hwpx and docx writers) ─────────────────────
-INLINE_RE = re.compile(
-    r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^"
-    r"|\[\^[^\]]+\])")
+# Emphasis is recognized only when both inner ends are non-space characters and no asterisk follows on the outside
+# Why: tells literal asterisks such as a significance legend ('*p<0.05, **p<0.01') apart from emphasis marks
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# Backslash escapes. An ASCII punctuation character after a backslash is written as it is, without its notation role (the same characters as CommonMark). Backtick spans are left alone
+# How: when the manuscript is read, escaped characters are swapped for Unicode noncharacters (32 from U+FDD0). They are restored after the document is saved
+# Why: no path of manuscript parsing or typesetting reads an escaped character as notation. Noncharacters are code values that documents do not use
+ESCAPABLE = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+ESCAPE_RE = re.compile(r"(`[^`\n]+`)|\\([" + re.escape(ESCAPABLE) + "])")
+ESCAPE_HOLD = {ch: chr(0xFDD0 + i) for i, ch in enumerate(ESCAPABLE)}
+ESCAPE_RELEASE = {ord(hold): ch for ch, hold in ESCAPE_HOLD.items()}
+XML_ENTITIES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+ESCAPE_RELEASE_XML = {code: XML_ENTITIES.get(ch, ch) for code, ch in ESCAPE_RELEASE.items()}
+ESCAPE_HOLD_BYTES = b"\xef\xb7"            # first two UTF-8 bytes of the placeholder characters (used to find the entries to rewrite in a saved file)
+ESCAPE_XML_SUFFIXES = (".xml", ".hpf")     # archive entries that hold text
+
+
+def hold_escapes(text: str) -> str:
+    """Swaps escaped characters for placeholder characters. Backtick spans are left alone"""
+    return ESCAPE_RE.sub(lambda m: m.group(1) or ESCAPE_HOLD[m.group(2)], text)
+
+
+def release_escapes(text: str) -> str:
+    """Restores placeholder characters to the escaped characters"""
+    return text.translate(ESCAPE_RELEASE)
+
+
+def release_escapes_in_file(path: str) -> None:
+    """Restores the placeholder characters left in the XML entries of a saved document (zip). Entry order and compression are kept.
+    Why after saving: text reaches the document through many paths (paragraphs, cells, captions, TOC, bookmark names and so on), so the saved file is handled once"""
+    with zipfile.ZipFile(path) as z:
+        items = [(info, z.read(info)) for info in z.infolist()]
+    held = [i for i, (info, data) in enumerate(items)
+            if info.filename.endswith(ESCAPE_XML_SUFFIXES) and ESCAPE_HOLD_BYTES in data]
+    if not held:
+        return
+    for i in held:
+        info, data = items[i]
+        items[i] = (info, data.decode("utf-8").translate(ESCAPE_RELEASE_XML).encode("utf-8"))
+    with zipfile.ZipFile(path, "w") as z:
+        for info, data in items:
+            z.writestr(info, data)
 
 
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """Split inline notation into a list of (kind, text). Kinds are text, bold, italic, code, sup, sub, footnote (footnote key)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # even items of the split are text outside the marks. They stay literal even when they start with a mark character
+            out.append(("text", seg))
+        elif seg.startswith("***"):   # bold italic marks are written as bold
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -761,11 +813,9 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[5:-6] if seg.startswith("<") else seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("text", seg))
-    return out
+    return [(kind, release_escapes(seg)) for kind, seg in out]
 
 
 def edge_sides(c0: int, c1: int, ncol: int) -> list[str]:
@@ -870,7 +920,7 @@ def parse_toc_scope(spec: str | None) -> tuple[str, ...]:
 
 def toc_bookmark_name(text: str) -> str:
     """HWPX bookmark name. Removes only the separator characters of the page reference path from the TOC entry text"""
-    return "".join(ch for ch in text if ch not in BOOKMARK_DROP_CHARS).strip()
+    return "".join(ch for ch in release_escapes(text) if ch not in BOOKMARK_DROP_CHARS).strip()
 
 
 def docx_bookmark_name(n: int, text: str) -> str:
@@ -1909,6 +1959,7 @@ def cmd_build(a):
     b.merge_mode = a.merge
     b.long_table_mode = a.long_table
     b.build(elems, footnotes, out)
+    release_escapes_in_file(out)
     fixed = repair_manifest(out)
     if fixed:
         print(f"WARN: {fixed} images not registered in the manifest were corrected automatically (checking the python-hwpx version is recommended)")

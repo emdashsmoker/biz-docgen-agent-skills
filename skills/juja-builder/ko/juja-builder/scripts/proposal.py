@@ -383,6 +383,14 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     return elems, footnotes
 
 
+def parse_for_check(path: str) -> tuple[list[Element], dict[str, str]]:
+    """점검용 요소 목록. 요소 문구의 이스케이프 자리 표시 문자를 글자로 되돌려 점검 결과 문구에 남지 않게 한다 (점검은 조판하지 않음)"""
+    elems, footnotes = parse_markdown(path)
+    for e in elems:
+        e.text = lib.release_escapes(e.text)
+    return elems, footnotes
+
+
 def estimate_table_lines(rows: list[list[str]]) -> int:
     """표 높이를 줄 수로 근사. 열 폭은 열별 최대 가중 길이에 비례 배분하고 셀 줄 수는 <br> 분절마다 접힘 줄 수를 합산."""
     ncol = max(len(r) for r in rows)
@@ -411,7 +419,7 @@ def lint(elems: list[Element]) -> list[str]:
         est = estimate_table_lines(rows)
         if est >= TABLE_PAGE_LINES and len(rows) <= lib.LONG_TABLE_ROWS:
             out.append(f"[장표 HITL] '{e.text[:24]}' {len(rows)}행 추정 {est}줄: 한 쪽을 넘을 가능성. 유저에게 (장표: engine) 글자취급 해제 또는 (장표: split N) 물리 분할 택일을 질의")
-    return out
+    return [lib.release_escapes(s) for s in out]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1548,7 +1556,7 @@ def _segments(lines: list[str]) -> list[tuple[str, list[str]]]:
 def check_density(path: str) -> tuple[bool, list[str], list[str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     fails, warns = [], []
-    elems, _ = parse_markdown(path)
+    elems, _ = parse_for_check(path)
     for msg in lint(elems):
         if "□ 단독" in msg:
             fails.append(msg)
@@ -1897,7 +1905,7 @@ def count_warnings(elems: list[Element]) -> list[str]:
 def check_volume(path: str, original: bool | None = None, style: bool | None = None) -> tuple[bool, list[str], list[str]]:
     """□ 1개당 ❍ 2개 이상과 근거(하이픈, ※) 2개 이상, Task 1개당 표 또는 그림 1개 이상과 본문 글자 수 하한.
     Why: 잘 쓴 제안서는 문장을 늘리지 않고 구성 단위를 채워 분량을 만든다. 단문 규율과 분량을 동시에 지키는 유일한 경로."""
-    elems, _ = parse_markdown(path)
+    elems, _ = parse_for_check(path)
     fails, warns = [], []
     squares: list[dict] = []
     tasks: list[dict] = []
@@ -2218,6 +2226,7 @@ def cmd_build(a):
     for fmt in formats:
         out = f"{out_base}.{fmt}"
         b = make(fmt, out)
+        lib.release_escapes_in_file(out)
         if fmt == "hwpx":
             fixed = lib.repair_manifest(out)
             if fixed:
