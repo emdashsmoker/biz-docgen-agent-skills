@@ -1,7 +1,9 @@
-"""LibreOffice로 DOCX를 열어 목차와 필드를 갱신한 뒤 PDF로 저장한다.
-LibreOffice 파이썬 연동(uno)이 있는 인터프리터에서 render.py가 실행한다.
+"""Opens a DOCX with LibreOffice, updates its fields and saves a DOCX copy.
+render.py runs this in an interpreter that has the LibreOffice Python bridge (uno).
+Why uno: `soffice --convert-to docx` writes the stored PAGEREF values as they are without recalculating them. The page numbers are written only when the field update is called directly
+The copy is used only to look up page numbers. LibreOffice rewrites the formatting on save, so the copy is not used as output
 
-사용: python lo_convert.py <soffice 경로> <입력 파일> <출력 PDF> <LibreOffice 사용자 프로필 URL>
+Usage: python lo_fields.py <soffice path> <input DOCX> <output DOCX> <LibreOffice user profile URL>
 """
 import os
 import subprocess
@@ -11,8 +13,8 @@ import time
 import uno
 from com.sun.star.beans import PropertyValue
 
-CONNECT_TRIES = 60          # 1초 간격으로 LibreOffice 기동을 기다리는 횟수
-INDEX_UPDATE_PASSES = 2     # 목차가 채워지면 쪽이 밀릴 수 있어 한 번 더 갱신
+CONNECT_TRIES = 60                    # number of 1-second waits for LibreOffice to start
+DOCX_FILTER = "MS Word 2007 XML"      # name of the LibreOffice DOCX export filter
 
 
 def prop(name, value):
@@ -22,8 +24,8 @@ def prop(name, value):
 
 
 def main():
-    soffice, src, pdf, profile = sys.argv[1:5]
-    pipe = f"blockwriter_{os.getpid()}"
+    soffice, src, out, profile = sys.argv[1:5]
+    pipe = f"toc_fields_{os.getpid()}"
     proc = subprocess.Popen([soffice, f"-env:UserInstallation={profile}", "--headless", "--invisible", "--norestore",
                              f"--accept=pipe,name={pipe};urp;StarOffice.ComponentContext"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -41,16 +43,13 @@ def main():
             sys.exit("LibreOffice connection failed")
         desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
         doc = desktop.loadComponentFromURL(uno.systemPathToFileUrl(src), "_blank", 0, (prop("Hidden", True),))
-        for _ in range(INDEX_UPDATE_PASSES):
-            indexes = doc.getDocumentIndexes()
-            for i in range(indexes.getCount()):
-                indexes.getByIndex(i).update()
-        doc.storeToURL(uno.systemPathToFileUrl(pdf), (prop("FilterName", "writer_pdf_Export"),))
+        doc.getTextFields().refresh()
+        doc.storeToURL(uno.systemPathToFileUrl(out), (prop("FilterName", DOCX_FILTER),))
         doc.close(True)
         try:
             desktop.terminate()
         except Exception:
-            pass   # 종료 요청 중 연결이 끊기는 것은 정상
+            pass   # the connection dropping during the terminate request is normal
     finally:
         try:
             proc.wait(timeout=30)

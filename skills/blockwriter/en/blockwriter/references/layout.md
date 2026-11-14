@@ -129,7 +129,7 @@ DOCX converts the same form.py definitions into Word units.
 - (Line spacing) Hangul's percentage of the font size becomes Word's minimum line height (font size x percentage). Because the two programs calculate line height differently, vertical positions can differ slightly
 - (Paragraph margins) Carried over as they are, and a negative first-line indent becomes a Word hanging indent
 - (Bullets) Word bullet lists (single level). The hanging indent is the sum of the symbol width, the gap after the symbol, and the width adjustment, so that the second line aligns with the text start line. The symbol width is 0.5 character for symbols whose Unicode East Asian Width is half-width (Na, H), which is the hyphen in the built-in forms, and 1 character for other symbols
-- (Heading styles) chapter puts the chapter, section, subsection, and 가나다 headings on Word Heading 1-4. flat puts the document title on Word Title and the section, subsection, and 가나다 headings on Heading 1-3. The navigation pane and the TOC field recognize these styles
+- (Heading styles) chapter puts the chapter, section, subsection, and 가나다 headings on Word Heading 1-4. flat puts the document title on Word Title and the section, subsection, and 가나다 headings on Heading 1-3. The navigation pane recognizes these styles
 - (Other roles) Custom styles named after the form styles
 - (Caption numbers) Word number fields (SEQ 표, SEQ 그림; the name follows the caption label of a label file) with prefilled results. chapter adds the chapter number as text, and the field restarts at 1 at each Heading 1. The first caption field of each chapter also carries a switch that resets the number to 1 (`\r 1`). LibreOffice does not restart numbering at Heading 1. flat numbers continuously through the document
 - (Caption width) The caption paragraph is indented on both sides by half the difference between the body width and the table width, so it wraps at the same width as the HWPX caption object
@@ -143,35 +143,46 @@ DOCX converts the same form.py definitions into Word units.
 
 ## Table of contents
 
-- TOC entries go down to chapters at depth 1, to sections at depth 2, and to subsections at depth 3. Each entry is the title, a dotted tab, and the page number
+- The scope is set with `--toc-scope`. The default is chapters, sections, tables, and figures; subsections and 가나다 headings can be added. Only tables and figures with captions are listed
+- Chapter, section, subsection, and 가나다 entries go into the TOC in document order. Tables and figures go into the list of tables and the list of figures after the TOC (each on a new page). An entry is the text, a dotted tab, and the page number
+- Left margins are chapter 0, section 1500, subsection 3000, 가나다 4500 (HWPUNIT). Entries of the list of tables and list of figures use 0. Chapters use the TOC chapter style and the others the TOC section style
 - A TOC is created only on forms with TOC styles (toc_chapter, toc_section). flat has no TOC styles, so its TOC is skipped
-- The HWPX TOC is static paragraphs. For a delivered document, rebuilding the TOC with Hangul's table of contents feature is recommended
-- The DOCX TOC is a Word TOC field (`TOC \o "1-depth" \h \z`) with the entries and page numbers prefilled as its result. Without page numbers, the `\n` switch hides them
-- The DOCX TOC is generated with the same structure as a TOC made by Word. Each heading gets a hidden bookmark (a name made of `_Toc` and a 9-digit number), each TOC entry gets a hyperlink to that bookmark and a `PAGEREF` page-number field, and a Word TOC content control wraps the whole TOC
-- If a DOCX TOC with page numbers is inserted, the document is set so that Word asks to update fields when it opens. Choosing "Yes" recalculates the numbers with Word's layout. A TOC without page numbers does not ask
-- The DOCX TOC collects its entries from the Word heading styles. If a heading's style is changed during manual editing, the heading drops out of the TOC. After editing, select the TOC and press F9 to update it
-- When the TOC is updated, Word offers 'Update page numbers only' and 'Update entire table'. 'Update page numbers only' recalculates the `PAGEREF` fields from the bookmark positions, and 'Update entire table' makes Word rebuild the entries
+- The body section starts at page 1, so changes in the TOC length do not change body page numbers
+- Hangul's Make Table of Contents feature and Word's TOC field and table-of-figures field are not used. When Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles
 
-Page-number calculation (when `--toc` and `--page-number` are both given)
+Page numbers (when both `--toc` and `--page-number` are given)
 
-1. Typeset a first-pass document that holds only the TOC entries
-2. Render the first-pass document to a text-extractable PDF and get the text of each page in drawing order. HWPX uses rhwp, or LibreOffice with H2Orestart if rhwp is missing. DOCX uses LibreOffice, which updates the TOC field before saving. The rendering copy and the PDF are made in a temporary folder and removed, so only the document stays in the output folder
-3. Starting from the first page that contains the TOC title (`목  차`, or toc.title of a label file), find the TOC entries in order. The pages up to the one containing the last entry are the TOC, and the next page is body page 1. The same applies when the TOC spans several pages
-4. Find the TOC entries in order in the body and use the first page where each entry appears as its page number. The search for an entry starts at the page of the previous entry
-5. Render the final document with the page numbers filled in and check it the same way. If there are mismatches, typeset again with the new values (TOC_MAX_PASSES, default 2)
-6. build prints `TOC page check: filled numbers match the re-rendered page positions N/M` (M is the number of TOC entries) or a list of mismatched entries. Entries not found in the body get no page number and a `WARN:` line reports them
-7. For HWPX, when a TOC heading sits at a page bottom in the final render and the first body line after it (lower headings and □ in between are skipped; tables and figures are found by their captions) starts on the next page, the `[stranded TOC heading]` WARN reports the heading and its body page number. As the WARN says, put `---` before that heading in the manuscript
+- Each listed item gets a bookmark, and the TOC page number is written as a page reference field to that bookmark. A page number exists only after a layout engine places the document, so only the values calculated by Hangul and Word match the real pages
+- (HWPX bookmark) The bookmark control is written as the first control of the first run of the paragraph. Headings use the heading paragraph; tables and figures use the first cell paragraph of the table object (for a figure, the one-column table that holds it)
+    - Placed inside the table object, the bookmark moves with the table. A bookmark inside the caption paragraph is not used because rhwp then draws the caption over the table
+    - The name is the TOC entry text. The characters `;` `?` `#`, which the page reference path uses, are removed, and a repeated text gets a sequence number starting at `(2)`
+- (HWPX page reference) Hangul's bookmark page-number cross-reference (CROSSREF field, RefType TARGET_BOOKMARK, RefContentType OBJECT_TYPE_PAGE), written in one run as field begin, stored value text, field end
+    - The stored value is the placeholder `?`. Hangul recalculates it to the page of the bookmark when it loads the document, prints, or previews
+    - rhwp and H2Orestart draw the stored value as it is, so review renders and their PDFs show `?`
+- (DOCX bookmark) The whole target paragraph is wrapped in a bookmark. Headings use the heading paragraph; tables and figures use the caption paragraph. The name is `toc_number_text` (only letters, digits, and underscores, within 40 characters, to meet Word's rules). Names starting with an underscore are not used because Word treats them as hidden bookmarks
+- (DOCX page reference) A `PAGEREF bookmarkname \h` complex field. Word does not recalculate PAGEREF when it opens a document; it updates with select all (Ctrl+A) then F9
+    - The result value is an approximation that LibreOffice calculates by updating the fields. Without LibreOffice or its Python bridge (uno) it is the placeholder `?`
+    - A zero-width character (U+200B) is appended to the approximation as a mark. When Word updates the field it rewrites the result text, so the mark disappears, and static conversion uses the mark to tell whether the value was updated
+    - The copy used for the lookup is made in a temporary folder and deleted. LibreOffice rewrites the formatting on save, so the copy is not used as output
+- build prints one line with the number of TOC entries, the number of bookmarks and page references, and the kind of initial page-number value
 
-- TOC entries and page numbers are matched by entry order, so headings with the same text do not get mixed up
-- The body section starts at page 1, so a change in TOC length does not change the body page numbers
-- The values are approximations based on the review renderer. If the renderer's line and page breaks differ from Hangul or Word, the values can differ
+Static conversion (`toc-static`; the procedure is in the TOC static conversion section of SKILL.md)
+
+- (HWPX) Removes the field begin control of each cross-reference (page number and bookmark name references) that targets a target bookmark, and the matching field end control, and keeps the stored value text. Removes the target bookmark controls
+- (DOCX) Removes the fldChar (begin, separate, end) and instrText of PAGEREF and REF fields that target a target bookmark and keeps the result text. A fldSimple is only unwrapped. Removes the bookmarkStart of each target bookmark and the bookmarkEnd with the same id
+- Footnote number cross-references (TARGET_FOOTNOTE in HWPX, NOTEREF in DOCX) and the bookmarks for footnote merging are not changed
+- The line layout values saved by Hangul (linesegarray) are kept. Removing them changes the page layout in renderers that recalculate line breaks
+- Files saved again by an editor differ from build output in run splitting and attributes, so targets are found by element kind and reference relation
+- Only the XML entries whose target elements were removed are rewritten; the other archive entries are copied as they are. An HWPX gets its mimetype entry first and uncompressed
+- (Update check) A stored value that is a number without the mark is an updated value. The placeholder `?` and approximations that still carry the mark are not made static
+- (Item kind) In HWPX, a bookmark inside a captioned table object is a table or figure (by the numbering type of the object); otherwise the kind comes from the role of the paragraph style. In DOCX the kind comes from the role of the paragraph style (heading, table caption, figure caption)
 
 ## User forms (HWPX only)
 
 - The skeleton command (`skeleton form.hwpx skeleton.hwpx [--section N]`) produces, from a user form, an empty form that keeps only header.xml and the page settings of the body section (first paragraph), plus a draft profile (skeleton.profile.json). The body section defaults to the last section
 - The skeleton drops the other sections, images, the preview, and the author and date metadata
 - The draft guesses a style for each role from candidate names (built-in form names and short names common in report forms). Roles that are not found are null. Fill them in from the printed style list
-- The cover, submission letter, research team page, and list of tables are not in the skeleton. Fill them in the original user form with fill or paste them in Hangul
+- The cover, submission letter, and research team pages are not in the skeleton. Fill them in the original user form with fill or paste them in Hangul
 
 Profile keys
 
@@ -200,7 +211,8 @@ The fixed strings that build prints into documents and the language tags it writ
 | formats.subsection | Subsection heading format. `{c}`, `{s}`, `{ss}` subsection number, `{t}` | chapter `{c}.{s}.{ss} {t}`, flat `{s}.{ss} {t}` |
 | letters.items | Letter sequence of the 가나다 level, one character per heading. After the last one it starts again | `가나다라마바사아자차카타파하` |
 | letters.format | Number format of the 가나다 level. `{x}` letter. The title follows after a space | `{x}.` |
-| toc.title | TOC title. The TOC page-number check also starts from the page with this title | `목  차` |
+| toc.title | TOC title | `목  차` |
+| toc.tables, toc.figures | Title of the list of tables, title of the list of figures | `표 목차`, `그림 목차` |
 | caption.table.label, caption.figure.label | Caption label word | `표`, `그림` |
 | caption.table.open, caption.table.close | Marks around the table caption label and number | `<`, `>` |
 | caption.figure.open, caption.figure.close | Marks around the figure caption label and number | `[`, `]` |
@@ -228,7 +240,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 {
   "formats": {"chapter": "Chapter {n}. {t}"},
   "letters": {"items": "abcdefghijklmnopqrstuvwxyz", "format": "({x})"},
-  "toc": {"title": "Contents"},
+  "toc": {"title": "Contents", "tables": "List of Tables", "figures": "List of Figures"},
   "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
   "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
                "colwidth": ["Column widths"]},
@@ -236,7 +248,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 }
 ```
 
-- Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
+- Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, the list titles `List of Tables` and `List of Figures`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
 - Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 15, 20, 25)` together with the Korean tokens
 
 ## Review items
@@ -255,8 +267,8 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
 - For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
-- If a TOC was inserted, confirm that the build check result is a full match, and check the entries, dotted leaders, and page-number alignment on the TOC page PNG. If build prints the `[stranded TOC heading]` WARN, fix the manuscript as it says
-- For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, and footnotes and whether a TOC field exists match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
+- If a TOC was inserted, confirm that the numbers of TOC entries and bookmarks in the build output match the scope, and check the entries, dotted leaders, and the alignment of the page-number positions on the TOC page PNG. The TOC page number `?` in an HWPX render is the placeholder and does not count as a defect. The TOC page numbers in a DOCX render are the values LibreOffice calculates
+- For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, footnotes, and TOC page references match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
 - Decide whether a difference found in the page PNGs is a defect with the judgment method in references/renderers.md
 - After the item checks, set the list aside and do one free review. Fix at your discretion anything that would look odd to a practitioner receiving the document for the first time, even if no rule covers it
     - (Design and alignment) Left alignment lines between levels, the balance of table and figure widths against the body width, the alignment lines of captions, unit lines, and source lines, consistent spacing, and the distribution of visual weight on a page
@@ -280,6 +292,6 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Outer table borders) The left and right outer borders are open to soften the boundary between the text and the table. If outer borders are needed, set EDGE_OPEN_SIDES to False
 - (Code-generated forms) The references among styles, fonts, bullets, and outline numbering are created from one definition (form.py), which prevents missing references. If even one bullet definition reference is missing, Hangul omits the symbol, and checking the body text does not reveal such a gap
 - (Manuscript parsing module) Manuscript parsing and the table and figure calculations live in one module, manuscript.py. The HWPX and DOCX typesetters use the same merge, alignment, and width calculations, so a rule change happens in one place
-- (TOC page number recheck) The recheck catches cases where filling in the page numbers changes the TOC or body layout
+- (TOC bookmarks and page references) Page numbers written as text go wrong with every edit. As bookmarks and page references, Hangul and Word recalculate the real pages
 - (DOCX language tag) With the Latin language set to ko-KR, LibreOffice breaks lines inside numbers such as `3,456,789`
-- (DOCX TOC bookmarks) With a TOC that only had prefilled result text, updating the fields in Word reset every page number to 1. Using the same structure as a Word-made TOC lets Word recalculate the page numbers from the heading positions whichever update option is chosen
+- (No DOCX TOC field) With a TOC field that only had prefilled result text, updating the fields in Word reset every page number to 1. TOC entries are ordinary paragraphs and only the page number is a PAGEREF, so the typeset entries stay

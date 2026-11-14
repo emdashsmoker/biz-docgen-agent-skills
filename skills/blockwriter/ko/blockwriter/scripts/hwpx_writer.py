@@ -17,6 +17,7 @@ import lxml.etree as ET
 
 import config as C
 import manuscript as M
+import toc_refs
 from config import msg
 from form import FORMS
 from hwpx_form import write_skeleton
@@ -55,7 +56,7 @@ def builtin_skeleton(form_name: str, workdir: str) -> str:
     return write_skeleton(FORMS[form_name], path)
 
 
-class Builder:
+class Builder(M.TocMarks):
     def __init__(self, skeleton: str, profile: dict, page_break: str = "chapter"):
         try:
             from hwpx import HwpxDocument
@@ -77,8 +78,8 @@ class Builder:
         missing = [v for k, v in profile.items() if k not in C.NON_ROLE_KEYS and v is not None and v not in self.styles]
         if missing:
             sys.exit(msg("err_missing_styles", names=missing))
-        self.headings: list[tuple[int, str]] = []
-        self.toc_numbers: dict[int, int] = {}   # 목차 항목 순번 → 쪽번호
+        self.toc_items: list[tuple[str, str, str | None]] = []   # 목차 수록 항목 (M.TocMarks)
+        self.bookmark_names = M.BookmarkNames()
         self.header = self.doc.parts.headers[0]
         self.body_w = self._body_width()
         self.table_max_w = self.body_w - C.TABLE_INDENT_MARGIN
@@ -90,10 +91,11 @@ class Builder:
         self.last_para = None
         self.last_cp = None   # 직전 문단의 기본 글자 모양 (출처 줄을 옮긴 각주의 참조 run에 사용)
         self.caption_counts = {"TABLE": 0, "PICTURE": 0}   # 캡션 번호 필드에 저장할 번호
+        self.pending_caption = None   # 목차 등록을 기다리는 캡션 (종류, 목차 문구, 개체)
         # 조판 옵션 (cmd_build에서 지정)
         self.numbered_square = False
         self.toc = False
-        self.toc_depth = 2
+        self.toc_scope = C.TOC_SCOPE_DEFAULT
         self.cover = None
         self.page_number = False
         self.header_spec = None
@@ -187,6 +189,20 @@ class Builder:
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
 
+    def add_bookmark(self, p, text: str) -> str:
+        """책갈피를 문단 첫 run의 첫 컨트롤로 기록하고 이름을 돌려준다. 표를 담은 문단에서는 표보다 앞에 놓인다.
+        p는 문단 객체 또는 문단 요소 (캡션 문단은 요소로 받음)"""
+        pe = getattr(p, "element", p)
+        name = self.bookmark_names.issue(text)
+        run = pe.find(f"{HP}run")
+        if run is None:   # 글자가 없는 문단. 줄 배치 저장값보다 앞에 run을 둔다
+            run = ET.Element(f"{HP}run", charPrIDRef=str(self.refs("body")["char_pr_id_ref"]))
+            pe.insert(0, run)
+        ctrl = ET.Element(f"{HP}ctrl")
+        ET.SubElement(ctrl, f"{HP}bookmark", name=name)
+        run.insert(0, ctrl)
+        return name
+
     def _add_footnote(self, p, text: str, body_cp: str):
         """각주 참조를 문단 기본 글자 모양의 run에 두고 각주 본문에도 본문과 같은 인라인 서식을 적용한다.
         라이브러리는 참조를 문단의 마지막 run(첨자, 굵게 등)에 두고 각주 본문을 run 하나의 글자 모양으로만 만든다.
@@ -220,16 +236,7 @@ class Builder:
         at = list(pe).index(runs[-1]) + 1 if runs else len(pe)   # 줄 배치 저장값보다 앞, 마지막 run 뒤
         field_id = new_object_id()
         begin_run = ET.Element(f"{HP}run", charPrIDRef=base_cp)
-        begin = ET.SubElement(ET.SubElement(begin_run, f"{HP}ctrl"), f"{HP}fieldBegin", id=field_id, type="CROSSREF",
-                              name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
-        # 매개변수 이름과 값은 한/글 저장 파일 그대로 ("Fiexde" 철자 포함). Command의 뒤 숫자는 각주 번호 참조를 뜻하는 저장값
-        params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
-                  ("stringParam", "Command", f"?#{inst_id};3;1;0;0;"), ("stringParam", "RefPath", f"?#{inst_id};"),
-                  ("stringParam", "RefType", "TARGET_FOOTNOTE"), ("stringParam", "RefContentType", "OBJECT_TYPE_NUMBER"),
-                  ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
-        holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
-        for tag, name, value in params:
-            ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+        begin_run.append(crossref_begin(field_id, f"?#{inst_id};3;1;0;0;", f"?#{inst_id};", "TARGET_FOOTNOTE", "OBJECT_TYPE_NUMBER"))
         sup_run = ET.Element(f"{HP}run", charPrIDRef=self._run_style(base_cp, script="sup"))
         ET.SubElement(sup_run, f"{HP}t").text = number
         ET.SubElement(ET.SubElement(sup_run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id,
@@ -404,29 +411,30 @@ class Builder:
             if cover.get("org"):
                 front(cover["org"], self._cover_char(C.COVER_ORG_PT, True))
         if self.toc:
-            if not (self.p.get("toc_chapter") and self.p.get("toc_section")):
-                print(msg("warn_no_toc_style"))
-            else:
-                ch = self.refs("chapter")
-                front(C.label("toc.title"), str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
-                      pageBreak="1" if cover else "0")
-                sub_pp = None
-                for idx, (lv, text) in enumerate(M.toc_entries(self.headings, self.toc_depth)):
-                    r = self.refs("toc_chapter" if lv == 1 else "toc_section")
-                    pp = str(r["para_pr_id_ref"])
-                    if lv >= 3:
-                        if sub_pp is None:
-                            sub_pp = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": C.TOC_SUB_INDENT})
-                        pp = sub_pp
-                    p = front(text, str(r["char_pr_id_ref"]), pp)
-                    p.element.set("styleIDRef", str(r["style_id_ref"]))
-                    num = self.toc_numbers.get(idx)
-                    if num:
-                        tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
-                        left = C.TOC_SUB_INDENT if lv >= 3 else (0 if lv == 1 else C.TOC_SECTION_INDENT)
-                        unit = 700 if lv == 1 else 600   # 장 14pt, 절 12pt 글자 1자 폭 추정 (HWPUNIT)
-                        width = max(C.TOC_TAB_POS - left - M.weighted_len(text) * unit - len(str(num)) * unit, 1000)
-                        ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2").tail = str(num)
+            ch = self.refs("chapter")
+            indent_pp: dict[int, str] = {}   # 왼쪽 여백 → 목차 절 스타일에서 파생한 문단 모양
+            for it in M.toc_layout(self.toc_items):
+                if it["kind"] == "title":
+                    front(it["text"], str(ch["char_pr_id_ref"]), self._aligned_pp(str(ch["para_pr_id_ref"]), "CENTER"),
+                          pageBreak="1" if cover or not it["first"] else "0")
+                    continue
+                item, text, left = it["item"], it["text"], it["indent"]
+                r = self.refs("toc_chapter" if item == "chapter" else "toc_section")
+                pp, cp = str(r["para_pr_id_ref"]), str(r["char_pr_id_ref"])
+                if item not in ("chapter", "section"):   # 장과 절은 스타일의 여백 그대로
+                    if left not in indent_pp:
+                        indent_pp[left] = self.header.ensure_paragraph_format(base_para_pr_id=pp, margins={"left": left})
+                    pp = indent_pp[left]
+                p = front(text, cp, pp)
+                p.element.set("styleIDRef", str(r["style_id_ref"]))
+                if it["name"]:   # 항목 문구, 오른쪽 점선 탭, 쪽 참조 순서
+                    tnode = [t for t in p.element.iter(f"{HP}t") if t.text][-1]
+                    unit = C.TOC_UNIT_W.get(item, C.TOC_UNIT_W_DEFAULT)
+                    width = max(C.TOC_TAB_POS - left - M.weighted_len(text) * unit - len(toc_refs.PLACEHOLDER) * unit, 1000)
+                    ET.SubElement(tnode, f"{HP}tab", width=str(width), leader="3", type="2")
+                    ref_run = ET.Element(f"{HP}run", charPrIDRef=cp)
+                    p.element.findall(f"{HP}run")[-1].addnext(ref_run)
+                    toc_page_ref(ref_run, it["name"], toc_refs.PLACEHOLDER)
         for sec in (s0, s1):
             sec.mark_dirty() if hasattr(sec, "mark_dirty") else None
 
@@ -563,6 +571,21 @@ class Builder:
                            num=str(self.caption_counts[kind]), numType=kind)
         ET.SubElement(an, f"{HP}autoNumFormat", type="DIGIT", userChar="", prefixChar="", suffixChar="", supscript="0")
         cp.add_run(close_b + text, char_pr_id_ref=r["char_pr_id_ref"])
+        # 목차 등록은 개체 기록이 끝난 뒤 (_mark_pending_caption)
+        self.pending_caption = (C.CAPTION_KINDS[kind], f"{open_b}{prefix}{self.caption_counts[kind]}{close_b}{text}", holder)
+
+    def _mark_pending_caption(self):
+        """캡션이 붙은 표나 그림을 목차에 등록하고 책갈피를 개체 안에 둔다. 개체가 표이면 첫 셀의 첫 문단, 그 밖은 개체를 담은 문단.
+        Why 첫 셀: 책갈피가 표 개체 안에 있어 표를 옮기면 함께 이동. 캡션 문단 안에 두면 rhwp가 캡션을 표와 겹쳐 그림.
+        Why 개체 기록 뒤: 셀 글자를 기록할 때 run을 다시 만들므로 그 전에 넣은 책갈피는 지워짐"""
+        if not self.pending_caption:
+            return
+        kind, text, holder = self.pending_caption
+        self.pending_caption = None
+        cell = next(holder.element.iter(f"{HP}tc"), None)
+        host = next(cell.iter(f"{HP}p")) if cell is not None else next(
+            a for a in holder.element.iterancestors() if a.tag == f"{HP}p")
+        self.toc_mark(kind, text, host)
 
     # ── 헤더 계위 ───────────────────────────────────────────────────────
     def heading(self, level: int, text: str):
@@ -573,8 +596,7 @@ class Builder:
         label = M.heading_label(self.p, self.numbering.n, level, text)
         manual = self.p["numbering"] == "manual"
         p = self.para(role, label, no_heading=manual and level in (2, 3))
-        if level <= 3:
-            self.headings.append((level, label))
+        self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):   # 장별 <표 N-1>부터 재시작
             p.add_new_num(kind="TABLE", number=1)
             p.add_new_num(kind="PICTURE", number=1)
@@ -686,6 +708,7 @@ class Builder:
             if pos is not None:
                 pos.set("treatAsChar", "0")
                 pos.set("flowWithText", "1")
+        self._mark_pending_caption()
         t.mark_dirty()
         if engine_long:
             self._long_table_gap()
@@ -710,6 +733,7 @@ class Builder:
                                        **r, **self._take_break())
             if e.text:
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
+            self._mark_pending_caption()
             for src in sources:
                 self.para("source", src)
             return
@@ -745,10 +769,15 @@ class Builder:
             sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + C.ROW_BASE_H * len(sources)))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, "BOTTOM", table_w)
+        self._mark_pending_caption()
         t.mark_dirty()
 
     # ── 실행 ────────────────────────────────────────────────────────────
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
+        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음
+        if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
+            print(msg("warn_no_toc_style"))
+            self.toc = False
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
@@ -783,6 +812,31 @@ class Builder:
                 print("   ", it)
         save_hwpx(self.doc, out)
         self.doc.close()
+
+
+def crossref_begin(field_id: str, command: str, ref_path: str, ref_type: str, content_type: str):
+    """상호참조 필드 시작 컨트롤(hp:ctrl). 한/글이 저장하는 구조와 같게 기록한다.
+    매개변수 이름과 값은 한/글 저장 파일 그대로 ("Fiexde" 철자 포함). Command의 뒤 숫자는 참조 내용을 뜻하는 저장값"""
+    ctrl = ET.Element(f"{HP}ctrl")
+    begin = ET.SubElement(ctrl, f"{HP}fieldBegin", id=field_id, type="CROSSREF",
+                          name="", editable="0", dirty="0", zorder="-1", fieldid=C.HWPX_CROSSREF_FIELD_ID)
+    params = (("booleanParam", "Fiexde", "1"), ("integerParam", "Prop", "0"),
+              ("stringParam", "Command", command), ("stringParam", "RefPath", ref_path),
+              ("stringParam", "RefType", ref_type), ("stringParam", "RefContentType", content_type),
+              ("booleanParam", "RefHyperLink", "false"), ("stringParam", "RefOpenType", "HWPHYPERLINK_JUMP_CURRENTTAB"))
+    holder = ET.SubElement(begin, f"{HP}parameters", cnt=str(len(params)), name="")
+    for tag, name, value in params:
+        ET.SubElement(holder, f"{HP}{tag}", name=name).text = value
+    return ctrl
+
+
+def toc_page_ref(run, name: str, value: str):
+    """책갈피 쪽 번호 상호참조를 run에 기록한다 (필드 시작, 저장값 글자, 필드 끝 순서).
+    저장값은 한/글이 문서를 불러올 때 책갈피 위치의 쪽번호로 다시 계산한다"""
+    field_id = new_object_id()
+    run.append(crossref_begin(field_id, f"?{name};6;0;0;0;", f"?{name};", "TARGET_BOOKMARK", "OBJECT_TYPE_PAGE"))
+    ET.SubElement(run, f"{HP}t").text = value
+    ET.SubElement(ET.SubElement(run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=C.HWPX_CROSSREF_FIELD_ID)
 
 
 def new_object_id() -> str:
@@ -854,7 +908,7 @@ def repair_manifest(path: str) -> int:
 
 
 def build_hwpx(a, elems, footnotes, out: str):
-    """build 명령의 HWPX 경로. 목차와 쪽번호를 함께 켜면 렌더링으로 제목 쪽을 찾아 2회 조판한다."""
+    """build 명령의 HWPX 경로"""
     workdir = tempfile.mkdtemp(prefix="blockwriter_")   # 내장 양식 스켈레톤 보관. 조판이 끝나면 삭제
     try:
         _build_hwpx(a, elems, footnotes, out, workdir)
@@ -863,36 +917,28 @@ def build_hwpx(a, elems, footnotes, out: str):
 
 
 def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
-    import render
     profile = load_profile(a.profile)
     skeleton = a.skeleton or (builtin_skeleton(a.profile, workdir) if a.profile in FORMS else None)
     if not skeleton or not os.path.exists(skeleton):
         sys.exit(msg("err_no_skeleton", path=skeleton))
-
-    def make(numbers=None):
-        b = Builder(skeleton, profile, page_break=a.page_break)
-        b.numbered_square = a.numbered_square
-        b.toc, b.toc_depth = a.toc, a.toc_depth
-        b.page_number = a.page_number
-        b.cover = parse_cover(a.cover)
-        b.header_spec = a.header
-        b.merge_mode = a.merge
-        b.long_table_mode = a.long_table
-        b.notes = M.NoteRegistry(a.footnote_merge)
-        b.toc_numbers = numbers or {}
-        b.build(elems, footnotes, out)
-        return b
-    b = make()
+    b = Builder(skeleton, profile, page_break=a.page_break)
+    b.numbered_square = a.numbered_square
+    b.toc, b.toc_scope = a.toc, a.toc_scope
+    b.page_number = a.page_number
+    b.cover = parse_cover(a.cover)
+    b.header_spec = a.header
+    b.merge_mode = a.merge
+    b.long_table_mode = a.long_table
+    b.notes = M.NoteRegistry(a.footnote_merge)
+    b.build(elems, footnotes, out)
     fixed = repair_manifest(out)
     if fixed:
         print(msg("manifest_fixed", n=fixed))
-    has_toc = bool(profile.get("toc_chapter") and profile.get("toc_section"))
-    if a.toc and a.page_number and b.headings and has_toc:   # 2회 조판: 렌더링으로 제목의 쪽 위치를 찾아 목차에 기입 (근사값)
-        def remake(numbers):
-            make(numbers)
-            repair_manifest(out)
-        render.fill_toc_numbers(remake, out, [t for _, t in M.toc_entries(b.headings, a.toc_depth)], a.rhwp,
-                                M.toc_first_lines(elems, a.toc_depth))   # rhwp는 제목 고립 방지 설정을 반영하지 않음
+    refs = sum(1 for _, _, name in b.toc_items if name)
+    if refs:   # 한/글은 문서를 불러올 때 쪽 참조를 다시 계산하므로 저장값은 자리 표시 값으로 둔다
+        print(msg("toc_hwpx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
+    elif b.toc_items:
+        print(msg("toc_no_numbers", n=len(b.toc_items), fmt="hwpx"))
 
 
 # ── 유저 양식에서 스켈레톤 추출 ────────────────────────────────────────────────

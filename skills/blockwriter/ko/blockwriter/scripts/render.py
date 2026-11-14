@@ -16,9 +16,10 @@ import zipfile
 from enum import Enum
 
 import config as C
+import toc_refs
 from config import msg
 
-LO_HELPER = os.path.join(C.SCRIPT_DIR, "lo_convert.py")
+LO_FIELDS_HELPER = os.path.join(C.SCRIPT_DIR, "lo_fields.py")   # 필드 갱신 사본을 만드는 보조 스크립트
 
 
 # ── 렌더러 탐색 ────────────────────────────────────────────────────────────
@@ -117,27 +118,19 @@ def plain_copy(src: str, dest_dir: str) -> str:
     return work
 
 
-def _soffice_pdf(src: str, pdf: str, update_fields: bool) -> str:
+def _soffice_pdf(src: str, pdf: str) -> str:
     soffice = find_soffice()
     if not soffice:
         sys.exit(msg("err_no_soffice"))
     profile_dir = tempfile.mkdtemp(prefix="lo_profile_")   # 렌더링마다 전용 사용자 프로필을 쓰고 끝나면 삭제
     try:
-        return _soffice_convert(soffice, src, pdf, update_fields, "file://" + profile_dir.replace(os.sep, "/"))
+        return _soffice_convert(soffice, src, pdf, "file://" + profile_dir.replace(os.sep, "/"))
     finally:
         shutil.rmtree(profile_dir, ignore_errors=True)
 
 
-def _soffice_convert(soffice: str, src: str, pdf: str, update_fields: bool, profile: str) -> str:
-    lo_python = find_lo_python(soffice) if update_fields else None
-    if update_fields and lo_python:   # 목차 필드를 갱신한 뒤 PDF로 저장 (Word가 열 때 갱신하는 결과에 가까운 검수본)
-        res = subprocess.run([lo_python, LO_HELPER, soffice, os.path.abspath(src), os.path.abspath(pdf), profile],
-                             capture_output=True, text=True, timeout=C.LIBREOFFICE_TIMEOUT)
-        if res.returncode == 0 and os.path.exists(pdf):
-            return "soffice"
-        sys.exit(msg("err_soffice_failed", detail=(res.stdout + res.stderr)[-300:]))
-    if update_fields:
-        print(msg("warn_fields_not_updated"))
+def _soffice_convert(soffice: str, src: str, pdf: str, profile: str) -> str:
+    """LibreOffice로 PDF 변환. DOCX의 PAGEREF 쪽 참조는 LibreOffice가 PDF로 내보낼 때 다시 계산하여 표시한다"""
     # 같은 폴더의 동시 렌더링이 겹치지 않도록 변환 폴더 이름마다 고유 접미사. PDF를 둘 폴더에 만들어 납품 폴더를 건드리지 않음
     outdir = tempfile.mkdtemp(prefix="_lo_out_", dir=os.path.dirname(os.path.abspath(pdf)))
     try:
@@ -154,8 +147,8 @@ def _soffice_convert(soffice: str, src: str, pdf: str, update_fields: bool, prof
     return "soffice"
 
 
-def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_layer: bool = False) -> str:
-    """문서를 PDF로. text_layer=True면 글자 추출이 가능한 PDF를 만든다 (목차 쪽번호 산정용). 사용한 엔진명 반환."""
+def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None) -> str:
+    """문서를 PDF로. 사용한 엔진명 반환."""
     engine = resolve_engine(engine, rhwp_opt, src)
     if engine == "rhwp":
         rhwp = rhwp_opt or find_rhwp()
@@ -166,14 +159,14 @@ def to_pdf(src: str, pdf: str, engine: str, rhwp_opt: str | None, text_layer: bo
         cmd = [rhwp, C.RHWP_PDF_COMMAND, src, "-o", pdf]
         if os.path.isdir(C.USER_FONT_DIR) and rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_FONT_PATH_FLAG):
             cmd += [C.RHWP_FONT_PATH_FLAG, C.USER_FONT_DIR]
-        if not text_layer and rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_PDF_OUTLINE_FLAG):
+        if rhwp_supports(rhwp, C.RHWP_PDF_COMMAND, C.RHWP_PDF_OUTLINE_FLAG):
             cmd.append(C.RHWP_PDF_OUTLINE_FLAG)
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0 or not os.path.exists(pdf):
             sys.exit(msg("err_rhwp_failed", detail=(res.stderr or res.stdout)[-400:]))
         return "rhwp"
     if engine == "soffice":
-        _soffice_pdf(src, pdf, update_fields=src.lower().endswith(".docx"))
+        _soffice_pdf(src, pdf)
         return "soffice" if src.lower().endswith(".docx") else "soffice(H2Orestart)"
     sys.exit(msg("err_no_renderer"))
 
@@ -211,122 +204,27 @@ def render(src: str, outdir: str | None, dpi: int, engine: str, rhwp_opt: str | 
         print(msg("render_pdf_only", engine=used, pdf=pdf))
 
 
-def text_pages(doc_path: str, rhwp_opt: str | None) -> list[str] | None:
-    """문서를 글자 추출이 가능한 PDF로 렌더링하고 쪽별 텍스트를 돌려준다. 렌더러나 pdftotext가 없으면 None."""
-    is_docx = doc_path.lower().endswith(".docx")
-    has_renderer = find_soffice() if is_docx else (rhwp_opt or find_rhwp() or find_soffice())
-    if not shutil.which("pdftotext") or not has_renderer:
-        return None
-    tmp = tempfile.mkdtemp(prefix="_toc_check_")   # 대조용 PDF는 납품 폴더 밖에서 만들고 중단되어도 지움
-    pdf = os.path.join(tmp, "toc.pdf")
-    engine = resolve_engine("auto", rhwp_opt, doc_path)
-    work = plain_copy(doc_path, tmp) if is_docx else render_copy(doc_path, strip_newnum=(engine == "soffice"), dest_dir=tmp)
+def approx_page_values(path: str) -> dict[str, str]:
+    """DOCX의 책갈피 이름 → LibreOffice가 계산한 쪽번호. LibreOffice나 파이썬 연동(uno)이 없거나 실행에 실패하면 빈 dict.
+    필드를 갱신한 사본은 임시 폴더에 만들어 조회에만 쓰고 지운다 (LibreOffice가 서식을 바꿔 저장하므로 산출물로 쓰지 않음)"""
+    soffice = find_soffice()
+    lo_python = find_lo_python(soffice) if soffice else None
+    if not lo_python:
+        return {}
+    tmp = tempfile.mkdtemp(prefix="toc_lookup_")
     try:
-        to_pdf(work, pdf, engine, rhwp_opt, text_layer=True)
-        # 그린 순서대로 추출. -layout은 쪽 끝 제목이 각주 영역에 겹쳐 그려지면 두 글자를 섞어 제목을 찾지 못함
-        txt = subprocess.run(["pdftotext", "-raw", pdf, "-"], capture_output=True, text=True).stdout
-    except SystemExit:
-        return None
+        src, out = os.path.join(tmp, "in.docx"), os.path.join(tmp, "out.docx")
+        shutil.copyfile(path, src)
+        profile = "file://" + os.path.join(tmp, "profile").replace(os.sep, "/")   # 호출마다 전용 사용자 프로필
+        res = subprocess.run([lo_python, LO_FIELDS_HELPER, soffice, src, out, profile],
+                             capture_output=True, text=True, timeout=C.LIBREOFFICE_TIMEOUT)
+        if res.returncode != 0 or not os.path.exists(out):
+            return {}
+        return {name: value.strip() for name, value in toc_refs.docx_page_values(out).items() if value.strip().isdigit()}
+    except subprocess.TimeoutExpired:
+        return {}
     finally:
-        if work != doc_path and os.path.exists(work):
-            os.remove(work)
         shutil.rmtree(tmp, ignore_errors=True)
-    return txt.split("\f")
-
-
-def _norm(text: str) -> str:
-    return re.sub(r"\s+", "", text)
-
-
-def locate_headings(pages: list[str], entries: list[str]) -> list[int | None]:
-    """목차 항목(문서 순서)이 본문 몇 쪽에 있는지 센다. 본문 첫 쪽이 1.
-    목차 제목이 처음 나오는 쪽부터 항목을 차례로 찾아 마지막 항목이 있는 쪽까지를 목차로 보고 그다음 쪽을 본문 첫 쪽으로 둔다.
-    목차가 여러 쪽이어도 본문 시작을 바로 찾는다. 본문에서도 항목을 차례로 찾아 앞 제목보다 앞쪽에서 찾지 않는다."""
-    found, body = _locate_pages(pages, entries)
-    return [None if q is None else q - body + 1 for q in found]
-
-
-def _locate_pages(pages: list[str], entries: list[str]) -> tuple[list[int | None], int]:
-    """locate_headings의 탐색. 항목마다 렌더 쪽의 0부터 센 위치와 본문 첫 쪽 위치를 돌려준다"""
-    keys = [_norm(e) for e in entries]
-    title = _norm(C.label("toc.title"))
-    toc = next((i for i, page in enumerate(pages) if title in _norm(page)), None)
-    if toc is None or not keys:
-        return [None] * len(keys), 0
-    p = toc
-    for k in keys:
-        while p < len(pages) and k not in _norm(pages[p]):
-            p += 1
-    if p >= len(pages):
-        return [None] * len(keys), 0
-    body = p + 1
-    found, p = [], body
-    for k in keys:
-        q = p
-        while q < len(pages) and k not in _norm(pages[q]):
-            q += 1
-        if q < len(pages):
-            found.append(q)
-            p = q
-        else:
-            found.append(None)
-    return found, body
-
-
-def stranded_headings(pages: list[str], entries: list[str], firsts: list[str | None]) -> list[str]:
-    """목차 제목은 한 쪽 끝에 있고 첫 본문 줄은 다음 쪽에서 시작하는 항목 ('제목 (본문 N쪽)').
-    렌더러가 다음 문단과 같은 쪽에 두는 설정을 반영하지 않을 때 생기며 한/글은 제목을 다음 쪽으로 넘김.
-    같은 문구가 앞에 있어 판정이 어긋나지 않도록 제목 뒤 글자와 바로 다음 쪽만 본다"""
-    found, body = _locate_pages(pages, entries)
-    out = []
-    for entry, q, first in zip(entries, found, firsts):
-        if q is None or not first or q + 1 >= len(pages):
-            continue
-        key = _norm(first)[:C.TOC_FIRST_LINE_KEY]
-        page, head = _norm(pages[q]), _norm(entry)
-        if key in page[page.find(head) + len(head):]:
-            continue
-        if key in _norm(pages[q + 1]):
-            out.append(f"{entry} ({q - body + 1})")
-    return out
-
-
-def heading_pages(doc_path: str, entries: list[str], rhwp_opt: str | None) -> list[int | None]:
-    """목차 항목의 본문 쪽번호 목록. 렌더링할 수 없으면 모두 None."""
-    pages = text_pages(doc_path, rhwp_opt)
-    return locate_headings(pages, entries) if pages else [None] * len(entries)
-
-
-def fill_toc_numbers(make, out: str, entries: list[str], rhwp_opt: str | None, firsts: list[str | None] | None = None):
-    """목차 쪽번호 2회 조판. 1회차 문서를 렌더링해 쪽번호를 구하고 기입한 뒤, 최종 문서를 다시 렌더링해 대조한다.
-    불일치가 남으면 새로 구한 값으로 다시 조판한다 (최대 C.TOC_MAX_PASSES회). make(numbers)는 순번→쪽번호로 문서를 다시 만든다.
-    firsts(항목별 첫 본문 줄)를 주면 최종 렌더에서 제목과 첫 본문 줄이 다른 쪽에 놓인 항목을 WARN으로 알린다."""
-    used = heading_pages(out, entries, rhwp_opt)
-    if not any(n is not None for n in used):
-        print(msg("warn_toc_numbers"))
-        return
-    pages = None
-    for attempt in range(C.TOC_MAX_PASSES):
-        make({i: n for i, n in enumerate(used) if n is not None})
-        pages = text_pages(out, rhwp_opt)
-        actual = locate_headings(pages, entries) if pages else [None] * len(entries)
-        diff = [i for i, (u, a) in enumerate(zip(used, actual)) if u != a]
-        if not diff or attempt + 1 == C.TOC_MAX_PASSES:
-            break
-        used = actual
-    filled = sum(n is not None for n in used)
-    print(msg("toc_numbers", found=filled, total=len(entries)))
-    missing = [e for e, n in zip(entries, used) if n is None]
-    if missing:
-        print(msg("warn_toc_missing", n=len(missing), items=missing))
-    if diff:
-        items = [f"{entries[i]} ({used[i]}→{actual[i]})" for i in diff]
-        print(msg("warn_toc_mismatch", n=len(diff), items=items))
-    else:   # 찾지 못한 항목은 일치로 세지 않음
-        print(msg("toc_verified", n=filled, total=len(entries)))
-    stranded = stranded_headings(pages, entries, firsts) if pages and firsts else []
-    if stranded:
-        print(msg("warn_toc_stranded", n=len(stranded), items=stranded))
 
 
 def rhwp_verify(path: str, expect: str) -> bool | None:

@@ -54,6 +54,9 @@ def cmd_build(a):
         print("HITL:", notice)
     a.page_break = a.page_break or C.DEFAULT_PAGE_BREAK
     a.long_table = a.long_table or C.DEFAULT_LONG_TABLE
+    if a.toc_scope and not a.toc:
+        sys.exit(msg("err_toc_scope_alone"))
+    a.toc_scope = M.parse_toc_kinds(a.toc_scope, C.TOC_SCOPE_KINDS, "--toc-scope") if a.toc_scope else C.TOC_SCOPE_DEFAULT
     if ext == ".hwpx":
         import hwpx_writer
         hwpx_writer.build_hwpx(a, elems, footnotes, out)
@@ -84,9 +87,54 @@ def count_merged_notes(path: str) -> int:
     """Number of footnote references in the output file replaced by a cross-reference to the first footnote number (source footnote merging)"""
     with zipfile.ZipFile(path) as z:
         if path.lower().endswith(".hwpx"):
-            return sum(len(re.findall(r'<hp:fieldBegin\b[^>]*type="CROSSREF"', z.read(n).decode("utf-8")))
+            # TOC page references are the same CROSSREF field, so count only fields whose target is a footnote
+            return sum(z.read(n).decode("utf-8").count(">TARGET_FOOTNOTE<")
                        for n in z.namelist() if re.match(r"Contents/section\d+\.xml$", n))
         return len(re.findall(r"<w:instrText[^>]*>\s*NOTEREF\b", z.read("word/document.xml").decode("utf-8")))
+
+
+def cmd_toc_static(a):
+    """Post-build static conversion: removes bookmarks of the given kinds from the submitted file and turns the page references to them into plain text.
+    Items whose page numbers were not updated (placeholder, approximation not updated) are skipped and reported. Why: only Hangul and Word calculate the real pages"""
+    import toc_refs
+    style_kinds = static_style_kinds(a.profile, toc_refs.is_docx(a.input))
+    items = toc_refs.scan(a.input, style_kinds)
+    if not items:
+        sys.exit(msg("err_static_no_refs"))
+    for it in items:   # kind, stored page number, update state, bookmark name, text of the paragraph holding the bookmark
+        print(f"{it.kind}\t{'|'.join(it.values)}\t{msg('static_state_' + it.state.value)}\t{it.name}\t{it.text}")
+    kinds = (*toc_refs.KINDS, toc_refs.OTHER)
+    counts = {k: sum(it.kind == k for it in items) for k in kinds}
+    print(msg("static_counts", counts=", ".join(f"{k} {n}" for k, n in counts.items() if n)))
+    if not a.scope:
+        print(msg("static_need_scope", all=C.STATIC_SCOPE_ALL))
+        return
+    wanted = set(toc_refs.KINDS) if a.scope == C.STATIC_SCOPE_ALL else set(M.parse_toc_kinds(a.scope, kinds, "--scope"))
+    chosen = [it for it in items if it.kind in wanted]
+    targets = [it for it in chosen if it.state is toc_refs.RefState.UPDATED]
+    skipped = [it for it in chosen if it.state is not toc_refs.RefState.UPDATED]
+    if skipped:
+        key = "warn_static_skipped_docx" if toc_refs.is_docx(a.input) else "warn_static_skipped_hwpx"
+        print(msg(key, n=len(skipped), items=", ".join(it.name for it in skipped)))
+    if not targets:
+        print(msg("static_none"))
+        return
+    stem, ext = os.path.splitext(a.input)
+    out = a.output or f"{stem}{C.STATIC_SUFFIX}{ext}"
+    if os.path.abspath(out) == os.path.abspath(a.input):
+        sys.exit(msg("err_static_same_path"))
+    toc_refs.make_static(a.input, out, {it.name for it in targets})
+    print(msg("static_ok", out=out, done=len(targets), skipped=len(skipped), kept=len(toc_refs.scan(out, style_kinds))))
+
+
+def static_style_kinds(profile_spec: str, docx: bool) -> dict[str, str]:
+    """Paragraph style name → TOC item kind. HWPX uses the style names of the profile; DOCX uses the Word style names the builder creates"""
+    if not docx:
+        import hwpx_writer
+        profile = hwpx_writer.load_profile(profile_spec)
+        return {profile[role]: kind for role, kind in C.STATIC_STYLE_ROLES.items() if profile.get(role)}
+    import docx_writer
+    return docx_writer.style_kinds(profile_spec)
 def cmd_form(a):
     from hwpx_form import write_skeleton
     write_skeleton(FORMS[a.form], a.output)
@@ -160,18 +208,26 @@ def main():
                    help="source footnote merging (default OFF): replaces a footnote that repeats the same text inside the scope "
                         "with a cross-reference to the first footnote number. "
                         "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
-    b.add_argument("--toc", action="store_true", help="insert a table of contents at the front (default OFF)")
-    b.add_argument("--toc-depth", type=int, default=2, choices=[1, 2, 3], help="TOC depth: 1=chapter, 2=section (default), 3=subsection")
+    b.add_argument("--toc", action="store_true",
+                   help="insert a table of contents at the front (default OFF). With --page-number, each listed item gets a bookmark and its page number is written as a page reference field")
+    b.add_argument("--toc-scope", help=f"TOC scope (comma-separated, default {','.join(C.TOC_SCOPE_DEFAULT)}). "
+                                       f"Items: {', '.join(C.TOC_SCOPE_KINDS)}. table and figure are tables and figures with numbered captions")
     b.add_argument("--page-number", action="store_true", help="footer page number '- N -' at center (default OFF)")
     b.add_argument("--cover", help='cover (default OFF): "title=title;subtitle=subtitle;date=date;org=organization"')
     b.add_argument("--header", help='header (default OFF): "text;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="cell merge: auto=consecutive identical values in leading label columns plus '^' '<' directives (default), explicit=directives only, none=no merge")
-    b.add_argument("--rhwp", help="rhwp path used for TOC page-number calculation")
     b.add_argument("--numbered-square", action="store_true", help="print '□ 1. title' lines as numbered headers without a bullet")
     b.add_argument("--labels", help="label JSON for documents in another language: numbering, TOC title, caption labels, "
                                     "extra manuscript tokens, language tags (default: Korean labels)")
     b.set_defaults(func=cmd_build)
+
+    ts = sub.add_parser("toc-static", help="post-build static conversion: makes a copy in which the bookmarks of the given items are removed and their TOC page numbers are plain text")
+    ts.add_argument("input", help="hwpx or docx saved after updating page numbers in Hangul or Word")
+    ts.add_argument("--scope", help=f"item kinds to make static (comma-separated or {C.STATIC_SCOPE_ALL}). Omit it to print the item status only")
+    ts.add_argument("-o", "--output", help=f"output path (default: the source name with the {C.STATIC_SUFFIX} suffix)")
+    ts.add_argument("--profile", default="chapter", help="profile used to identify item kinds from style names (chapter | flat | profile JSON)")
+    ts.set_defaults(func=cmd_toc_static)
 
     f = sub.add_parser("form", help="save a built-in form as an empty HWPX file")
     f.add_argument("form", choices=sorted(FORMS))

@@ -72,8 +72,8 @@ Use this when options 1 and 2 both fail or when Permission denial handling point
 - DOCX is always rendered with LibreOffice. Install it as in option 3 steps 1-2 without H2Orestart
 - Run a render test after installing LibreOffice and preparing the fonts (`fonts --setup`). Put the same one-line `안녕하세요!` manuscript as the HWPX render test in a temporary folder outside the output folder and typeset it with `build test.md render-test.docx --profile flat`. Then render it with `render render-test.docx --outdir <temporary folder>/docx` and check that `안녕하세요!` is visible in the page PNG (the PDF when poppler is missing). The separate `--outdir` keeps its PDF name from clashing with the HWPX render test
 - If the text is not visible, check the fonts with `fonts`. If the problem cannot be solved, skip the DOCX rendering review and state this and the reason in the planning question turn
-- If the LibreOffice Python bridge (uno) is available, render opens the document, updates the TOC and fields, and saves it as PDF. uno is searched in the current Python, the Python bundled with LibreOffice, and /usr/bin/python3 in that order
-- Without uno, render converts the document without updating fields and prints a warning. The TOC then shows the values stored in the document
+- LibreOffice recalculates the PAGEREF page references of the TOC when it exports to PDF. The TOC page numbers in a review PDF can differ from the values stored in the document
+- build looks up the initial values of DOCX TOC page references through the LibreOffice Python bridge (uno). uno is searched in the current Python, the Python bundled with LibreOffice, and /usr/bin/python3 in that order; without it the placeholder `?` stays
 - Without pdftoppm (poppler-utils), render produces only the PDF
 
 ## How render works
@@ -87,7 +87,7 @@ Use this when options 1 and 2 both fail or when Permission denial handling point
     - Soft hyphens (U+00AD) are replaced with hyphens. The approximate renderers do not draw U+00AD, so this keeps the hyphen bullets of user forms from showing as blanks. In the bullet definitions (header.xml) only the bullet symbols are replaced, and in the body (section*.xml) every U+00AD is replaced. The replacement glyph is SOFT_HYPHEN_GLYPH in config.py
     - Only for the soffice engine, number-restart controls in the middle of the body are removed
     - With `--keep-soft-hyphen`, render renders the original content unchanged. Both the soft hyphen replacement and the number-restart control removal are skipped
-- rhwp review PDFs draw glyphs as outlines so the appearance holds even where fonts are missing. TOC page-number calculation needs text extraction, so it renders without the outline option
+- rhwp review PDFs draw glyphs as outlines so the appearance holds even where fonts are missing
 - If the substitute font folder created by `fonts --setup` exists, it is passed to rhwp with the font folder option
 
 ## Renderer limits
@@ -104,11 +104,11 @@ Judgment method
 Items not judged (every renderer)
 
 - Vertical position of the page header, compressed table row heights, long-table split positions and title row repetition, and line break positions caused by font substitution
-- How numbers computed by automatic numbering and fields (caption numbers, page numbers) are shown. Check the numbers in the XML's automatic numbers and fields; Hangul and Word compute them
+- How numbers computed by automatic numbering and fields (caption numbers, page numbers, TOC page numbers) are shown. Check the numbers in the XML's automatic numbers and fields; Hangul and Word compute them. HWPX TOC page numbers show as the placeholder `?`
 
 Confirmed examples (as of rhwp v0.8.6 and H2Orestart 0.6.1; behavior may change in later versions)
 
-- rhwp does not apply the keep-with-next setting, so a heading or □ can stay at the bottom of a page. For a TOC-entry heading, build reports it with the `[stranded TOC heading]` WARN
+- rhwp does not apply the keep-with-next setting, so a heading or □ can stay at the bottom of a page
 - H2Orestart does not draw caption objects of tables and figures, footnote bodies, or footer page numbers. Check these elements in the rhwp render and the XML
 
 ## Fonts
