@@ -63,6 +63,10 @@ Changelog rules
 - Fixed undocumented `--header` align values such as `MIDDLE` being accepted or ending in a traceback, so values other than `LEFT`, `CENTER` and `RIGHT` now stop build with an ERROR line (#150)
 - Added a note that a footnote moved from a source line keeps its source label and stays apart from a `[^n]` footnote of the same source under footnote merging (#150)
 - Changed the table cell renderer margin of line tidying from 3 characters to 1 character, keeping 2 characters in a paragraph (#152)
+- Changed footnotes moved from source lines after body paragraphs to hold the source text without the source label such as `출처:` or `자료:` (#154)
+- Changed footnote merging to join a footnote moved from a source line with a `[^n]` footnote of the same source text (#154)
+- Added the footnote definition format to the manuscript rules, with a note that a footnote carries no source label (#154)
+- Changed the source format to `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name), naming the author beside the organization (#154)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
@@ -92,13 +96,19 @@ Changelog rules
 * 문서에 없는 `--header` 정렬값(`MIDDLE` 등)을 오류 없이 받거나 트레이스백으로 멈추던 오류 수정 (`LEFT`, `CENTER`, `RIGHT` 외의 값은 ERROR로 중단) (#150)
 * 출처 줄에서 옮긴 각주가 출처 표기를 유지하여 같은 출처의 `[^n]` 각주와 별도 각주로 남는다는 안내 추가 (#150)
 * 줄 정리의 표 셀 렌더러 여유를 3글자에서 1글자로 변경 (문단 2글자는 유지) (#152)
+* 본문 문단 뒤 출처 줄에서 옮긴 각주가 출처 표기(`출처:`, `자료:` 등) 없이 출처 문구만 담도록 변경 (#154)
+* 출처 각주 통합에서 출처 줄에서 옮긴 각주와 출처 문구가 같은 `[^n]` 각주가 하나로 합쳐지도록 변경 (#154)
+* 원고 규칙에 각주 정의 형식과 각주에 출처 표기를 붙이지 않는다는 안내 추가 (#154)
+* 출처 형식을 저자명을 병기한 `기관명 또는 저자명(연도), 자료명`으로 변경 (#154)
 
 ### ieum-deck
 - Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
 - Changed the kickoff question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
+- Changed the source item format to `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name), naming the author beside the organization (#154)
 
 * ISP 항목에서 출처 문헌의 이름을 빼도록 변경 (절차와 산출물명은 유지) (#140)
 * 착수 질의의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질의 도구에 담지 못한 항목 포함) (#144)
+* 출처 항목 형식을 저자명을 병기한 `기관명 또는 저자명(연도), 자료명`으로 변경 (#154)
 
 ### juja-builder
 - Changed TOC page numbers from renderer estimates to bookmarks and page reference fields that 한/글 and Word calculate, with `?` shown until the first calculation (#140)
@@ -140,6 +150,10 @@ Changelog rules
 - Added a note that a footnote moved from a source line keeps its source label and stays apart from a `[^n]` footnote of the same source under footnote merging (#150)
 - Added the split unit of `--long-table split` (24 body rows) to the long table rules, with `(장표: split N)` as the way to even out a short last table (#150)
 - Changed the table cell renderer margin of line tidying from 3 characters to 1 character, keeping 2 characters in a paragraph (#152)
+- Changed footnotes moved from source lines under body paragraphs to hold the source text without the source label such as `출처:` or `자료:` (#154)
+- Changed footnote merging to join a footnote moved from a source line with a `[^n]` footnote of the same source text (#154)
+- Added the footnote definition format to the manuscript notation rules, with a note that a footnote carries no source label (#154)
+- Changed the source format to `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name), naming the author beside the organization (#154)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
@@ -180,6 +194,10 @@ Changelog rules
 * 출처 줄에서 옮긴 각주가 출처 표기를 유지하여 같은 출처의 `[^n]` 각주와 별도 각주로 남는다는 안내 추가 (#150)
 * 장표 처리 규칙에 `--long-table split`의 분할 단위(본문 행 24행)와 `(장표: split N)`으로 마지막 표의 행 수를 맞추는 방법 추가 (#150)
 * 줄 정리의 표 셀 렌더러 여유를 3글자에서 1글자로 변경 (문단 2글자는 유지) (#152)
+* 본문 문단 아래 출처 줄에서 옮긴 각주가 출처 표기(`출처:`, `자료:` 등) 없이 출처 문구만 담도록 변경 (#154)
+* 출처 각주 통합에서 출처 줄에서 옮긴 각주와 출처 문구가 같은 `[^n]` 각주가 하나로 합쳐지도록 변경 (#154)
+* 원고 표기 규칙에 각주 정의 형식과 각주에 출처 표기를 붙이지 않는다는 안내 추가 (#154)
+* 출처 형식을 저자명을 병기한 `기관명 또는 저자명(연도), 자료명`으로 변경 (#154)
 
 ## 2026-11-13
 
