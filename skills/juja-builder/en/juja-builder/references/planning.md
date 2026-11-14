@@ -159,7 +159,7 @@
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
     + Source line layout (automatic by default, fixed line breaks, fixed joining). Defined in the SKILL.md Manuscript Hierarchy section
-    + Whether to apply the ratio and letter spacing adjustment and the line spacing adjustment (both off by default). Defined under typesetting adjustment in the SKILL.md Typesetting section
+    + The line tidying level (no tidying, shorten the wording by default, ratio and letter spacing adjustment) and whether to apply the line spacing adjustment (off by default). Defined in the SKILL.md Typesetting section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design

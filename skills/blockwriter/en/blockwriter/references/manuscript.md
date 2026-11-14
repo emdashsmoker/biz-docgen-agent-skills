@@ -127,7 +127,7 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 
 ## Adjustment lines
 
-An adjustment line changes the glyph ratio, letter spacing or line spacing of a paragraph or table slightly from the form style values. Use it only when the user turned on the ratio and letter spacing adjustment or the line spacing adjustment in the step 1 plan. The criteria for targets and values follow the Typesetting adjustment section of references/layout.md.
+An adjustment line changes the glyph ratio, letter spacing or line spacing of a paragraph or table slightly from the form style values. Use the ratio and letter spacing items only when the user chose the ratio and letter spacing adjustment level of line tidying in the step 1 plan, and the line spacing item only when the user turned on the line spacing adjustment. The criteria for targets and values follow the Typesetting adjustment section of references/layout.md.
 
 - (Single line) A `(조판 조정: 장평 -3, 자간 -2)` line applies to the one element right after it. An element is a heading, a body paragraph or a table
 - (Range) Applies to every element from a `(조판 조정 시작: 줄 간격 -10)` line to just before the `(조판 조정 끝)` line

@@ -139,9 +139,10 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (automatic) Picks the arrangement that fits the length and number of sources for each table and figure
         - (fixed line breaks) Puts each source on its own line and aligns the second and later sources with the start of the first one
         - (fixed joining) Writes all sources on one line, separated by `;`
-    - (Ratio and letter spacing adjustment) Whether to adjust the glyph ratio and letter spacing to tidy cases such as a paragraph with only 1-2 characters on its last line. Choose off (default) or on. The criteria are in the Typesetting adjustment section of references/layout.md
-        - (off) Typesets every character with the ratio and letter spacing of the form styles
-        - (on) Adjusts the ratio and letter spacing within a narrow range, only for paragraphs and tables with awkward line breaks
+    - (Line tidying) How far to go in tidying cases such as a paragraph or table cell with only 1-2 characters on its last line. Choose no tidying, shorten the wording (default), or ratio and letter spacing adjustment. The criteria are in the Typesetting adjustment section of references/layout.md
+        - (no tidying) Leaves those lines as they are
+        - (shorten the wording) Shortens the wording as long as the meaning stays the same
+        - (ratio and letter spacing adjustment) In addition to shortening, adjusts the ratio and letter spacing of the paragraph or table within a narrow range
     - (Line spacing adjustment) Whether to adjust the line spacing to tidy cases such as a page with only 1-2 lines carried to the next page. Choose off (default) or on. The criteria are in the Typesetting adjustment section of references/layout.md
         - (off) Typesets every paragraph with the line spacing of the form styles
         - (on) Adjusts the line spacing within a narrow range, only for pages, paragraphs and tables where the page fill is uneven
@@ -169,8 +170,8 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
-    - (Page fill) Check that the body text of two facing pages fills each page evenly down to the bottom, and adjust the size and position of tables, figures and paragraphs as long as the content still reads well. The criteria are in the Page fill section of references/layout.md
-    - (Typesetting adjustment) Adjust the ratio, letter spacing and line spacing only for the items the user turned on in step 1. When an item is on, review closely the pages with a line that has almost no margin at its end and the pages whose fill can come apart. The criteria for targets and values are in the Typesetting adjustment section of references/layout.md
+    - (Page fill) Check that the body text of two facing pages fills each page evenly down to the bottom, and take measures that fill both pages in balance, such as adjusting the size and position of tables, figures and paragraphs, as long as the content still reads well. The criteria are in the Page fill section of references/layout.md
+    - (Line tidying and line spacing adjustment) Do them only up to what the user chose in step 1. Review closely the pages with a line that has almost no margin at its end and the pages whose fill can come apart. The criteria for targets and values are in the Typesetting adjustment section of references/layout.md
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason

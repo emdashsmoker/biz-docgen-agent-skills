@@ -261,24 +261,28 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - A layout where the body text of two facing pages fills each page evenly down to the bottom is recommended. A document with a large empty area at the bottom of a page, or with two facing pages filled very differently, reads as a document that still needs editing
 - Deciding the size and position of tables and figures and the length and order of paragraphs with the page fill in mind from the manuscript stage reduces changes at the review stage
 - At the review stage, look at the rendered PNGs two pages side by side and adjust the size or position of tables and figures, the position of paragraphs and so on
+- Beyond these, take whatever measures fill both pages in balance, judged flexibly for the content and layout of the document
 - A layout where only 1-2 lines carry over to the next page is also a page fill target, checked whether or not the line spacing adjustment is on
 - Adjust only as long as the content still reads well. The order of the content and the flow of the argument come before the page fill
 
 ## Typesetting adjustment
 
-This adjustment changes the glyph ratio, letter spacing and line spacing slightly from the form style values. Do it only for the items the user turned on in the step 1 plan. The manuscript notation follows the Adjustment lines section of references/manuscript.md.
+These are the criteria for line tidying and the line spacing adjustment. Do them only up to what the user chose in the step 1 plan. The manuscript notation for ratio, letter spacing and line spacing follows the Adjustment lines section of references/manuscript.md.
 
-- (Focused review) In a job that applies the adjustment, review the following pages closely in the rendered PNGs
+- (Focused review) In a job that does line tidying or the line spacing adjustment, review the following pages closely in the rendered PNGs
     - Pages with a line where only 1-2 characters carry over, or a line with almost no margin at its end that can wrap in Hangul and Word
     - Facing pages whose fill does not match or can come apart by 1-2 lines
 
-Ratio and letter spacing adjustment
+Line tidying
 
 - (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
-- (Method) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
-- (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
-- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin at the end of the line in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
-- (Shortening the text) When the ratio and letter spacing adjustment does not solve it, shorten the wording as long as the meaning stays the same
+- (Levels) Use only the means of the level the user chose in step 1
+    - (No tidying) Leave the target lines as they are
+    - (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit. The default level
+    - (Ratio and letter spacing adjustment) Use both shortening and the ratio and letter spacing adjustment. Choose the means and their order to suit the target
+- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
+- (Method of the ratio and letter spacing adjustment) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
+- (Values of the ratio and letter spacing adjustment) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
 - (Table cells) A table cell holds few characters per line, so the same overflow needs a larger adjustment. When the adjustment needed would make the text look different from its surroundings, consider other means of adjustment first
 
 Line spacing adjustment
@@ -302,7 +306,7 @@ Line spacing adjustment
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
 - For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
 - Check the page fill of two facing pages (Page fill section)
-- For paragraphs and tables with a typesetting adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting adjustment section)
+- For paragraphs and tables with line tidying or a line spacing adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting adjustment section)
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
