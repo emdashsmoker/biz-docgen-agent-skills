@@ -545,7 +545,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
 - Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
-- Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name). Use the organization for material it published and the author for papers and books
+- Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name)
 - Start the first source item and any note item that cites a source with the same source mark as the deck sourceLabel ("Source:" in a default deck; details in the notation section of `references/writing-rules.md`)
 - Keep the note label and the source mark in one language pair across the deck (e.g. "Note:" with "Source:", "참조:" with "출처:")
 - Notes and the source line are set in the line-broken form (default)

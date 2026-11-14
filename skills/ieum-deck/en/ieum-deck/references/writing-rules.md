@@ -132,7 +132,7 @@
     + (Table cells) Lines that receive bullets by the comparison line condition or the whole table condition in the tables section below are an exception
     + (Module overview slides) The process, data used and deliverables boxes are an exception and take bullets (treated as a table where both conditions always hold)
 - Items in the same tier are consistent in having or not having numbers and symbols
-- Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name). Use the organization for material it published and the author for papers and books
+- Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name)
 - Separate several sources with semicolons (the build joins a `source` array)
     + (Line-broken source line) The build sets one source per line only when the source line passes one line (the semicolon stays at the line end)
     + (Alignment of line-broken sources) The second source onward aligns with the start of the first source, after the source mark (in a ※-style deck with footnoteSourceMark, after the width of ※ and the source mark, as in "※ Source:")

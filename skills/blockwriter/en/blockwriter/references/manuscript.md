@@ -126,7 +126,7 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
 - A source line after a body paragraph becomes a footnote of the previous paragraph. The footnote holds only the source text, without the source label (`출처:`, `자료:`, and so on). A source line written over several lines is joined into one line in the footnote. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
-- Write a source as `organization or author (year), material name`. Use the organization for material it published and the author for papers and books. Source lines and footnotes share this format
+- Write a source as `organization or author (year), material name`. Source lines and footnotes share this format
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 
