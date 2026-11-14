@@ -315,11 +315,12 @@ class DocxBuilder(lib.TocMarks):
         return p
 
     def _run(self, p, text: str, role: str, pt: float | None = None, bold: bool | None = None,
-             color: str | None = None, font_key: str | None = None):
+             color: str | None = None, font_key: str | None = None, fit: dict | None = None):
         """크기를 바꾼 글자(제목 위계, 밴드, 표지). 문단 줄 간격도 바뀐 크기 기준으로 다시 계산"""
-        if pt is not None:
-            p.paragraph_format.line_spacing = Twips(self._style_line(self._row(role), pt))
-        return self._text(p, text, pt or self._row(role)[3], bold=bold, color=color, font_key=font_key, size=pt)
+        row = self._row(role)
+        if pt is not None or (fit or {}).get("line"):
+            p.paragraph_format.line_spacing = Twips(round(self._style_line(row, pt) * lib.fit_line_scale(row[10], fit)))
+        return self._text(p, text, pt or row[3], bold=bold, color=color, font_key=font_key, size=pt, fit=fit)
 
     def _space_twips(self, pt: float) -> int:
         """한/글 고정 빈칸 폭(글자 크기의 절반)과 글꼴 빈칸 폭의 차이. docx 빈칸에 자간으로 더함"""
@@ -726,7 +727,7 @@ class DocxBuilder(lib.TocMarks):
         p = self._new_para(role)
         numpr = p._p.get_or_add_pPr().get_or_add_numPr()
         numpr.get_or_add_numId().val = 0
-        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None)
+        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None, fit=self.fit)
         return p
 
     def chapter_started(self, p):

@@ -704,7 +704,7 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
     def heading_para(self, role: str, label: str, pt: int | None):
         p = self.para(role, label, no_heading=True)
         if pt:
-            cp = self._sized_char(pt, True)
+            cp = self._fit_cp(self._sized_char(pt, True), self.fit)
             for run in p.element.iter(f"{HP}run"):
                 run.set("charPrIDRef", cp)
         return p

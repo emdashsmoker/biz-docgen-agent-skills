@@ -316,11 +316,12 @@ class DocxBuilder(lib.TocMarks):
         return p
 
     def _run(self, p, text: str, role: str, pt: float | None = None, bold: bool | None = None,
-             color: str | None = None, font_key: str | None = None):
+             color: str | None = None, font_key: str | None = None, fit: dict | None = None):
         """Text with a changed size (heading levels, bands, cover). Paragraph line spacing is recalculated from the changed size"""
-        if pt is not None:
-            p.paragraph_format.line_spacing = Twips(self._style_line(self._row(role), pt))
-        return self._text(p, text, pt or self._row(role)[3], bold=bold, color=color, font_key=font_key, size=pt)
+        row = self._row(role)
+        if pt is not None or (fit or {}).get("line"):
+            p.paragraph_format.line_spacing = Twips(round(self._style_line(row, pt) * lib.fit_line_scale(row[10], fit)))
+        return self._text(p, text, pt or row[3], bold=bold, color=color, font_key=font_key, size=pt, fit=fit)
 
     def _space_twips(self, pt: float) -> int:
         """Difference between the 한/글 fixed space width (half the font size) and the font's space width. Added to docx spaces as character spacing"""
@@ -726,7 +727,7 @@ class DocxBuilder(lib.TocMarks):
         p = self._new_para(role)
         numpr = p._p.get_or_add_pPr().get_or_add_numPr()
         numpr.get_or_add_numId().val = 0
-        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None)
+        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None, fit=self.fit)
         return p
 
     def chapter_started(self, p):

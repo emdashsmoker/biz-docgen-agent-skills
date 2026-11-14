@@ -179,6 +179,7 @@ HALFWIDTH_EM = 0.5
 SOURCE_LABEL_GAP_EM = 0.25      # 줄을 나눈 출처 행에서 출처 표기 폭의 상한에 더하는 간격 (글자 크기 배수)
 # 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
 FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
+DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # 괄호 지시 줄 ((단위: ), (폭: ), (장표: ), (삽입: ) 등). 괄호 한 쌍이 줄 전체를 감싸고 안에 쌍점이 있는 줄
 FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # 조판 조정 줄의 항목 하나 ('장평 -3')
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
@@ -446,7 +447,9 @@ def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
 def _is_source_tail(line: str) -> bool:
     """출처 행에 이어 붙일 수 있는 줄. 빈 줄과 다른 원고 표기로 시작하는 줄은 제외"""
     s = line.strip().lstrip("> ").strip()
-    if not s or s == "---" or s.startswith(("|", "#", "!", "(")) or BULLET_RE.match(line):
+    if not s or s == "---" or s.startswith(("|", "#", "!")) or BULLET_RE.match(line):
+        return False
+    if DIRECTIVE_LINE_RE.match(s) or FIT_RE.match(s):
         return False
     if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
         return False

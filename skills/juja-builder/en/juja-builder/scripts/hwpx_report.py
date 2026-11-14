@@ -173,6 +173,7 @@ HALFWIDTH_EM = 0.5
 SOURCE_LABEL_GAP_EM = 0.25      # gap added to the upper bound of the source label width in a broken source row (multiple of the font size)
 # Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
 FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
+DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # parenthesized directive line ((단위: ), (폭: ), (장표: ), (삽입: ) and so on): one pair of parentheses around the whole line with a colon inside
 FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # one item of an adjustment line ('장평 -3')
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
@@ -440,7 +441,9 @@ def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
 def _is_source_tail(line: str) -> bool:
     """A line that can continue a source row. Blank lines and lines that start with another manuscript notation are excluded"""
     s = line.strip().lstrip("> ").strip()
-    if not s or s == "---" or s.startswith(("|", "#", "!", "(")) or BULLET_RE.match(line):
+    if not s or s == "---" or s.startswith(("|", "#", "!")) or BULLET_RE.match(line):
+        return False
+    if DIRECTIVE_LINE_RE.match(s) or FIT_RE.match(s):
         return False
     if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
         return False
