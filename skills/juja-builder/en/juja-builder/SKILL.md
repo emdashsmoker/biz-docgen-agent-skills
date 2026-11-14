@@ -658,6 +658,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - build assigns heading numbers. Manuscript headings hold only the title
 - Do not use code block fences (three backticks) in manuscripts. `check tone` flags them as FAIL. Fences in reference file examples mark the extent of the example
 - The `(단위: )` (unit) line goes between caption and table. Give it only to numeric tables
+- Write the won sign as `원` or `₩` (U+20A9). The backslash that the `₩` key of a Korean keyboard enters is read as an escape before a punctuation character and is not written
 - The source line `※ 출처: ` or `출처: ` goes right after tables and figures. Give it only to tables of external data and external figures
 - When one table or figure has two or more sources, write the source label once and separate the sources with `;`. Choose between line breaks and joining
     + (Line breaks) End a source with `;` and write the next source on the next line. The typesetter breaks the lines inside the source row and aligns the second and later lines with the start of the first source
