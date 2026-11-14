@@ -39,6 +39,7 @@
     + Whether a field research plan exists (survey targets, sample size, survey timing, and so on). If there is no plan, the model writes a draft survey design
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), whether to insert a cover, band color theme (navy by default, mono is black and gray), long-table handling (engine or split)
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
+    + Table of contents scope. The default is chapters, sections, tables, and figures. Tables and figures with numbered captions (`<표 1-1>`, `[그림 1-1]`) go into the list of tables and the list of figures after the table of contents. Offer subsections, items, Module, and Task as examples of items that can be added. Give the bookmark notice of the SKILL.md Typesetting section with the question
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
     + Source line layout (automatic by default, fixed line breaks, fixed joining). Defined in the SKILL.md Manuscript Hierarchy section
     + The line tidying level (no tidying by default, shorten the wording, ratio and letter spacing adjustment) and whether to apply the line spacing adjustment (off by default). Defined in the SKILL.md Typesetting section
