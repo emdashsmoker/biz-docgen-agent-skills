@@ -3,6 +3,7 @@ Both the HWPX and DOCX typesetters use the results of this module."""
 from __future__ import annotations
 
 import copy
+import dataclasses
 import io
 import math
 import os
@@ -19,7 +20,7 @@ from config import msg
 
 @dataclass
 class Element:
-    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak
+    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak fit
     text: str = ""
     level: int = 0           # heading: 1-4
     data: dict = field(default_factory=dict)
@@ -60,13 +61,14 @@ def _format_re(fmt: str, fields: dict[str, str]) -> str | None:
 def compile_notation():
     """Builds the manuscript notation patterns from the active labels (built-in tokens plus those added by a label file).
     build calls it again after reading a label file. Heading numbers written in a label file's number format are removed like 제N장 and 가."""
-    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE, FIT_RE
     src = C.label("notation.source")
     paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
     FIG_CAPTION_RE = re.compile(rf"^\[\s*(?:{_alt(C.label('notation.figure'))})\s*[^\]]*\]\s*(.*)$")
     UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.unit'))})\s*[:：].*\)$")
     COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
+    FIT_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.fit'))})\s*({_alt(C.FIT_RANGE_WORDS)})?\s*(?:[:：]\s*(.*))?\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
     extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
@@ -107,6 +109,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if stripped == "---":
             elems.append(Element("pagebreak"))
+            continue
+        if m := FIT_RE.match(stripped):
+            elems.append(Element("fit", stripped, data={"range": C.FIT_RANGE_WORDS.get(m.group(1)), "spec": m.group(2) or ""}))
             continue
         if m := HEADING_RE.match(stripped):
             elems.append(Element("heading", m.group(2).strip(), len(m.group(1))))
@@ -151,6 +156,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if stripped.startswith(">"):   # quote lines get their role from their content (source if it is a source notation, otherwise a note)
             body = stripped.lstrip("> ").strip()
             if SOURCE_RE.match(body):
+                body, i = _read_source(lines, i, body)
                 elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", body), data={"gap": gap}))
             else:   # store '> ※ text' without the symbol, the same as '※ text' (avoids a doubled symbol in body notes)
                 t = _strip_marker(body, NOTE_MARK)
@@ -158,12 +164,15 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                                      data={"gap": gap, "mark": "※" if t is None else body[0]}))
             continue
         if SOURCE_RE.match(stripped):
+            stripped, i = _read_source(lines, i, stripped)
             elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
         if (t := _strip_marker(stripped, NOTE_MARK)) is not None:
+            if SOURCE_RE.match(t):
+                t, i = _read_source(lines, i, t)
             elems.append(Element("note", t, data={"gap": gap, "mark": stripped[0]}))
             continue
         if m := BULLET_RE.match(raw):
@@ -183,7 +192,107 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # a plain paragraph without a symbol is a ○ statement
-    return elems, footnotes
+    return _apply_fit(elems), footnotes
+
+
+def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
+    """Reads the lines after a source line that ends with the source separator as lines of the same source row. Line boundaries stay as '\\n'"""
+    parts = [first]
+    while parts[-1].endswith(C.SOURCE_SEP) and i < len(lines) and _is_source_tail(lines[i]):
+        parts.append(lines[i].strip().lstrip("> ").strip())
+        i += 1
+    return "\n".join(parts), i
+
+
+def _is_source_tail(line: str) -> bool:
+    """A line that can continue a source row. Blank lines and lines that start with another manuscript notation are excluded"""
+    s = line.strip().lstrip("> ").strip()
+    if not s or s == "---" or s.startswith(("|", "#", "!")) or BULLET_RE.match(line):
+        return False
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
+        return False
+    return not any(rx.match(s) for rx in (SOURCE_RE, UNIT_RE, CAPTION_RE, FIG_CAPTION_RE, COL_WIDTH_RE, FIT_RE, FOOTNOTE_DEF_RE))
+
+
+SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(C.SOURCE_SEP)})\s+")   # spaces and line boundaries after the source separator
+
+
+def source_lines(text: str, layout: str) -> list[str]:
+    """Typeset lines of a source row. auto keeps the manuscript lines, break gives one line per source, inline joins them into one line"""
+    if layout == "break":
+        return SOURCE_SPLIT_RE.split(text)
+    lines = text.split("\n")
+    return lines if layout == "auto" else [" ".join(lines)]
+
+
+def source_label(text: str) -> tuple[str, str]:
+    """Splits a source row text into the source label ('자료:') and the text after it. Without a label, the label is an empty string"""
+    m = SOURCE_RE.match(text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m else ("", text)
+
+
+FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # one item of an adjustment line ('장평 -3')
+
+
+def parse_fit(spec: str) -> tuple[dict[str, float], list[str]]:
+    """Reads the values of an adjustment line as {item: change}. Pieces it cannot read are returned separately"""
+    vals: dict[str, float] = {}
+    bad: list[str] = []
+    for piece in filter(None, (s.strip() for s in re.split(r"[,，]", spec))):
+        m = FIT_ITEM_RE.match(piece)
+        key = C.FIT_KEYS.get(re.sub(r"\s+", "", m.group(1)).lower()) if m else None
+        if key is None:
+            bad.append(piece)
+        else:
+            vals[key] = float(m.group(2))
+    return vals, bad
+
+
+def _apply_fit(elems: list[Element]) -> list[Element]:
+    """Moves adjustment lines into data['fit'] of their target elements and drops them from the element list. A single line targets the next element, a begin line targets the elements up to the end line.
+    Unreadable values and unpaired begin or end lines are kept in data['fit_issues'] of the following element for lint to report"""
+    out: list[Element] = []
+    once = ranged = None
+    issues: list[str] = []
+    for e in elems:
+        if e.kind != "fit":
+            fit = {**(ranged or {}), **(once or {})}
+            if fit:
+                e.data["fit"] = fit
+            if issues:
+                e.data["fit_issues"], issues = issues, []
+            once = None
+            out.append(e)
+            continue
+        vals, bad = parse_fit(e.data["spec"])
+        issues += [msg("lint_fit_value", text=e.text, piece=p) for p in bad]
+        for key, val in vals.items():
+            if abs(val) > C.FIT_WARN[key]:
+                print(msg("warn_fit_range", text=e.text, val=f"{val:+g}", limit=C.FIT_WARN[key]))
+        if e.data["range"] == "end":
+            if ranged is None:
+                issues.append(msg("lint_fit_no_begin", text=e.text))
+            ranged = None
+        elif e.data["range"] == "begin":
+            ranged = vals
+        else:
+            once = vals
+    if ranged is not None:
+        issues.append(msg("lint_fit_no_end"))
+    if issues and out:
+        out[-1].data.setdefault("fit_issues", []).extend(issues)
+    return out
+
+
+def fit_value(key: str, base: float, fit: dict | None) -> float:
+    """A style value plus the adjustment change (ratio, spacing, line spacing), limited to the range Hangul accepts"""
+    low, high = C.FIT_BOUNDS[key]
+    return min(high, max(low, base + (fit or {}).get(key, 0)))
+
+
+def fit_line_scale(base: float | None, fit: dict | None) -> float:
+    """Scale that a line spacing adjustment gives to the line height. Multiplied into the minimum table row height"""
+    return fit_value("line", base, fit) / base if base and (fit or {}).get("line") else 1.0
 
 
 def _opens_table(line: str) -> bool:
@@ -216,7 +325,7 @@ def _parse_table(rows: list[str], elems: list[Element]) -> Element:
                    data={"rows": cells, "aligns": aligns, "unit": found["unit"], "colwidth": found["colwidth"]})
 
 
-def attach_block_notes(elems: list[Element]) -> list[Element]:
+def attach_block_notes(elems: list[Element], source_layout: str = C.DEFAULT_SOURCE_LAYOUT) -> list[Element]:
     """Attaches ※, *, and source lines right after tables and figures as source rows at the bottom of the block, and moves a unit line after a table up to the unit row.
     ※ and * lines written after a blank line are not attached to the block and stay as body notes."""
     out: list[Element] = []
@@ -231,9 +340,10 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
                 if nx.kind == "note" and nx.data.get("gap"):
                     break
                 if nx.kind == "note":   # keep the note symbol in source rows so notes differ from source lines. A '※ 출처:' line stays a source line
-                    srcs.append(nx.text if SOURCE_RE.match(nx.text) else f"{nx.data.get('mark', '※')} {nx.text}")
+                    srcs.append("\n".join(source_lines(nx.text, source_layout)) if SOURCE_RE.match(nx.text)
+                                else f"{nx.data.get('mark', '※')} {nx.text}")
                 elif nx.kind == "source":
-                    srcs.append(nx.text)
+                    srcs.append("\n".join(source_lines(nx.text, source_layout)))
                 elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                     e.data["unit"] = nx.text
                 else:
@@ -241,6 +351,8 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
                 consumed += 1
             e.data["sources"] = srcs
             skip = consumed
+        elif e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined
+            e.text = " ".join(e.text.split("\n"))
         out.append(e)
     return out
 
@@ -255,6 +367,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
     issues = []
     prev_level = 0
     for idx, e in enumerate(elems):
+        issues += e.data.get("fit_issues", [])
         if e.kind == "heading":
             skipped = e.level > prev_level + 1 and prev_level
             if skipped and not (e.level == GANADA_LEVEL and prev_level >= 2):
@@ -498,6 +611,17 @@ class LineStyle:
         """Width of one weighted unit (half a Hangul character) of cell text. One Hangul character is the font size x the font's Hangul width ratio x the width ratio, plus the character spacing"""
         return self.size_hu * (C.CELL_HANGUL_EM * self.ratio + self.spacing) / 100 / 2
 
+    def fitted(self, fit: dict | None) -> "LineStyle":
+        """Line style with the ratio and spacing adjustment added (for column widths and line counts)"""
+        if not fit:
+            return self
+        return dataclasses.replace(self, ratio=fit_value("ratio", self.ratio, fit), spacing=fit_value("spacing", self.spacing, fit))
+
+    def label_hang_hu(self, label: str, space_em: float) -> int:
+        """Hanging indent width: the source label width plus the gap after it (HWPUNIT). It aligns the second line of a broken source row with the start of the first source.
+        A tab puts the first source at the same position, so the gap after the label absorbs glyph width differences between fonts"""
+        return math.ceil(self.text_hu(label, space_em) - self.lead_hu + self.size_hu * C.SOURCE_LABEL_GAP_EM)
+
     def text_hu(self, text: str, space_em: float) -> float:
         """Width of text printed in this style plus the line lead (HWPUNIT)"""
         return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w + self.lead_hu
@@ -537,9 +661,14 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
+def row_height(lines: int, scale: float = 1.0) -> int:
     """Minimum row height for an expected line count (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+    return round((C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)) * scale)
+
+
+def source_row_height(lines: int, line_h: float) -> int:
+    """Minimum height of a source or unit row (HWPUNIT). A broken source row grows by the style line height for each line after the first"""
+    return round(C.ROW_BASE_H + line_h * (lines - 1))
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,

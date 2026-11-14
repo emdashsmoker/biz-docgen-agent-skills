@@ -208,6 +208,8 @@ def main():
                    help="source footnote merging (default OFF): replaces a footnote that repeats the same text inside the scope "
                         "with a cross-reference to the first footnote number. "
                         "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
+    b.add_argument("--source-layout", choices=list(C.SOURCE_LAYOUTS), default=C.DEFAULT_SOURCE_LAYOUT,
+                   help="line layout of table and figure source rows: auto=lines as written (default), break=one line per source, inline=joined into one line")
     b.add_argument("--toc", action="store_true",
                    help="insert a table of contents at the front (default OFF). With --page-number, each listed item gets a bookmark and its page number is written as a page reference field")
     b.add_argument("--toc-scope", help=f"TOC scope (comma-separated, default {','.join(C.TOC_SCOPE_DEFAULT)}). "

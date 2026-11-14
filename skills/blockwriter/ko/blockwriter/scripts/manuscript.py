@@ -3,6 +3,7 @@ HWPX와 DOCX 조판기는 모두 이 모듈의 결과를 쓴다."""
 from __future__ import annotations
 
 import copy
+import dataclasses
 import io
 import math
 import os
@@ -19,7 +20,7 @@ from config import msg
 
 @dataclass
 class Element:
-    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak
+    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak fit
     text: str = ""
     level: int = 0           # heading: 1-4
     data: dict = field(default_factory=dict)
@@ -60,13 +61,14 @@ def _format_re(fmt: str, fields: dict[str, str]) -> str | None:
 def compile_notation():
     """현재 라벨(기본 토큰과 라벨 파일이 추가한 토큰)로 원고 표기 정규식을 만듦.
     build는 라벨 파일을 읽은 뒤 다시 호출. 라벨 파일의 번호 형식으로 쓴 헤더 번호도 제N장, 가.와 같이 제거"""
-    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE, FIT_RE
     src = C.label("notation.source")
     paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
     FIG_CAPTION_RE = re.compile(rf"^\[\s*(?:{_alt(C.label('notation.figure'))})\s*[^\]]*\]\s*(.*)$")
     UNIT_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.unit'))})\s*[:：].*\)$")
     COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
+    FIT_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.fit'))})\s*({_alt(C.FIT_RANGE_WORDS)})?\s*(?:[:：]\s*(.*))?\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
     extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
@@ -107,6 +109,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if stripped == "---":
             elems.append(Element("pagebreak"))
+            continue
+        if m := FIT_RE.match(stripped):
+            elems.append(Element("fit", stripped, data={"range": C.FIT_RANGE_WORDS.get(m.group(1)), "spec": m.group(2) or ""}))
             continue
         if m := HEADING_RE.match(stripped):
             elems.append(Element("heading", m.group(2).strip(), len(m.group(1))))
@@ -151,6 +156,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if stripped.startswith(">"):   # 인용 줄은 내용으로 역할 판정 (출처 표기면 출처, 아니면 주석)
             body = stripped.lstrip("> ").strip()
             if SOURCE_RE.match(body):
+                body, i = _read_source(lines, i, body)
                 elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", body), data={"gap": gap}))
             else:   # '> ※ 내용'도 '※ 내용'과 같게 기호를 떼어 저장 (본문 주석에서 기호 중복 방지)
                 t = _strip_marker(body, NOTE_MARK)
@@ -158,12 +164,15 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                                      data={"gap": gap, "mark": "※" if t is None else body[0]}))
             continue
         if SOURCE_RE.match(stripped):
+            stripped, i = _read_source(lines, i, stripped)
             elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
         if (t := _strip_marker(stripped, NOTE_MARK)) is not None:
+            if SOURCE_RE.match(t):
+                t, i = _read_source(lines, i, t)
             elems.append(Element("note", t, data={"gap": gap, "mark": stripped[0]}))
             continue
         if m := BULLET_RE.match(raw):
@@ -183,7 +192,107 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # 기호 없는 일반 문단은 ○ 서술
-    return elems, footnotes
+    return _apply_fit(elems), footnotes
+
+
+def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
+    """출처 구분 기호로 끝난 출처 줄의 다음 줄을 같은 출처 행의 줄로 이어 읽는다. 줄 경계는 '\\n'으로 남긴다"""
+    parts = [first]
+    while parts[-1].endswith(C.SOURCE_SEP) and i < len(lines) and _is_source_tail(lines[i]):
+        parts.append(lines[i].strip().lstrip("> ").strip())
+        i += 1
+    return "\n".join(parts), i
+
+
+def _is_source_tail(line: str) -> bool:
+    """출처 행에 이어 붙일 수 있는 줄. 빈 줄과 다른 원고 표기로 시작하는 줄은 제외"""
+    s = line.strip().lstrip("> ").strip()
+    if not s or s == "---" or s.startswith(("|", "#", "!")) or BULLET_RE.match(line):
+        return False
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
+        return False
+    return not any(rx.match(s) for rx in (SOURCE_RE, UNIT_RE, CAPTION_RE, FIG_CAPTION_RE, COL_WIDTH_RE, FIT_RE, FOOTNOTE_DEF_RE))
+
+
+SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(C.SOURCE_SEP)})\s+")   # 출처 구분 기호 뒤의 빈칸과 줄 경계
+
+
+def source_lines(text: str, layout: str) -> list[str]:
+    """출처 행의 조판 줄. auto는 원고에 쓴 줄 그대로, break는 출처마다 한 줄, inline은 한 줄로 이음"""
+    if layout == "break":
+        return SOURCE_SPLIT_RE.split(text)
+    lines = text.split("\n")
+    return lines if layout == "auto" else [" ".join(lines)]
+
+
+def source_label(text: str) -> tuple[str, str]:
+    """출처 행 문구를 출처 표기('자료:')와 뒤 문구로 나눈다. 출처 표기가 없으면 표기는 빈 문자열"""
+    m = SOURCE_RE.match(text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m else ("", text)
+
+
+FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # 조판 조정 줄의 항목 하나 ('장평 -3')
+
+
+def parse_fit(spec: str) -> tuple[dict[str, float], list[str]]:
+    """조판 조정 줄의 값을 {항목: 증감}으로 읽는다. 읽지 못한 조각은 따로 돌려준다"""
+    vals: dict[str, float] = {}
+    bad: list[str] = []
+    for piece in filter(None, (s.strip() for s in re.split(r"[,，]", spec))):
+        m = FIT_ITEM_RE.match(piece)
+        key = C.FIT_KEYS.get(re.sub(r"\s+", "", m.group(1)).lower()) if m else None
+        if key is None:
+            bad.append(piece)
+        else:
+            vals[key] = float(m.group(2))
+    return vals, bad
+
+
+def _apply_fit(elems: list[Element]) -> list[Element]:
+    """조판 조정 줄을 대상 요소의 data['fit']으로 옮기고 요소 목록에서 뺀다. 단독 줄의 대상은 바로 다음 요소, 시작 줄의 대상은 끝 줄 앞까지의 요소.
+    읽지 못한 값과 짝이 없는 시작 줄, 끝 줄은 뒤 요소의 data['fit_issues']에 남겨 lint가 알린다"""
+    out: list[Element] = []
+    once = ranged = None
+    issues: list[str] = []
+    for e in elems:
+        if e.kind != "fit":
+            fit = {**(ranged or {}), **(once or {})}
+            if fit:
+                e.data["fit"] = fit
+            if issues:
+                e.data["fit_issues"], issues = issues, []
+            once = None
+            out.append(e)
+            continue
+        vals, bad = parse_fit(e.data["spec"])
+        issues += [msg("lint_fit_value", text=e.text, piece=p) for p in bad]
+        for key, val in vals.items():
+            if abs(val) > C.FIT_WARN[key]:
+                print(msg("warn_fit_range", text=e.text, val=f"{val:+g}", limit=C.FIT_WARN[key]))
+        if e.data["range"] == "end":
+            if ranged is None:
+                issues.append(msg("lint_fit_no_begin", text=e.text))
+            ranged = None
+        elif e.data["range"] == "begin":
+            ranged = vals
+        else:
+            once = vals
+    if ranged is not None:
+        issues.append(msg("lint_fit_no_end"))
+    if issues and out:
+        out[-1].data.setdefault("fit_issues", []).extend(issues)
+    return out
+
+
+def fit_value(key: str, base: float, fit: dict | None) -> float:
+    """스타일 값에 조판 조정의 증감을 더한 값 (장평, 자간, 줄 간격). 한/글이 받는 범위 안으로 제한"""
+    low, high = C.FIT_BOUNDS[key]
+    return min(high, max(low, base + (fit or {}).get(key, 0)))
+
+
+def fit_line_scale(base: float | None, fit: dict | None) -> float:
+    """조판 조정의 줄 간격 증감이 줄 높이에 주는 배율. 표 행의 최소 높이에 곱한다"""
+    return fit_value("line", base, fit) / base if base and (fit or {}).get("line") else 1.0
 
 
 def _opens_table(line: str) -> bool:
@@ -216,7 +325,7 @@ def _parse_table(rows: list[str], elems: list[Element]) -> Element:
                    data={"rows": cells, "aligns": aligns, "unit": found["unit"], "colwidth": found["colwidth"]})
 
 
-def attach_block_notes(elems: list[Element]) -> list[Element]:
+def attach_block_notes(elems: list[Element], source_layout: str = C.DEFAULT_SOURCE_LAYOUT) -> list[Element]:
     """표와 그림 바로 뒤의 ※, *, 출처 줄을 블록 하단 출처 행으로 붙이고 표 뒤 단위 줄을 단위 행으로 올린다.
     빈 줄을 두고 쓴 ※, * 줄은 블록에 붙이지 않고 본문 주석으로 둔다."""
     out: list[Element] = []
@@ -231,9 +340,10 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
                 if nx.kind == "note" and nx.data.get("gap"):
                     break
                 if nx.kind == "note":   # 출처 행에서도 주석 기호를 남겨 출처 줄과 구별. '※ 출처:' 표기는 출처 줄 그대로
-                    srcs.append(nx.text if SOURCE_RE.match(nx.text) else f"{nx.data.get('mark', '※')} {nx.text}")
+                    srcs.append("\n".join(source_lines(nx.text, source_layout)) if SOURCE_RE.match(nx.text)
+                                else f"{nx.data.get('mark', '※')} {nx.text}")
                 elif nx.kind == "source":
-                    srcs.append(nx.text)
+                    srcs.append("\n".join(source_lines(nx.text, source_layout)))
                 elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                     e.data["unit"] = nx.text
                 else:
@@ -241,6 +351,8 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
                 consumed += 1
             e.data["sources"] = srcs
             skip = consumed
+        elif e.kind == "source":   # 본문 뒤 출처 줄은 각주로 옮겨지므로 한 줄로 이음
+            e.text = " ".join(e.text.split("\n"))
         out.append(e)
     return out
 
@@ -255,6 +367,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
     issues = []
     prev_level = 0
     for idx, e in enumerate(elems):
+        issues += e.data.get("fit_issues", [])
         if e.kind == "heading":
             skipped = e.level > prev_level + 1 and prev_level
             if skipped and not (e.level == GANADA_LEVEL and prev_level >= 2):
@@ -498,6 +611,17 @@ class LineStyle:
         """셀 글자의 가중 1단위(한글 반 자) 폭. 한글 1자 폭은 글자 크기 x 글꼴 한글 폭 비율 x 장평에 자간을 더한 값"""
         return self.size_hu * (C.CELL_HANGUL_EM * self.ratio + self.spacing) / 100 / 2
 
+    def fitted(self, fit: dict | None) -> "LineStyle":
+        """조판 조정의 장평과 자간 증감을 더한 줄 스타일 (열 폭과 줄 수 산정용)"""
+        if not fit:
+            return self
+        return dataclasses.replace(self, ratio=fit_value("ratio", self.ratio, fit), spacing=fit_value("spacing", self.spacing, fit))
+
+    def label_hang_hu(self, label: str, space_em: float) -> int:
+        """출처 표기 폭에 표기 뒤 간격을 더한 내어쓰기 폭 (HWPUNIT). 줄을 나눈 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
+        첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 표기 뒤 간격이 받아 낸다"""
+        return math.ceil(self.text_hu(label, space_em) - self.lead_hu + self.size_hu * C.SOURCE_LABEL_GAP_EM)
+
     def text_hu(self, text: str, space_em: float) -> float:
         """이 스타일로 출력한 글자와 줄 앞 폭의 합 (HWPUNIT)"""
         return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w + self.lead_hu
@@ -537,9 +661,14 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
+def row_height(lines: int, scale: float = 1.0) -> int:
     """예상 줄 수에 맞는 행 최소 높이 (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+    return round((C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)) * scale)
+
+
+def source_row_height(lines: int, line_h: float) -> int:
+    """출처 행과 단위 행의 최소 높이 (HWPUNIT). 줄을 나눈 출처 행은 둘째 줄부터 스타일의 줄 높이만큼 높인다"""
+    return round(C.ROW_BASE_H + line_h * (lines - 1))
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,

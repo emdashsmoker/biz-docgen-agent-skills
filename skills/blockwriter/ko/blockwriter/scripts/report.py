@@ -208,6 +208,8 @@ def main():
     b.add_argument("--footnote-merge", choices=list(C.NOTE_MERGE_SCOPES),
                    help="출처 각주 통합 (기본 OFF): 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
                         "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
+    b.add_argument("--source-layout", choices=list(C.SOURCE_LAYOUTS), default=C.DEFAULT_SOURCE_LAYOUT,
+                   help="표와 그림의 출처 행 줄 나눔: auto=원고에 쓴 줄 그대로(기본), break=출처마다 줄 나눔, inline=한 줄로 이음")
     b.add_argument("--toc", action="store_true",
                    help="문서 앞에 목차 삽입 (기본 OFF). --page-number와 함께 켜면 수록 항목마다 책갈피를 붙이고 쪽번호를 쪽 참조 필드로 기록")
     b.add_argument("--toc-scope", help=f"목차 수록 범위 (쉼표 구분, 기본 {','.join(C.TOC_SCOPE_DEFAULT)}). "

@@ -35,12 +35,24 @@ LABEL_DEFAULTS = {
     "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
                 "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
     # manuscript tokens the parser recognizes. Tokens in a label file are added to these and never replace them
-    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"],
+                 "fit": ["조판 조정"]},
     # DOCX document default language (w:lang). HWPX content.hpf language and style langID (Windows LCID) of the built-in forms
     "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
 }
 # built-in source tokens that are also written in parentheses ('(출처)'). '(주)' abbreviates 주식회사 (Inc.), so it does not start a source line
 SOURCE_PAREN_TOKENS = ("출처", "자료")
+# Line layout of source rows. A manuscript source line that ends with the source separator shares one source row with the next line
+SOURCE_SEP = ";"
+SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=lines as written, break=one line per source, inline=joined into one line
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_LABEL_GAP_EM = 0.5       # gap between the source label and the first source in a broken source row (multiple of the font size)
+# Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
+FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
+FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
+FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # recommended change range (±%p). build prints WARN beyond it
+FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # value range Hangul accepts (%)
+LINE_PERCENT_FALLBACK = 100     # value (%) used to estimate the line height of a style whose line spacing is not a % of the font size
 # placeholders each format may use, and the one it must contain
 LABEL_FORMAT_FIELDS = {"formats.chapter": (("n", "t"), "t"), "formats.section": (("c", "s", "t"), "t"),
                        "formats.subsection": (("c", "s", "ss", "t"), "t"), "letters.format": (("x",), "x")}
@@ -255,6 +267,18 @@ MESSAGES = {
     "lint_colwidth_alone": {
         "ko": "[열 폭 줄 위치] '{text}' 바로 뒤에 표가 없어 적용 안 됨. 캡션과 표 사이에 둠",
         "en": "[column width line] '{text}' is not followed by a table and is ignored. Put it between the caption and the table"},
+    "lint_fit_value": {
+        "ko": "[조판 조정 값] '{text}'의 '{piece}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재",
+        "en": "[adjustment value] cannot read '{piece}' in '{text}'. Write an item (ratio, spacing, line) and a change, as in 'ratio -3, spacing -2'"},
+    "lint_fit_no_begin": {
+        "ko": "[조판 조정 구간] '{text}' 앞에 시작 줄이 없음",
+        "en": "[adjustment range] '{text}' has no begin line before it"},
+    "lint_fit_no_end": {
+        "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠",
+        "en": "[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range"},
+    "warn_fit_range": {
+        "ko": "WARN: 조판 조정 '{text}'의 증감 {val}이 권장 범위(±{limit}%p)를 넘음. 렌더에서 글자와 줄 간격의 모양을 확인",
+        "en": "WARN: the change {val} in adjustment '{text}' is beyond the recommended range (±{limit}%p). Check the glyph and line spacing shapes in the render"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},
