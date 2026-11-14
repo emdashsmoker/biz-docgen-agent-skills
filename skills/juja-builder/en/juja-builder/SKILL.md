@@ -317,7 +317,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Principal investigator candidates and participating staff candidates
     + Whether an advisory committee runs, and its candidates
     + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover. The conditions for turning on the table of contents and page numbers are in the Typesetting section
-    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters, sections, tables, and figures. Offer subsections, items, Module, and Task as examples of items that can be added. Only tables and figures with numbered captions are listed (pre-diagnosis report). Give the bookmark notice of the Typesetting section with the question
+    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters and sections. Offer subsections, items, Module, and Task as examples of items that can be added. Give the bookmark notice of the Typesetting section with the question
     + Band color theme. navy (navy blue, default) or mono (black and gray)
     + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
