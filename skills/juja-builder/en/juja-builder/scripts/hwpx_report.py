@@ -493,7 +493,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None:
+            # a bullet that starts with '**bold**' is a statement. Same condition as the note check for lines without a bullet
+            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
                 elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
