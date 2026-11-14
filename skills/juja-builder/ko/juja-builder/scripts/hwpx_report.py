@@ -421,8 +421,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None:
-                elems.append(Element("note", t))
+            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
+                elems.append(Element("note", t))  # 굵게(**)로 시작하는 서술은 주석 표기 아님
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))

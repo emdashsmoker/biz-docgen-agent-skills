@@ -415,8 +415,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None:
-                elems.append(Element("note", t))
+            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
+                elems.append(Element("note", t))  # text that starts with bold (**) is not a note mark
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))

@@ -2247,12 +2247,30 @@ W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외
 
 
+HWPX_CAPTION_BELOW = "BOTTOM"   # 개체 아래에 놓이는 캡션의 side 값
+
+
+def _hwpx_visual_paragraphs(el):
+    """문단을 지면에 보이는 순서로 순회. Why: 아래쪽 캡션은 XML에서 개체의 행보다 앞에 저장되어, 문서 순서로 읽으면
+    캡션 문단이 표 뒤에 오는 docx와 대조 순서가 어긋남. 위쪽 캡션과 나머지는 문서 순서 그대로"""
+    if el.tag == f"{HP}p":
+        yield el
+    below = []
+    for c in el:
+        if c.tag == f"{HP}caption" and c.get("side") == HWPX_CAPTION_BELOW:
+            below.append(c)
+        else:
+            yield from _hwpx_visual_paragraphs(c)
+    for c in below:
+        yield from _hwpx_visual_paragraphs(c)
+
+
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
-    """hwpx 본문 문단 글자(표 셀과 캡션 포함, 머리말 제외)와 각주 글자. 문서 순서"""
+    """hwpx 본문 문단 글자(표 셀과 캡션 포함, 머리말 제외)와 각주 글자. 지면에 보이는 순서"""
     body, notes = [], []
     with zipfile.ZipFile(path) as z:
         for n in sorted(x for x in z.namelist() if re.match(r"Contents/section\d+\.xml$", x)):
-            for p in etree.fromstring(z.read(n)).iter(f"{HP}p"):
+            for p in _hwpx_visual_paragraphs(etree.fromstring(z.read(n))):
                 anc = {a.tag for a in p.iterancestors()}
                 if f"{HP}header" in anc or f"{HP}footer" in anc:
                     continue
