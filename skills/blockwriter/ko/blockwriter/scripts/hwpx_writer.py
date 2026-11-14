@@ -594,7 +594,8 @@ class Builder(M.TocMarks):
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
-        height = M.row_height(len(lines))
+        line_pct = self._line_pct(pp)
+        height = M.source_row_height(len(lines), self._line_style(role).size_hu * line_pct / 100 if line_pct else C.ROW_LINE_H)
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
             t.cell(ri, ci).set_size(height=height)

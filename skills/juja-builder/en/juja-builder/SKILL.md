@@ -653,10 +653,11 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not use code block fences (three backticks) in manuscripts. `check tone` flags them as FAIL. Fences in reference file examples mark the extent of the example
 - The `(단위: )` (unit) line goes between caption and table. Give it only to numeric tables
 - The source line `※ 출처: ` or `출처: ` goes right after tables and figures. Give it only to tables of external data and external figures
-    + (Several sources) With two or more sources, separate the sources with `;` and put `<br>` after each `;` to start every source on a new line. The typesetter aligns the later lines with the start of the first source (`출처: 기관명(연도), 자료명;<br>기관명(연도), 자료명`)
-    + (Same separator) The `;` between sources is written the same way in the split form and the one-line form. Do not put it after the last source
-    + (One line) For a table or figure where all sources fit on one line and one line looks tidier, join them with `; ` without `<br>` (`출처: 기관명(연도), 자료명; 기관명(연도), 자료명`)
-    + (Choosing) Decide for each table and figure from the number and length of the sources, the width of the table or figure, the page layout and the like
+    + (Several sources) With two or more sources, separate the sources with `;` and put `<br>` after each `;` to start every source on a new line. This split form is the default. The typesetter aligns the later lines with the start of the first source (`출처: 기관명(연도), 자료명;<br>기관명(연도), 자료명`)
+    + (Same separator) The `;` between sources is written the same way in the split form and the joined form. Do not put it after the last source
+    + (Splitting) With 2-3 sources, split the lines even when the sources are short. Long sources are split in most cases
+    + (Joining) When there are many short sources and splitting would make the source row tall and unsightly, and in similar cases, join them with `; ` without `<br>` (`출처: 기관명(연도), 자료명; 기관명(연도), 자료명`). A table or figure with more than 10 short sources is one such case, and now and then joining also suits long sources
+    + (Choosing) Decide for each table and figure which form looks better, from the editing situation such as the number and length of the sources, the width of the table or figure and the page layout
     + (Wrapped lines) When a source runs past one line, the wrapped lines also align with the start of the first source. In a source line under a paragraph, `<br>` is removed and the sources join into one line when it moves into a footnote
 - Sources of body text are `[^n]` footnotes. A source line placed under a paragraph moves into a footnote of the preceding paragraph at typesetting
     + Keep footnote labels unique within one manuscript file. build separates labels per file, so the same number in another file is allowed

@@ -622,6 +622,12 @@ def row_height(lines: int, line_scale: float = 1.0) -> int:
     return round(pad + (C.ROW_BASE_H - pad + C.ROW_LINE_H * (lines - 1)) * line_scale)
 
 
+def source_row_height(lines: int, line_pitch: float) -> int:
+    """출처 행의 최소 높이 (HWPUNIT). 둘째 줄부터 출처 스타일의 줄 높이(line_pitch)만큼 더함.
+    셀 글자 기준의 줄 높이로 잡으면 줄이 많은 출처 행 위아래에 빈틈이 생김"""
+    return C.ROW_BASE_H + round(line_pitch * (lines - 1))
+
+
 def line_scale(line_pct: float, adjust: dict | None) -> float:
     """줄 간격 조정 비율. line_pct는 스타일의 줄 간격(%)"""
     return (line_pct + (adjust or {}).get("line", 0)) / line_pct if line_pct else 1.0

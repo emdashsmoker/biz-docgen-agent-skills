@@ -580,7 +580,7 @@ class DocxBuilder(lib.TocMarks):
                 pf.left_indent = Twips(tw(row[6] + hang))
                 pf.first_line_indent = Twips(0 if li else -tw(hang))
         self._tc_style(cell._tc, [], None, None)
-        self._row_height(t.rows[ri], lib.lines_to_height(len(lines)))
+        self._row_height(t.rows[ri], lib.source_row_height(len(lines), row[3] * HU_PER_PT * row[10] / 100))
 
     def table(self, e: lib.Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]

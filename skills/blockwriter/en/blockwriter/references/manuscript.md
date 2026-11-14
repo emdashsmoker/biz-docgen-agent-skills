@@ -110,10 +110,11 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - (※ note line) A line starting with `※` or `* ` (an asterisk and a space)
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
-- (Several sources) When the source line of a table or figure has two or more sources, separate the sources with `;` and put `<br>` after each `;` to start every source on a new line. build aligns the later lines with the start of the first source (`자료: 기관명(연도), 자료명;<br>기관명(연도), 자료명`)
-    - (Same separator) The `;` between sources is written the same way in the split form and the one-line form. Do not put it after the last source
-    - (One line) For a table or figure where all sources fit on one line and one line looks tidier, join them with `; ` without `<br>` (`자료: 기관명(연도), 자료명; 기관명(연도), 자료명`)
-    - (Choosing) Decide for each table and figure from the number and length of the sources, the width of the table or figure, the page layout and the like
+- (Several sources) When the source line of a table or figure has two or more sources, separate the sources with `;` and put `<br>` after each `;` to start every source on a new line. This split form is the default. build aligns the later lines with the start of the first source (`자료: 기관명(연도), 자료명;<br>기관명(연도), 자료명`)
+    - (Same separator) The `;` between sources is written the same way in the split form and the joined form. Do not put it after the last source
+    - (Splitting) With 2-3 sources, split the lines even when the sources are short. Long sources are split in most cases
+    - (Joining) When there are many short sources and splitting would make the source row tall and unsightly, and in similar cases, join them with `; ` without `<br>` (`자료: 기관명(연도), 자료명; 기관명(연도), 자료명`). A table or figure with more than 10 short sources is one such case, and now and then joining also suits long sources
+    - (Choosing) Decide for each table and figure which form looks better, from the editing situation such as the number and length of the sources, the width of the table or figure and the page layout
     - (Wrapped lines) When a source runs past one line, the wrapped lines also align with the start of the first source
     - (Source lines that become footnotes) In a source line after a body paragraph, `<br>` is removed and the sources join into one line
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes

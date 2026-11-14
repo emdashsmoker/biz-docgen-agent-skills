@@ -420,6 +420,12 @@ def scaled_height(height: int, scale: float) -> int:
     return round(pad + (height - pad) * scale)
 
 
+def source_row_height(lines: int, line_pitch: float) -> int:
+    """출처 행의 최소 높이 (HWPUNIT). 둘째 줄부터 출처 스타일의 줄 높이(line_pitch)만큼 더함.
+    셀 글자 기준의 줄 높이로 잡으면 줄이 많은 출처 행 위아래에 빈틈이 생김"""
+    return ROW_BASE_H + round(line_pitch * (lines - 1))
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -1555,7 +1561,8 @@ class Builder(TocMarks):
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
-        height = lines_to_height(len(lines))
+        line_pct = self._line_pct(pp)
+        height = source_row_height(len(lines), size * line_pct / 100 if line_pct else ROW_LINE_H)
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
             t.cell(ri, ci).set_size(height=height)

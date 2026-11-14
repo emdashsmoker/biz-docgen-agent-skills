@@ -415,6 +415,12 @@ def scaled_height(height: int, scale: float) -> int:
     return round(pad + (height - pad) * scale)
 
 
+def source_row_height(lines: int, line_pitch: float) -> int:
+    """Minimum height of a source row (HWPUNIT). Each line after the first adds the line height of the source style (line_pitch).
+    Using the line height of cell text leaves gaps above and below a source row with many lines"""
+    return ROW_BASE_H + round(line_pitch * (lines - 1))
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -1552,7 +1558,8 @@ class Builder(TocMarks):
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
-        height = lines_to_height(len(lines))
+        line_pct = self._line_pct(pp)
+        height = source_row_height(len(lines), size * line_pct / 100 if line_pct else ROW_LINE_H)
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
             t.cell(ri, ci).set_size(height=height)

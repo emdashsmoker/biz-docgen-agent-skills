@@ -622,6 +622,12 @@ def row_height(lines: int, line_scale: float = 1.0) -> int:
     return round(pad + (C.ROW_BASE_H - pad + C.ROW_LINE_H * (lines - 1)) * line_scale)
 
 
+def source_row_height(lines: int, line_pitch: float) -> int:
+    """Minimum height of a source row (HWPUNIT). Each line after the first adds the line height of the source style (line_pitch).
+    Using the line height of cell text leaves gaps above and below a source row with many lines"""
+    return C.ROW_BASE_H + round(line_pitch * (lines - 1))
+
+
 def line_scale(line_pct: float, adjust: dict | None) -> float:
     """Line spacing adjustment ratio. line_pct is the style's line spacing (%)"""
     return (line_pct + (adjust or {}).get("line", 0)) / line_pct if line_pct else 1.0

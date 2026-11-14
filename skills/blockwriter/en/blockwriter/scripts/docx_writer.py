@@ -667,7 +667,7 @@ class DocxBuilder(M.TocMarks):
         tr = sub(tbl, "w:tr")
         trpr = sub(tr, "w:trPr")
         sub(trpr, "w:cantSplit")
-        sub(trpr, "w:trHeight", w__val=tw(M.row_height(len(lines))), w__hRule="atLeast")
+        sub(trpr, "w:trHeight", w__val=tw(M.source_row_height(len(lines), st.char.size * st.para.line)), w__hRule="atLeast")
         if header:
             sub(trpr, "w:tblHeader")
         tc = sub(tr, "w:tc")
