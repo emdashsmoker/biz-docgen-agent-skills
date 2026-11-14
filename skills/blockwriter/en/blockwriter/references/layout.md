@@ -67,6 +67,11 @@ Table attachments
 
 - The unit row is a transparent merged row above the header, right-aligned. The source row is a transparent merged row below the table, left-aligned. Both are inside the table and move with it
 - Unit and source rows use dedicated 9pt styles without bullets (단위, 출처). A ※ note line attached to the source rows is printed in the source style with its ※ or * kept
+- A source row with line breaks is written as one paragraph with forced line breaks and a hanging indent. The second and later lines start where the first source starts, and so does a line that wraps at the row width
+    - (Hanging indent width) The width of the source label (such as `자료:`), calculated from the font size, ratio and letter spacing of the source style, plus a gap of 0.5 times the font size (SOURCE_LABEL_GAP_EM). When a user form has other source style values, the width is calculated from those values
+    - (Tab) A tab after the source label puts the first source at the hanging indent position. HWPX uses the automatic tab for hanging indents and DOCX uses the default tab at the hanging indent. The first and second lines start at the same position even when fonts have different glyph widths
+    - (Alignment) Written left-aligned. Justified alignment stretches the spaces of a line that ends with a forced line break
+    - (Row height) Each line after the first adds the line height of the source style to the minimum row height
 - Table captions go above the table and figure captions below the figure. The gap between the caption and the table is 850 HWPUNIT (about 3mm, CAPTION_GAP)
 - The caption width is the width of its table or figure table. A long caption wraps within this width
 - HWPX captions are caption objects attached to the table, and the number is an automatic number field. chapter restarts the numbering at 1 in each chapter through a number restart in the chapter's first paragraph
@@ -218,6 +223,7 @@ The fixed strings that build prints into documents and the language tags it writ
 | caption.table.seq, caption.figure.seq | Word SEQ field name of the caption number (DOCX). No spaces | the caption label |
 | notation.source | Source line tokens (`token:`). Added tokens are also recognized as `(token)` | `출처`, `자료`, `주` (also `(출처)`, `(자료)`) |
 | notation.unit | Unit line token (`(token: )`) | `단위` |
+| notation.fit | Adjustment line token (`(token: 장평 -3)`). The item names `장평`, `자간`, `줄 간격`, `ratio`, `spacing`, `line` and the range words `시작`, `끝`, `begin`, `end` are recognized whatever the labels are | `조판 조정` |
 | notation.table | Table caption line token (`<token> title`) | `표` |
 | notation.figure | Figure caption line token (`[token] caption`) | `그림` |
 | notation.colwidth | Column width line token (`(token: 15, 20, 25)`) | `열 폭` |
@@ -242,13 +248,39 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
   "toc": {"title": "Contents", "tables": "List of Tables", "figures": "List of Figures"},
   "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
   "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
-               "colwidth": ["Column widths"]},
+               "colwidth": ["Column widths"], "fit": ["Adjust"]},
   "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "en", "hwpx_style_lcid": 1033}
 }
 ```
 
 - Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, the list titles `List of Tables` and `List of Figures`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
-- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 15, 20, 25)` together with the Korean tokens
+- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, `(Column widths: 15, 20, 25)`, and `(Adjust: ratio -3)` together with the Korean tokens
+
+## Page fill
+
+- A layout where the body text of two facing pages fills each page evenly down to the bottom is recommended. A document with a large empty area at the bottom of a page, or with two facing pages filled very differently, reads as a document that still needs editing
+- Deciding the size and position of tables and figures and the length and order of paragraphs with the page fill in mind from the manuscript stage reduces changes at the review stage
+- At the review stage, look at the rendered PNGs two pages side by side and adjust the size or position of tables and figures, the position of paragraphs and so on
+- Adjust only as long as the content still reads well. The order of the content and the flow of the argument come before the page fill
+
+## Typesetting adjustment
+
+This adjustment changes the glyph ratio, letter spacing and line spacing slightly from the form style values. Do it only for the items the user turned on in the step 1 plan. The manuscript notation follows the Adjustment lines section of references/manuscript.md.
+
+Ratio and letter spacing adjustment
+
+- (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
+- (Method) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
+- (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop within the recommended range (ratio ±5%p, letter spacing ±5%p)
+- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin of 1-2 characters at the end of the line in the rendered PNGs
+- (Shortening the text) When the ratio and letter spacing adjustment does not solve it, shorten the wording as long as the meaning stays the same
+
+Line spacing adjustment
+
+- (Targets) A page where only 1-2 lines carry over to the next page, facing pages whose fill does not match, a table that reads better on one page, and so on
+- (Method) Put an adjustment line before the paragraph range of the target page, a particular paragraph or a table, typeset again, and check the page layout in the rendered PNGs
+- (Values) Stay conservative, at a level where the line spacing does not look different from the pages around it. Try small values first and stop within the recommended range (±10%p)
+- (Purpose) A way to match the page fill without cutting content. The page fill criteria are in the Page fill section
 
 ## Review items
 
@@ -262,6 +294,9 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - If automatic merging looks odd, switch to `--merge explicit` and merge only where needed with `^` and `<`. Whether a merge fits differs from table to table, so judge it in the free review
 - A long-text cell wrapping to 2 lines and a line break in the middle of a word (for example `대한민` and `국` on different lines) are normal placement and do not count as defects. They are not a reason to add a column width line either
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
+- For a source row with line breaks, check that the second and later lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
+- Check the page fill of two facing pages (Page fill section)
+- For paragraphs and tables with a typesetting adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters (Typesetting adjustment section)
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
@@ -288,6 +323,8 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Default alignment) In tables of reports written by people, most text columns other than bullet columns are centered. Left alignment appears mostly in descriptive text columns such as content and details. Text length cannot pick out these columns. Without a marker only bullet columns go left
 - (Caption objects and automatic numbers) When a table is moved in Hangul, the caption follows and the number updates. The DOCX number fields serve the same purpose
 - (Attached rows inside the table) The unit and source rows are transparent cells inside the table so that they move with the table during manual editing
+- (Hanging indent and tab of source rows) Aligning the second line with spaces breaks when the font or the font size changes. Calculating the hanging indent from the style values and putting the first source at the same position with a tab keeps the alignment in any form
+- (Adjustments written as changes) Writing the ratio, letter spacing and line spacing as absolute values would require the manuscript writer to know the base value of each style. Written as a change against the style value, a range gives its headings and body text the same degree of adjustment
 - (Outer table borders) The left and right outer borders are open to soften the boundary between the text and the table. If outer borders are needed, set EDGE_OPEN_SIDES to False
 - (Code-generated forms) The references among styles, fonts, bullets, and outline numbering are created from one definition (form.py), which prevents missing references. If even one bullet definition reference is missing, Hangul omits the symbol, and checking the body text does not reveal such a gap
 - (Manuscript parsing module) Manuscript parsing and the table and figure calculations live in one module, manuscript.py. The HWPX and DOCX typesetters use the same merge, alignment, and width calculations, so a rule change happens in one place

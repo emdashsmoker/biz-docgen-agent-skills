@@ -108,6 +108,8 @@ Items not judged (every renderer)
 Confirmed examples (as of rhwp v0.8.6 and H2Orestart 0.6.1; behavior may change in later versions)
 
 - rhwp does not apply the keep-with-next setting, so a heading or □ can stay at the bottom of a page
+- The review renderers tend to fit more characters on a line than Hangul and Word. A line whose end margin in the render is less than 1-2 characters can wrap to the next line in Hangul and Word
+- H2Orestart calculates the automatic tab for hanging indents differently from Hangul, so the first line of a source row with line breaks can look slightly out of line with the second. Check the alignment in the rhwp render and the hanging indent value in the XML
 - H2Orestart does not draw caption objects of tables and figures, footnote bodies, or footer page numbers. Check these elements in the rhwp render and the XML
 
 ## Fonts
