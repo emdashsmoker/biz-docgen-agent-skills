@@ -143,8 +143,9 @@ def source_lines(text: str) -> list[str]:
 
 
 def source_inline(text: str) -> str:
-    """각주로 옮기는 출처 줄. 줄 나눔 표기를 구분 문자로 바꿔 한 줄로 잇는다"""
-    return C.SOURCE_INLINE_SEP.join(source_lines(text))
+    """각주로 옮기는 출처 줄. 줄 나눔 표기를 구분 문자로 바꿔 한 줄로 잇는다.
+    줄 끝에 이미 쓴 구분 문자(;)는 떼어 구분 문자가 겹치지 않게 한다"""
+    return C.SOURCE_INLINE_SEP.join(part.rstrip(C.SOURCE_INLINE_SEP + "；") for part in source_lines(text))
 
 
 def source_label(line: str) -> str:

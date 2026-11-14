@@ -392,8 +392,9 @@ def source_lines(text: str) -> list[str]:
 
 
 def source_inline(text: str) -> str:
-    """Source line that becomes a footnote. The line break notation is replaced with the separator to join it into one line"""
-    return SOURCE_INLINE_SEP.join(source_lines(text))
+    """Source line that becomes a footnote. The line break notation is replaced with the separator to join it into one line
+    A separator (;) already written at the end of a line is removed so that separators do not double"""
+    return SOURCE_INLINE_SEP.join(part.rstrip(SOURCE_INLINE_SEP + "；") for part in source_lines(text))
 
 
 def source_label_hu(line: str, size_hu: float) -> int:
