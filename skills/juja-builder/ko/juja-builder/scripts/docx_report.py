@@ -129,6 +129,7 @@ class DocxBuilder(lib.TocMarks):
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
         self.notes = lib.NoteRegistry(None)   # 출처 각주 통합. 조판 명령이 범위를 지정하면 교체
+        self.fit = None   # 조판 중인 요소의 맞춤 조정 증감 (원고의 조정 블록)
         page = spec["page"]
         self.body_w = page["width"] - page["left"] - page["right"]
         self.table_max_w = self.body_w - lib.TABLE_INDENT_MARGIN
@@ -367,7 +368,33 @@ class DocxBuilder(lib.TocMarks):
                 continue
             self._text(p, seg, pt, bold=True if kind == "bold" else None, italic=kind == "italic",
                        script=kind if kind in ("sup", "sub") else None)
+        if self.fit and role in lib.FIT_ROLES:
+            self._fit_para(p, role)
         return p
+
+    # ── 맞춤 조정 (원고의 조정 블록) ──────────────────────────────────────────
+    def _fit_para(self, p, role: str):
+        """줄간격 증감을 더한 고정 줄 간격과 run마다 장평과 자간 증감을 직접 서식으로 기록. 스타일 값은 바꾸지 않음.
+        스켈레톤 스타일의 장평과 자간은 100%와 0%"""
+        row, fit = self._row(role), self.fit
+        if fit.get("line"):
+            p.paragraph_format.line_spacing = Twips(round(row[3] * lib.fit_value("line", row[10], fit) / 100 * TWIP_PER_PT))
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return
+        ratio = lib.fit_value("ratio", 100, fit)
+        extra = round(row[3] * lib.fit_value("spacing", 0, fit) / 100 * TWIP_PER_PT)
+        for r in p.runs:
+            rpr = r._element.get_or_add_rPr()
+            old = rpr.find(qn("w:spacing"))   # 빈칸 run은 한/글 빈칸 폭을 맞추는 자간이 이미 있으므로 더함
+            base = int(old.get(qn("w:val"))) if old is not None else 0
+            _insert_ordered(rpr, _w("spacing", val=base + extra), RPR_ORDER)
+            _insert_ordered(rpr, _w("w", val=ratio), RPR_ORDER)
+
+    def _cell_metrics(self) -> tuple[float, float]:
+        """조정 블록 안 표의 가중 1단위 폭과 셀 줄 간격 배율 (표 본문 스타일 기준)"""
+        if not self.fit:
+            return lib.CELL_UNIT_W, 1.0
+        return lib.fit_cell_metrics(self.fit, 100, 0, self._row("table_cell")[10])
 
     def add_footnote(self, p, text: str):
         """각주 참조. 번호는 Word 자동 번호, 뒤의 닫는 괄호는 글자로 붙여 hwpx 각주 번호 형식(1))과 맞춤
@@ -544,6 +571,8 @@ class DocxBuilder(lib.TocMarks):
             p.paragraph_format.alignment = JC[align]
         if text:
             self._text(p, text, self._row(role)[3], bold=bold)
+        if self.fit and role.startswith("table_cell"):
+            self._fit_para(p, role)
         return p
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
@@ -551,7 +580,14 @@ class DocxBuilder(lib.TocMarks):
         cell = t.cell(ri, 0).merge(t.cell(ri, ncol - 1)) if ncol > 1 else t.cell(ri, 0)
         if ncol > 1:
             cell.width = Emu(sum(c.width for c in t.columns))
-        self._cell_para(cell, text, role, align)
+        hang = 0
+        if role == "source":   # <br> 줄바꿈과 출처 표기 뒤 내어쓰기로 둘째 줄부터 출처 표기 뒤 글자에 맞춤
+            text = lib.source_lines(text)
+            hang = round(self._row(role)[3] * HU_PER_PT * lib.source_label_em(text))
+        p = self._cell_para(cell, text, role, align)
+        if hang:
+            row = self._row(role)
+            p.paragraph_format.left_indent, p.paragraph_format.first_line_indent = Twips(tw(row[6] + hang)), Twips(-tw(hang))
         self._tc_style(cell._tc, [], None, None)
         self._row_height(t.rows[ri], lib.ROW_BASE_H)
 
@@ -591,7 +627,7 @@ class DocxBuilder(lib.TocMarks):
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
-        heights = lib.row_heights(rows, widths, hdr, vspans, hspans)
+        heights = lib.row_heights(rows, widths, hdr, vspans, hspans, *self._cell_metrics())
         for ri, row in enumerate(rows):
             is_head = ri < hdr
             self._row_height(t.rows[head + ri], heights[ri], cant_split=not long,
@@ -651,7 +687,7 @@ class DocxBuilder(lib.TocMarks):
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
-                self.para("source", src)
+                self.para("source", lib.flat_source(src))
         else:  # 투명 1열 표에 그림과 자료 행을 담음 (hwpx와 같은 구성)
             # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
             t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])

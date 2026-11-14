@@ -40,6 +40,7 @@
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), whether to insert a cover, band color theme (navy by default, mono is black and gray), long-table handling (engine or split)
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Width and spacing fit (off by default, on) and line spacing fit (off by default, on). Defined in Fit Adjustments of the SKILL.md Render Review section
     + The judged report type and engagement type. Judge with the TOC example table of the Table of Contents Design section and the SKILL.md Module Frameworks by Engagement Type section
 - Step 1 applies the requirement transfer rules of the SKILL.md RFP Dissection section. In a pre-diagnosis report workspace, `rfp` places only the requirement table (no scoring table). After the transfer, fill 00_진단서.md according to the Diagnosis Design section
 - Step 2 writes 02_모듈총괄표.md (SKILL.md Module Overview Table section) and 02_스토리라인.md. For 02_스토리라인.md, copy `<SKILL>/assets/report-storyline.md` into the workspace and fill it

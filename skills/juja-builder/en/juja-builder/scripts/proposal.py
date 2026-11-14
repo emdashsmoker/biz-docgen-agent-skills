@@ -613,6 +613,7 @@ class ProposalLayout:
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind == "band":
@@ -623,9 +624,9 @@ class ProposalLayout:
                 self.para("unit", e.text)
             elif e.kind == "source":
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, lib.flat_source(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", lib.flat_source(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -2242,8 +2243,9 @@ def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
                     owner = next(a for a in t.iterancestors() if a.tag == f"{HP}p")
                     if owner is not p:
                         continue
-                    buf.append(t.text or "")
-                    buf += ["\t" + (c.tail or "") for c in t if c.tag == f"{HP}tab"]
+                    buf.append(t.text or "")   # a line break (lineBreak) joins the following text without a separator, like the docx comparison text
+                    buf += [("\t" if c.tag == f"{HP}tab" else "") + (c.tail or "") for c in t
+                            if c.tag in (f"{HP}tab", f"{HP}lineBreak")]
                 text = "".join(buf)
                 if text.strip():
                     (notes if f"{HP}footNote" in anc else body).append(text)

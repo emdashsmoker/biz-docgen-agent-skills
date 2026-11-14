@@ -130,6 +130,7 @@ class DocxBuilder(lib.TocMarks):
         self._warned: set[str] = set()
         self._footnotes: list[tuple[int, str]] = []
         self.notes = lib.NoteRegistry(None)   # source footnote merging. The build command replaces it when a scope is given
+        self.fit = None   # fit changes of the element being typeset (fit block in the manuscript)
         page = spec["page"]
         self.body_w = page["width"] - page["left"] - page["right"]
         self.table_max_w = self.body_w - lib.TABLE_INDENT_MARGIN
@@ -368,7 +369,33 @@ class DocxBuilder(lib.TocMarks):
                 continue
             self._text(p, seg, pt, bold=True if kind == "bold" else None, italic=kind == "italic",
                        script=kind if kind in ("sup", "sub") else None)
+        if self.fit and role in lib.FIT_ROLES:
+            self._fit_para(p, role)
         return p
+
+    # ── Fit adjustments (fit block in the manuscript) ───────────────────────────
+    def _fit_para(self, p, role: str):
+        """Writes the fixed line spacing with the line spacing change and the width and spacing changes on each run as direct formatting. The style values stay unchanged.
+        The width and spacing of the skeleton styles are 100% and 0%"""
+        row, fit = self._row(role), self.fit
+        if fit.get("line"):
+            p.paragraph_format.line_spacing = Twips(round(row[3] * lib.fit_value("line", row[10], fit) / 100 * TWIP_PER_PT))
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return
+        ratio = lib.fit_value("ratio", 100, fit)
+        extra = round(row[3] * lib.fit_value("spacing", 0, fit) / 100 * TWIP_PER_PT)
+        for r in p.runs:
+            rpr = r._element.get_or_add_rPr()
+            old = rpr.find(qn("w:spacing"))   # space runs already carry the spacing that matches the Hangul space width, so the change is added
+            base = int(old.get(qn("w:val"))) if old is not None else 0
+            _insert_ordered(rpr, _w("spacing", val=base + extra), RPR_ORDER)
+            _insert_ordered(rpr, _w("w", val=ratio), RPR_ORDER)
+
+    def _cell_metrics(self) -> tuple[float, float]:
+        """Weighted unit width and cell line spacing ratio of a table in a fit block (from the table cell style)"""
+        if not self.fit:
+            return lib.CELL_UNIT_W, 1.0
+        return lib.fit_cell_metrics(self.fit, 100, 0, self._row("table_cell")[10])
 
     def add_footnote(self, p, text: str):
         """Footnote reference. The number is Word's automatic number, and the closing parenthesis after it is attached as text to match the hwpx footnote number format (1))"""
@@ -544,6 +571,8 @@ class DocxBuilder(lib.TocMarks):
             p.paragraph_format.alignment = JC[align]
         if text:
             self._text(p, text, self._row(role)[3], bold=bold)
+        if self.fit and role.startswith("table_cell"):
+            self._fit_para(p, role)
         return p
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
@@ -551,7 +580,14 @@ class DocxBuilder(lib.TocMarks):
         cell = t.cell(ri, 0).merge(t.cell(ri, ncol - 1)) if ncol > 1 else t.cell(ri, 0)
         if ncol > 1:
             cell.width = Emu(sum(c.width for c in t.columns))
-        self._cell_para(cell, text, role, align)
+        hang = 0
+        if role == "source":   # <br> line breaks and a hanging indent after the label align later lines with the text after the label
+            text = lib.source_lines(text)
+            hang = round(self._row(role)[3] * HU_PER_PT * lib.source_label_em(text))
+        p = self._cell_para(cell, text, role, align)
+        if hang:
+            row = self._row(role)
+            p.paragraph_format.left_indent, p.paragraph_format.first_line_indent = Twips(tw(row[6] + hang)), Twips(-tw(hang))
         self._tc_style(cell._tc, [], None, None)
         self._row_height(t.rows[ri], lib.ROW_BASE_H)
 
@@ -591,7 +627,7 @@ class DocxBuilder(lib.TocMarks):
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
-        heights = lib.row_heights(rows, widths, hdr, vspans, hspans)
+        heights = lib.row_heights(rows, widths, hdr, vspans, hspans, *self._cell_metrics())
         for ri, row in enumerate(rows):
             is_head = ri < hdr
             self._row_height(t.rows[head + ri], heights[ri], cant_split=not long,
@@ -651,7 +687,7 @@ class DocxBuilder(lib.TocMarks):
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
-                self.para("source", src)
+                self.para("source", lib.flat_source(src))
         else:  # put the picture and the source row in a transparent one-column table (same composition as hwpx)
             # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
             t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])

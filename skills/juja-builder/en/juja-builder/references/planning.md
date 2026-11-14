@@ -155,9 +155,10 @@
     + Whether web search is allowed. If not, figures outside the materials get the `[확인]` marker
     + Delivery format (one of hwpx or docx recommended. Both is allowed after the notice in the SKILL.md Output Types section), page breaks (chapter, none), band color theme (navy by default, mono is black and gray)
     + Whether to include a PDF. Not included by default. The approximate rendering notice is in PDF Copy of the SKILL.md Render Review section
-    + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added) and give the bookmark notice of the SKILL.md Typesetting section
+    + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added). Give the bookmark notice of the SKILL.md Typesetting section with the question
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Width and spacing fit (off by default, on) and line spacing fit (off by default, on). Defined in Fit Adjustments of the SKILL.md Render Review section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design

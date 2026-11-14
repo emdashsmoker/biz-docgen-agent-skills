@@ -310,11 +310,13 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Principal investigator candidates and participating staff candidates
     + Whether an advisory committee runs, and its candidates
     + Delivery format. Output format (one of hwpx or docx recommended. Both is allowed after the notice in the Output Types section), whether the client specifies a template, volume cap, whether to insert a table of contents, page numbers, and a cover. The conditions for turning on the table of contents and page numbers are in the Typesetting section
-    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters, sections, tables, and figures. Offer subsections, items, Module, and Task as examples of items that can be added. Only tables and figures with numbered captions are listed (pre-diagnosis report). Give the bookmark notice of the Typesetting section with the question
+    + Table of contents scope. Ask when a table of contents is inserted. The default is chapters, sections, tables, and figures. Also offer subsections, items, Module, and Task, which can be added. Only tables and figures with numbered captions are listed (pre-diagnosis report). Give the bookmark notice of the Typesetting section with the question
     + Band color theme. navy (navy blue, default) or mono (black and gray)
     + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Source footnote inheritance. How a footnote that cites the same source again is written. Choose off (default, every footnote gives the full source), short form (later footnotes are shortened, as in `기관명(연도), 앞의 보고서`), or merging (one footnote per source, with that footnote number shown again at later citation positions). When the user chooses short form or merging, also ask the scope (□, section, chapter, whole document). Defined in the Manuscript Hierarchy section
+    + Width and spacing fit. How to handle a paragraph where line wrapping pushes only one or two characters to the next line or where one line looks out of step with the lines around it. Choose off (default, the width and spacing of the form stay) or on (the width and spacing of that paragraph shrink within an unnoticeable range, and the wording is shortened when that is not enough). Defined in Fit Adjustments of the Render Review section
+    + Line spacing fit. How to fill a two-page spread to the bottom. Choose off (default, the line spacing of the form stays) or on (to align the bottoms of the two pages without cutting information, the line spacing of particular pages, paragraphs, tables, and so on shrinks within an unnoticeable range). Defined in Fit Adjustments of the Render Review section
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
     + The judged engagement type. Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
@@ -641,12 +643,18 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `(폭: group name)` or `(폭: 1,3,2)` | Table width directive | Between caption and table. Unifies the widths of tables with the same layout or sets ratios |
 | `(삽입: 모듈총괄표)` | Module overview table | Inserts the table of 02_모듈총괄표.md at this point. Once in the whole manuscript set |
 | `(장표: engine)` or `(장표: split N)` | Long-table directive | Between caption and table. How to handle a table that runs past one page. Written after the user chooses |
+| `::: spacing -2` line and `:::` line | Fit block | Applies width, spacing, and line spacing changes to the body paragraphs and tables between the two lines. Used only for the items the user turned on in the kickoff questions |
 
 - SKILL.md and the reference files call levels by their manuscript notation (□, ❍, hyphen, ․, ※). The symbols in the typeset result are set by the bullet definitions of the skeleton
 - build assigns heading numbers. Manuscript headings hold only the title
 - Do not use code block fences (three backticks) in manuscripts. `check tone` flags them as FAIL. Fences in reference file examples mark the extent of the example
 - The `(단위: )` (unit) line goes between caption and table. Give it only to numeric tables
 - The source line `※ 출처: ` or `출처: ` goes right after tables and figures. Give it only to tables of external data and external figures
+- (Multiple sources) Separate several sources on one source line with `;`. Whether to join them on one line or break the line after each source is judged from the width of the table or figure, the length and number of the sources, and so on
+    + (Line break) Put `<br>` after the `;`. The `;` stays at the end of the line as on a joined line (`자료: Org A(2024), Title;<br>Org B(2023), Title`)
+    + (Examples of judgment) If a joined line wraps in the middle of a source or there are three or more sources, one source per line reads more easily. Two or three short sources look cleaner on one line
+    + (Alignment) The typesetter aligns the second and later lines with the text after the source label (`출처:`, `자료:`, `주:`, and so on). Lines that wrap because they are long align at the same position. Do not add spaces for alignment
+    + A `<br>` in a source line under a paragraph (a line that becomes a footnote) turns into a space and the line is joined into one
 - Sources of body text are `[^n]` footnotes. A source line placed under a paragraph moves into a footnote of the preceding paragraph at typesetting
     + Keep footnote labels unique within one manuscript file. build separates labels per file, so the same number in another file is allowed
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
@@ -661,6 +669,13 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + The merged number is a 한/글 cross-reference in hwpx and a Word footnote number reference field in docx. When editing after delivery changes the footnote numbers, a field update in 한/글 or Word brings the numbers along
     + Record the answer (method and scope) in the writing rules row of basic project conditions in 00_제안전략서.md. For the pre-diagnosis report, record it in the basic report information table of 00_진단서.md, and for the planning report in the basic information table of 00_기획설계.md
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
+- Fit blocks are used only when the user turned on the width and spacing fit or the line spacing fit in the kickoff questions. The criteria are in Fit Adjustments of the Render Review section
+    + (Notation) Open with a `::: key value` line and close with a `:::` line. The keys are width, spacing, and line (Korean 장평, 자간, 줄간격), and several keys can follow each other on one line
+    + (Values) Changes (%p) added to the form style values. `spacing -2` lowers the style spacing by 2%p, and `line -10` lowers the style line spacing by 10%p (140% becomes 130%)
+    + (Targets) Body paragraphs (□, ❍, hyphen, ․, ※) and table cells inside the block. Headings, bands, captions, unit rows, and source rows keep the form values even inside a block. Tables inside a block get their row heights recalculated with the adjusted values
+    + (Range) For one paragraph, wrap only that paragraph. For a page-level line spacing adjustment, wrap the elements on that page in one block
+    + Blocks are not nested. build reports a `[fit block]` LINT when a closing line has no opening line, a closing line is missing, or a value cannot be read
+    + Record the answers where the source footnote inheritance answer is recorded (the writing rules row of 00_제안전략서.md, the basic information tables of 00_진단서.md and 00_기획설계.md)
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). A single item takes no `◦`, even when it wraps onto several lines. Columns with bullets are left-aligned at typesetting
 - `◦` on single-item cells is judged per comparison line. A comparison line is a line of cells that sets the same attribute side by side across subjects. In a table with subjects in columns (module overview table, alternative comparison table), rows are the comparison lines. In a table with subjects in rows (track record table, etc.), columns are
@@ -1013,7 +1028,12 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - The transparent table that holds a figure is as wide as the figure plus the left and right cell margins, so the figure fits the inner cell width as is
     + The left and right margins used for the width are written into the figure cell. A figure wider than the body width is scaled down in proportion to fit the body width
     + In docx the table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
-- A table without a caption is placed with the figure position style. The table position style has a small top margin because a caption sits above the table, so a table without a caption looks attached to the paragraph above
+- A table without a caption is placed with the figure position style. The table position style assumes a caption above the table and has a small top margin, so a table without a caption placed with it looks attached to the paragraph above
+- A source row that starts with a source label (`출처:`, `자료:`, `주:`, and so on) hangs by the width of the label and the following space, so the second and later lines align with the text after the label. A `<br>` in the manuscript is a line break inside the same paragraph
+    + The hanging width is calculated from the font size of the source style and the NanumBarunGothic glyph widths. docx writes the same width as a Word hanging indent. In a client template with another font, the second line can be slightly off
+    + Alignment made with spaces drifts because the space width differs by font and renderer. With a hanging indent the editor calculates the position of the second line
+- The width and spacing of a fit block are written as character shapes with the changes added in hwpx and as direct run formatting in docx. The line spacing is written as paragraph shapes with the change added in hwpx and as the fixed line spacing of the paragraph in docx. The style values stay unchanged
+- (Page fill) A layout in which the two pages of each spread fill evenly to the bottom is recommended. Plan the size of tables and figures, the placement of paragraphs, and so on for this layout from the writing and typesetting stages. Adjustments at the review stage are in Page Fill of the Render Review section
 - Table width is computed per table by the typesetter's rules. The cap is the body width minus the level indent, and the floor is 50% of the cap
     + If every column fits on one line, each column gets its one-line width. If the table is narrower than the floor, it is scaled up proportionally
     + If not everything fits on one line, the table width is set to the cap. Short columns get their one-line width first. Long columns share the remaining width evenly
@@ -1041,7 +1061,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - build's `--toc` (table of contents) and `--page-number` (page numbers) are separate options. Both are OFF by default. The defaults for the pre-diagnosis report are in the references/report.md Typesetting section
     + Turn them on only when the user asked or the RFP writing rules explicitly require them. Record the reason for turning them on (kickoff answer or RFP writing rule) in the writing rules row of basic project conditions in 00_제안전략서.md. For the pre-diagnosis report, record it in the basic report information table of 00_진단서.md, and for the planning report in the basic information table of 00_기획설계.md
     + If the RFP requires only page numbers, turn on only `--page-number`
-    + Table of contents page numbers are recorded only when `--page-number` is also on. Check in `n TOC entries, m bookmarks and page references` of the build log that n matches the number of items in the scope, and check the entry text, dotted leaders, and alignment on the PNG of the table of contents page
+    + Table of contents page numbers are recorded only when `--page-number` is also on. Compare n in `n TOC entries, m bookmarks and page references` of the build log with the number of items in the scope. Check the entry text, dotted leaders, and alignment on the PNG of the table of contents page
 - The table of contents scope is set with `--toc-scope`. The default is chapters, sections, tables, and figures (`chapter,section,table,figure`)
     + The items that can be added are subsections (subsection), items (ganada), Module (module), and Task (task). Chapters, sections, subsections, items, Modules, and Tasks go into the table of contents in document order
     + Only tables and figures with numbered captions (`<표 1-1>`, `[그림 1-1]`) are listed. The list of tables and list of figures follow the table of contents on new pages. Proposals and planning reports have unnumbered captions, so they get no table or figure entries
@@ -1050,24 +1070,24 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + (Bookmark position) Sections, subsections, and items use the heading paragraph. Chapters, divider pages, Modules, and Tasks use the number-cell paragraph of the band. Tables and figures use the first cell paragraph of the table object in hwpx and the caption paragraph in docx. Placed inside the band or table, the bookmark moves with it
     + (Bookmark name) In hwpx it is the entry text. `;` `?` `#` are removed, and a repeated text gets a sequence number starting at `(2)`. In docx it is `toc_number_text` (letters, digits, underscores, within 40 characters)
     + (hwpx initial value) The stored value of a page reference is the placeholder `?`. 한/글 recalculates it to the real page when it loads the document. Approximate renderers draw the stored value as it is, so review PNGs and PDFs show `?`. It is excluded from the verdict
-    + (docx initial value) The placeholder `?`, as in hwpx. Word does not recalculate page references when it opens a document; it calculates them with select all (Ctrl+A) then F9. An approximation from another layout engine differs from Word's pages and looks like a plausible wrong number, so none is recorded
-    + Settings that update on open (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1. Putting a TOC field with the dirty flag before the page references gave the same result
+    + (docx initial value) The placeholder `?`, as in hwpx. Word does not recalculate page references when it opens a document. It calculates them with select all (Ctrl+A) and then the F9 key. An approximation from another layout engine can differ from Word's real pages while the error is hard to notice, so none is recorded
+    + Settings that update fields when the document opens (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1. A TOC field with the dirty flag placed before the page references leads to the same result
     + 한/글's Make Table of Contents feature and Word's TOC field are not used. When Word updates a TOC field it deletes the typeset entries and rebuilds them
 - (Bookmark notice) For a job with a table of contents, give the following in the kickoff questions and in the final report
-    + A table of contents with page numbers attaches a bookmark to every listed item (heading paragraphs, chapter bands and divider bands, Module and Task bands, tables and figures with numbered captions), and each page number follows its bookmark
+    + A table of contents with page numbers places a bookmark on every listed item (heading paragraphs, chapter bands and divider bands, Module and Task bands, tables and figures with numbered captions) and calculates each page number from the position of its bookmark
     + Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. A band or table moved as a whole carries its bookmark
-    + Page numbers are first recorded as `?`. 한/글 calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
+    + The initial page number is `?`. 한/글 calculates the real pages automatically when it loads the document. Word calculates them with select all (Ctrl+A) and then the F9 key
     + Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     + In the final report, also state that the page numbers first show as `?` and how each format updates them
 - Table of contents static conversion is post-processing performed only when the user asks for it after the files are delivered. It is not part of the kickoff questions
-    + (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their page numbers become plain text
-    + (1 Update request) Ask the user to open the delivered file once in 한/글 or Word, update the page numbers, save it, and submit it again. 한/글 updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save. Only 한/글 and Word calculate the real pages, so static conversion of the build output as it is freezes the placeholder
+    + (Purpose) To reduce the editing burden after the output is final, the bookmarks of the items the user chooses are removed and their page numbers become plain text
+    + (1 Update request) Ask the user to open the delivered file once in 한/글 or Word, update the page numbers, save it, and submit the saved file again. 한/글 updates the page numbers on load, so the file is saved right after opening. In Word, update them with select all (Ctrl+A) and the F9 key, then save. Only 한/글 and Word calculate the real pages, so static conversion of a build output that was not updated leaves the placeholder `?` as plain text
     + (2 Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, module, task, table, figure) or all
     + (3 Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
     + (4 Report) Give the user the counts of items made static, skipped, and kept, and the output path
     + The bookmarks and page references of items outside the scope stay and keep updating in 한/글 and Word
     + Items whose page number is `?` are left as they are and reported in a `WARN:` line. Repeat the update request to the user
-    + The item kind is identified from where the bookmark sits (inside a captioned table, in a band cell) and from the paragraph style. For a client template, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all (they can be chosen with `--scope other`)
+    + The item kind is identified from the position of the bookmark (inside a captioned table, in a band cell) and from the paragraph style. For a client template, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other. other is not part of all, so it is chosen separately with `--scope other`
     + References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references and the bookmarks for footnote merging are not changed. The line layout values saved by 한/글 are kept
 - Extract a client template with `skeleton template.hwpx skeleton.hwpx`. Fill style names into the null roles of the draft profile, then run `build --profile profile.json --skeleton skeleton.hwpx`
 
@@ -1093,11 +1113,35 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + It is a defect if columns of the same nature (periods, amounts, ratios, etc.) are aligned differently in different tables
     + Figure size and caption, clipped and overlapping text. Check that all four sides of each figure are visible
     + For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
+    + Check that the second line of a multi-line source row aligns with the text after the source label, and that the choice between one joined line and line breaks suits the width of the table or figure
+    + For a document with fit adjustments, check that the adjusted paragraphs and pages do not look squeezed or cramped compared with their surroundings
     + Spacing before and after tables and figures. It is a defect if the next numbered title (chapter band, section 1., subsection 가., item 1)), a Module or Task band, □, or ❍ touches the bottom border of a table or figure, or if the table overlaps the paragraph above. Check for each table that it has the same spacing as other tables
     + Spacing defects occur mainly after `(장표: engine)` tables. When found, replace the directive line of that table with `(장표: split N)` and retypeset. Then check the PNG again
     + Tables separated from captions at page boundaries, split positions and header row repetition of tables that run past one page, blank pages right after a section starts, and bands, titles, and □ left alone at the end of a page
-- After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, and differences in font size and weight across levels
+- After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, differences in font size and weight across levels, and the bottom lines of each two-page spread
 - If the cause is the manuscript, fix the manuscript. If the cause is a norm, fix the settings part of proposal.py. With three or more defects of the same kind, stop individual fixes and adjust the norm in the settings part of proposal.py
+
+### Page Fill
+
+- In a document printed on both sides, the ideal layout fills the two pages of each spread evenly to the bottom and aligns their bottom lines. This is a recommendation, and no adjustment may harm how the information comes across
+- When the bottoms of the two pages do not match, for example a large empty space at the bottom of a page or only a few lines carried to the next page, adjust the means below within a range that keeps the information intact
+    + Size and position of tables and figures, table width directives
+    + Position and order of paragraphs, placement of □ groups
+    + The line spacing fit in the Fit Adjustments section, if the user turned it on in the kickoff questions
+
+### Fit Adjustments
+
+- Only the items the user turned on in the kickoff questions are carried out. Both items are off by default. The manuscript notation is the fit block in the Manuscript Hierarchy section
+- (Common) Adjust conservatively. Excessive adjustment makes characters look squeezed or lines look cramped and lowers the quality of the document. There is no fixed limit; the limit is the range where the difference does not stand out next to the other paragraphs on the same page
+- (Width and spacing fit) Applies to a paragraph where line wrapping pushes only one or two characters to the next line or where one line is out of step with the lines around it and breaks their uniformity
+    + Start with small changes and stop when the line fits
+    + If width and spacing alone do not fit the line, shorten the wording without changing its meaning
+    + (Approximate renderer margin) The approximate renderers tend to fit more characters on a line than 한/글. Fit the line so that one or two characters of room remain at the end of the adjusted line in the review PNG. Keep the same margin for docx
+- (Line spacing fit) When the other means in the Page Fill section do not align the bottoms of the two pages, shrink the line spacing of particular pages, paragraphs, tables, and so on
+    + A small change spread evenly over a whole page stands out less than a large change on one paragraph
+    + Start with small changes. If the pages still do not match, decide together with the other means in the Page Fill section
+- Fit adjustments apply only to particular paragraphs and pages, so they are exempt from the rule of applying adjustments to the whole level in the Discretionary Adjustment of Defects Outside the Rules section
+- State the adjusted positions and values in one line of the final report
 
 ### Discretionary Adjustment of Defects Outside the Rules
 
