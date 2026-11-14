@@ -267,6 +267,10 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 
 This adjustment changes the glyph ratio, letter spacing and line spacing slightly from the form style values. Do it only for the items the user turned on in the step 1 plan. The manuscript notation follows the Adjustment lines section of references/manuscript.md.
 
+- (Focused review) In a job that applies the adjustment, review the following pages closely in the rendered PNGs
+    - Pages with a line where only 1-2 characters carry over, or a line with almost no margin at its end that can wrap in Hangul and Word
+    - Facing pages whose fill does not match or can come apart by 1-2 lines
+
 Ratio and letter spacing adjustment
 
 - (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
@@ -274,6 +278,7 @@ Ratio and letter spacing adjustment
 - (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
 - (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin at the end of the line in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
 - (Shortening the text) When the ratio and letter spacing adjustment does not solve it, shorten the wording as long as the meaning stays the same
+- (Table cells) A table cell holds few characters per line, so the same overflow needs a larger adjustment. When the adjustment needed would make the text look different from its surroundings, consider other means of adjustment first
 
 Line spacing adjustment
 
