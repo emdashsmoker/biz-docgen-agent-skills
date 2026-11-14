@@ -29,6 +29,11 @@ Changelog rules
 
 ## 2026-11-14
 
+### Common
+- Changed spoken-style phrases and placeholder nouns in the skill documents and script comments to formal wording in both Korean and English, with no change in behavior (#146)
+
+* 한국어판과 영어판의 스킬 문서와 스크립트 주석에서 구어체 표현과 빈자리 명사를 격식체 문구로 변경 (동작 변화 없음) (#146)
+
 ### blockwriter
 - Changed TOC page numbers from renderer estimates to bookmarks and page reference fields that Hangul and Word calculate, with `?` shown until the first calculation (#140)
 - Added the `--toc-scope` build option that sets the items listed in the TOC, with chapters, sections, tables and figures as the default and subsections and 가나다 headings as additions (#140)
