@@ -56,6 +56,8 @@ Changelog rules
 - Action needed: write the won sign as `원` or `₩` (U+20A9) in manuscripts, because a backslash before a punctuation character is now an escape (#144)
 - Changed the planning question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
 - Changed the renderer margin of line tidying from a range to 2 characters in a paragraph and 3 characters in a table cell (#144)
+- Added a note to the TOC scope item of the planning questions that the list of tables and the list of figures are generated in the chapter form (#148)
+- Fixed the planning questions presenting the TOC as optional in the flat form, which has no TOC styles and skips the TOC (#148)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
@@ -78,6 +80,8 @@ Changelog rules
 * 원고의 원화 기호를 `원` 또는 `₩`(U+20A9)로 표기 필요 (문장부호 앞의 백슬래시는 이스케이프로 처리) (#144)
 * 기획안 질문의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질문 도구에 담지 못한 항목 포함) (#144)
 * 줄 정리의 렌더러 여유를 범위에서 문단 2글자, 표 셀 3글자의 기준값으로 변경 (#144)
+* 기획안 질문의 목차 수록 범위 항목에 표 목차와 그림 목차가 chapter 양식에서 생성된다는 안내 추가 (#148)
+* 기획안 질문에서 flat 양식의 목차를 선택 요소로 안내하던 문구 수정 (flat 양식은 목차 스타일이 없어 목차를 생략) (#148)
 
 ### ieum-deck
 - Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
@@ -111,6 +115,8 @@ Changelog rules
 - Action needed: write the won sign as `원` or `₩` (U+20A9) in manuscripts, because a backslash before a punctuation character is now an escape (#144)
 - Changed the kickoff question guidance so that every choice item shows all of its choices, including items listed outside the question tool (#144)
 - Changed the renderer margin of line tidying from a range to 2 characters in a paragraph and 3 characters in a table cell (#144)
+- Changed the default TOC scope in the proposal kickoff questions to chapters and sections, because proposal captions have no numbers and get no list of tables or list of figures (#148)
+- Added a TOC scope item and a bookmark notice to the pre-diagnosis report kickoff questions, with chapters, sections, tables and figures as the default (#148)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
@@ -136,6 +142,8 @@ Changelog rules
 * 원고의 원화 기호를 `원` 또는 `₩`(U+20A9)로 표기 필요 (문장부호 앞의 백슬래시는 이스케이프로 처리) (#144)
 * 착수 질의의 선택형 항목마다 선택지 전체를 제시하도록 안내 변경 (질의 도구에 담지 못한 항목 포함) (#144)
 * 줄 정리의 렌더러 여유를 범위에서 문단 2글자, 표 셀 3글자의 기준값으로 변경 (#144)
+* 제안서 착수 질의의 목차 수록 범위 기본값을 장, 절로 변경 (제안서 캡션은 번호가 없어 표 목차와 그림 목차가 생기지 않음) (#148)
+* 사전진단보고서 착수 질의에 목차 수록 범위 항목과 책갈피 안내 추가 (기본은 장, 절, 표, 그림) (#148)
 
 ## 2026-11-13
 
