@@ -494,7 +494,7 @@ def set_paragraph_line_break(xml: str) -> tuple[str, int]:
 
     WHY: Both attributes are line break options PowerPoint reads per paragraph (allow Korean word break, allow Latin word break).
          soffice reserialization removes txStyles from the master and defaultTextStyle from presentation.xml,
-         so values left to inheritance fall back to PowerPoint's program defaults. Writing them on each paragraph gives the same result in PowerPoint.
+         so values left to inheritance fall back to PowerPoint's program defaults. Writing them on each paragraph keeps the same line breaking in PowerPoint.
          Existing values are overwritten so no value that disagrees with the build record's line break unit remains
     """
     attrs = line_break_attrs()

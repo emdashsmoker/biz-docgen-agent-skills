@@ -905,7 +905,7 @@ def image_size_mm(data: bytes) -> tuple[float, float]:
 def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
     """Figure size and the width of the transparent table that holds it (HWPUNIT). Returns (figure width, figure height, table width)
     The line that holds the figure is as wide as the cell minus the left and right cell margins, so table width = figure width + those margins.
-    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure in hand editing.
+    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure during manual editing.
     A table wider than the body width leaves the page, so the figure is scaled down in proportion"""
     pad = 2 * C.CELL_MARGIN_LR
     max_w = body_w - pad
@@ -915,7 +915,7 @@ def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
 
 
 def table_pos_role(has_caption: bool, has_fig_pos: bool) -> str:
-    """Role of the paragraph that holds a table. The table position style has no top margin because a caption sits above the table.
+    """Role of the paragraph that holds a table. The table position style has no top margin because it assumes a caption above the table.
     A table without a caption touches the paragraph above, so it uses the figure position style, which has a top margin
     (the table position style when the form has no figure position style)"""
     return "table_pos" if has_caption or not has_fig_pos else "fig_pos"

@@ -400,7 +400,7 @@ class DocxBuilder(lib.TocMarks):
 
     def _note_crossref(self, p, fid: int, ref_run):
         """Cross-reference to a footnote number (Word NOTEREF field). Wraps the reference run of the first footnote in a bookmark and points to it
-        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the sequence number is the number"""
+        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the number equals the sequence number"""
         name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
         if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
             ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # the footnote sequence number is the id. TOC bookmarks start at TOC_BOOKMARK_ID_BASE
@@ -639,7 +639,7 @@ class DocxBuilder(lib.TocMarks):
                     self._tc_style(tc, sides, style_fill, lib.CELL_MARGIN)
         if long and head:  # Word repeats only rows continuous from the first table row, so the unit row is included in repetition
             t.rows[0]._tr.get_or_add_trPr().append(_w("tblHeader"))
-        if not long:  # move whole without breaking across pages, like a 한/글 treat-as-character table
+        if not long:  # like a 한/글 treat-as-character table, move the whole table to the next page instead of splitting it at a page boundary
             for row in t.rows[:-1]:
                 for cell in row.cells:
                     for p in cell.paragraphs:

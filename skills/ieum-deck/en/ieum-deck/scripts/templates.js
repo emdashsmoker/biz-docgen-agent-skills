@@ -239,7 +239,7 @@ const sameLines = (a, b) => a.every((n, k) => n === b[k]);
 /** Whether line counts differ between the two width factors (edge zone) */
 const isEdgeCol = (xs, w, sz) => !sameLines(linesAt(xs, w, EDGE_FACTORS[0], sz), linesAt(xs, w, EDGE_FACTORS[1], sz));
 // Avoiding line breaks inside a word. A column where the renderer splits a word caught at the line end, as in '○○|억원' or '(기|업)' (same computed width as the check_layout warning),
-// moves to a width where that word fits on the upper line or moves whole to the next line
+// moves to a width where that word fits on the upper line or moves to the next line without being split
 // Why: of 117 rendered breaks inside a word in the A4, 10.83 and 4:3 sample renders, 36 are in table cells. 9 remain after this avoidance, all at check_layout warning positions
 //      The rendered/computed width ratio is 0.990 at the 1st percentile and 1.007 at most over both samples and four page sizes, so a column that had a split moves to a width with no split at ±1% of the computed width
 //      Avoiding splits only at the computed width leaves 16 (15 without a warning) through rendering error; avoiding them at ±3% (edge zone factors) leaves 20 for lack of width to move. 16:9 samples have no splitting column, so their widths stay as they were

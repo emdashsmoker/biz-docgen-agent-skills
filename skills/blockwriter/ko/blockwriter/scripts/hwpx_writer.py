@@ -554,7 +554,7 @@ class Builder(M.TocMarks):
         return str(bid)
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
-        """표 안의 투명 병합 행 (단위, 출처). 손으로 편집할 때 표와 함께 이동하도록 표 내부에 둔다."""
+        """표 안의 투명 병합 행 (단위, 출처). 수동 편집 때 표와 함께 이동하도록 표 내부에 둔다."""
         no_border = self._border_fill([])
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
