@@ -650,7 +650,7 @@ class ProposalLayout:
                 self.para("unit", e.text)
             elif e.kind == "source":
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, lib.source_label(e.text)[1])   # 각주는 출처 표기(`출처:` 등) 없이 출처 문구만 담음. `[^n]` 각주와 문구가 같아 통합 대상이 됨
                 else:
                     self.para("note", e.text, footnotes)
             elif e.kind == "table":

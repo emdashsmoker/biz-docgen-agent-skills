@@ -930,7 +930,7 @@ class DocxBuilder(M.TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":   # 표·그림에 붙지 않은 출처 줄은 직전 문단의 각주로 이동
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.source_label(e.text)[1])   # 각주는 출처 표기(`출처:` 등) 없이 출처 문구만 담음. `[^n]` 각주와 문구가 같아 통합 대상이 됨
                 else:
                     self.para("note", e.text, footnotes)
             elif e.kind == "table":
