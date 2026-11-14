@@ -34,7 +34,7 @@ This is how a footnote that cites the same source again is written. The default 
 - (Short form) The first footnote in the scope gives the full source. Later footnotes for the same source put a short form that fits the document type after the organization or author name (year), written directly in the footnote definition
     - (Examples) `기관명(연도), 앞의 보고서`, `저자명(연도), 앞의 논문, p. 12`, `저자명(연도), 앞의 책`, `기관명(연도), 앞의 자료`, `저자명(연도), op. cit., p. 79`, and so on
     - Choose the short-form word by document type: 보고서 for a research report, 논문 or 글 for a journal article, 책 for a book, 자료 for press releases, ministry materials and web materials, and so on
-    - Some documents use `위의`, as in `위의 보고서`, `위의 자료` or `Ibid.`, for the same source as the footnote just before. Use one convention within a document
+    - Some documents use `위의`, as in `위의 보고서`, `위의 자료`, `Ibid.` and the like, for the same source as the footnote just before. Use one convention within a document
     - When the cited page differs, write the page after the short form
     - When the user gives a citation rule or the user form shows a notation, follow it
 - (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, footnotes with the same text inside the scope become the first footnote, and the later citation positions show the first footnote number in superscript
@@ -42,6 +42,7 @@ This is how a footnote that cites the same source again is written. The default 
     - Footnotes moved from source lines after body paragraphs are merged too
     - Check the number of merged citations on the build completion line (`merged footnote references`)
     - The number is a Hangul cross-reference in HWPX and a Word footnote number reference field in DOCX. The typesetting is in the object placement section of references/layout.md
+
 ## Tables
 
 - A table is written as a `<표> title` caption line followed by a pipe table. build assigns the caption number automatically
@@ -97,6 +98,7 @@ This is how a footnote that cites the same source again is written. The default 
 - Write a figure as `![caption](path or URL)`. Relative paths are resolved from the manuscript file location
 - A `[그림] caption` line right after the figure is used as that figure's caption
 - Write the source on the line after the figure (after the caption line, if there is one) as `※ 출처: ` or `출처: `
+- `{폭 120}` at the end of a figure line sets the figure width in mm (`![caption](path) {폭 120}`). The height follows the original aspect ratio, and a value wider than the body width is reduced to the body width. A figure without it is typeset at the default size in the figure placement part of references/layout.md
 - Insert only files or URLs the user provided
 - webp is converted to JPG when inserted. If the file does not exist, build prints `WARN: image not found` and skips that figure
 
@@ -108,11 +110,44 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - (※ note line) A line starting with `※` or `* ` (an asterisk and a space)
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
+- (Several sources) When the source line of a table or figure has two or more sources, split the line at each source with `<br>`. build aligns the later lines with the start of the first source (`자료: 기관명(연도), 자료명<br>기관명(연도), 자료명`)
+    - (One line) For a table or figure where all sources fit on one line and one line looks tidier, join them with `; ` (`자료: 기관명(연도), 자료명; 기관명(연도), 자료명`)
+    - (Choosing) Decide for each table and figure from the number and length of the sources, the width of the table or figure, the page layout and the like
+    - (Wrapped lines) When a source runs past one line, the wrapped lines also align with the start of the first source
+    - (Source lines that become footnotes) In a source line after a body paragraph, `<br>` becomes `; `
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
 - A source line after a body paragraph becomes a footnote of the previous paragraph. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
+
+## Adjustment notation
+
+This notation adjusts the width ratio (장평), letter spacing (자간) and line spacing (줄 간격) of a paragraph or a range. It is off by default, and each item is used only when the user chose the width ratio and letter spacing adjustment or the line spacing adjustment in the step 1 plan.
+
+- (Notation) Write the item name and the adjustment value in braces, such as `{자간 -3}`, `{장평 -2, 자간 -3}`, `{줄 간격 -10}`
+    - (Value) An integer in percentage points added to the style value. `{자간 -3}` on a style with 0% letter spacing gives -3%, and `{줄 간격 -10}` on a style with 160% line spacing gives 150%
+    - (Style values) The width ratio and letter spacing of each built-in form style are in the built-in forms table of references/layout.md, and the line spacing is in scripts/form.py
+- (One paragraph) Write it after a space at the end of a heading line or a body paragraph line (□, ○, -, ㆍ, ※). It applies to that paragraph only (`- statement {자간 -3}`)
+- (A range) Written alone on a line, it applies to the paragraphs and tables from that line up to the next adjustment line. End the range with an adjustment line whose value is 0 (`{줄 간격 0}`)
+    - An adjustment line replaces the previous adjustment line. Inside a range, a notation at the end of a paragraph overrides the same items for that paragraph
+    - Tables take the line spacing only. To adjust one table, put an adjustment line before the caption line and another after the source lines
+- (Recommended range) -5 to +5 for the width ratio and the letter spacing, and -15 to +15 for the line spacing. For a value outside it, build prints a `WARN:` and typesets with the given value
+- (When) Add it in step 4 review, after finding the targets in the page PNGs
+- (Amount) Use the smallest value that does the job. If an adjusted paragraph or page looks noticeably different from its neighbors, reduce the value
+
+Width ratio and letter spacing adjustment
+
+- (Targets) A paragraph whose last line holds only 1-2 characters, a paragraph where one overflowing line gives it a different line count from neighboring paragraphs of the same level, and the like
+- (Order) Narrow the letter spacing from -1 in steps of 1 and build again. If the letter spacing alone is not enough, narrow the width ratio as well
+- (Room at the line end) The review renderers tend to fit more characters on a line than Hangul. Choose a value that leaves room for 1-2 characters at the line end in the page PNGs
+- (Shortening the wording) For a paragraph that adjustment within the recommended range does not resolve, also try shortening the wording, as far as the meaning is kept
+
+Line spacing adjustment
+
+- (Targets) A page with empty space at the bottom because a table, a figure or a few lines of a paragraph moved to the next page, facing pages that fill unevenly, and the like (Page fill section of references/layout.md)
+- (Unit) Apply the same value to a whole page, consecutive paragraphs, a table and the like
+- (Order) Narrow from -5 in steps of 5 and build again
 
 ## Content-writing rules
 

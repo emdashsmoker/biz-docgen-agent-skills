@@ -45,9 +45,11 @@ def cmd_build(a):
         C.set_labels(a.labels)
         M.compile_notation()
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)   # 저장 시점의 폴더 없음 오류 방지
-    elems, footnotes = M.parse_markdown(a.input)
+    elems, footnotes, adjust_warnings = M.parse_markdown(a.input)
     for issue in M.lint(elems, footnotes):   # LINT는 원고를 고쳐 해소
         print("LINT:", issue)
+    for warning in adjust_warnings:   # 권장 범위를 벗어난 조정 표기
+        print(warning)
     # HITL은 유저가 고르는 조판 선택지. 옵션으로 이미 고른 항목은 알리지 않음
     for notice in M.hitl_notices(elems, ask_page_break=a.page_break is None, ask_long_table=a.long_table is None):
         print("HITL:", notice)

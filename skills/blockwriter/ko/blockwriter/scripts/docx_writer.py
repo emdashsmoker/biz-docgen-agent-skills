@@ -328,7 +328,9 @@ class DocxBuilder(M.TocMarks):
             sub(rpr, "w:vertAlign", w__val="superscript" if kind == "sup" else "subscript")
         return rpr
 
-    def para(self, role: str, text: str, footnotes: dict | None = None, no_bullet: bool = False):
+    def para(self, role: str, text: str, footnotes: dict | None = None, no_bullet: bool = False,
+             adjust: dict | None = None):
+        """adjust는 원고 조정 표기의 값 (장평, 자간, 줄 간격을 스타일 값에서 더하는 %p)"""
         st = self.form.style(role) or self.form.style("body")
         head = st.para.head
         is_bullet = isinstance(head, tuple) and head[0] == "BULLET"
@@ -346,20 +348,46 @@ class DocxBuilder(M.TocMarks):
                 sub(extra, "w:jc", w__val="left")
         elif not is_bullet and role in MANUAL_SYMBOLS:
             text = MANUAL_SYMBOLS[role] + text
+        adjust = adjust or {}
+        if adjust.get("line"):
+            extra = el("w:pPr") if extra is None else extra
+            self._line_spacing(extra, st, adjust["line"])
         p = self._new_p(role, extra)
-        self._append_inline(p, text, footnotes)
+        self._append_inline(p, text, footnotes, self._adjust_rpr(st, adjust))
         return self._body_append(p)
 
-    def _append_inline(self, p, text: str, footnotes: dict | None = None):
-        """인라인 서식(굵게, 기울임, 첨자)을 run으로 나누어 붙인다. 각주 참조는 footnotes가 있을 때만 처리"""
+    @staticmethod
+    def _line_spacing(ppr, st, delta: int):
+        """줄 간격에 조정값(%p)을 더한 최소 줄 높이. 문단 앞뒤 간격은 스타일 값을 그대로 따름"""
+        sub(ppr, "w:spacing", w__line=round(st.char.size * (st.para.line + delta) / 100 * 20), w__lineRule="atLeast")
+
+    @staticmethod
+    def _adjust_rpr(st, adjust: dict):
+        """장평과 자간에 조정값(%p)을 더한 글자 속성을 run 속성에 넣는 함수. 조정이 없으면 None"""
+        ratio, spacing = adjust.get("ratio", 0), adjust.get("spacing", 0)
+        if not ratio and not spacing:
+            return None
+
+        def apply(rpr):
+            rpr = el("w:rPr") if rpr is None else rpr
+            if spacing:
+                sub(rpr, "w:spacing", w__val=round(st.char.size * (st.char.spacings[0] + spacing) / 100 * 20))
+            if ratio:
+                sub(rpr, "w:w", w__val=st.char.ratios[0] + ratio)
+            sort_children(rpr, ["b", "bCs", "i", "iCs", "spacing", "w", "vertAlign"])
+            return rpr
+        return apply
+
+    def _append_inline(self, p, text: str, footnotes: dict | None = None, char_adjust=None):
+        """인라인 서식(굵게, 기울임, 첨자)을 run으로 나누어 붙인다. 각주 참조는 footnotes가 있을 때만 처리.
+        char_adjust는 run 속성에 장평과 자간 조정을 더하는 함수 (_adjust_rpr)"""
         for kind, seg in M.inline_segments(text):
             if kind == "footnote":
                 if footnotes is not None:
                     self._footnote_ref(p, footnotes.get(seg, ""))
-            elif kind in ("bold", "italic", "sup", "sub"):
-                p.append(self._run(seg, self._fmt_rpr(kind)))
-            else:
-                p.append(self._run(seg))
+                continue
+            rpr = self._fmt_rpr(kind) if kind in ("bold", "italic", "sup", "sub") else None
+            p.append(self._run(seg, char_adjust(rpr) if char_adjust else rpr))
 
     # ── 각주 ───────────────────────────────────────────────────────────
     def _footnotes(self):
@@ -429,13 +457,13 @@ class DocxBuilder(M.TocMarks):
         p.append(self._run(self.form.page.note_suffix, sup))
 
     # ── 헤더 계위 ───────────────────────────────────────────────────────
-    def heading(self, level: int, text: str):
+    def heading(self, level: int, text: str, adjust: dict | None = None):
         text = M.NUM_PREFIX_RE.sub("", text).strip()
         role = ("chapter", "section", "subsection", "ganada")[level - 1]
         if self.numbering.advance(level):
             self.pending_break = True
         label = M.heading_label(self.p, self.numbering.n, level, text)
-        p = self.para(role, label)
+        p = self.para(role, label, adjust=adjust)
         self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):
             self.caption_n = {"TABLE": 0, "PICTURE": 0}
@@ -514,9 +542,11 @@ class DocxBuilder(M.TocMarks):
         if unit:
             self._transparent_row(tbl, widths, unit, "unit", "right", header=header_repeat)
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_delta = e.data.get("adjust", {}).get("line", 0)   # 원고 조정 표기의 줄 간격 조정값 (%p)
+        scale = M.line_scale(cell_style.para.line, e.data.get("adjust"))
         for ri, row in enumerate(rows):
             is_head = ri < hdr
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], scale)
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
             sub(trpr, "w:cantSplit")
@@ -542,7 +572,7 @@ class DocxBuilder(M.TocMarks):
                     sub(tcpr, "w:shd", w__val="clear", w__color="auto", w__fill=C.HEADER_FILL.lstrip("#"))
                 sub(tcpr, "w:vAlign", w__val="center")
                 text = "" if cell["vmerge"] == "continue" or cell["text"].strip() in ("^", "<") else cell["text"]
-                self._cell_paragraphs(tc, text, aligns[c], is_head, cell_style, keep=not long_table)
+                self._cell_paragraphs(tc, text, aligns[c], is_head, cell_style, keep=not long_table, line_delta=line_delta)
                 c += span
         for k, src in enumerate(sources):
             self._transparent_row(tbl, widths, src, "source", "left")
@@ -589,7 +619,7 @@ class DocxBuilder(M.TocMarks):
         plain = tuple(s for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
         return M.CellFont(C.SPACE_EM_DOCX, plain, line_style("table_cell_bullet"), line_style("table_cell_dash"))
 
-    def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool):
+    def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool, line_delta: int = 0):
         lines = text.split("\n")
         for ln in lines:
             role = "table_cell"
@@ -613,6 +643,8 @@ class DocxBuilder(M.TocMarks):
                     sub(extra, "w:jc", w__val="right")
                 elif is_head:
                     sub(extra, "w:jc", w__val=ALIGN[cell_style.para.align])
+            if line_delta:
+                self._line_spacing(extra, self.form.style(role), line_delta)
             p = el("w:p")
             ppr = sub(p, "w:pPr")
             sub(ppr, "w:pStyle", w__val=self.style_ids[role])
@@ -627,11 +659,17 @@ class DocxBuilder(M.TocMarks):
             tc.append(p)
 
     def _transparent_row(self, tbl, widths, text: str, role: str, align: str, header: bool = False):
-        """표 안의 투명 병합 행 (단위, 출처). 표와 함께 이동한다."""
+        """표 안의 투명 병합 행 (단위, 출처). 표와 함께 이동한다.
+        출처 행은 줄 나눔 표기(<br>)마다 문단을 나누고 라벨('출처: ') 폭만큼 내어써서 둘째 줄부터 첫 출처 시작 위치에 맞춘다"""
+        lines = M.source_lines(text) if role == "source" else [text]
+        st = self.form.style(role)
+        label_style = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
+        hang = round(label_style.glyph_hu(M.source_label(lines[0]), C.SPACE_EM_DOCX)) if role == "source" else 0
+        left = st.para.margin[1]
         tr = sub(tbl, "w:tr")
         trpr = sub(tr, "w:trPr")
         sub(trpr, "w:cantSplit")
-        sub(trpr, "w:trHeight", w__val=tw(C.ROW_BASE_H), w__hRule="atLeast")
+        sub(trpr, "w:trHeight", w__val=tw(M.row_height(len(lines))), w__hRule="atLeast")
         if header:
             sub(trpr, "w:tblHeader")
         tc = sub(tr, "w:tc")
@@ -641,12 +679,17 @@ class DocxBuilder(M.TocMarks):
             sub(tcpr, "w:gridSpan", w__val=len(widths))
         self._cell_borders(tcpr, [])
         sub(tcpr, "w:vAlign", w__val="center")
-        p = sub(tc, "w:p")
-        ppr = sub(p, "w:pPr")
-        sub(ppr, "w:pStyle", w__val=self.style_ids[role])
-        sub(ppr, "w:keepNext")
-        sub(ppr, "w:jc", w__val=align)
-        p.append(self._run(text))
+        for li, line in enumerate(lines):
+            p = sub(tc, "w:p")
+            ppr = sub(p, "w:pPr")
+            sub(ppr, "w:pStyle", w__val=self.style_ids[role])
+            sub(ppr, "w:keepNext")
+            if li:   # 이어지는 줄은 문단 위 여백을 없애 한 출처 행의 줄 사이를 고르게 둠
+                sub(ppr, "w:spacing", w__before=0)
+            if hang:   # 첫 줄은 왼쪽 여백에서 시작하고 둘째 줄과 이어지는 문단은 라벨 폭만큼 들여 시작
+                sub(ppr, "w:ind", w__left=tw(left + hang), w__hanging=0 if li else tw(hang))
+            sub(ppr, "w:jc", w__val=align)
+            p.append(self._run(line))
 
     def _page_break_para(self):
         """표·그림 앞 쪽 나눔. 새 쪽 첫 줄을 차지하지 않도록 높이가 최소인 빈 문단에 쪽 나눔을 건다."""
@@ -697,7 +740,7 @@ class DocxBuilder(M.TocMarks):
         if not C.FIGURE_IN_TABLE:
             self._body_append(pic_p)
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.source_inline(src))
         else:
             # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
             cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
@@ -889,17 +932,17 @@ class DocxBuilder(M.TocMarks):
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
-                self.heading(e.level, e.text)
+                self.heading(e.level, e.text, e.data.get("adjust"))
                 self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
+                self.last_para = self.para(e.kind, e.text, footnotes, adjust=e.data.get("adjust"))
             elif e.kind == "unit":
                 self.para("unit", e.text)
             elif e.kind == "source":   # 표·그림에 붙지 않은 출처 줄은 직전 문단의 각주로 이동
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.source_inline(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.source_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":

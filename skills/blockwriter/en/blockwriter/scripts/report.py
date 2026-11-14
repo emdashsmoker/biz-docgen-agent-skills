@@ -46,9 +46,11 @@ def cmd_build(a):
         C.set_labels(a.labels)
         M.compile_notation()
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)   # avoid a missing-folder error at save time
-    elems, footnotes = M.parse_markdown(a.input)
+    elems, footnotes, adjust_warnings = M.parse_markdown(a.input)
     for issue in M.lint(elems, footnotes):   # LINT is resolved by fixing the manuscript
         print("LINT:", issue)
+    for warning in adjust_warnings:   # adjustment notation outside the recommended range
+        print(warning)
     # HITL lines are typesetting choices for the user. Items already chosen by option are not reported
     for notice in M.hitl_notices(elems, ask_page_break=a.page_break is None, ask_long_table=a.long_table is None):
         print("HITL:", notice)

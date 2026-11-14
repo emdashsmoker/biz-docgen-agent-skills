@@ -134,6 +134,12 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (off) Every footnote gives the full source
         - (short form) Only the first footnote in the scope gives the full source, and later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
         - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
+    - (Width ratio and letter spacing adjustment) Whether to apply the editing practice that narrows the width ratio (장평) and letter spacing (자간) of paragraphs such as one where only 1-2 characters run over to the next line, so that the paragraph takes fewer lines. Choose off (default) or on. The criteria are in the Adjustment notation section of references/manuscript.md
+        - (off) Every paragraph is typeset with the form's width ratio and letter spacing
+        - (on) During review, the width ratio and letter spacing of the target paragraphs are narrowed within the recommended range, and shortening the wording is also tried for paragraphs this does not resolve
+    - (Line spacing adjustment) Whether to apply the editing practice that narrows the line spacing of some pages, paragraphs, tables and the like so that facing pages fill evenly without removing content. Choose off (default) or on. The criteria are in the Adjustment notation section of references/manuscript.md
+        - (off) Every paragraph and table is typeset with the form's line spacing
+        - (on) During review, the line spacing of the target range is narrowed within the recommended range
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
@@ -155,14 +161,18 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (`HITL:`) A typesetting choice for the user (page breaks, long tables). build prints it only when `--page-break` or `--long-table` is not given, so pass the items decided in step 1 as options
     - (`WARN:`) A typesetting warning such as a missing style or a missing image
     - (`INFO:`) The current width and the no-wrap width (as % of the ○ level width) of tables whose cells wrap and tables with a column width line. Automatic sizing expects cells to wrap, so this line alone is no reason to edit the manuscript. Use its values for column width lines when fixing a column width defect in step 4
+    - (Page fill) A layout in which facing pages fill evenly down to the bottom margin is recommended. From the first build, choose the page break unit and the position and size of tables and figures with this in mind (Page fill section of references/layout.md)
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
+    - (Page fill) In the page PNGs, find pages with noticeable empty space at the bottom and adjust the size and position of tables and figures, the position of paragraphs and the like, as far as the information still comes across. This is a recommendation, and the means are in the Page fill section of references/layout.md
+    - (Adjustment notation) Only when the user chose the width ratio and letter spacing adjustment or the line spacing adjustment in step 1, add the adjustment notation to the targets found in the page PNGs and build again. The criteria and order are in the Adjustment notation section of references/manuscript.md
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason
     - (Renderer limits) One line saying that the review renderers are approximate, so the result may look different in Hangul or Word
     - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
+    - (Adjustments) If the width ratio, letter spacing or line spacing was adjusted, summarize where and by how much. Line breaks can differ between the review renderers and Hangul or Word, so also advise checking those places
     - (TOC page numbers) If a TOC with page numbers was inserted, repeat the bookmark notice of step 1 and add the initial values of each format
         - The TOC page numbers of an HWPX are written as the placeholder `?`. They change to the real pages when Hangul loads the document
         - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document, so they change to the real pages only after select all (Ctrl+A) then F9
@@ -202,7 +212,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 | `※ remark` | note | ※ | ※ |
 | Source lines such as `출처: ` | source | after a table or figure: source row. After body text: footnote of the previous paragraph | same |
 
-- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, and source and unit lines are in references/manuscript.md
+- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, source and unit lines, and the adjustment notation are in references/manuscript.md
 - The rules for statements under □, keyword versus sentence style, and the use of section numbers and 가나다 are also in references/manuscript.md
 
 ## Differences between formats
@@ -214,7 +224,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 
 ## Labels
 
-- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC titles (TOC, list of tables, list of figures), caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width), and the language tags of DOCX and HWPX
+- (Customizable) Heading number formats (chapter, section, subsection), the letters and format of the 가나다 level, the TOC titles (TOC, list of tables, list of figures), caption label words, marks, and Word SEQ field names, extra manuscript tokens (source, unit, table caption, figure caption, column width, adjustment items, figure width), and the language tags of DOCX and HWPX
 - (How) `build manuscript.md output.docx --profile chapter --labels labels.json`. A nested JSON object; omitted keys keep the defaults. Unknown keys and invalid values stop build with the list of all problems. Works for HWPX and DOCX and for both built-in forms
 - (Defaults) Without `--labels`, documents get the Korean labels (제N장, 가., 목  차, 표, 그림)
 - (Manuscript tokens) The Korean tokens stay recognized. A label file only adds tokens (for example `Source:`, `<Table>`, `(Unit: )`)

@@ -67,6 +67,10 @@ Table attachments
 
 - The unit row is a transparent merged row above the header, right-aligned. The source row is a transparent merged row below the table, left-aligned. Both are inside the table and move with it
 - Unit and source rows use dedicated 9pt styles without bullets (단위, 출처). A ※ note line attached to the source rows is printed in the source style with its ※ or * kept
+- A source row splits into paragraphs at each `<br>` in the manuscript and hangs by the width of the label (such as `출처: ` or `자료: `), so that wrapped lines and the second and later lines align with the start of the first source
+    - The label width comes from the font size, width ratio and letter spacing of the source style and the NanumGothic glyph widths (GLYPH_EM)
+    - From the second paragraph, the space before the paragraph is 0 so that the lines of one source row are evenly spaced. The minimum row height follows the line count
+    - A ※ note line, which has no label, keeps the hanging indent of the source style
 - Table captions go above the table and figure captions below the figure. The gap between the caption and the table is 850 HWPUNIT (about 3mm, CAPTION_GAP)
 - The caption width is the width of its table or figure table. A long caption wraps within this width
 - HWPX captions are caption objects attached to the table, and the number is an automatic number field. chapter restarts the numbering at 1 in each chapter through a number restart in the chapter's first paragraph
@@ -102,6 +106,7 @@ Figure layout
     - When the figure table is wider than the body width, the figure is scaled down in proportion to fit the body width
     - (DOCX) The table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
 - Figure size depends on the width to height ratio. A landscape figure (1.4 or more) is 140mm wide, a portrait figure (0.8 or less) is 110mm high, and anything in between is 90mm wide. Without resolution information, 96dpi is assumed
+    - `{폭 N}` at the end of a manuscript figure line sets the figure width to N mm. The height follows the original aspect ratio, and a value wider than the body width is reduced to the body width
 - Tables and figures are centered in the body. The spacing before and after them comes from the paragraph margins of the table position and figure position styles
     - A table without a caption is placed with the figure position style. The table position style has no top margin because a caption sits above the table, so a table without a caption touches the paragraph above
 
@@ -112,6 +117,14 @@ Source footnote merging
     - A paragraph with a cross-reference uses a paragraph shape whose bullet takes the style's character shape. When the bullet character shape follows the text, Hangul shrinks the bullet along with the superscript characters
 - (DOCX) The first footnote reference is wrapped in a bookmark, and a NOTEREF field that points to the bookmark goes at each repeated citation position
 - The number stored in the field is the footnote number at typesetting time. When editing changes the footnote numbers, a field update in Hangul or Word brings the numbers along
+
+Adjustment notation
+
+- Applied only to the paragraphs and tables that carry the adjustment notation in the manuscript. The notation and the criteria are in the Adjustment notation section of references/manuscript.md
+- (HWPX) The target paragraph gets shapes derived from the style: a character shape with the changed width ratio and letter spacing, and a paragraph shape with the changed line spacing. The style definitions stay as they are
+- (DOCX) The character width scale and character spacing are written on the runs of the target paragraph, and the minimum line height on the paragraph
+- (Tables) The line spacing of the cell paragraphs changes and the minimum row height is scaled by the same ratio. The ratio applies only to the height without the top and bottom cell margins
+- For a value outside the recommended range (ADJUST_WARN_ABS), build prints a `WARN:` and typesets with the given value
 
 HWPX package
 
@@ -221,6 +234,8 @@ The fixed strings that build prints into documents and the language tags it writ
 | notation.table | Table caption line token (`<token> title`) | `표` |
 | notation.figure | Figure caption line token (`[token] caption`) | `그림` |
 | notation.colwidth | Column width line token (`(token: 15, 20, 25)`) | `열 폭` |
+| notation.ratio, notation.spacing, notation.linespacing | Item names of the adjustment notation for the width ratio, letter spacing and line spacing (`{token -3}`) | `장평`, `자간`, `줄 간격` |
+| notation.figwidth | Item name of the width notation at the end of a figure line (`{token 120}`) | `폭` |
 | language.latin, language.east_asia | DOCX document default language (w:lang) for Latin and East Asian text | `en-US`, `ko-KR` |
 | language.hwpx_package | HWPX document language (opf:language in content.hpf) | `ko` |
 | language.hwpx_style_lcid | HWPX style language (langID, a Windows LCID integer) | `1042` |
@@ -242,13 +257,25 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
   "toc": {"title": "Contents", "tables": "List of Tables", "figures": "List of Figures"},
   "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
   "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
-               "colwidth": ["Column widths"]},
+               "colwidth": ["Column widths"], "ratio": ["Width ratio"], "spacing": ["Letter spacing"],
+               "linespacing": ["Line spacing"], "figwidth": ["Width"]},
   "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "en", "hwpx_style_lcid": 1033}
 }
 ```
 
 - Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, the list titles `List of Tables` and `List of Figures`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
-- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 15, 20, 25)` together with the Korean tokens
+- Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, `(Column widths: 15, 20, 25)`, `{Letter spacing -3}`, `{Line spacing -10}`, `{Width 120}` and the like together with the Korean tokens
+
+## Page fill
+
+A layout in which facing pages fill evenly down to the bottom margin is recommended. Adjust only as far as the information still comes across.
+
+- (Standard) No noticeable empty space at the bottom of a page, and facing pages filled to a similar extent
+- (Typesetting) From drafting the manuscript and the first build, choose the page break unit and the position and size of tables and figures with this in mind
+- (Review) In the page PNGs, find pages with noticeable empty space and adjust with means such as the following
+    - (Size) `{폭 N}` at the end of a figure line and the column width line of a table (Figures and Tables sections of references/manuscript.md)
+    - (Position) Moving a table or figure earlier or later, changing the position of paragraphs, and adding or removing `---` lines
+    - (Line spacing) The adjustment notation, when the user chose the line spacing adjustment in step 1 (Adjustment notation section of references/manuscript.md)
 
 ## Review items
 
@@ -262,12 +289,15 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - If automatic merging looks odd, switch to `--merge explicit` and merge only where needed with `^` and `<`. Whether a merge fits differs from table to table, so judge it in the free review
 - A long-text cell wrapping to 2 lines and a line break in the middle of a word (for example `대한민` and `국` on different lines) are normal placement and do not count as defects. They are not a reason to add a column width line either
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
+- Check that the wrapped lines of a source row and its second and later sources align with the start of the first source
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
 - For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
 - If a TOC was inserted, confirm that the numbers of TOC entries and bookmarks in the build output match the scope, and check the entries, dotted leaders, and the alignment of the page-number positions on the TOC page PNG. The TOC page number `?` in an HWPX render is the placeholder and does not count as a defect. The TOC page numbers in a DOCX render are the values LibreOffice calculates
 - For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, footnotes, and TOC page references match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
+- Find pages with noticeable empty space at the bottom and facing pages that fill unevenly, and adjust them with the means in the Page fill section (recommended)
+- For a document that uses the adjustment notation, check that the line count of the target paragraphs and the page layout changed as intended, and that an adjusted paragraph does not look noticeably different from its neighbors
 - Decide whether a difference found in the page PNGs is a defect with the judgment method in references/renderers.md
 - After the item checks, set the list aside and do one free review. Fix at your discretion anything that would look odd to a practitioner receiving the document for the first time, even if no rule covers it
     - (Design and alignment) Left alignment lines between levels, the balance of table and figure widths against the body width, the alignment lines of captions, unit lines, and source lines, consistent spacing, and the distribution of visual weight on a page
@@ -288,6 +318,8 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Default alignment) In tables of reports written by people, most text columns other than bullet columns are centered. Left alignment appears mostly in descriptive text columns such as content and details. Text length cannot pick out these columns. Without a marker only bullet columns go left
 - (Caption objects and automatic numbers) When a table is moved in Hangul, the caption follows and the number updates. The DOCX number fields serve the same purpose
 - (Attached rows inside the table) The unit and source rows are transparent cells inside the table so that they move with the table during manual editing
+- (Hanging source rows) When a source row has several sources or a source runs past one line, aligning the second line with the start of the first source is the usual editing practice. Lines aligned with spaces drift when the font or width changes, so the alignment is written as a paragraph hanging indent
+- (Adjustment notation off by default) When the width ratio, letter spacing and line spacing differ from paragraph to paragraph, the text of a document looks uneven. They are applied only when the user chooses them, within the recommended range
 - (Outer table borders) The left and right outer borders are open to soften the boundary between the text and the table. If outer borders are needed, set EDGE_OPEN_SIDES to False
 - (Code-generated forms) The references among styles, fonts, bullets, and outline numbering are created from one definition (form.py), which prevents missing references. If even one bullet definition reference is missing, Hangul omits the symbol, and checking the body text does not reveal such a gap
 - (Manuscript parsing module) Manuscript parsing and the table and figure calculations live in one module, manuscript.py. The HWPX and DOCX typesetters use the same merge, alignment, and width calculations, so a rule change happens in one place

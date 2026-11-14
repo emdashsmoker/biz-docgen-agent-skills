@@ -19,7 +19,7 @@ from config import msg
 
 @dataclass
 class Element:
-    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak
+    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak adjust
     text: str = ""
     level: int = 0           # heading: 1-4
     data: dict = field(default_factory=dict)
@@ -27,7 +27,6 @@ class Element:
 
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$")
 BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
-IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
@@ -61,6 +60,7 @@ def compile_notation():
     """Builds the manuscript notation patterns from the active labels (built-in tokens plus those added by a label file).
     build calls it again after reading a label file. Heading numbers written in a label file's number format are removed like 제N장 and 가."""
     global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    global IMAGE_RE, ADJUST_RE, ADJUST_ITEM_RE, SOURCE_LABEL_RE
     src = C.label("notation.source")
     paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
@@ -69,6 +69,14 @@ def compile_notation():
     COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
+    SOURCE_LABEL_RE = re.compile(rf"^(?:{_alt(src)})\s*[:：]\s*")   # label of a source row ('출처: '). Later lines are indented by this width
+    # figure line. {{폭 120}} at the end of the line sets the figure width (mm)
+    IMAGE_RE = re.compile(rf"^!\[([^\]]*)\]\(([^)]+)\)\s*(?:\{{\s*(?:{_alt(C.label('notation.figwidth'))})\s*(\d+(?:\.\d+)?)\s*\}})?\s*$")
+    # adjustment notation {{장평 -3, 자간 -4, 줄 간격 -10}}. At the end of a paragraph it applies to that paragraph; on a line of its own it applies up to the next adjustment line
+    item = "|".join(f"(?P<{key}>{_alt(C.label(path))})" for key, path in C.ADJUST_NOTATION.items())
+    ADJUST_ITEM_RE = re.compile(rf"(?:{item})\s*([-+]?\d+)")
+    one = rf"(?:{'|'.join(_alt(C.label(path)) for path in C.ADJUST_NOTATION.values())})\s*[-+]?\d+"
+    ADJUST_RE = re.compile(rf"(?:^|\s+)\{{\s*({one}(?:\s*[,，]\s*{one})*)\s*\}}$")
     extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
              for lv in ("chapter", "section", "subsection") if C.label(f"formats.{lv}") is not None]
     if C.label("letters") != C.LABEL_DEFAULTS["letters"]:
@@ -86,7 +94,67 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
     return None
 
 
-def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
+def split_adjust(text: str) -> tuple[str, dict[str, int]]:
+    """Removes the adjustment notation at the end of a line and returns (remaining text, adjustment). Values are percentage points added to the style value (ratio width ratio, spacing letter spacing, line line spacing)"""
+    m = ADJUST_RE.search(text)
+    if m is None:
+        return text, {}
+    adjust = {key: int(im.group(im.lastindex)) for im in ADJUST_ITEM_RE.finditer(m.group(1))
+              for key in C.ADJUST_NOTATION if im.group(key)}
+    return text[:m.start()].rstrip(), adjust
+
+
+def resolve_adjust(elems: list[Element]) -> tuple[list[Element], list[str]]:
+    """Moves the adjustment notation into each element's data["adjust"] and drops the adjustment line elements. Returns (elements, warnings for adjustments outside the recommended range)
+    An adjustment line applies to paragraphs and tables up to the next adjustment line, and a notation at the end of a paragraph overrides the same items for that paragraph.
+    Tables take the line spacing only. An item with value 0 means no adjustment"""
+    out, warnings, current = [], [], {}
+
+    def check(adjust: dict, shown: str):
+        for key, value in adjust.items():
+            if abs(value) > C.ADJUST_WARN_ABS[key]:
+                warnings.append(msg("warn_adjust_range", text=shown[:30], name=C.label(C.ADJUST_NOTATION[key])[0],
+                                    value=f"{value:+d}", limit=C.ADJUST_WARN_ABS[key]))
+
+    for e in elems:
+        if e.kind == "adjust":
+            current = e.data["adjust"]
+            check(current, e.text)
+            continue
+        own = {}
+        if e.kind in ADJUST_PARA_KINDS:
+            e.text, own = split_adjust(e.text)
+            check(own, e.text)
+        adjust = {**current, **own}
+        if e.kind == "table":
+            adjust = {k: v for k, v in adjust.items() if k in C.ADJUST_TABLE_KEYS}
+        elif e.kind not in ADJUST_PARA_KINDS:
+            adjust = {}
+        adjust = {k: v for k, v in adjust.items() if v}
+        if adjust:
+            e.data["adjust"] = adjust
+        out.append(e)
+    return out, warnings
+
+
+def source_lines(text: str) -> list[str]:
+    """Output lines of a source line split at the line break notation (<br>)"""
+    return [part.strip() for part in text.split(C.SOURCE_BREAK)]
+
+
+def source_inline(text: str) -> str:
+    """Source line that becomes a footnote. The line break notation is replaced with the separator to join it into one line"""
+    return C.SOURCE_INLINE_SEP.join(source_lines(text))
+
+
+def source_label(line: str) -> str:
+    """Label and trailing space of the first line of a source row ('출처: '). An empty string for a line without a label (※ note)"""
+    m = SOURCE_LABEL_RE.match(line)
+    return m.group(0) if m else ""
+
+
+def parse_markdown(path: str) -> tuple[list[Element], dict[str, str], list[str]]:
+    """Returns (elements, footnote definitions, adjustment notation warnings)"""
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     footnotes: dict[str, str] = {}
     # bullet levels are ranked by indent width (the width values themselves differ between manuscripts)
@@ -100,6 +168,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         i += 1
         if not stripped:
             blank = True
+            continue
+        if stripped.startswith("{") and (adj := split_adjust(stripped))[0] == "":   # adjustment line on its own. The blank-line state is left unchanged
+            elems.append(Element("adjust", stripped, data={"adjust": adj[1]}))
             continue
         gap, blank = blank, False
         if m := FOOTNOTE_DEF_RE.match(stripped):
@@ -133,7 +204,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path))}))
+                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path)),
+                                       "width_mm": float(m.group(3)) if m.group(3) else None}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -183,7 +255,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # a plain paragraph without a symbol is a ○ statement
-    return elems, footnotes
+    elems, warnings = resolve_adjust(elems)
+    return elems, footnotes, warnings
 
 
 def _opens_table(line: str) -> bool:
@@ -248,6 +321,7 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
 # ── Manuscript lint: reports manuscript defects before typesetting (conversion continues) ─────────────────
 GANADA_LEVEL = 4   # 가나다 is optional grouping, so it may sit right under a section or a subsection
 BODY_KINDS = ("square", "circle", "dash", "dot", "note")   # body paragraphs where the writers process footnote references
+ADJUST_PARA_KINDS = ("heading",) + BODY_KINDS              # paragraphs that take the adjustment notation (headings and body paragraphs)
 
 
 def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
@@ -498,9 +572,13 @@ class LineStyle:
         """Width of one weighted unit (half a Hangul character) of cell text. One Hangul character is the font size x the font's Hangul width ratio x the width ratio, plus the character spacing"""
         return self.size_hu * (C.CELL_HANGUL_EM * self.ratio + self.spacing) / 100 / 2
 
+    def glyph_hu(self, text: str, space_em: float) -> float:
+        """Width of text printed in this style (HWPUNIT), without the line lead"""
+        return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w
+
     def text_hu(self, text: str, space_em: float) -> float:
         """Width of text printed in this style plus the line lead (HWPUNIT)"""
-        return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w + self.lead_hu
+        return self.glyph_hu(text, space_em) + self.lead_hu
 
 
 @dataclass(frozen=True)
@@ -537,9 +615,15 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
-    """Minimum row height for an expected line count (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+def row_height(lines: int, line_scale: float = 1.0) -> int:
+    """Minimum row height for an expected line count (HWPUNIT). line_scale is the line spacing adjustment ratio and multiplies only the text height without the top and bottom cell margins"""
+    pad = 2 * C.CELL_MARGIN_TB
+    return round(pad + (C.ROW_BASE_H - pad + C.ROW_LINE_H * (lines - 1)) * line_scale)
+
+
+def line_scale(line_pct: float, adjust: dict | None) -> float:
+    """Line spacing adjustment ratio. line_pct is the style's line spacing (%)"""
+    return (line_pct + (adjust or {}).get("line", 0)) / line_pct if line_pct else 1.0
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,
@@ -705,6 +789,8 @@ def load_image(e: Element) -> tuple[bytes, str, tuple[float, float]] | None:
     if fmt == "jpeg":
         fmt = "jpg"
     size = image_size_mm(data)
+    if e.data.get("width_mm"):   # {폭 N} at the end of the figure line. Sets the width to the given value and keeps the aspect ratio (fit_figure reduces a width beyond the body width)
+        size = (e.data["width_mm"], round(size[1] * e.data["width_mm"] / size[0], 1))
     if fmt in C.IMAGE_CONVERT_TO_JPG:   # convert formats that Hangul and Word cannot open to JPG
         from PIL import Image
         buf = io.BytesIO()

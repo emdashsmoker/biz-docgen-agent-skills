@@ -164,8 +164,10 @@ class Builder(M.TocMarks):
         self._cp_cache[key] = el.get("id")
         return self._cp_cache[key]
 
-    def para(self, role: str, text: str, footnotes: dict | None = None, no_heading: bool = False, **attrs):
-        """Formatting applies only when all three references (style, paragraph shape, character shape) are set together."""
+    def para(self, role: str, text: str, footnotes: dict | None = None, no_heading: bool = False,
+             adjust: dict | None = None, **attrs):
+        """Formatting applies only when all three references (style, paragraph shape, character shape) are set together.
+        adjust holds the manuscript adjustment values (percentage points added to the style's width ratio, letter spacing and line spacing)"""
         r = self.refs(role)
         if role == "square" and self.numbered_square and M.NUMBERED_SQUARE_RE.match(text):   # 1. 2. 3. numbered headers
             r["para_pr_id_ref"] = self._numbered_pp(str(r["para_pr_id_ref"]), str(r["char_pr_id_ref"]), text)
@@ -173,6 +175,9 @@ class Builder(M.TocMarks):
             r["para_pr_id_ref"] = self._no_bullet_pp(str(r["para_pr_id_ref"]))
         else:
             text = self.manual_symbol.get(role, "") + text
+        if adjust:
+            r["para_pr_id_ref"] = self._line_pp(str(r["para_pr_id_ref"]), adjust.get("line", 0))
+            r["char_pr_id_ref"] = self._adjusted_cp(str(r["char_pr_id_ref"]), adjust)
         p = self.doc.add_paragraph("", **r, **self._take_break(attrs))
         cp = str(r["char_pr_id_ref"])
         for kind, seg in M.inline_segments(text):
@@ -188,6 +193,72 @@ class Builder(M.TocMarks):
             else:
                 p.add_run(seg, char_pr_id_ref=cp)
         return p
+
+    def _adjusted_cp(self, base_cp: str, adjust: dict) -> str:
+        """Character shape with the adjustment (percentage points) added to the width ratio and letter spacing. The same value is added to all seven font slots"""
+        deltas = {"ratio": adjust.get("ratio", 0), "spacing": adjust.get("spacing", 0)}
+        if not any(deltas.values()):
+            return base_cp
+        key = (base_cp, "ADJUST", deltas["ratio"], deltas["spacing"])
+        if key in self._cp_cache:
+            return self._cp_cache[key]
+        base = self.header.element.find(f".//{HH}charPr[@id='{base_cp}']")
+
+        def shift(e):
+            for tag, delta in deltas.items():
+                node = e.find(f"{HH}{tag}")
+                if node is not None and delta:
+                    for lang, value in node.attrib.items():
+                        node.set(lang, str(int(value) + delta))
+
+        def signature(e):
+            return (tuple(sorted((k, v) for k, v in e.attrib.items() if k != "id")), tuple(ET.tostring(c) for c in e))
+
+        want = copy.deepcopy(base)
+        shift(want)
+        want_sig = signature(want)
+        el = self.header.ensure_char_property(predicate=lambda e: signature(e) == want_sig, modifier=shift,
+                                              base_char_pr_id=base_cp)
+        self._cp_cache[key] = el.get("id")
+        return self._cp_cache[key]
+
+    def _line_pct(self, pp_id: str) -> int | None:
+        """Line spacing (%) of a paragraph shape. None when the line spacing is not a percentage of the font size"""
+        pp = self.header.element.find(f".//{HH}paraPr[@id='{pp_id}']")
+        node = next(pp.iter(f"{HH}lineSpacing"), None) if pp is not None else None
+        return int(node.get("value")) if node is not None and node.get("type") == "PERCENT" else None
+
+    def _line_pp(self, base_pp: str, delta: int) -> str:
+        """Paragraph shape with the adjustment (percentage points) added to the line spacing. A shape whose line spacing is not a percentage is returned as is"""
+        base_pct = self._line_pct(base_pp)
+        if not delta or base_pct is None:
+            return base_pp
+        key = (str(base_pp), "LINE", delta)
+        if key not in self._pp_cache:
+            self._pp_cache[key] = self.header.ensure_paragraph_format(base_para_pr_id=base_pp,
+                                                                      line_spacing_percent=base_pct + delta)
+        return self._pp_cache[key]
+
+    def _margin_pp(self, base_pp: str, **margins: int) -> str:
+        """Paragraph shape with changed margins (intent, left, prev and so on). The value stored for older Hangul (hp:default) is twice the new value (same rule as form generation)"""
+        key = (str(base_pp), "MARGIN") + tuple(sorted(margins.items()))
+        if key not in self._pp_cache:
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, margins=margins)
+            for name, value in margins.items():
+                legacy = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HP}default/{HH}margin/{HC}{name}")
+                if legacy is not None:
+                    legacy.set("value", str(2 * value))
+            self._pp_cache[key] = pp
+        return self._pp_cache[key]
+
+    def _pp_margin(self, pp_id: str, name: str) -> int:
+        """Margin value of a paragraph shape (HWPUNIT). The new Hangul value (hp:case), or half the older value (hp:default) when it is absent"""
+        pp = self.header.element.find(f".//{HH}paraPr[@id='{pp_id}']")
+        case = pp.find(f".//{HP}case/{HH}margin/{HC}{name}")
+        if case is not None:
+            return int(case.get("value"))
+        legacy = pp.find(f".//{HP}default/{HH}margin/{HC}{name}")
+        return int(legacy.get("value")) // 2 if legacy is not None else 0
 
     def add_bookmark(self, p, text: str) -> str:
         """Writes a bookmark as the first control of the first run of the paragraph and returns its name. In a paragraph that holds a table it comes before the table.
@@ -503,21 +574,33 @@ class Builder(M.TocMarks):
                     b.set("type", "SOLID" if side in sides else "NONE")
         return str(bid)
 
-    def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
-        """Transparent merged row inside a table (unit, source). Kept inside the table so it moves with the table during manual editing."""
+    def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str) -> int:
+        """Transparent merged row inside a table (unit, source). Kept inside the table so it moves with the table during manual editing. Returns the row height
+        A source row splits into paragraphs at each line break notation (<br>) and hangs by the label width ('출처: ') so that later lines align with the start of the first source"""
         no_border = self._border_fill([])
         u = self.refs(role)
-        t.set_cell_text(ri, 0, text)
-        for pe in t.cell(ri, 0).element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", self._aligned_pp(str(u["para_pr_id_ref"]), align))
+        lines = M.source_lines(text) if role == "source" else [text]
+        t.set_cell_text(ri, 0, "\n".join(lines), split_paragraphs=True)
+        pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
+        hang = round(self._line_style(role).glyph_hu(M.source_label(lines[0]), C.SPACE_EM_HWPX)) if role == "source" else 0
+        left = self._pp_margin(pp, "left")
+        for li, pe in enumerate(t.cell(ri, 0).element.iter(f"{HP}p")):
+            # a Hangul hanging indent keeps the first line at the left margin and indents from the second line (negative intent).
+            # later paragraphs reach the same position with a left margin and drop the space before the paragraph so that the lines of one source row are evenly spaced
+            line_pp = pp if li == 0 else self._margin_pp(pp, left=left, prev=0)
+            if hang:
+                line_pp = self._margin_pp(pp, intent=-hang) if li == 0 else self._margin_pp(pp, left=left + hang, intent=0, prev=0)
+            pe.set("paraPrIDRef", line_pp)
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
+        height = M.row_height(len(lines))
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
-            t.cell(ri, ci).set_size(height=C.ROW_BASE_H)
+            t.cell(ri, ci).set_size(height=height)
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
+        return height
 
     def _cell_font(self) -> M.CellFont:
         """Line styles of table cells (for column widths and row line counts)"""
@@ -588,14 +671,14 @@ class Builder(M.TocMarks):
         self.toc_mark(kind, text, host)
 
     # ── Heading levels ─────────────────────────────────────────────────────
-    def heading(self, level: int, text: str):
+    def heading(self, level: int, text: str, adjust: dict | None = None):
         text = M.NUM_PREFIX_RE.sub("", text).strip()
         role = ("chapter", "section", "subsection", "ganada")[level - 1]
         if self.numbering.advance(level):
             self.pending_break = True
         label = M.heading_label(self.p, self.numbering.n, level, text)
         manual = self.p["numbering"] == "manual"
-        p = self.para(role, label, no_heading=manual and level in (2, 3))
+        p = self.para(role, label, no_heading=manual and level in (2, 3), adjust=adjust)
         self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):   # restart from <표 N-1> in each chapter
             p.add_new_num(kind="TABLE", number=1)
@@ -632,14 +715,15 @@ class Builder(M.TocMarks):
         left_pp = str(left_ref["para_pr_id_ref"])
         if self._pp_align(left_pp) not in ("LEFT", "JUSTIFY"):   # forms without a left-aligned style derive a left-aligned version of the table content style
             left_pp = self._aligned_pp(left_pp, "LEFT")
-        if unit:
-            self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
+        extra_h = self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT") if unit else 0   # sum of the unit row and source row heights
         for k, src in enumerate(sources):   # source row: transparent merged cell below the table, left-aligned
-            self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
+            extra_h += self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
         total_h = 0
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_delta = e.data.get("adjust", {}).get("line", 0)   # line spacing adjustment from the manuscript notation (percentage points)
+        scale = M.line_scale(self._line_pct(str(cell_ref["para_pr_id_ref"])), e.data.get("adjust"))
         for ri, row in enumerate(rows):
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], scale)
             total_h += row_h
             for ci, val in enumerate(row):
                 lines_txt = val.split("\n")
@@ -660,7 +744,7 @@ class Builder(M.TocMarks):
                 for li, pe in enumerate(cell.element.iter(f"{HP}p")):
                     br = bullet_roles[li] if li < len(bullet_roles) and not is_head else None
                     bref = self.refs(br) if br else None
-                    pe.set("paraPrIDRef", str(bref["para_pr_id_ref"]) if bref else pp)
+                    pe.set("paraPrIDRef", self._line_pp(str(bref["para_pr_id_ref"]) if bref else pp, line_delta))
                     pe.set("styleIDRef", str(bref["style_id_ref"] if bref else ref["style_id_ref"]))
                     line_cp = str(bref["char_pr_id_ref"]) if bref else cp
                     for run in pe.iter(f"{HP}run"):
@@ -671,7 +755,7 @@ class Builder(M.TocMarks):
                     cell.element.set("header", "1")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:   # if the table height exceeds the sum of row heights, renderers stretch the last row
-            sz.set("height", str(total_h + C.ROW_BASE_H * (head + len(sources))))
+            sz.set("height", str(total_h + extra_h))
         pos = t.element.find(f"{HP}pos")
         if pos is not None:   # a table treated as a character follows paragraph alignment, so pos alignment is also centered to remove conflicting interpretations
             pos.set("horzAlign", "CENTER")
@@ -735,7 +819,7 @@ class Builder(M.TocMarks):
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             self._mark_pending_caption()
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.source_inline(src))
             return
         # put the figure in a transparent one-column table and set the table's numbering type to figure. The inner picture is excluded from numbering
         t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r, **self._take_break())
@@ -758,15 +842,14 @@ class Builder(M.TocMarks):
             cm.set("left", str(C.CELL_MARGIN_LR))
             cm.set("right", str(C.CELL_MARGIN_LR))
         cell.set_size(height=h_hu + 2 * C.ROW_LINE_H)
-        for k, src in enumerate(sources):
-            self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
+        source_h = sum(self._transparent_row(t, 1 + k, 1, src, "source", "LEFT") for k, src in enumerate(sources))
         t.element.set("numberingType", "PICTURE")
         pos = t.element.find(f"{HP}pos")
         if pos is not None:
             pos.set("horzAlign", "CENTER")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
-            sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + C.ROW_BASE_H * len(sources)))
+            sz.set("height", str(h_hu + 2 * C.ROW_LINE_H + source_h))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, "BOTTOM", table_w)
         self._mark_pending_caption()
@@ -781,18 +864,18 @@ class Builder(M.TocMarks):
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
-                self.heading(e.level, e.text)
+                self.heading(e.level, e.text, e.data.get("adjust"))
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
+                self.last_para = self.para(e.kind, e.text, footnotes, adjust=e.data.get("adjust"))
                 self.last_cp = str(self.refs(e.kind)["char_pr_id_ref"])
             elif e.kind == "unit":
                 self.para("unit", e.text)
             elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
                 if self.last_para is not None:
-                    self._add_footnote(self.last_para, e.text, self.last_cp)
+                    self._add_footnote(self.last_para, M.source_inline(e.text), self.last_cp)
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.source_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":

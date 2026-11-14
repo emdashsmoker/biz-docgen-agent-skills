@@ -19,7 +19,7 @@ from config import msg
 
 @dataclass
 class Element:
-    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak
+    kind: str                # heading square circle dash dot note unit colwidth source table table_caption image pagebreak adjust
     text: str = ""
     level: int = 0           # heading: 1-4
     data: dict = field(default_factory=dict)
@@ -27,7 +27,6 @@ class Element:
 
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$")
 BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
-IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
@@ -61,6 +60,7 @@ def compile_notation():
     """현재 라벨(기본 토큰과 라벨 파일이 추가한 토큰)로 원고 표기 정규식을 만듦.
     build는 라벨 파일을 읽은 뒤 다시 호출. 라벨 파일의 번호 형식으로 쓴 헤더 번호도 제N장, 가.와 같이 제거"""
     global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    global IMAGE_RE, ADJUST_RE, ADJUST_ITEM_RE, SOURCE_LABEL_RE
     src = C.label("notation.source")
     paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
@@ -69,6 +69,14 @@ def compile_notation():
     COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
+    SOURCE_LABEL_RE = re.compile(rf"^(?:{_alt(src)})\s*[:：]\s*")   # 출처 행의 라벨('출처: '). 둘째 줄부터 이 폭만큼 들여 맞춤
+    # 그림 줄. 줄 끝의 {{폭 120}}은 그림 폭(mm) 지정
+    IMAGE_RE = re.compile(rf"^!\[([^\]]*)\]\(([^)]+)\)\s*(?:\{{\s*(?:{_alt(C.label('notation.figwidth'))})\s*(\d+(?:\.\d+)?)\s*\}})?\s*$")
+    # 조정 표기 {{장평 -3, 자간 -4, 줄 간격 -10}}. 문단 끝에 쓰면 그 문단, 단독 줄로 쓰면 다음 단독 조정 줄 앞까지 적용
+    item = "|".join(f"(?P<{key}>{_alt(C.label(path))})" for key, path in C.ADJUST_NOTATION.items())
+    ADJUST_ITEM_RE = re.compile(rf"(?:{item})\s*([-+]?\d+)")
+    one = rf"(?:{'|'.join(_alt(C.label(path)) for path in C.ADJUST_NOTATION.values())})\s*[-+]?\d+"
+    ADJUST_RE = re.compile(rf"(?:^|\s+)\{{\s*({one}(?:\s*[,，]\s*{one})*)\s*\}}$")
     extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
              for lv in ("chapter", "section", "subsection") if C.label(f"formats.{lv}") is not None]
     if C.label("letters") != C.LABEL_DEFAULTS["letters"]:
@@ -86,7 +94,67 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
     return None
 
 
-def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
+def split_adjust(text: str) -> tuple[str, dict[str, int]]:
+    """줄 끝의 조정 표기를 떼어 (남은 글자, 조정값)을 돌려준다. 조정값은 스타일 값에 더하는 %p (ratio 장평, spacing 자간, line 줄 간격)"""
+    m = ADJUST_RE.search(text)
+    if m is None:
+        return text, {}
+    adjust = {key: int(im.group(im.lastindex)) for im in ADJUST_ITEM_RE.finditer(m.group(1))
+              for key in C.ADJUST_NOTATION if im.group(key)}
+    return text[:m.start()].rstrip(), adjust
+
+
+def resolve_adjust(elems: list[Element]) -> tuple[list[Element], list[str]]:
+    """조정 표기를 요소의 data["adjust"]로 옮기고 단독 조정 줄 요소를 지운다. 반환: (요소 목록, 권장 범위를 벗어난 조정의 경고)
+    단독 조정 줄은 다음 단독 조정 줄 앞까지의 문단과 표에 적용하고 문단 끝 표기는 그 문단의 같은 항목을 덮어쓴다.
+    표에는 줄 간격만 적용한다. 값이 0인 항목은 조정 없음"""
+    out, warnings, current = [], [], {}
+
+    def check(adjust: dict, shown: str):
+        for key, value in adjust.items():
+            if abs(value) > C.ADJUST_WARN_ABS[key]:
+                warnings.append(msg("warn_adjust_range", text=shown[:30], name=C.label(C.ADJUST_NOTATION[key])[0],
+                                    value=f"{value:+d}", limit=C.ADJUST_WARN_ABS[key]))
+
+    for e in elems:
+        if e.kind == "adjust":
+            current = e.data["adjust"]
+            check(current, e.text)
+            continue
+        own = {}
+        if e.kind in ADJUST_PARA_KINDS:
+            e.text, own = split_adjust(e.text)
+            check(own, e.text)
+        adjust = {**current, **own}
+        if e.kind == "table":
+            adjust = {k: v for k, v in adjust.items() if k in C.ADJUST_TABLE_KEYS}
+        elif e.kind not in ADJUST_PARA_KINDS:
+            adjust = {}
+        adjust = {k: v for k, v in adjust.items() if v}
+        if adjust:
+            e.data["adjust"] = adjust
+        out.append(e)
+    return out, warnings
+
+
+def source_lines(text: str) -> list[str]:
+    """출처 줄을 줄 나눔 표기(<br>)로 나눈 출력 줄 목록"""
+    return [part.strip() for part in text.split(C.SOURCE_BREAK)]
+
+
+def source_inline(text: str) -> str:
+    """각주로 옮기는 출처 줄. 줄 나눔 표기를 구분 문자로 바꿔 한 줄로 잇는다"""
+    return C.SOURCE_INLINE_SEP.join(source_lines(text))
+
+
+def source_label(line: str) -> str:
+    """출처 행 첫 줄의 라벨과 뒤 빈칸 ('출처: '). 라벨이 없는 줄(※ 주석)은 빈 문자열"""
+    m = SOURCE_LABEL_RE.match(line)
+    return m.group(0) if m else ""
+
+
+def parse_markdown(path: str) -> tuple[list[Element], dict[str, str], list[str]]:
+    """반환: (요소 목록, 각주 정의, 조정 표기 경고)"""
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     footnotes: dict[str, str] = {}
     # 불릿 계위는 들여쓰기 폭의 순위로 판정 (폭 값 자체는 원고마다 다름)
@@ -100,6 +168,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         i += 1
         if not stripped:
             blank = True
+            continue
+        if stripped.startswith("{") and (adj := split_adjust(stripped))[0] == "":   # 단독 조정 줄. 빈 줄 판정은 그대로 둠
+            elems.append(Element("adjust", stripped, data={"adjust": adj[1]}))
             continue
         gap, blank = blank, False
         if m := FOOTNOTE_DEF_RE.match(stripped):
@@ -133,7 +204,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path))}))
+                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path)),
+                                       "width_mm": float(m.group(3)) if m.group(3) else None}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -183,7 +255,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # 기호 없는 일반 문단은 ○ 서술
-    return elems, footnotes
+    elems, warnings = resolve_adjust(elems)
+    return elems, footnotes, warnings
 
 
 def _opens_table(line: str) -> bool:
@@ -248,6 +321,7 @@ def attach_block_notes(elems: list[Element]) -> list[Element]:
 # ── 원고 린트: 조판 전에 원고 결함을 알린다 (변환은 계속 진행) ─────────────────
 GANADA_LEVEL = 4   # 가나다는 선택적 묶음이라 절이나 소절 바로 아래에 올 수 있음
 BODY_KINDS = ("square", "circle", "dash", "dot", "note")   # 조판기가 각주 참조를 처리하는 본문 문단
+ADJUST_PARA_KINDS = ("heading",) + BODY_KINDS              # 조정 표기를 적용하는 문단 (제목과 본문 문단)
 
 
 def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
@@ -498,9 +572,13 @@ class LineStyle:
         """셀 글자의 가중 1단위(한글 반 자) 폭. 한글 1자 폭은 글자 크기 x 글꼴 한글 폭 비율 x 장평에 자간을 더한 값"""
         return self.size_hu * (C.CELL_HANGUL_EM * self.ratio + self.spacing) / 100 / 2
 
+    def glyph_hu(self, text: str, space_em: float) -> float:
+        """이 스타일로 출력한 글자 폭의 합 (HWPUNIT). 줄 앞 폭은 제외"""
+        return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w
+
     def text_hu(self, text: str, space_em: float) -> float:
         """이 스타일로 출력한 글자와 줄 앞 폭의 합 (HWPUNIT)"""
-        return text_units(text, space_em, self.ratio, self.spacing) * self.unit_w + self.lead_hu
+        return self.glyph_hu(text, space_em) + self.lead_hu
 
 
 @dataclass(frozen=True)
@@ -537,9 +615,15 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
-    """예상 줄 수에 맞는 행 최소 높이 (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+def row_height(lines: int, line_scale: float = 1.0) -> int:
+    """예상 줄 수에 맞는 행 최소 높이 (HWPUNIT). line_scale은 줄 간격 조정 비율이며 셀 위아래 여백을 뺀 글자 높이에만 곱함"""
+    pad = 2 * C.CELL_MARGIN_TB
+    return round(pad + (C.ROW_BASE_H - pad + C.ROW_LINE_H * (lines - 1)) * line_scale)
+
+
+def line_scale(line_pct: float, adjust: dict | None) -> float:
+    """줄 간격 조정 비율. line_pct는 스타일의 줄 간격(%)"""
+    return (line_pct + (adjust or {}).get("line", 0)) / line_pct if line_pct else 1.0
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,
@@ -705,6 +789,8 @@ def load_image(e: Element) -> tuple[bytes, str, tuple[float, float]] | None:
     if fmt == "jpeg":
         fmt = "jpg"
     size = image_size_mm(data)
+    if e.data.get("width_mm"):   # 그림 줄 끝의 {폭 N}. 비율을 유지하며 폭을 지정값으로 맞춤 (본문 폭 초과분은 fit_figure가 줄임)
+        size = (e.data["width_mm"], round(size[1] * e.data["width_mm"] / size[0], 1))
     if fmt in C.IMAGE_CONVERT_TO_JPG:   # 한/글과 Word가 열지 못하는 형식은 JPG로 변환
         from PIL import Image
         buf = io.BytesIO()

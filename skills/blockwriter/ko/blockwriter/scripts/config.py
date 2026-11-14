@@ -35,7 +35,9 @@ LABEL_DEFAULTS = {
     "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
                 "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
     # 원고 해석기가 인식하는 표기 토큰. 라벨 파일의 토큰은 여기에 추가되며 기본 토큰을 대체하지 않음
-    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"],
+                 # 조정 표기 {장평 -3, 자간 -4, 줄 간격 -10}의 항목 이름과 그림 줄 끝 {폭 120}의 항목 이름
+                 "ratio": ["장평"], "spacing": ["자간"], "linespacing": ["줄 간격"], "figwidth": ["폭"]},
     # DOCX 문서 기본 언어(w:lang). 내장 양식 HWPX의 content.hpf 언어와 스타일 langID(Windows LCID)
     "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
 }
@@ -107,6 +109,15 @@ CELL_MARGIN_LR = 510            # 셀 안 좌우 여백 (조판 라이브러리 
 CELL_MARGIN_TB = 141            # 셀 안 위아래 여백
 CELL_HANGUL_EM = 0.94           # 한글 1자 폭 / 글자 크기. 나눔고딕 실측값이며 가중 길이 단위와 행 높이의 줄 수 추정에 사용
 CAPTION_GAP = 850               # 캡션과 표 사이 간격
+
+# ── 조정 표기 (원고의 {장평 -3, 자간 -4, 줄 간격 -10}). 값은 스타일 값에 더하는 %p ─────────────────────
+# 항목 → 원고 표기 토큰의 라벨 키. ratio는 장평, spacing은 자간, line은 줄 간격
+ADJUST_NOTATION = {"ratio": "notation.ratio", "spacing": "notation.spacing", "line": "notation.linespacing"}
+ADJUST_TABLE_KEYS = ("line",)   # 표에 적용하는 항목. 셀 글자의 접힘은 열 폭 줄로 조정하므로 장평과 자간은 제외
+# 조정폭 절대값이 이 값을 넘으면 WARN 후 지정값으로 조판. 넘는 조정은 글자와 줄이 눈에 띄게 좁아짐
+ADJUST_WARN_ABS = {"ratio": 5, "spacing": 5, "line": 15}
+SOURCE_BREAK = "<br>"           # 출처 줄 안의 줄 나눔 표기. 표와 그림의 출처 행에서 둘째 줄부터 첫 출처 시작 위치에 맞춤
+SOURCE_INLINE_SEP = "; "        # 각주로 옮기는 출처 줄에서 줄 나눔 표기를 대신하는 구분 문자
 
 # ── 그림 (mm, 본문 폭 약 170mm 기준). 좌우를 가득 채운 그림은 본문 계위와 어긋나고 세로형은 한 쪽을 넘긴다
 IMG_LANDSCAPE_RATIO = 1.4       # 폭/높이 비율이 이 값 이상이면 가로형
@@ -270,6 +281,9 @@ MESSAGES = {
     "info_colwidth": {
         "ko": "INFO: 표 '{title}' ○ 계위 폭 대비 현재 폭 {cur}% (열별 {cur_cols}), 줄바꿈 없는 폭 {nowrap}% (열별 {nowrap_cols})",
         "en": "INFO: table '{title}' as % of the ○ level width: current {cur}% (columns {cur_cols}), no-wrap {nowrap}% (columns {nowrap_cols})"},
+    "warn_adjust_range": {
+        "ko": "WARN: 조정 표기 '{text}'의 {name} 조정값 {value}가 권장 범위(-{limit}에서 +{limit}) 밖. 지정값으로 조판",
+        "en": "WARN: adjustment '{text}' sets {name} {value}, outside the recommended range (-{limit} to +{limit}). Typeset with the given value"},
     "warn_image_missing": {"ko": "WARN: 이미지 없음 {path}", "en": "WARN: image not found {path}"},
     "err_no_hwpx": {
         "ko": "ERROR: python-hwpx 미설치. `pip install -U python-hwpx` 후 재실행",

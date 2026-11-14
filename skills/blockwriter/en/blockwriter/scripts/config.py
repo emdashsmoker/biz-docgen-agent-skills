@@ -35,7 +35,9 @@ LABEL_DEFAULTS = {
     "caption": {"table": {"label": "표", "open": "<", "close": ">", "seq": None},
                 "figure": {"label": "그림", "open": "[", "close": "]", "seq": None}},
     # manuscript tokens the parser recognizes. Tokens in a label file are added to these and never replace them
-    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"]},
+    "notation": {"source": ["출처", "자료", "주"], "unit": ["단위"], "table": ["표"], "figure": ["그림"], "colwidth": ["열 폭"],
+                 # item names of the adjustment notation {장평 -3, 자간 -4, 줄 간격 -10} and of {폭 120} at the end of a figure line
+                 "ratio": ["장평"], "spacing": ["자간"], "linespacing": ["줄 간격"], "figwidth": ["폭"]},
     # DOCX document default language (w:lang). HWPX content.hpf language and style langID (Windows LCID) of the built-in forms
     "language": {"latin": "en-US", "east_asia": "ko-KR", "hwpx_package": "ko", "hwpx_style_lcid": 1042},
 }
@@ -107,6 +109,15 @@ CELL_MARGIN_LR = 510            # cell left/right padding (same as the typesetti
 CELL_MARGIN_TB = 141            # cell top/bottom padding
 CELL_HANGUL_EM = 0.94           # Hangul character width / font size. Measured on NanumGothic; used for the weighted-length unit and for estimating row line counts
 CAPTION_GAP = 850               # gap between caption and table
+
+# ── Adjustment notation ({장평 -3, 자간 -4, 줄 간격 -10} in the manuscript). Values are percentage points added to the style value ──
+# item → label key of the manuscript token. ratio is the width ratio (장평), spacing is the letter spacing (자간), line is the line spacing
+ADJUST_NOTATION = {"ratio": "notation.ratio", "spacing": "notation.spacing", "line": "notation.linespacing"}
+ADJUST_TABLE_KEYS = ("line",)   # items applied to tables. Cell wrapping is adjusted with a column width line, so width ratio and letter spacing are left out
+# when the absolute adjustment exceeds this value, build prints a WARN and typesets with the given value. Larger adjustments make text and lines visibly tight
+ADJUST_WARN_ABS = {"ratio": 5, "spacing": 5, "line": 15}
+SOURCE_BREAK = "<br>"           # line break notation inside a source line. In the source row of a table or figure, later lines align with the start of the first source
+SOURCE_INLINE_SEP = "; "        # separator that replaces the line break notation when a source line becomes a footnote
 
 # ── Figures (mm, for a body width of about 170mm). Full-width figures break the level alignment and portrait figures overflow a page
 IMG_LANDSCAPE_RATIO = 1.4       # width/height ratio at or above this is landscape
@@ -270,6 +281,9 @@ MESSAGES = {
     "info_colwidth": {
         "ko": "INFO: 표 '{title}' ○ 계위 폭 대비 현재 폭 {cur}% (열별 {cur_cols}), 줄바꿈 없는 폭 {nowrap}% (열별 {nowrap_cols})",
         "en": "INFO: table '{title}' as % of the ○ level width: current {cur}% (columns {cur_cols}), no-wrap {nowrap}% (columns {nowrap_cols})"},
+    "warn_adjust_range": {
+        "ko": "WARN: 조정 표기 '{text}'의 {name} 조정값 {value}가 권장 범위(-{limit}에서 +{limit}) 밖. 지정값으로 조판",
+        "en": "WARN: adjustment '{text}' sets {name} {value}, outside the recommended range (-{limit} to +{limit}). Typeset with the given value"},
     "warn_image_missing": {"ko": "WARN: 이미지 없음 {path}", "en": "WARN: image not found {path}"},
     "err_no_hwpx": {
         "ko": "ERROR: python-hwpx 미설치. `pip install -U python-hwpx` 후 재실행",

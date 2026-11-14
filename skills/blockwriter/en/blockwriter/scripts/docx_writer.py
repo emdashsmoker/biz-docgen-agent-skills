@@ -328,7 +328,9 @@ class DocxBuilder(M.TocMarks):
             sub(rpr, "w:vertAlign", w__val="superscript" if kind == "sup" else "subscript")
         return rpr
 
-    def para(self, role: str, text: str, footnotes: dict | None = None, no_bullet: bool = False):
+    def para(self, role: str, text: str, footnotes: dict | None = None, no_bullet: bool = False,
+             adjust: dict | None = None):
+        """adjust holds the manuscript adjustment values (percentage points added to the style's width ratio, letter spacing and line spacing)"""
         st = self.form.style(role) or self.form.style("body")
         head = st.para.head
         is_bullet = isinstance(head, tuple) and head[0] == "BULLET"
@@ -346,20 +348,46 @@ class DocxBuilder(M.TocMarks):
                 sub(extra, "w:jc", w__val="left")
         elif not is_bullet and role in MANUAL_SYMBOLS:
             text = MANUAL_SYMBOLS[role] + text
+        adjust = adjust or {}
+        if adjust.get("line"):
+            extra = el("w:pPr") if extra is None else extra
+            self._line_spacing(extra, st, adjust["line"])
         p = self._new_p(role, extra)
-        self._append_inline(p, text, footnotes)
+        self._append_inline(p, text, footnotes, self._adjust_rpr(st, adjust))
         return self._body_append(p)
 
-    def _append_inline(self, p, text: str, footnotes: dict | None = None):
-        """Splits inline formatting (bold, italic, super/subscript) into runs and appends them. Footnote references are handled only when footnotes is given"""
+    @staticmethod
+    def _line_spacing(ppr, st, delta: int):
+        """Minimum line height with the adjustment (percentage points) added to the line spacing. Spacing before and after the paragraph follows the style"""
+        sub(ppr, "w:spacing", w__line=round(st.char.size * (st.para.line + delta) / 100 * 20), w__lineRule="atLeast")
+
+    @staticmethod
+    def _adjust_rpr(st, adjust: dict):
+        """Returns a function that adds the adjusted width ratio and letter spacing (percentage points) to run properties. None when there is no adjustment"""
+        ratio, spacing = adjust.get("ratio", 0), adjust.get("spacing", 0)
+        if not ratio and not spacing:
+            return None
+
+        def apply(rpr):
+            rpr = el("w:rPr") if rpr is None else rpr
+            if spacing:
+                sub(rpr, "w:spacing", w__val=round(st.char.size * (st.char.spacings[0] + spacing) / 100 * 20))
+            if ratio:
+                sub(rpr, "w:w", w__val=st.char.ratios[0] + ratio)
+            sort_children(rpr, ["b", "bCs", "i", "iCs", "spacing", "w", "vertAlign"])
+            return rpr
+        return apply
+
+    def _append_inline(self, p, text: str, footnotes: dict | None = None, char_adjust=None):
+        """Splits inline formatting (bold, italic, super/subscript) into runs and appends them. Footnote references are handled only when footnotes is given.
+        char_adjust is the function that adds the width ratio and letter spacing adjustment to run properties (_adjust_rpr)"""
         for kind, seg in M.inline_segments(text):
             if kind == "footnote":
                 if footnotes is not None:
                     self._footnote_ref(p, footnotes.get(seg, ""))
-            elif kind in ("bold", "italic", "sup", "sub"):
-                p.append(self._run(seg, self._fmt_rpr(kind)))
-            else:
-                p.append(self._run(seg))
+                continue
+            rpr = self._fmt_rpr(kind) if kind in ("bold", "italic", "sup", "sub") else None
+            p.append(self._run(seg, char_adjust(rpr) if char_adjust else rpr))
 
     # ── Footnotes ──────────────────────────────────────────────────────────
     def _footnotes(self):
@@ -427,13 +455,13 @@ class DocxBuilder(M.TocMarks):
         sub(sup, "w:vertAlign", w__val="superscript")
         p.append(self._run(self.form.page.note_suffix, sup))
     # ── Heading levels ─────────────────────────────────────────────────────
-    def heading(self, level: int, text: str):
+    def heading(self, level: int, text: str, adjust: dict | None = None):
         text = M.NUM_PREFIX_RE.sub("", text).strip()
         role = ("chapter", "section", "subsection", "ganada")[level - 1]
         if self.numbering.advance(level):
             self.pending_break = True
         label = M.heading_label(self.p, self.numbering.n, level, text)
-        p = self.para(role, label)
+        p = self.para(role, label, adjust=adjust)
         self.toc_mark(role, label, p)
         if level == 1 and self.p.get("caption_prefix"):
             self.caption_n = {"TABLE": 0, "PICTURE": 0}
@@ -512,9 +540,11 @@ class DocxBuilder(M.TocMarks):
         if unit:
             self._transparent_row(tbl, widths, unit, "unit", "right", header=header_repeat)
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_delta = e.data.get("adjust", {}).get("line", 0)   # line spacing adjustment from the manuscript notation (percentage points)
+        scale = M.line_scale(cell_style.para.line, e.data.get("adjust"))
         for ri, row in enumerate(rows):
             is_head = ri < hdr
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], scale)
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
             sub(trpr, "w:cantSplit")
@@ -540,7 +570,7 @@ class DocxBuilder(M.TocMarks):
                     sub(tcpr, "w:shd", w__val="clear", w__color="auto", w__fill=C.HEADER_FILL.lstrip("#"))
                 sub(tcpr, "w:vAlign", w__val="center")
                 text = "" if cell["vmerge"] == "continue" or cell["text"].strip() in ("^", "<") else cell["text"]
-                self._cell_paragraphs(tc, text, aligns[c], is_head, cell_style, keep=not long_table)
+                self._cell_paragraphs(tc, text, aligns[c], is_head, cell_style, keep=not long_table, line_delta=line_delta)
                 c += span
         for k, src in enumerate(sources):
             self._transparent_row(tbl, widths, src, "source", "left")
@@ -587,7 +617,7 @@ class DocxBuilder(M.TocMarks):
         plain = tuple(s for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
         return M.CellFont(C.SPACE_EM_DOCX, plain, line_style("table_cell_bullet"), line_style("table_cell_dash"))
 
-    def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool):
+    def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool, line_delta: int = 0):
         lines = text.split("\n")
         for ln in lines:
             role = "table_cell"
@@ -611,6 +641,8 @@ class DocxBuilder(M.TocMarks):
                     sub(extra, "w:jc", w__val="right")
                 elif is_head:
                     sub(extra, "w:jc", w__val=ALIGN[cell_style.para.align])
+            if line_delta:
+                self._line_spacing(extra, self.form.style(role), line_delta)
             p = el("w:p")
             ppr = sub(p, "w:pPr")
             sub(ppr, "w:pStyle", w__val=self.style_ids[role])
@@ -625,11 +657,17 @@ class DocxBuilder(M.TocMarks):
             tc.append(p)
 
     def _transparent_row(self, tbl, widths, text: str, role: str, align: str, header: bool = False):
-        """Transparent merged row inside a table (unit, source). Moves with the table."""
+        """Transparent merged row inside a table (unit, source). Moves with the table.
+        A source row splits into paragraphs at each line break notation (<br>) and hangs by the label width ('출처: ') so that later lines align with the start of the first source"""
+        lines = M.source_lines(text) if role == "source" else [text]
+        st = self.form.style(role)
+        label_style = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
+        hang = round(label_style.glyph_hu(M.source_label(lines[0]), C.SPACE_EM_DOCX)) if role == "source" else 0
+        left = st.para.margin[1]
         tr = sub(tbl, "w:tr")
         trpr = sub(tr, "w:trPr")
         sub(trpr, "w:cantSplit")
-        sub(trpr, "w:trHeight", w__val=tw(C.ROW_BASE_H), w__hRule="atLeast")
+        sub(trpr, "w:trHeight", w__val=tw(M.row_height(len(lines))), w__hRule="atLeast")
         if header:
             sub(trpr, "w:tblHeader")
         tc = sub(tr, "w:tc")
@@ -639,12 +677,17 @@ class DocxBuilder(M.TocMarks):
             sub(tcpr, "w:gridSpan", w__val=len(widths))
         self._cell_borders(tcpr, [])
         sub(tcpr, "w:vAlign", w__val="center")
-        p = sub(tc, "w:p")
-        ppr = sub(p, "w:pPr")
-        sub(ppr, "w:pStyle", w__val=self.style_ids[role])
-        sub(ppr, "w:keepNext")
-        sub(ppr, "w:jc", w__val=align)
-        p.append(self._run(text))
+        for li, line in enumerate(lines):
+            p = sub(tc, "w:p")
+            ppr = sub(p, "w:pPr")
+            sub(ppr, "w:pStyle", w__val=self.style_ids[role])
+            sub(ppr, "w:keepNext")
+            if li:   # later lines drop the space before the paragraph so that the lines of one source row are evenly spaced
+                sub(ppr, "w:spacing", w__before=0)
+            if hang:   # the first line starts at the left margin; wrapped lines and later paragraphs are indented by the label width
+                sub(ppr, "w:ind", w__left=tw(left + hang), w__hanging=0 if li else tw(hang))
+            sub(ppr, "w:jc", w__val=align)
+            p.append(self._run(line))
 
     def _page_break_para(self):
         """Page break before a table or figure. The break goes on a minimum-height empty paragraph so it does not take the first line of the new page."""
@@ -695,7 +738,7 @@ class DocxBuilder(M.TocMarks):
         if not C.FIGURE_IN_TABLE:
             self._body_append(pic_p)
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.source_inline(src))
         else:
             # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
             cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
@@ -887,17 +930,17 @@ class DocxBuilder(M.TocMarks):
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
-                self.heading(e.level, e.text)
+                self.heading(e.level, e.text, e.data.get("adjust"))
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
+                self.last_para = self.para(e.kind, e.text, footnotes, adjust=e.data.get("adjust"))
             elif e.kind == "unit":
                 self.para("unit", e.text)
             elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.source_inline(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.source_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
