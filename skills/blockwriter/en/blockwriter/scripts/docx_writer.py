@@ -928,7 +928,7 @@ class DocxBuilder(M.TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.source_label(e.text)[1])   # the footnote holds the source text without the source label (such as `출처:`), so it matches a `[^n]` footnote of the same source for merging
                 else:
                     self.para("note", e.text, footnotes)
             elif e.kind == "table":

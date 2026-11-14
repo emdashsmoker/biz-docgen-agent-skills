@@ -638,7 +638,7 @@ class ProposalLayout:
                 self.para("unit", e.text)
             elif e.kind == "source":
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, lib.source_label(e.text)[1])   # the footnote holds the source text without the source label (such as `출처:`), so it matches a `[^n]` footnote of the same source for merging
                 else:
                     self.para("note", e.text, footnotes)
             elif e.kind == "table":

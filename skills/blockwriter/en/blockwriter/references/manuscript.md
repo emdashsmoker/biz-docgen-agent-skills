@@ -23,6 +23,7 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 - Inline formats apply in body paragraphs, table cells, and footnote definitions
 - `` `text` `` is printed as plain text with the backticks removed
 - A footnote reference is written as `[^1]` in a body paragraph, and its definition `[^1]: content` can be anywhere in the manuscript. build attaches the footnote at the reference position
+- Write the definition of a source footnote as `[^1]: Agency(year), Title`. A footnote already marks a source, so its text carries no source label (such as `출처:` or `자료:`)
 - build reports a reference without a definition with the `[footnote undefined]` lint, and a definition that no body paragraph references with the `[footnote unused]` lint
 - HWPX bullet symbols take the character shape of the line's first character. A line that starts with `**bold**` prints its symbol in bold too
 
@@ -42,8 +43,7 @@ This is how a footnote that cites the same source again is written. The default 
     - When the user gives a citation rule or the user form shows a notation, follow it
 - (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, footnotes with the same text inside the scope become the first footnote, and the later citation positions show the first footnote number in superscript
     - A footnote with different text stays a separate footnote. Write the same source in the same text, and keep citations of different pages as separate footnotes
-    - Footnotes moved from source lines after body paragraphs are merged too
-    - A footnote moved from a source line starts with the source label (such as `출처:`), so it stays apart from a `[^n]` footnote of the same source. Cite a source to be merged in one way only, either source lines or `[^n]` footnotes
+    - Footnotes moved from source lines after body paragraphs are merged too, and they also merge with a `[^n]` footnote that has the same source text
     - Check the number of merged citations on the build completion line (`merged footnote references`)
     - The number is a Hangul cross-reference in HWPX and a Word footnote number reference field in DOCX. The typesetting is in the object placement section of references/layout.md
 ## Tables
@@ -124,7 +124,7 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
-- A source line after a body paragraph becomes a footnote of the previous paragraph. The footnote text keeps the source label (`출처:`, `자료:`, and so on). A source line written over several lines is joined into one line in the footnote. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
+- A source line after a body paragraph becomes a footnote of the previous paragraph. The footnote holds only the source text, without the source label (`출처:`, `자료:`, and so on). A source line written over several lines is joined into one line in the footnote. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
