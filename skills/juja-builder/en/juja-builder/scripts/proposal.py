@@ -371,6 +371,14 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     return elems, footnotes
 
 
+def parse_for_check(path: str) -> tuple[list[Element], dict[str, str]]:
+    """The element list for checks. Restores the escape placeholder characters in element text so that they do not reach check messages (checks do not typeset)"""
+    elems, footnotes = parse_markdown(path)
+    for e in elems:
+        e.text = lib.release_escapes(e.text)
+    return elems, footnotes
+
+
 def estimate_table_lines(rows: list[list[str]]) -> int:
     """Approximate the table height in lines. Column widths are allocated in proportion to each column's maximum weighted length, and cell line counts sum the folded lines of each <br> segment."""
     ncol = max(len(r) for r in rows)
@@ -399,7 +407,7 @@ def lint(elems: list[Element]) -> list[str]:
         est = estimate_table_lines(rows)
         if est >= TABLE_PAGE_LINES and len(rows) <= lib.LONG_TABLE_ROWS:
             out.append(f"[long table HITL] '{e.text[:24]}' {len(rows)} rows estimated at {est} lines: may run past one page. Ask the user to choose (장표: engine) treat-as-character off or (장표: split N) physical split")
-    return out
+    return [lib.release_escapes(s) for s in out]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1536,7 +1544,7 @@ def _segments(lines: list[str]) -> list[tuple[str, list[str]]]:
 def check_density(path: str) -> tuple[bool, list[str], list[str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     fails, warns = [], []
-    elems, _ = parse_markdown(path)
+    elems, _ = parse_for_check(path)
     for msg in lint(elems):
         if "lone □" in msg:
             fails.append(msg)
@@ -1885,7 +1893,7 @@ def count_warnings(elems: list[Element]) -> list[str]:
 def check_volume(path: str, original: bool | None = None, style: bool | None = None) -> tuple[bool, list[str], list[str]]:
     """Two or more ❍ and two or more evidence lines (hyphen, ※) per □, one or more tables or figures per Task, and lower bounds on body characters.
     Why: well-written proposals build volume by filling composition units without stretching sentences. It is the only path that keeps both the short-sentence discipline and the volume."""
-    elems, _ = parse_markdown(path)
+    elems, _ = parse_for_check(path)
     fails, warns = [], []
     squares: list[dict] = []
     tasks: list[dict] = []
@@ -2206,6 +2214,7 @@ def cmd_build(a):
     for fmt in formats:
         out = f"{out_base}.{fmt}"
         b = make(fmt, out)
+        lib.release_escapes_in_file(out)
         if fmt == "hwpx":
             fixed = lib.repair_manifest(out)
             if fixed:

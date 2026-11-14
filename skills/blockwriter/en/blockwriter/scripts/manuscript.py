@@ -11,6 +11,7 @@ import re
 import sys
 import unicodedata
 import urllib.request
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -37,6 +38,44 @@ FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
 EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
 INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
                        + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# Backslash escapes. An ASCII punctuation character after a backslash is written as it is, without its notation role (the same characters as CommonMark). Backtick spans are left alone
+# How: when the manuscript is read, escaped characters are swapped for Unicode noncharacters (32 from U+FDD0). They are restored after the document is saved
+# Why: no path of manuscript parsing or typesetting reads an escaped character as notation. Noncharacters are code values that documents do not use
+ESCAPABLE = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+ESCAPE_RE = re.compile(r"(`[^`\n]+`)|\\([" + re.escape(ESCAPABLE) + "])")
+ESCAPE_HOLD = {ch: chr(0xFDD0 + i) for i, ch in enumerate(ESCAPABLE)}
+ESCAPE_RELEASE = {ord(hold): ch for ch, hold in ESCAPE_HOLD.items()}
+XML_ENTITIES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+ESCAPE_RELEASE_XML = {code: XML_ENTITIES.get(ch, ch) for code, ch in ESCAPE_RELEASE.items()}
+ESCAPE_HOLD_BYTES = b"\xef\xb7"            # first two UTF-8 bytes of the placeholder characters (used to find the entries to rewrite in a saved file)
+ESCAPE_XML_SUFFIXES = (".xml", ".hpf")     # archive entries that hold text
+
+
+def hold_escapes(text: str) -> str:
+    """Swaps escaped characters for placeholder characters. Backtick spans are left alone"""
+    return ESCAPE_RE.sub(lambda m: m.group(1) or ESCAPE_HOLD[m.group(2)], text)
+
+
+def release_escapes(text: str) -> str:
+    """Restores placeholder characters to the escaped characters"""
+    return text.translate(ESCAPE_RELEASE)
+
+
+def release_escapes_in_file(path: str) -> None:
+    """Restores the placeholder characters left in the XML entries of a saved document (zip). Entry order and compression are kept.
+    Why after saving: text reaches the document through many paths (paragraphs, cells, captions, TOC, bookmark names and so on), so the saved file is handled once"""
+    with zipfile.ZipFile(path) as z:
+        items = [(info, z.read(info)) for info in z.infolist()]
+    held = [i for i, (info, data) in enumerate(items)
+            if info.filename.endswith(ESCAPE_XML_SUFFIXES) and ESCAPE_HOLD_BYTES in data]
+    if not held:
+        return
+    for i in held:
+        info, data = items[i]
+        items[i] = (info, data.decode("utf-8").translate(ESCAPE_RELEASE_XML).encode("utf-8"))
+    with zipfile.ZipFile(path, "w") as z:
+        for info, data in items:
+            z.writestr(info, data)
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "* ")   # a '*' note needs a space after it. Lines starting with '*italic*' or '**bold**' are statements
@@ -93,7 +132,7 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
 
 
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    lines = hold_escapes(Path(path).read_text(encoding="utf-8")).splitlines()
     footnotes: dict[str, str] = {}
     # bullet levels are ranked by indent width (the width values themselves differ between manuscripts)
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines if (m := BULLET_RE.match(ln))})
@@ -142,7 +181,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path))}))
+                                 data={"path": release_escapes(m.group(2).strip()), "base": os.path.dirname(os.path.abspath(path))}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -382,7 +421,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
             issues.append(msg("lint_no_caption"))
         if e.kind == "colwidth":   # a column width line not absorbed by a table is not used in typesetting
             issues.append(msg("lint_colwidth_alone", text=e.text[:30]))
-    return issues + _lint_attached(elems, footnotes or {})
+    return [release_escapes(s) for s in issues + _lint_attached(elems, footnotes or {})]
 
 
 def _lint_attached(elems: list[Element], footnotes: dict) -> list[str]:
@@ -422,7 +461,7 @@ def hitl_notices(elems: list[Element], ask_page_break: bool = True, ask_long_tab
     for e in elems:
         if ask_long_table and e.kind == "table" and len(e.data["rows"]) > C.LONG_TABLE_ROWS:
             notices.append(msg("hitl_long_table", rows=len(e.data["rows"]), title=e.text or "-"))
-    return notices
+    return [release_escapes(s) for s in notices]
 
 
 # ── Table calculations (HWPUNIT; the DOCX typesetter converts them) ─────────────────────────
@@ -937,7 +976,7 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sub", seg[5:-6]))
         else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-    return out
+    return [(kind, release_escapes(seg)) for kind, seg in out]
 
 
 def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
@@ -951,7 +990,7 @@ def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[s
 
 def toc_bookmark_name(text: str) -> str:
     """HWPX bookmark name. Removes only the separator characters of the page reference path from the TOC entry text"""
-    return "".join(ch for ch in text if ch not in C.BOOKMARK_DROP_CHARS).strip()
+    return "".join(ch for ch in release_escapes(text) if ch not in C.BOOKMARK_DROP_CHARS).strip()
 
 
 def docx_bookmark_name(n: int, text: str) -> str:

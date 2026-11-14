@@ -648,6 +648,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `![caption](path)` | [caption] | Figure. Placed inside a transparent table. The source goes in a transparent row below the figure, and the caption goes below the transparent table |
 | `[^1]` | Footnote | Source of evidence in the body |
 | `^superscript^`, `<sup>up</sup>`, `<sub>down</sub>` | Superscript and subscript | For units and symbols |
+| `\*`, `\[` and other punctuation after a backslash | The punctuation character as it is | For punctuation that would otherwise be read as notation (the backslash escape of standard Markdown). Backtick spans are left alone |
 | `(폭: group name)` or `(폭: 1,3,2)` | Table width directive | Between caption and table. Unifies the widths of tables with the same layout or sets ratios |
 | `(삽입: 모듈총괄표)` | Module overview table | Inserts the table of 02_모듈총괄표.md at this point. Once in the whole manuscript set |
 | `(장표: engine)` or `(장표: split N)` | Long-table directive | Between caption and table. How to handle a table that runs past one page. Written after the user chooses |

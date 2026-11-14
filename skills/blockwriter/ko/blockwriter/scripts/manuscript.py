@@ -11,6 +11,7 @@ import re
 import sys
 import unicodedata
 import urllib.request
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -37,6 +38,44 @@ FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
 EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
 INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
                        + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# 백슬래시 이스케이프. 백슬래시 뒤의 ASCII 문장부호는 표기 역할 없이 글자 그대로 출력 (CommonMark와 같은 대상 문자). 백틱 구간 안은 제외
+# How: 원고를 읽을 때 이스케이프한 글자를 유니코드 비문자(U+FDD0부터 32자)로 바꿔 두고 문서를 저장한 뒤 글자로 되돌림
+# Why: 원고 해석과 조판의 모든 경로가 이스케이프한 글자를 표기로 읽지 않게 함. 비문자는 문서에 쓰이지 않는 코드 값
+ESCAPABLE = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+ESCAPE_RE = re.compile(r"(`[^`\n]+`)|\\([" + re.escape(ESCAPABLE) + "])")
+ESCAPE_HOLD = {ch: chr(0xFDD0 + i) for i, ch in enumerate(ESCAPABLE)}
+ESCAPE_RELEASE = {ord(hold): ch for ch, hold in ESCAPE_HOLD.items()}
+XML_ENTITIES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+ESCAPE_RELEASE_XML = {code: XML_ENTITIES.get(ch, ch) for code, ch in ESCAPE_RELEASE.items()}
+ESCAPE_HOLD_BYTES = b"\xef\xb7"            # 자리 표시 문자의 UTF-8 앞 2바이트 (저장 파일에서 대상 항목을 찾는 용도)
+ESCAPE_XML_SUFFIXES = (".xml", ".hpf")     # 글자를 담는 압축 항목
+
+
+def hold_escapes(text: str) -> str:
+    """이스케이프한 글자를 자리 표시 문자로 바꾼다. 백틱 구간은 그대로 둔다"""
+    return ESCAPE_RE.sub(lambda m: m.group(1) or ESCAPE_HOLD[m.group(2)], text)
+
+
+def release_escapes(text: str) -> str:
+    """자리 표시 문자를 이스케이프한 글자로 되돌린다"""
+    return text.translate(ESCAPE_RELEASE)
+
+
+def release_escapes_in_file(path: str) -> None:
+    """저장한 문서(zip)의 XML 항목에 남은 자리 표시 문자를 글자로 되돌린다. 항목 순서와 압축 방식은 유지한다.
+    Why 저장 뒤: 글자를 문서에 기록하는 경로(문단, 셀, 캡션, 목차, 책갈피 이름 등)가 여럿이므로 저장 파일에서 한 번에 처리"""
+    with zipfile.ZipFile(path) as z:
+        items = [(info, z.read(info)) for info in z.infolist()]
+    held = [i for i, (info, data) in enumerate(items)
+            if info.filename.endswith(ESCAPE_XML_SUFFIXES) and ESCAPE_HOLD_BYTES in data]
+    if not held:
+        return
+    for i in held:
+        info, data = items[i]
+        items[i] = (info, data.decode("utf-8").translate(ESCAPE_RELEASE_XML).encode("utf-8"))
+    with zipfile.ZipFile(path, "w") as z:
+        for info, data in items:
+            z.writestr(info, data)
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "* ")   # '*' 주석은 뒤에 공백이 있을 때만. '*기울임*'과 '**굵게**'로 시작하는 줄은 서술
@@ -93,7 +132,7 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
 
 
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    lines = hold_escapes(Path(path).read_text(encoding="utf-8")).splitlines()
     footnotes: dict[str, str] = {}
     # 불릿 계위는 들여쓰기 폭의 순위로 판정 (폭 값 자체는 원고마다 다름)
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines if (m := BULLET_RE.match(ln))})
@@ -142,7 +181,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if m := IMAGE_RE.match(stripped):
             elems.append(Element("image", m.group(1).strip(),
-                                 data={"path": m.group(2).strip(), "base": os.path.dirname(os.path.abspath(path))}))
+                                 data={"path": release_escapes(m.group(2).strip()), "base": os.path.dirname(os.path.abspath(path))}))
             continue
         if m := CAPTION_RE.match(stripped):
             elems.append(Element("table_caption", m.group(1).strip()))
@@ -382,7 +421,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
             issues.append(msg("lint_no_caption"))
         if e.kind == "colwidth":   # 표에 흡수되지 않은 열 폭 줄은 조판에 쓰이지 않음
             issues.append(msg("lint_colwidth_alone", text=e.text[:30]))
-    return issues + _lint_attached(elems, footnotes or {})
+    return [release_escapes(s) for s in issues + _lint_attached(elems, footnotes or {})]
 
 
 def _lint_attached(elems: list[Element], footnotes: dict) -> list[str]:
@@ -422,7 +461,7 @@ def hitl_notices(elems: list[Element], ask_page_break: bool = True, ask_long_tab
     for e in elems:
         if ask_long_table and e.kind == "table" and len(e.data["rows"]) > C.LONG_TABLE_ROWS:
             notices.append(msg("hitl_long_table", rows=len(e.data["rows"]), title=e.text or "-"))
-    return notices
+    return [release_escapes(s) for s in notices]
 
 
 # ── 표 계산 (단위 HWPUNIT, DOCX 조판기는 변환하여 사용) ─────────────────────────
@@ -938,7 +977,7 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sub", seg[5:-6]))
         else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-    return out
+    return [(kind, release_escapes(seg)) for kind, seg in out]
 
 
 def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[str, ...]:
@@ -952,7 +991,7 @@ def parse_toc_kinds(spec: str, allowed: tuple[str, ...], option: str) -> tuple[s
 
 def toc_bookmark_name(text: str) -> str:
     """HWPX 책갈피 이름. 목차 항목 문구에서 쪽 참조 경로의 구분 문자만 지운다"""
-    return "".join(ch for ch in text if ch not in C.BOOKMARK_DROP_CHARS).strip()
+    return "".join(ch for ch in release_escapes(text) if ch not in C.BOOKMARK_DROP_CHARS).strip()
 
 
 def docx_bookmark_name(n: int, text: str) -> str:
