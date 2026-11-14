@@ -62,6 +62,7 @@ Changelog rules
 - Fixed the tables divided by `--long-table split` getting different column widths, so every divided table now shares the widths sized from the whole table and the column width WARN and INFO lines print once per table (#150)
 - Fixed undocumented `--header` align values such as `MIDDLE` being accepted or ending in a traceback, so values other than `LEFT`, `CENTER` and `RIGHT` now stop build with an ERROR line (#150)
 - Added a note that a footnote moved from a source line keeps its source label and stays apart from a `[^n]` footnote of the same source under footnote merging (#150)
+- Changed the table cell renderer margin of line tidying from 3 characters to 1 character, keeping 2 characters in a paragraph (#152)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
@@ -90,6 +91,7 @@ Changelog rules
 * `--long-table split`으로 나눈 표마다 열 폭이 달라지던 오류 수정 (나눈 표 전체가 표 전체 기준의 열 폭을 공유하며 열 폭 WARN과 INFO 줄은 표마다 1회 출력) (#150)
 * 문서에 없는 `--header` 정렬값(`MIDDLE` 등)을 오류 없이 받거나 트레이스백으로 멈추던 오류 수정 (`LEFT`, `CENTER`, `RIGHT` 외의 값은 ERROR로 중단) (#150)
 * 출처 줄에서 옮긴 각주가 출처 표기를 유지하여 같은 출처의 `[^n]` 각주와 별도 각주로 남는다는 안내 추가 (#150)
+* 줄 정리의 표 셀 렌더러 여유를 3글자에서 1글자로 변경 (문단 2글자는 유지) (#152)
 
 ### ieum-deck
 - Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
@@ -137,6 +139,7 @@ Changelog rules
 - Added the `[출처 줄 위치]` lint to build and `check density` for source lines with no paragraph before them under the same heading or band (#150)
 - Added a note that a footnote moved from a source line keeps its source label and stays apart from a `[^n]` footnote of the same source under footnote merging (#150)
 - Added the split unit of `--long-table split` (24 body rows) to the long table rules, with `(장표: split N)` as the way to even out a short last table (#150)
+- Changed the table cell renderer margin of line tidying from 3 characters to 1 character, keeping 2 characters in a paragraph (#152)
 
 * 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
 * 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
@@ -176,6 +179,7 @@ Changelog rules
 * 같은 제목이나 밴드 아래에 앞 문단이 없는 출처 줄을 알리는 `[출처 줄 위치]` 린트를 build와 `check density`에 추가 (#150)
 * 출처 줄에서 옮긴 각주가 출처 표기를 유지하여 같은 출처의 `[^n]` 각주와 별도 각주로 남는다는 안내 추가 (#150)
 * 장표 처리 규칙에 `--long-table split`의 분할 단위(본문 행 24행)와 `(장표: split N)`으로 마지막 표의 행 수를 맞추는 방법 추가 (#150)
+* 줄 정리의 표 셀 렌더러 여유를 3글자에서 1글자로 변경 (문단 2글자는 유지) (#152)
 
 ## 2026-11-13
 
