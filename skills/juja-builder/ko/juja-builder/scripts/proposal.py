@@ -2242,12 +2242,28 @@ W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외
 
 
+def _reading_order(node):
+    """문단 요소를 읽는 순서로 돌려줌. 개체의 아래쪽 캡션(side="BOTTOM")은 개체 내용 뒤에 둠
+    Why: hwpx는 캡션을 개체 요소 안에서 내용(표 행)보다 앞에 기록. docx의 그림 캡션은 그림 표 뒤의 문단이므로
+    기록 순서대로 읽으면 캡션과 출처 행이 함께 있는 그림에서 두 형식의 순서가 달라짐"""
+    late = []
+    for child in node:
+        if child.tag == f"{HP}caption" and child.get("side") == "BOTTOM":
+            late.append(child)
+            continue
+        if child.tag == f"{HP}p":
+            yield child
+        yield from _reading_order(child)
+    for caption in late:
+        yield from _reading_order(caption)
+
+
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
     """hwpx 본문 문단 글자(표 셀과 캡션 포함, 머리말 제외)와 각주 글자. 문서 순서"""
     body, notes = [], []
     with zipfile.ZipFile(path) as z:
         for n in sorted(x for x in z.namelist() if re.match(r"Contents/section\d+\.xml$", x)):
-            for p in etree.fromstring(z.read(n)).iter(f"{HP}p"):
+            for p in _reading_order(etree.fromstring(z.read(n))):
                 anc = {a.tag for a in p.iterancestors()}
                 if f"{HP}header" in anc or f"{HP}footer" in anc:
                     continue

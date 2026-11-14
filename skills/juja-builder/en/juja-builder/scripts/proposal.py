@@ -2230,12 +2230,28 @@ W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references are calculated by the editor, so they are excluded from the comparison
 
 
+def _reading_order(node):
+    """Yields paragraph elements in reading order. A bottom caption of an object (side="BOTTOM") comes after the object's content
+    Why: hwpx writes the caption inside the object element before its content (table rows). The docx figure caption is a paragraph
+    after the figure table, so reading in written order gives the two formats different orders for a figure with a caption and source rows"""
+    late = []
+    for child in node:
+        if child.tag == f"{HP}caption" and child.get("side") == "BOTTOM":
+            late.append(child)
+            continue
+        if child.tag == f"{HP}p":
+            yield child
+        yield from _reading_order(child)
+    for caption in late:
+        yield from _reading_order(caption)
+
+
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
     """Paragraph text of the hwpx body (including table cells and captions, excluding headers) and footnote text. In document order"""
     body, notes = [], []
     with zipfile.ZipFile(path) as z:
         for n in sorted(x for x in z.namelist() if re.match(r"Contents/section\d+\.xml$", x)):
-            for p in etree.fromstring(z.read(n)).iter(f"{HP}p"):
+            for p in _reading_order(etree.fromstring(z.read(n))):
                 anc = {a.tag for a in p.iterancestors()}
                 if f"{HP}header" in anc or f"{HP}footer" in anc:
                     continue
