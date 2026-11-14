@@ -16,7 +16,7 @@
     + (Discretionary) Management strategy, organization diagnosis, new business discovery, facility feasibility, support program performance analysis and problem solving use the type skeleton as a reference example (the structure differs by contracting agency and engagement)
 - A statutory ISP is the preliminary ISP for building an information system above a set amount
 - Judge statutory ISP status by the governing law, program budget size and output list
-- A statutory ISP uses the procedure and output names of the NIA (National Information Society Agency) ISP·ISMP common guide as is (check the latest edition at kickoff)
+- A statutory ISP uses the procedure and output names of the institutional ISP as is (check the current standard at kickoff)
 - IT planning outside the statutory scope composes modules to fit the contracting agency's requirements
 - Modules and Tasks of discretionary engagements are derived from the RFP work details and key issues
 - Using the sample skeleton module names as is in a discretionary engagement is a distinctiveness defect
@@ -276,7 +276,7 @@ M5 통합 이행계획 수립 (integrated implementation plan development)      
     + The strategy is derived from program characteristics and risk factors through key success factors
     + Place 1 slide per strategy
     + A strategy slide consists of 4-step STEP cards and a sample example
-- (Standard output names) Use the output names of the 9th edition of the ISP·ISMP common guide (official Korean names)
+- (Standard output names) Use the output names of the institutional ISP (official Korean names)
     + (ISP examples) 경영환경 분석서, 법·제도 분석서, 업무현황 분석서, 차이 분석서, 정보화 전략 정의서, To-Be 업무프로세스 설계서, To-Be 정보시스템 구조 설계서, To-Be 데이터 구조 설계서, To-Be 기술 및 보안 구조 설계서, 통합 이행계획 수립서
     + (ISMP examples) 업무 요구사항 분석서, 정보기술 요구사항 분석서, 요구사항 연관표, 정보시스템 요건 기술서
 - Names set by the RFP take priority over the standard output names

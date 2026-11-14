@@ -234,7 +234,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Add or remove only the items the RFP designates in the skeleton
 - (Conditional framework) For informatization engagements, the framework applies depending on whether it is a statutory ISP
     + A prior ISP for building an information system above a certain amount is a legal obligation
-    + Statutory cases use the procedure and deliverable names of the ISP·ISMP common guide as they are
+    + Statutory cases use the procedure and deliverable names of the institutional ISP as they are
     + In statutory cases, the framework sets the five-stage skeleton (environment analysis, current state analysis, informatization vision and strategy development, target model design, integrated implementation plan), the requirement classification scheme, the cost estimation standards and the security design of the national network security framework
     + Even in statutory cases, module names and splits, Task composition, survey design and priority criteria for implementation tasks are at the discretion of the contracting agency
     + IT planning outside the statutory scope (engagements the contracting agency orders for its own needs) is structured within the scope set by the RFP
