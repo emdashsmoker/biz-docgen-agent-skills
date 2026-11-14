@@ -261,6 +261,7 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - A layout where the body text of two facing pages fills each page evenly down to the bottom is recommended. A document with a large empty area at the bottom of a page, or with two facing pages filled very differently, reads as a document that still needs editing
 - Deciding the size and position of tables and figures and the length and order of paragraphs with the page fill in mind from the manuscript stage reduces changes at the review stage
 - At the review stage, look at the rendered PNGs two pages side by side and adjust the size or position of tables and figures, the position of paragraphs and so on
+- A layout where only 1-2 lines carry over to the next page is also a page fill target, checked whether or not the line spacing adjustment is on
 - Adjust only as long as the content still reads well. The order of the content and the flow of the argument come before the page fill
 
 ## Typesetting adjustment
