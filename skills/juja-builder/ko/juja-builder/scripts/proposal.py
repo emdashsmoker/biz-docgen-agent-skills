@@ -2216,9 +2216,7 @@ def cmd_build(a):
             if fixed:
                 print(f"WARN: 매니페스트 미등록 이미지 {fixed}건 자동 보정")
         if a.toc:
-            # docx만 근사값을 채움. Why: 한/글은 문서를 불러올 때 쪽 참조를 다시 계산하지만 Word는 F9 전까지 저장값을 그대로 보임
-            filled = docx_lib.fill_page_refs(out) if fmt == "docx" and a.page_number else None
-            print(lib.toc_notice(b.toc_items, fmt, filled))
+            print(lib.toc_notice(b.toc_items, fmt))
         made[fmt] = out
         note_info = f", 각주 통합 {b.notes.merged}건" if a.footnote_merge else ""
         print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)}{note_info})")
@@ -2239,7 +2237,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 형식마다 다르므로(자리 표시 값, 근사값) 대조에서 제외
+TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # 목차 쪽 참조의 저장값은 편집기가 계산하는 값이므로 대조에서 제외
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2311,13 +2309,12 @@ STATIC_SCOPE_ALL = "all"    # 종류를 판별한 항목 전체
 STATIC_STYLE_ROLES = {"chapter": "chapter", "section": "section", "subsection": "subsection", "ganada": "ganada",
                       "table_title": "table", "fig_title": "figure", "fig_pos": "figure"}
 # 캡션 스타일은 docx의 캡션 문단, 그림 위치 스타일은 표에 담지 않은 그림(lib.FIGURE_IN_TABLE 해제)을 담은 hwpx 문단
-REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "갱신됨", toc_refs.RefState.PLACEHOLDER: "자리 표시 값",
-                  toc_refs.RefState.UNREFRESHED: "갱신 전 근사값"}
+REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "갱신됨", toc_refs.RefState.PLACEHOLDER: "자리 표시 값"}
 
 
 def cmd_toc_static(a):
     """사후 정적화: 제출 파일에서 지정한 종류의 책갈피를 지우고 그 책갈피를 가리키는 쪽 참조를 일반 글자로 바꿈
-    쪽번호를 갱신하지 않은 항목(자리 표시 값, 갱신 전 근사값)은 건너뛰고 알림. Why: 실제 쪽은 한/글과 Word만 계산함"""
+    쪽번호를 갱신하지 않은 항목(자리 표시 값)은 건너뛰고 알림. Why: 실제 쪽은 한/글과 Word만 계산함"""
     profile = PROFILES[a.profile] if a.profile in PROFILES else json.load(open(a.profile, encoding="utf-8"))
     style_kinds = {profile[role]: kind for role, kind in STATIC_STYLE_ROLES.items() if profile.get(role)}
     items = toc_refs.scan(a.input, style_kinds)

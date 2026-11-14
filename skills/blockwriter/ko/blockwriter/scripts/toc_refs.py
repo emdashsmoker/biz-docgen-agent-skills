@@ -1,4 +1,4 @@
-"""목차 책갈피와 쪽 참조: 산출 파일(HWPX, DOCX)에서 찾기, DOCX 초기값 기입, 정적화.
+"""목차 책갈피와 쪽 참조: 산출 파일(HWPX, DOCX)에서 찾기와 정적화.
 
 - 한/글과 Word가 다시 저장한 파일은 run 분할과 속성이 build 산출물과 다르므로 요소 종류와 참조 관계로만 찾는다
 - 조판 라이브러리 없이 zipfile과 lxml만 쓴다. 제출 파일에서 대상 요소만 지우고 나머지 내용은 다시 만들지 않기 위함
@@ -15,8 +15,9 @@ from enum import Enum
 from lxml import etree as ET
 
 # ── 설정부 ─────────────────────────────────────────────────────────────────
-PLACEHOLDER = "?"        # 쪽 참조의 자리 표시 값. 한/글과 Word가 쪽번호를 계산하기 전까지 보이는 글자
-STALE_MARK = "​"    # DOCX 근사값 뒤에 붙이는 폭 없는 문자. Word가 필드를 갱신하면 결과 글자를 새로 쓰므로 사라짐
+# 쪽 참조의 자리 표시 값. 한/글과 Word가 쪽번호를 계산하기 전까지 보이는 글자
+# Why 근사값을 넣지 않음: 다른 조판 엔진이 계산한 쪽은 Word와 달라 그럴듯한 틀린 숫자로 보임 (LibreOffice 값은 16건 중 11건이 Word와 달랐음)
+PLACEHOLDER = "?"
 KINDS = ("chapter", "section", "subsection", "ganada", "module", "task", "table", "figure")   # 목차 수록 항목의 종류
 OTHER = "other"          # 종류를 판별하지 못한 책갈피
 BAND_KIND_RE = re.compile(r"^\s*(Module|Task|Step)\b", re.I)   # 밴드 번호 칸의 글자. 일치하지 않는 밴드는 장
@@ -34,7 +35,6 @@ class RefState(Enum):
     """쪽 참조 저장값의 상태"""
     UPDATED = "updated"            # 한/글이나 Word가 계산한 쪽번호
     PLACEHOLDER = "placeholder"    # 자리 표시 값이 남음 (편집기에서 갱신하지 않은 파일)
-    UNREFRESHED = "unrefreshed"    # DOCX 근사값의 표식이 남음 (Word에서 필드를 갱신하지 않은 파일)
 
 
 @dataclass
@@ -47,8 +47,6 @@ class TocItem:
 
     @property
     def state(self) -> RefState:
-        if any(STALE_MARK in v for v in self.values):
-            return RefState.UNREFRESHED
         if all(v.strip().isdigit() for v in self.values):
             return RefState.UPDATED
         return RefState.PLACEHOLDER   # 자리 표시 값과 숫자가 아닌 값(편집기의 참조 오류 글자 등)
@@ -319,22 +317,6 @@ def docx_page_values(path: str) -> dict[str, str]:
     """책갈피 이름 → PAGEREF 결과 글자"""
     _, root, _ = _docx_roots(path)
     return {name: "".join(t.text or "" for t in f["result"]) for name, is_page, f in _docx_refs(root) if is_page}
-
-
-def fill_docx_page_values(path: str, values: dict[str, str]) -> int:
-    """PAGEREF 결과 글자를 책갈피 이름별 값으로 바꾸고 표식을 붙임. 바꾼 건수를 반환
-    Why 표식: 근사값과 Word 갱신값은 숫자만으로 구분되지 않음"""
-    data, root, _ = _docx_roots(path)
-    filled = 0
-    for name, is_page, f in _docx_refs(root):
-        if is_page and name in values and f["result"]:
-            f["result"][0].text = values[name] + STALE_MARK
-            for extra in f["result"][1:]:
-                extra.text = ""
-            filled += 1
-    if filled:
-        _rewrite(path, path, {DOCX_BODY: _serialize(root, data)})
-    return filled
 
 
 # ── 형식 공통 진입점 ────────────────────────────────────────────────────────

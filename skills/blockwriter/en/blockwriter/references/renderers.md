@@ -58,7 +58,7 @@ Option 3 LibreOffice and H2Orestart
 
 Use this when options 1 and 2 both fail or when Permission denial handling points to option 3. State the fallback reason (the failed step of each option or the refused command) in the final report.
 
-1. On Debian-based systems, run `apt-get update`, then `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
+1. On Debian-based systems, run `apt-get update`, then `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart fonts-nanum poppler-utils`
 2. On other operating systems, install the official LibreOffice distribution and register the H2Orestart extension (https://extensions.libreoffice.org/en/extensions/show/27504) with the Extension Manager or `unopkg add`
 3. Confirm that H2Orestart is registered in `unopkg list --shared` (or `unopkg list`)
 4. Convert with `render document.hwpx --engine soffice`. render applies a dedicated user profile and an ASCII temporary file name automatically
@@ -73,7 +73,6 @@ Use this when options 1 and 2 both fail or when Permission denial handling point
 - Run a render test after installing LibreOffice and preparing the fonts (`fonts --setup`). Put the same one-line `안녕하세요!` manuscript as the HWPX render test in a temporary folder outside the output folder and typeset it with `build test.md render-test.docx --profile flat`. Then render it with `render render-test.docx --outdir <temporary folder>/docx` and check that `안녕하세요!` is visible in the page PNG (the PDF when poppler is missing). The separate `--outdir` keeps its PDF name from clashing with the HWPX render test
 - If the text is not visible, check the fonts with `fonts`. If the problem cannot be solved, skip the DOCX rendering review and state this and the reason in the planning question turn
 - LibreOffice recalculates the PAGEREF page references of the TOC when it exports to PDF. The TOC page numbers in a review PDF can differ from the values stored in the document
-- build looks up the initial values of DOCX TOC page references through the LibreOffice Python bridge (uno). uno is searched in the current Python, the Python bundled with LibreOffice, and /usr/bin/python3 in that order; without it the placeholder `?` stays
 - Without pdftoppm (poppler-utils), render produces only the PDF
 
 ## How render works

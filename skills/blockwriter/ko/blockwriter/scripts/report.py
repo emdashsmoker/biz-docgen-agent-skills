@@ -94,7 +94,7 @@ def count_merged_notes(path: str) -> int:
 
 def cmd_toc_static(a):
     """사후 정적화: 제출 파일에서 지정한 종류의 책갈피를 지우고 그 책갈피를 가리키는 쪽 참조를 일반 글자로 바꾼다.
-    쪽번호를 갱신하지 않은 항목(자리 표시 값, 갱신 전 근사값)은 건너뛰고 알린다. Why: 실제 쪽은 한/글과 Word만 계산함"""
+    쪽번호를 갱신하지 않은 항목(자리 표시 값)은 건너뛰고 알린다. Why: 실제 쪽은 한/글과 Word만 계산함"""
     import toc_refs
     style_kinds = static_style_kinds(a.profile, toc_refs.is_docx(a.input))
     items = toc_refs.scan(a.input, style_kinds)

@@ -14,11 +14,7 @@ import copy
 import io
 import math
 import os
-import pathlib
-import shutil
-import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from xml.sax.saxutils import escape
 
@@ -54,8 +50,6 @@ FOOTNOTE_SUFFIX = ")"      # character after the footnote number. Same as the hw
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # default table cell margins left, right, top, bottom (same as the python-hwpx table default)
 NOTE_BOOKMARK_PREFIX = "_RefNote"   # prefix of the bookmark name that wraps the first footnote reference in source footnote merging (followed by the footnote sequence number)
 TOC_BOOKMARK_ID_BASE = 1000000      # first id of TOC bookmarks. A range that does not overlap the footnote-merging bookmark ids (footnote sequence numbers, from 1)
-LO_FIELDS_HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lo_fields.py")   # helper script that makes a copy with updated fields
-LO_TIMEOUT = 600                    # time limit for a LibreOffice run (seconds)
 # Schema order of formatting elements. Word judges elements out of order as corruption
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -436,8 +430,9 @@ class DocxBuilder(lib.TocMarks):
         return name
 
     def _page_ref(self, p, name: str, value: str):
-        """Bookmark page reference (Word PAGEREF complex field). The result text is a stored value that Word recalculates with Ctrl+A then F9
-        Why no TOC field: when Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles"""
+        """Bookmark page reference (Word PAGEREF complex field). The result text is a placeholder that Word calculates with Ctrl+A then F9
+        Why no TOC field: when Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles
+        Why no update-on-open setting (updateFields, the dirty flag of a field): Word updates the fields before it lays out the pages, so every page number becomes 1"""
         instr = OxmlElement("w:instrText")
         instr.set(qn("xml:space"), "preserve")
         instr.text = f" PAGEREF {name} \\h "
@@ -869,54 +864,3 @@ class DocxBuilder(lib.TocMarks):
         self._blank_divider_pages()
         self._write_footnotes()
         self.doc.save(os.path.abspath(out))
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# Initial values of TOC page references: approximations calculated by LibreOffice
-# ═══════════════════════════════════════════════════════════════════════
-def find_lo_python(soffice: str) -> str | None:
-    """Interpreter that can use the LibreOffice Python bridge (uno). Order: current Python, the Python bundled with LibreOffice, system Python"""
-    try:
-        import uno  # noqa: F401
-        return sys.executable
-    except ImportError:
-        pass
-    prog = os.path.dirname(os.path.realpath(soffice))
-    for cand in (os.path.join(prog, "python"), os.path.join(prog, "python.exe"),
-                 os.path.join(os.path.dirname(prog), "Resources", "python")):
-        if os.path.isfile(cand):
-            return cand
-    for cand in ("/usr/bin/python3",):
-        if os.path.isfile(cand) and subprocess.run([cand, "-c", "import uno"], capture_output=True).returncode == 0:
-            return cand
-    return None
-
-
-def approx_page_values(path: str) -> dict[str, str]:
-    """Bookmark name → page number calculated by LibreOffice. Returns an empty dict when LibreOffice or its Python bridge is missing or the run fails
-    The copy with updated fields is made in a temporary folder, used only for the lookup and deleted (LibreOffice rewrites the formatting on save, so it is not used as output)"""
-    soffice = lib.find_soffice()
-    lo_python = find_lo_python(soffice) if soffice else None
-    if not lo_python:
-        return {}
-    tmp = tempfile.mkdtemp(prefix="toc_lookup_")
-    try:
-        src, out = os.path.join(tmp, "in.docx"), os.path.join(tmp, "out.docx")
-        shutil.copyfile(path, src)
-        profile = pathlib.Path(os.path.join(tmp, "profile")).as_uri()   # separate profile per call (avoids lock conflicts with concurrent sessions)
-        res = subprocess.run([lo_python, LO_FIELDS_HELPER, soffice, src, out, profile],
-                             capture_output=True, text=True, timeout=LO_TIMEOUT)
-        if res.returncode != 0 or not os.path.exists(out):
-            return {}
-        return {name: value.strip() for name, value in toc_refs.docx_page_values(out).items() if value.strip().isdigit()}
-    except subprocess.TimeoutExpired:
-        return {}
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
-def fill_page_refs(path: str) -> int:
-    """Replaces the placeholder in PAGEREF result text with LibreOffice approximations. Returns the number replaced (0 when the lookup fails)
-    Why docx only: Word does not recalculate PAGEREF when it opens a document, so the initial values stay visible until F9"""
-    values = approx_page_values(path)
-    return toc_refs.fill_docx_page_values(path, values) if values else 0

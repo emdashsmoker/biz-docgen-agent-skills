@@ -141,7 +141,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (Bookmark notice) When asking whether to insert a TOC, give the following notice with the question
         - A TOC with page numbers attaches a bookmark to every listed item (heading paragraphs, tables and figures with captions), and each TOC page number follows its bookmark
         - Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. The bookmarks of tables and figures sit inside the table, so they move with the table
-        - Hangul updates the page numbers automatically when it loads the document. Word updates them with select all (Ctrl+A) then F9
+        - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
         - Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
     - (Choice items) Present every choice and mark the default with "(default)"
@@ -165,7 +165,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
     - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
     - (TOC page numbers) If a TOC with page numbers was inserted, repeat the bookmark notice of step 1 and add the initial values of each format
         - The TOC page numbers of an HWPX are written as the placeholder `?`. They change to the real pages when Hangul loads the document
-        - The TOC page numbers of a DOCX are approximations calculated by LibreOffice. They change to the real pages when updated in Word with select all (Ctrl+A) then F9. When build prints that it could not record approximations, they are written as `?`
+        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document, so they change to the real pages only after select all (Ctrl+A) then F9
         - If a PDF is bundled, the PDF from the HWPX review render keeps `?` as the TOC page numbers
     - (Font notice) If `fonts` can run on the computer where the user opens the documents (the skill runs on that computer or can send commands to it), run it. If every form font (NanumGothic, plus NanumBarunGothic for flat) is installed with all Hanja present, skip the notice. If a font is missing or lacks Hanja, name it and give the installation steps for the user's computer in references/renderers.md
     - (Remote workspace) If the user's computer cannot be checked, skip the font notice and the question about font installation. Give the installation steps when the user mentions a font or Hanja display problem
@@ -176,13 +176,13 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 - (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
 
 1. (Update request) Ask the user to open the delivered file once in Hangul or Word, update the page numbers, save it, and submit it again. Hangul updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save
-    - Only Hangul and Word calculate the real pages. Static conversion of the build output as it is freezes the placeholder or the approximation
+    - Only Hangul and Word calculate the real pages. Static conversion of the build output as it is freezes the placeholder
 2. (Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, table, figure) or all
 3. (Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
 4. (Report) Give the user the counts of items made static, skipped, and kept, and the output path
 
 - The bookmarks and page references of items outside the scope stay and keep updating in Hangul and Word
-- (File not updated) Items whose page number is the placeholder `?` or an approximation that was not updated are left as they are and reported in a `WARN:` line. Repeat step 1 to the user
+- (File not updated) Items whose page number is the placeholder `?` are left as they are and reported in a `WARN:` line. Repeat step 1 to the user
 - (Item kind) Identified from where the bookmark sits (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all. They can be chosen with `--scope other`
 - References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references are not changed
 - The processing rules are in the TOC section of references/layout.md

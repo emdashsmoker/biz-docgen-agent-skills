@@ -16,10 +16,7 @@ import zipfile
 from enum import Enum
 
 import config as C
-import toc_refs
 from config import msg
-
-LO_FIELDS_HELPER = os.path.join(C.SCRIPT_DIR, "lo_fields.py")   # helper script that makes a copy with updated fields
 
 
 # ── Renderer lookup ────────────────────────────────────────────────────────
@@ -47,24 +44,6 @@ def find_soffice() -> str | None:
                  r"C:\Program Files\LibreOffice\program\soffice.exe",
                  "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
         if cand and os.path.isfile(cand):
-            return cand
-    return None
-
-
-def find_lo_python(soffice: str) -> str | None:
-    """Interpreter that can use the LibreOffice Python bridge (uno): the current Python or the Python bundled with LibreOffice."""
-    try:
-        import uno  # noqa: F401
-        return sys.executable
-    except ImportError:
-        pass
-    prog = os.path.dirname(os.path.realpath(soffice))
-    for cand in (os.path.join(prog, "python"), os.path.join(prog, "python.exe"),
-                 os.path.join(os.path.dirname(prog), "Resources", "python")):
-        if os.path.isfile(cand):
-            return cand
-    for cand in ("/usr/bin/python3",):
-        if os.path.isfile(cand) and subprocess.run([cand, "-c", "import uno"], capture_output=True).returncode == 0:
             return cand
     return None
 
@@ -202,29 +181,6 @@ def render(src: str, outdir: str | None, dpi: int, engine: str, rhwp_opt: str | 
         print(msg("render_ok", engine=used, pdf=pdf, outdir=outdir, n=len(page_pngs(outdir))))
     else:
         print(msg("render_pdf_only", engine=used, pdf=pdf))
-
-
-def approx_page_values(path: str) -> dict[str, str]:
-    """DOCX bookmark name → page number calculated by LibreOffice. Returns an empty dict when LibreOffice or its Python bridge (uno) is missing or the run fails.
-    The copy with updated fields is made in a temporary folder, used only for the lookup and deleted (LibreOffice rewrites the formatting on save, so it is not used as output)"""
-    soffice = find_soffice()
-    lo_python = find_lo_python(soffice) if soffice else None
-    if not lo_python:
-        return {}
-    tmp = tempfile.mkdtemp(prefix="toc_lookup_")
-    try:
-        src, out = os.path.join(tmp, "in.docx"), os.path.join(tmp, "out.docx")
-        shutil.copyfile(path, src)
-        profile = "file://" + os.path.join(tmp, "profile").replace(os.sep, "/")   # dedicated user profile per call
-        res = subprocess.run([lo_python, LO_FIELDS_HELPER, soffice, src, out, profile],
-                             capture_output=True, text=True, timeout=C.LIBREOFFICE_TIMEOUT)
-        if res.returncode != 0 or not os.path.exists(out):
-            return {}
-        return {name: value.strip() for name, value in toc_refs.docx_page_values(out).items() if value.strip().isdigit()}
-    except subprocess.TimeoutExpired:
-        return {}
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def rhwp_verify(path: str, expect: str) -> bool | None:

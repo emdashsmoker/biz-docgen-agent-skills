@@ -16,10 +16,7 @@ import zipfile
 from enum import Enum
 
 import config as C
-import toc_refs
 from config import msg
-
-LO_FIELDS_HELPER = os.path.join(C.SCRIPT_DIR, "lo_fields.py")   # 필드 갱신 사본을 만드는 보조 스크립트
 
 
 # ── 렌더러 탐색 ────────────────────────────────────────────────────────────
@@ -47,24 +44,6 @@ def find_soffice() -> str | None:
                  r"C:\Program Files\LibreOffice\program\soffice.exe",
                  "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
         if cand and os.path.isfile(cand):
-            return cand
-    return None
-
-
-def find_lo_python(soffice: str) -> str | None:
-    """LibreOffice 파이썬 연동(uno)을 쓸 수 있는 인터프리터. 현재 파이썬 또는 LibreOffice 동봉 파이썬."""
-    try:
-        import uno  # noqa: F401
-        return sys.executable
-    except ImportError:
-        pass
-    prog = os.path.dirname(os.path.realpath(soffice))
-    for cand in (os.path.join(prog, "python"), os.path.join(prog, "python.exe"),
-                 os.path.join(os.path.dirname(prog), "Resources", "python")):
-        if os.path.isfile(cand):
-            return cand
-    for cand in ("/usr/bin/python3",):
-        if os.path.isfile(cand) and subprocess.run([cand, "-c", "import uno"], capture_output=True).returncode == 0:
             return cand
     return None
 
@@ -202,29 +181,6 @@ def render(src: str, outdir: str | None, dpi: int, engine: str, rhwp_opt: str | 
         print(msg("render_ok", engine=used, pdf=pdf, outdir=outdir, n=len(page_pngs(outdir))))
     else:
         print(msg("render_pdf_only", engine=used, pdf=pdf))
-
-
-def approx_page_values(path: str) -> dict[str, str]:
-    """DOCX의 책갈피 이름 → LibreOffice가 계산한 쪽번호. LibreOffice나 파이썬 연동(uno)이 없거나 실행에 실패하면 빈 dict.
-    필드를 갱신한 사본은 임시 폴더에 만들어 조회에만 쓰고 지운다 (LibreOffice가 서식을 바꿔 저장하므로 산출물로 쓰지 않음)"""
-    soffice = find_soffice()
-    lo_python = find_lo_python(soffice) if soffice else None
-    if not lo_python:
-        return {}
-    tmp = tempfile.mkdtemp(prefix="toc_lookup_")
-    try:
-        src, out = os.path.join(tmp, "in.docx"), os.path.join(tmp, "out.docx")
-        shutil.copyfile(path, src)
-        profile = "file://" + os.path.join(tmp, "profile").replace(os.sep, "/")   # 호출마다 전용 사용자 프로필
-        res = subprocess.run([lo_python, LO_FIELDS_HELPER, soffice, src, out, profile],
-                             capture_output=True, text=True, timeout=C.LIBREOFFICE_TIMEOUT)
-        if res.returncode != 0 or not os.path.exists(out):
-            return {}
-        return {name: value.strip() for name, value in toc_refs.docx_page_values(out).items() if value.strip().isdigit()}
-    except subprocess.TimeoutExpired:
-        return {}
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def rhwp_verify(path: str, expect: str) -> bool | None:

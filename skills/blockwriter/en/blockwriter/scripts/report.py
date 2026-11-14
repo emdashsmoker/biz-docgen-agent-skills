@@ -95,7 +95,7 @@ def count_merged_notes(path: str) -> int:
 
 def cmd_toc_static(a):
     """Post-build static conversion: removes bookmarks of the given kinds from the submitted file and turns the page references to them into plain text.
-    Items whose page numbers were not updated (placeholder, approximation not updated) are skipped and reported. Why: only Hangul and Word calculate the real pages"""
+    Items whose page numbers were not updated (placeholder) are skipped and reported. Why: only Hangul and Word calculate the real pages"""
     import toc_refs
     style_kinds = static_style_kinds(a.profile, toc_refs.is_docx(a.input))
     items = toc_refs.scan(a.input, style_kinds)

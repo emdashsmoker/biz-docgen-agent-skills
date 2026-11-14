@@ -850,7 +850,8 @@ class DocxBuilder(M.TocMarks):
     def _toc_paragraph(self, it: dict):
         """TOC entry paragraph: an ordinary paragraph with the entry text, a tab and a PAGEREF page reference, in this order.
         Why no TOC field: when Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles.
-        The PAGEREF result text is a stored value that Word recalculates with Ctrl+A then F9"""
+        The PAGEREF result text is a placeholder that Word calculates with Ctrl+A then F9.
+        Why no update-on-open setting (updateFields, the dirty flag of a field): Word updates the fields before it lays out the pages, so every page number becomes 1"""
         p = el("w:p")
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val="TOC1" if it["item"] == "chapter" else "TOC2")
@@ -986,9 +987,7 @@ def drop_thumbnail(doc):
 
 
 def build_docx(a, elems, footnotes, out: str):
-    """DOCX path of the build command. The initial values of TOC page references are filled with approximations calculated by LibreOffice.
-    Why DOCX only: Hangul recalculates page references when it loads the document, but Word shows the stored values until F9"""
-    import render
+    """DOCX path of the build command"""
     b = DocxBuilder(a.profile, a.page_break)
     b.numbered_square = a.numbered_square
     b.toc, b.toc_scope = a.toc, a.toc_scope
@@ -1000,11 +999,8 @@ def build_docx(a, elems, footnotes, out: str):
     b.notes = M.NoteRegistry(a.footnote_merge)
     b.build(elems, footnotes, out)
     refs = sum(1 for _, _, name in b.toc_items if name)
-    if refs:
-        values = render.approx_page_values(out)
-        filled = toc_refs.fill_docx_page_values(out, values) if values else 0
-        key = "toc_docx_approx" if filled else "toc_docx_placeholder"
-        print(msg(key, n=len(b.toc_items), refs=refs, filled=filled, mark=toc_refs.PLACEHOLDER))
+    if refs:   # Word does not recalculate PAGEREF when it opens a document, so the user updates with Ctrl+A then F9
+        print(msg("toc_docx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
     elif b.toc_items:
         print(msg("toc_no_numbers", n=len(b.toc_items), fmt="docx"))
 

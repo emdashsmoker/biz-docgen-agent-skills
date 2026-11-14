@@ -852,7 +852,8 @@ class DocxBuilder(M.TocMarks):
     def _toc_paragraph(self, it: dict):
         """목차 항목 문단: 항목 문구, 탭, PAGEREF 쪽 참조 순서의 일반 문단.
         Why 목차 필드(TOC)를 쓰지 않음: Word가 TOC 필드를 갱신하면 조판한 항목을 지우고 제목 스타일에서 항목을 다시 만듦.
-        PAGEREF 결과 글자는 저장값이며 Word에서 Ctrl+A 후 F9로 다시 계산한다"""
+        PAGEREF 결과 글자는 자리 표시 값이며 Word에서 Ctrl+A 후 F9로 계산한다.
+        Why 열 때 갱신 설정(updateFields, 필드의 dirty 표시)을 쓰지 않음: Word가 쪽 배치 전에 필드를 갱신하여 쪽번호가 모두 1이 됨"""
         p = el("w:p")
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val="TOC1" if it["item"] == "chapter" else "TOC2")
@@ -989,9 +990,7 @@ def drop_thumbnail(doc):
 
 
 def build_docx(a, elems, footnotes, out: str):
-    """build 명령의 DOCX 경로. 목차 쪽 참조의 초기값은 LibreOffice가 계산한 근사값으로 채운다.
-    Why DOCX만: 한/글은 문서를 불러올 때 쪽 참조를 다시 계산하지만 Word는 F9 전까지 저장값을 그대로 보인다"""
-    import render
+    """build 명령의 DOCX 경로"""
     b = DocxBuilder(a.profile, a.page_break)
     b.numbered_square = a.numbered_square
     b.toc, b.toc_scope = a.toc, a.toc_scope
@@ -1003,11 +1002,8 @@ def build_docx(a, elems, footnotes, out: str):
     b.notes = M.NoteRegistry(a.footnote_merge)
     b.build(elems, footnotes, out)
     refs = sum(1 for _, _, name in b.toc_items if name)
-    if refs:
-        values = render.approx_page_values(out)
-        filled = toc_refs.fill_docx_page_values(out, values) if values else 0
-        key = "toc_docx_approx" if filled else "toc_docx_placeholder"
-        print(msg(key, n=len(b.toc_items), refs=refs, filled=filled, mark=toc_refs.PLACEHOLDER))
+    if refs:   # Word는 문서를 열 때 PAGEREF를 다시 계산하지 않으므로 유저가 Ctrl+A 후 F9로 갱신
+        print(msg("toc_docx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))
     elif b.toc_items:
         print(msg("toc_no_numbers", n=len(b.toc_items), fmt="docx"))
 

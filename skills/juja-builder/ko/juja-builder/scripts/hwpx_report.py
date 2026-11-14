@@ -1701,17 +1701,15 @@ def cmd_build(a):
     print(f"OK: {out} (요소 {len(elems)}, 각주 {len(footnotes)})")
 
 
-def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str, filled: int | None = None) -> str:
-    """build가 출력하는 목차 쪽번호 안내 1줄. filled는 docx에 근사값을 기록한 건수 (기록을 시도하지 않았으면 None)"""
+def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str) -> str:
+    """build가 출력하는 목차 쪽번호 안내 1줄"""
     refs = sum(1 for _, _, name in toc_items if name)
     if not refs:
         return f"목차 항목 {len(toc_items)}건 ({fmt}, 쪽번호 없음)" if toc_items else f"목차 없음 ({fmt})"
-    head = f"목차 항목 {len(toc_items)}건, 책갈피와 쪽 참조 {refs}건 ({fmt})."
+    head = f"목차 항목 {len(toc_items)}건, 책갈피와 쪽 참조 {refs}건 ({fmt}). 쪽번호는 자리 표시 값 '{toc_refs.PLACEHOLDER}'이며"
     if fmt == "hwpx":
-        return f"{head} 쪽번호는 자리 표시 값 '{toc_refs.PLACEHOLDER}'이며 한/글이 문서를 불러올 때 실제 쪽으로 계산"
-    if filled:
-        return f"{head} 쪽번호는 LibreOffice 근사값 {filled}건이며 Word에서 Ctrl+A 후 F9로 갱신"
-    return f"{head} 쪽번호는 자리 표시 값 '{toc_refs.PLACEHOLDER}'이며 Word에서 Ctrl+A 후 F9로 갱신 (LibreOffice 연동 부재로 근사값 미기록)"
+        return f"{head} 한/글이 문서를 불러올 때 실제 쪽으로 계산"
+    return f"{head} Word에서 Ctrl+A 후 F9로 실제 쪽을 계산"
 
 
 # ═══════════════════════════════════════════════════════════════════════

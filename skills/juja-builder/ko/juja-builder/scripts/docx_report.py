@@ -14,11 +14,7 @@ import copy
 import io
 import math
 import os
-import pathlib
-import shutil
-import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from xml.sax.saxutils import escape
 
@@ -54,8 +50,6 @@ FOOTNOTE_SUFFIX = ")"      # 각주 번호 뒤 글자. hwpx 각주 번호 형식
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # 표 기본 셀 여백 좌, 우, 위, 아래 (python-hwpx 표 기본값과 같음)
 NOTE_BOOKMARK_PREFIX = "_RefNote"   # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름의 접두 (뒤에 각주 순번)
 TOC_BOOKMARK_ID_BASE = 1000000      # 목차 책갈피 id 시작값. 각주 통합용 책갈피 id(각주 순번, 1부터)와 겹치지 않는 범위
-LO_FIELDS_HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lo_fields.py")   # 필드 갱신 사본을 만드는 보조 스크립트
-LO_TIMEOUT = 600                    # LibreOffice 실행 제한 시간(초)
 # 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 판정함
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
@@ -436,8 +430,9 @@ class DocxBuilder(lib.TocMarks):
         return name
 
     def _page_ref(self, p, name: str, value: str):
-        """책갈피 쪽 참조(Word PAGEREF 복합 필드). 결과 글자는 저장값이며 Word에서 Ctrl+A 후 F9로 다시 계산
-        Why 목차 필드(TOC)를 쓰지 않음: Word가 TOC 필드를 갱신하면 조판한 항목을 지우고 제목 스타일에서 항목을 다시 만듦"""
+        """책갈피 쪽 참조(Word PAGEREF 복합 필드). 결과 글자는 자리 표시 값이며 Word에서 Ctrl+A 후 F9로 계산
+        Why 목차 필드(TOC)를 쓰지 않음: Word가 TOC 필드를 갱신하면 조판한 항목을 지우고 제목 스타일에서 항목을 다시 만듦
+        Why 열 때 갱신 설정(updateFields, 필드의 dirty 표시)을 쓰지 않음: Word가 쪽 배치 전에 필드를 갱신하여 쪽번호가 모두 1이 됨"""
         instr = OxmlElement("w:instrText")
         instr.set(qn("xml:space"), "preserve")
         instr.text = f" PAGEREF {name} \\h "
@@ -869,54 +864,3 @@ class DocxBuilder(lib.TocMarks):
         self._blank_divider_pages()
         self._write_footnotes()
         self.doc.save(os.path.abspath(out))
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 목차 쪽 참조의 초기값: LibreOffice가 계산한 근사값
-# ═══════════════════════════════════════════════════════════════════════
-def find_lo_python(soffice: str) -> str | None:
-    """LibreOffice 파이썬 연동(uno)을 쓸 수 있는 인터프리터. 현재 파이썬, LibreOffice 동봉 파이썬, 시스템 파이썬 순"""
-    try:
-        import uno  # noqa: F401
-        return sys.executable
-    except ImportError:
-        pass
-    prog = os.path.dirname(os.path.realpath(soffice))
-    for cand in (os.path.join(prog, "python"), os.path.join(prog, "python.exe"),
-                 os.path.join(os.path.dirname(prog), "Resources", "python")):
-        if os.path.isfile(cand):
-            return cand
-    for cand in ("/usr/bin/python3",):
-        if os.path.isfile(cand) and subprocess.run([cand, "-c", "import uno"], capture_output=True).returncode == 0:
-            return cand
-    return None
-
-
-def approx_page_values(path: str) -> dict[str, str]:
-    """책갈피 이름 → LibreOffice가 계산한 쪽번호. LibreOffice나 파이썬 연동이 없거나 실행에 실패하면 빈 dict
-    필드를 갱신한 사본은 임시 폴더에 만들어 조회에만 쓰고 지움 (LibreOffice가 서식을 바꿔 저장하므로 산출물로 쓰지 않음)"""
-    soffice = lib.find_soffice()
-    lo_python = find_lo_python(soffice) if soffice else None
-    if not lo_python:
-        return {}
-    tmp = tempfile.mkdtemp(prefix="toc_lookup_")
-    try:
-        src, out = os.path.join(tmp, "in.docx"), os.path.join(tmp, "out.docx")
-        shutil.copyfile(path, src)
-        profile = pathlib.Path(os.path.join(tmp, "profile")).as_uri()   # 호출마다 별도 프로필 (동시 실행 세션과 잠금 충돌 방지)
-        res = subprocess.run([lo_python, LO_FIELDS_HELPER, soffice, src, out, profile],
-                             capture_output=True, text=True, timeout=LO_TIMEOUT)
-        if res.returncode != 0 or not os.path.exists(out):
-            return {}
-        return {name: value.strip() for name, value in toc_refs.docx_page_values(out).items() if value.strip().isdigit()}
-    except subprocess.TimeoutExpired:
-        return {}
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
-def fill_page_refs(path: str) -> int:
-    """PAGEREF 결과 글자의 자리 표시 값을 LibreOffice 근사값으로 바꿈. 바꾼 건수를 반환 (조회하지 못하면 0)
-    Why docx만: Word는 문서를 열 때 PAGEREF를 다시 계산하지 않아 F9 전까지 초기값이 그대로 보임"""
-    values = approx_page_values(path)
-    return toc_refs.fill_docx_page_values(path, values) if values else 0

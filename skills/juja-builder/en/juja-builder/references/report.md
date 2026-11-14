@@ -278,7 +278,7 @@
 - For partial output, `--chapter-start N` keeps the chapter numbers of the full table of contents. Caption numbers start with the same chapter number
 - Inserting the module overview table is optional. Putting one `(삽입: 모듈총괄표)` line in the execution method section of the engagement overview chapter places it there
 - Table of contents page numbers are recorded as bookmarks and page reference fields. Check in `n TOC entries, m bookmarks and page references` of the build log that n matches the number of items in the scope
-    + The page numbers of hwpx are the placeholder `?`, which 한/글 recalculates to the real pages when it loads the document. The page numbers of docx are approximations, updated in Word with select all (Ctrl+A) then F9. The bookmark notice and static conversion are in the SKILL.md Typesetting section
+    + The initial page numbers are the placeholder `?` in both formats. 한/글 calculates the real pages when it loads the document, and Word calculates them with select all (Ctrl+A) then F9. The bookmark notice and static conversion are in the SKILL.md Typesetting section
 - The report title goes on the cover (`--cover`). Without a cover, it is reflected in the file name of the output path (`build workspace 납품/보고서명.hwpx`)
 
 ## Final Report

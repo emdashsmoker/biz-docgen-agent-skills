@@ -56,7 +56,7 @@ rhwp는 명령 체계와 배포 방식이 자주 바뀌는 프로젝트이므로
 
 1순위와 2순위가 모두 실패했거나 권한 거부 처리가 3순위를 가리키는 경우에 사용한다. 폴백 사유(순위별 실패 단계 또는 거부된 명령)는 최종 보고에 기재한다.
 
-1. Debian 계열은 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart python3-uno fonts-nanum poppler-utils`
+1. Debian 계열은 `apt-get update` 후 `apt-get install -y --no-install-recommends libreoffice-writer libreoffice-java-common default-jre-headless libreoffice-h2orestart fonts-nanum poppler-utils`
 2. 다른 운영체제는 LibreOffice 공식 배포판을 설치하고 H2Orestart 확장(https://extensions.libreoffice.org/en/extensions/show/27504)을 확장 관리자 또는 `unopkg add`로 등록
 3. `unopkg list --shared`(또는 `unopkg list`)에서 H2Orestart 등록 확인
 4. `render 문서.hwpx --engine soffice`로 변환. render는 전용 사용자 프로필과 ASCII 임시 파일명을 자동 적용
@@ -71,7 +71,6 @@ rhwp는 명령 체계와 배포 방식이 자주 바뀌는 프로젝트이므로
 - LibreOffice 설치와 글꼴 준비(`fonts --setup`)를 마친 뒤 렌더 시험을 수행. HWPX 렌더 시험과 같은 `안녕하세요!` 한 줄 원고를 산출 폴더 밖의 임시 폴더에 두고 `build 시험.md 렌더시험.docx --profile flat`으로 조판. 이어서 `render 렌더시험.docx --outdir <임시 폴더>/docx`로 렌더하고 쪽 PNG(poppler가 없으면 PDF)에서 `안녕하세요!`가 보이는지 확인. `--outdir`를 따로 지정하는 이유는 HWPX 렌더 시험과 PDF 이름이 겹치기 때문
 - 글자가 보이지 않으면 `fonts`로 글꼴 상태를 확인. 해결하지 못하면 DOCX 렌더 검수를 생략하고 생략 사실과 사유를 기획안 질문 턴에 고지
 - LibreOffice는 PDF로 내보낼 때 목차의 PAGEREF 쪽 참조를 다시 계산하여 표시. 검수 PDF의 목차 쪽번호는 문서에 저장된 값과 다를 수 있음
-- build는 DOCX 목차 쪽 참조의 초기값을 LibreOffice 파이썬 연동(uno)으로 조회. 현재 파이썬, LibreOffice 동봉 파이썬, /usr/bin/python3 순으로 uno를 찾고 없으면 자리 표시 값 `?`를 남김
 - pdftoppm(poppler-utils)이 없으면 render는 PDF까지만 산출
 
 ## render 명령의 동작

@@ -1697,17 +1697,15 @@ def cmd_build(a):
     print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)})")
 
 
-def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str, filled: int | None = None) -> str:
-    """One-line notice about TOC page numbers that build prints. filled is the number of approximations recorded in the docx (None when no recording was attempted)"""
+def toc_notice(toc_items: list[tuple[str, str, str | None]], fmt: str) -> str:
+    """One-line notice about TOC page numbers that build prints"""
     refs = sum(1 for _, _, name in toc_items if name)
     if not refs:
         return f"{len(toc_items)} TOC entries ({fmt}, no page numbers)" if toc_items else f"no TOC ({fmt})"
-    head = f"{len(toc_items)} TOC entries, {refs} bookmarks and page references ({fmt})."
+    head = f"{len(toc_items)} TOC entries, {refs} bookmarks and page references ({fmt}). Page numbers hold the placeholder '{toc_refs.PLACEHOLDER}';"
     if fmt == "hwpx":
-        return f"{head} Page numbers hold the placeholder '{toc_refs.PLACEHOLDER}'; 한/글 calculates the real pages when it loads the document"
-    if filled:
-        return f"{head} Page numbers hold {filled} LibreOffice approximations; update them in Word with Ctrl+A then F9"
-    return f"{head} Page numbers hold the placeholder '{toc_refs.PLACEHOLDER}'; update them in Word with Ctrl+A then F9 (no approximations: LibreOffice bridge missing)"
+        return f"{head} 한/글 calculates the real pages when it loads the document"
+    return f"{head} Word calculates the real pages with Ctrl+A then F9"
 
 
 # ═══════════════════════════════════════════════════════════════════════

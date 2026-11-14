@@ -161,10 +161,9 @@ Page numbers (when both `--toc` and `--page-number` are given)
     - rhwp and H2Orestart draw the stored value as it is, so review renders and their PDFs show `?`
 - (DOCX bookmark) The whole target paragraph is wrapped in a bookmark. Headings use the heading paragraph; tables and figures use the caption paragraph. The name is `toc_number_text` (only letters, digits, and underscores, within 40 characters, to meet Word's rules). Names starting with an underscore are not used because Word treats them as hidden bookmarks
 - (DOCX page reference) A `PAGEREF bookmarkname \h` complex field. Word does not recalculate PAGEREF when it opens a document; it updates with select all (Ctrl+A) then F9
-    - The result value is an approximation that LibreOffice calculates by updating the fields. Without LibreOffice or its Python bridge (uno) it is the placeholder `?`
-    - A zero-width character (U+200B) is appended to the approximation as a mark. When Word updates the field it rewrites the result text, so the mark disappears, and static conversion uses the mark to tell whether the value was updated
-    - The copy used for the lookup is made in a temporary folder and deleted. LibreOffice rewrites the formatting on save, so the copy is not used as output
-- build prints one line with the number of TOC entries, the number of bookmarks and page references, and the kind of initial page-number value
+    - The result value is the placeholder `?`. An approximation calculated by another layout engine such as LibreOffice differs from Word's pages and looks like a plausible wrong number, so none is written
+    - Settings that update on open (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1
+- build prints one line with the number of TOC entries and the number of bookmarks and page references
 
 Static conversion (`toc-static`; the procedure is in the TOC static conversion section of SKILL.md)
 
@@ -174,7 +173,7 @@ Static conversion (`toc-static`; the procedure is in the TOC static conversion s
 - The line layout values saved by Hangul (linesegarray) are kept. Removing them changes the page layout in renderers that recalculate line breaks
 - Files saved again by an editor differ from build output in run splitting and attributes, so targets are found by element kind and reference relation
 - Only the XML entries whose target elements were removed are rewritten; the other archive entries are copied as they are. An HWPX gets its mimetype entry first and uncompressed
-- (Update check) A stored value that is a number without the mark is an updated value. The placeholder `?` and approximations that still carry the mark are not made static
+- (Update check) A stored value that is a number is an updated value. Items that still hold the placeholder `?` are not made static
 - (Item kind) In HWPX, a bookmark inside a captioned table object is a table or figure (by the numbering type of the object); otherwise the kind comes from the role of the paragraph style. In DOCX the kind comes from the role of the paragraph style (heading, table caption, figure caption)
 
 ## User forms (HWPX only)

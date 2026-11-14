@@ -1,4 +1,4 @@
-"""TOC bookmarks and page references: finding them in output files (HWPX, DOCX), filling DOCX initial values, static conversion.
+"""TOC bookmarks and page references: finding them in output files (HWPX, DOCX) and static conversion.
 
 - Files saved again by 한/글 and Word differ from build output in run splitting and attributes, so everything is found by element kind and reference relation only
 - Uses only zipfile and lxml, no typesetting library, so that only the target elements are removed from a submitted file and the rest is not rebuilt
@@ -15,8 +15,9 @@ from enum import Enum
 from lxml import etree as ET
 
 # ── Settings ───────────────────────────────────────────────────────────────
-PLACEHOLDER = "?"        # placeholder of a page reference. The text shown until 한/글 or Word calculates the page number
-STALE_MARK = "​"    # zero-width character appended to a DOCX approximation. It disappears when Word updates the field, because Word rewrites the result text
+# placeholder of a page reference. The text shown until 한/글 or Word calculates the page number
+# Why no approximation: pages calculated by another layout engine differ from Word and look like plausible wrong numbers (LibreOffice values differed from Word in 11 of 16 entries)
+PLACEHOLDER = "?"
 KINDS = ("chapter", "section", "subsection", "ganada", "module", "task", "table", "figure")   # kinds of items listed in the TOC
 OTHER = "other"          # bookmark whose kind was not identified
 BAND_KIND_RE = re.compile(r"^\s*(Module|Task|Step)\b", re.I)   # text of a band number cell. A band that does not match is a chapter
@@ -34,7 +35,6 @@ class RefState(Enum):
     """State of the stored value of a page reference"""
     UPDATED = "updated"            # page number calculated by 한/글 or Word
     PLACEHOLDER = "placeholder"    # the placeholder remains (a file not updated in the editor)
-    UNREFRESHED = "unrefreshed"    # the mark of a DOCX approximation remains (a file whose fields were not updated in Word)
 
 
 @dataclass
@@ -47,8 +47,6 @@ class TocItem:
 
     @property
     def state(self) -> RefState:
-        if any(STALE_MARK in v for v in self.values):
-            return RefState.UNREFRESHED
         if all(v.strip().isdigit() for v in self.values):
             return RefState.UPDATED
         return RefState.PLACEHOLDER   # the placeholder and non-numeric values (such as an editor's reference error text)
@@ -319,22 +317,6 @@ def docx_page_values(path: str) -> dict[str, str]:
     """Bookmark name → PAGEREF result text"""
     _, root, _ = _docx_roots(path)
     return {name: "".join(t.text or "" for t in f["result"]) for name, is_page, f in _docx_refs(root) if is_page}
-
-
-def fill_docx_page_values(path: str, values: dict[str, str]) -> int:
-    """Replaces PAGEREF result text with the value for each bookmark name and appends the mark. Returns the number replaced
-    Why the mark: an approximation and a value updated by Word cannot be told apart by the number alone"""
-    data, root, _ = _docx_roots(path)
-    filled = 0
-    for name, is_page, f in _docx_refs(root):
-        if is_page and name in values and f["result"]:
-            f["result"][0].text = values[name] + STALE_MARK
-            for extra in f["result"][1:]:
-                extra.text = ""
-            filled += 1
-    if filled:
-        _rewrite(path, path, {DOCX_BODY: _serialize(root, data)})
-    return filled
 
 
 # ── Entry points for both formats ──────────────────────────────────────────

@@ -310,12 +310,9 @@ MESSAGES = {
     "toc_hwpx": {
         "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (hwpx). 쪽번호는 자리 표시 값 '{mark}'이며 한/글이 문서를 불러올 때 실제 쪽으로 계산",
         "en": "{n} TOC entries, {refs} bookmarks and page references (hwpx). Page numbers hold the placeholder '{mark}'; Hangul computes the real pages when it loads the document"},
-    "toc_docx_approx": {
-        "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (docx). 쪽번호는 LibreOffice 근사값 {filled}건이며 Word에서 Ctrl+A 후 F9로 갱신",
-        "en": "{n} TOC entries, {refs} bookmarks and page references (docx). Page numbers hold {filled} LibreOffice approximations; update them in Word with Ctrl+A then F9"},
-    "toc_docx_placeholder": {
-        "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (docx). 쪽번호는 자리 표시 값 '{mark}'이며 Word에서 Ctrl+A 후 F9로 갱신 (LibreOffice 연동 부재로 근사값 미기록)",
-        "en": "{n} TOC entries, {refs} bookmarks and page references (docx). Page numbers hold the placeholder '{mark}'; update them in Word with Ctrl+A then F9 (no approximations: LibreOffice bridge missing)"},
+    "toc_docx": {
+        "ko": "목차 항목 {n}건, 책갈피와 쪽 참조 {refs}건 (docx). 쪽번호는 자리 표시 값 '{mark}'이며 Word에서 Ctrl+A 후 F9로 실제 쪽을 계산",
+        "en": "{n} TOC entries, {refs} bookmarks and page references (docx). Page numbers hold the placeholder '{mark}'; Word computes the real pages with Ctrl+A then F9"},
     "err_toc_scope": {
         "ko": "ERROR: {option}에 쓸 수 없는 항목 {items}. 쓸 수 있는 항목: {allowed}",
         "en": "ERROR: {option} does not accept {items}. Allowed items: {allowed}"},
@@ -323,7 +320,6 @@ MESSAGES = {
         "ko": "ERROR: --toc-scope는 --toc와 함께 지정", "en": "ERROR: pass --toc-scope together with --toc"},
     "static_state_updated": {"ko": "갱신됨", "en": "updated"},
     "static_state_placeholder": {"ko": "자리 표시 값", "en": "placeholder"},
-    "static_state_unrefreshed": {"ko": "갱신 전 근사값", "en": "approximation, not updated"},
     "static_counts": {"ko": "항목 종류별 건수: {counts}", "en": "Items by kind: {counts}"},
     "static_need_scope": {
         "ko": "정적화할 범위를 --scope로 지정 (쉼표 구분 또는 {all}). 파일은 바꾸지 않음",

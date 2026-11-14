@@ -2204,9 +2204,7 @@ def cmd_build(a):
             if fixed:
                 print(f"WARN: {fixed} images not registered in the manifest were corrected automatically")
         if a.toc:
-            # only docx gets approximations. Why: 한/글 recalculates page references when it loads the document, but Word shows the stored values until F9
-            filled = docx_lib.fill_page_refs(out) if fmt == "docx" and a.page_number else None
-            print(lib.toc_notice(b.toc_items, fmt, filled))
+            print(lib.toc_notice(b.toc_items, fmt))
         made[fmt] = out
         note_info = f", merged footnote references {b.notes.merged}" if a.footnote_merge else ""
         print(f"OK: {out} (elements {len(elems)}, footnotes {len(footnotes)}{note_info})")
@@ -2227,7 +2225,7 @@ def cmd_build(a):
 
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references differ by format (placeholder, approximation), so they are excluded from the comparison
+TOC_NUM_RE = re.compile(r"\t[^\t]*$")   # stored values of TOC page references are calculated by the editor, so they are excluded from the comparison
 
 
 def hwpx_paragraph_texts(path: str) -> tuple[list[str], list[str]]:
@@ -2299,13 +2297,12 @@ STATIC_SCOPE_ALL = "all"    # every item whose kind was identified
 STATIC_STYLE_ROLES = {"chapter": "chapter", "section": "section", "subsection": "subsection", "ganada": "ganada",
                       "table_title": "table", "fig_title": "figure", "fig_pos": "figure"}
 # caption styles are docx caption paragraphs; the figure position style is the hwpx paragraph holding a figure that is not placed in a table (lib.FIGURE_IN_TABLE off)
-REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "updated", toc_refs.RefState.PLACEHOLDER: "placeholder",
-                  toc_refs.RefState.UNREFRESHED: "approximation, not updated"}
+REF_STATE_TEXT = {toc_refs.RefState.UPDATED: "updated", toc_refs.RefState.PLACEHOLDER: "placeholder"}
 
 
 def cmd_toc_static(a):
     """Post-build static conversion: removes bookmarks of the given kinds from the submitted file and turns the page references to them into plain text
-    Items whose page numbers were not updated (placeholder, approximation not updated) are skipped and reported. Why: only 한/글 and Word calculate the real pages"""
+    Items whose page numbers were not updated (placeholder) are skipped and reported. Why: only 한/글 and Word calculate the real pages"""
     profile = PROFILES[a.profile] if a.profile in PROFILES else json.load(open(a.profile, encoding="utf-8"))
     style_kinds = {profile[role]: kind for role, kind in STATIC_STYLE_ROLES.items() if profile.get(role)}
     items = toc_refs.scan(a.input, style_kinds)
