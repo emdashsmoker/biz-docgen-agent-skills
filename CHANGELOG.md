@@ -27,6 +27,53 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-14
+
+### blockwriter
+- Changed TOC page numbers from renderer estimates to bookmarks and page reference fields that Hangul and Word calculate, with `?` shown until the first calculation (#140)
+- Added the `--toc-scope` build option that sets the items listed in the TOC, with chapters, sections, tables and figures as the default and subsections and 가나다 headings as additions (#140)
+- Removed the `--toc-depth` build option and the `--rhwp` option of build (#140)
+- Action needed: replace `--toc-depth` with `--toc-scope` in existing build commands (#140)
+- Added a list of tables and a list of figures to the TOC of the chapter form (#140)
+- Added the `toc-static` command that turns the TOC page numbers of chosen items into plain text and removes their bookmarks after delivery (#140)
+- Added a TOC scope item and a bookmark notice to the planning questions (#140)
+- Changed the DOCX TOC from a Word TOC field to ordinary paragraphs, so Word no longer asks to update fields on open (#140)
+- Removed the TOC page check lines and the `[stranded TOC heading]` warning from the build output (#140)
+
+* 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
+* 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 소절과 가나다 제목 추가 가능) (#140)
+* build 옵션 `--toc-depth`와 build의 `--rhwp` 옵션 삭제 (#140)
+* 기존 build 명령의 `--toc-depth`를 `--toc-scope`로 교체 필요 (#140)
+* chapter 양식의 목차에 표 목차와 그림 목차 추가 (#140)
+* 납품 뒤 선택한 항목의 목차 쪽번호를 일반 글자로 바꾸고 책갈피를 지우는 `toc-static` 명령 추가 (#140)
+* 기획안 질문에 목차 수록 범위 항목과 책갈피 안내 추가 (#140)
+* DOCX 목차를 Word 목차 필드에서 일반 문단으로 변경 (Word가 문서를 열 때 필드 갱신을 묻지 않음) (#140)
+* build 출력의 목차 쪽번호 대조 줄과 `[목차 제목 고립]` 경고 삭제 (#140)
+
+### ieum-deck
+- Changed the ISP items to stop naming the source document while keeping the procedure and work product names (#140)
+
+* ISP 항목에서 출처 문헌의 이름을 빼도록 변경 (절차와 산출물명은 유지) (#140)
+
+### juja-builder
+- Changed TOC page numbers from renderer estimates to bookmarks and page reference fields that 한/글 and Word calculate, with `?` shown until the first calculation (#140)
+- Added the `--toc-scope` build option that sets the items listed in the TOC, with chapters, sections, tables and figures as the default and subsections, items, Module and Task as additions (#140)
+- Removed the `--toc-depth` build option and the `toc_lists` profile key (#140)
+- Action needed: replace `--toc-depth` with `--toc-scope` in existing build commands (#140)
+- Changed the bookmarks of chapter, divider, Module and Task bands and of numbered tables and figures to sit inside the band or table so that they move with it (#140)
+- Added the `toc-static` command that turns the TOC page numbers of chosen items into plain text and removes their bookmarks after delivery (#140)
+- Added a TOC scope item and a bookmark notice to the kickoff questions (#140)
+- Changed the ISP work product item to stop naming the source document while keeping the work product names (#140)
+
+* 목차 쪽번호를 렌더러 추정값에서 한/글과 Word가 계산하는 책갈피와 쪽 참조 필드로 변경 (첫 계산 전에는 `?` 표시) (#140)
+* 목차 수록 항목을 정하는 build 옵션 `--toc-scope` 추가 (기본은 장, 절, 표, 그림이며 항, 목, Module, Task 추가 가능) (#140)
+* build 옵션 `--toc-depth`와 프로파일 키 `toc_lists` 삭제 (#140)
+* 기존 build 명령의 `--toc-depth`를 `--toc-scope`로 교체 필요 (#140)
+* 장, 간지, Module, Task 밴드와 번호 캡션이 붙은 표와 그림의 책갈피를 밴드와 표 안에 두어 함께 이동하도록 변경 (#140)
+* 납품 뒤 선택한 항목의 목차 쪽번호를 일반 글자로 바꾸고 책갈피를 지우는 `toc-static` 명령 추가 (#140)
+* 착수 질의에 목차 수록 범위 항목과 책갈피 안내 추가 (#140)
+* ISP 산출물 항목에서 출처 문헌의 이름을 빼도록 변경 (산출물명은 유지) (#140)
+
 ## 2026-11-13
 
 ### blockwriter
