@@ -138,6 +138,7 @@ class DocxBuilder(M.TocMarks):
         self.header_spec = None
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
+        self.fit = None   # fit changes of the element being typeset (fit block in the manuscript)
         self._setup_styles()
         self._font_table()
 
@@ -306,14 +307,16 @@ class DocxBuilder(M.TocMarks):
         r = el("w:r")
         if rpr is not None:
             r.append(rpr)
-        parts = text.split("\t")
-        for i, part in enumerate(parts):
-            if i:
-                sub(r, "w:tab")
-            if part:
-                t = sub(r, "w:t")
-                t.text = part
-                t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        for li, line in enumerate(text.split("\n")):   # a line break is a break inside the same paragraph (w:br)
+            if li:
+                sub(r, "w:br")
+            for i, part in enumerate(line.split("\t")):
+                if i:
+                    sub(r, "w:tab")
+                if part:
+                    t = sub(r, "w:t")
+                    t.text = part
+                    t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
         return r
 
     def _fmt_rpr(self, kind: str, bold: bool = False):
@@ -346,9 +349,46 @@ class DocxBuilder(M.TocMarks):
                 sub(extra, "w:jc", w__val="left")
         elif not is_bullet and role in MANUAL_SYMBOLS:
             text = MANUAL_SYMBOLS[role] + text
+        fit = self.fit if role in C.FIT_ROLES else None
+        if fit and fit.get("line"):
+            extra = extra if extra is not None else el("w:pPr")
+            sub(extra, "w:spacing", w__line=self._fit_line(st), w__lineRule="atLeast")
         p = self._new_p(role, extra)
         self._append_inline(p, text, footnotes)
+        self._fit_runs(p, st, fit)
         return self._body_append(p)
+
+    # ── Fit adjustments (fit block in the manuscript) ───────────────────────────
+    def _fit_line(self, st) -> int:
+        """Minimum line height with the line spacing change added (twip). Same rule that turns the Hangul percentage of the font size into a minimum line height"""
+        return round(st.char.size * M.fit_value("line", st.para.line, self.fit) / 100 * 20)
+
+    def _fit_runs(self, p, st, fit: dict | None):
+        """Writes the width and spacing with the changes added as direct formatting on each run of the paragraph. The style values stay unchanged"""
+        if not fit or not (fit.get("ratio") or fit.get("spacing")):
+            return
+        ratio = M.fit_value("ratio", st.char.ratios[0], fit)
+        spacing = M.fit_value("spacing", st.char.spacings[0], fit)
+        for r in p.findall(qn("w:r")):
+            rpr = r.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = el("w:rPr")
+                r.insert(0, rpr)
+            for tag in ("w:spacing", "w:w"):
+                old = rpr.find(qn(tag))
+                if old is not None:
+                    rpr.remove(old)
+            sub(rpr, "w:spacing", w__val=round(st.char.size * spacing / 100 * 20))
+            sub(rpr, "w:w", w__val=ratio)
+            sort_children(rpr, RPR_ORDER)
+
+    def _label_hang(self, text: str, st) -> int:
+        """Hanging width of a source row. Width of the source label and following spaces ('Source: ') in the source style (HWPUNIT)"""
+        label = M.source_label(text)
+        if not label:
+            return 0
+        ls = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
+        return round(M.text_units(label, C.SPACE_EM_DOCX, ls.ratio, ls.spacing) * ls.unit_w)
 
     def _append_inline(self, p, text: str, footnotes: dict | None = None):
         """Splits inline formatting (bold, italic, super/subscript) into runs and appends them. Footnote references are handled only when footnotes is given"""
@@ -512,9 +552,10 @@ class DocxBuilder(M.TocMarks):
         if unit:
             self._transparent_row(tbl, widths, unit, "unit", "right", header=header_repeat)
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_scale = M.fit_value("line", cell_style.para.line, self.fit) / cell_style.para.line   # line spacing adjustment ratio
         for ri, row in enumerate(rows):
             is_head = ri < hdr
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], line_scale)
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
             sub(trpr, "w:cantSplit")
@@ -584,8 +625,11 @@ class DocxBuilder(M.TocMarks):
             head = st.para.head if isinstance(st.para.head, tuple) and st.para.head[0] == "BULLET" else None
             lead = st.para.margin[1] + st.para.margin[2] + (bullet_hanging_pt(head, st.char.size) * 100 if head else 0)
             return M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0], lead)
-        plain = tuple(s for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
-        return M.CellFont(C.SPACE_EM_DOCX, plain, line_style("table_cell_bullet"), line_style("table_cell_dash"))
+        fit = self.fit   # width and spacing adjustments also apply to column width and line count calculations
+        plain = tuple(M.fit_line_style(s, fit) for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
+        bullet, dash = line_style("table_cell_bullet"), line_style("table_cell_dash")
+        return M.CellFont(C.SPACE_EM_DOCX, plain, bullet and M.fit_line_style(bullet, fit),
+                          dash and M.fit_line_style(dash, fit))
 
     def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool):
         lines = text.split("\n")
@@ -611,6 +655,9 @@ class DocxBuilder(M.TocMarks):
                     sub(extra, "w:jc", w__val="right")
                 elif is_head:
                     sub(extra, "w:jc", w__val=ALIGN[cell_style.para.align])
+            line_st = self.form.style(role)
+            if (self.fit or {}).get("line"):
+                sub(extra, "w:spacing", w__line=self._fit_line(line_st), w__lineRule="atLeast")
             p = el("w:p")
             ppr = sub(p, "w:pPr")
             sub(ppr, "w:pStyle", w__val=self.style_ids[role])
@@ -622,6 +669,7 @@ class DocxBuilder(M.TocMarks):
                     kind, seg = "plain", f"[^{seg}]"
                 rpr = self._fmt_rpr(kind, bold=is_head)
                 p.append(self._run(seg, rpr if len(rpr) else None))
+            self._fit_runs(p, line_st, self.fit)
             tc.append(p)
 
     def _transparent_row(self, tbl, widths, text: str, role: str, align: str, header: bool = False):
@@ -643,6 +691,12 @@ class DocxBuilder(M.TocMarks):
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val=self.style_ids[role])
         sub(ppr, "w:keepNext")
+        if role == "source":   # <br> line breaks and a hanging indent after the label align later lines with the text after the label
+            text = M.source_lines(text)
+            st = self.form.style("source")
+            if hang := self._label_hang(text, st):
+                sub(ppr, "w:ind", w__left=tw(st.para.margin[1] + hang), w__right=tw(st.para.margin[2]),
+                    w__hanging=tw(hang))
         sub(ppr, "w:jc", w__val=align)
         p.append(self._run(text))
 
@@ -695,7 +749,7 @@ class DocxBuilder(M.TocMarks):
         if not C.FIGURE_IN_TABLE:
             self._body_append(pic_p)
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.flat_source(src))
         else:
             # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
             cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
@@ -886,6 +940,7 @@ class DocxBuilder(M.TocMarks):
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
@@ -895,9 +950,9 @@ class DocxBuilder(M.TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.flat_source(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.flat_source(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -935,6 +990,13 @@ def field_runs(instr: str, result: str, rpr_factory=None) -> list:
     end = run()
     sub(end, "w:fldChar", w__fldCharType="end")
     return [begin, ins, sep, res, end]
+
+
+# child order of w:rPr (ECMA-376 CT_RPr). Word opens the file only when direct formatting is sorted in this order
+RPR_ORDER = ["rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps", "strike", "dstrike", "outline", "shadow",
+             "emboss", "imprint", "noProof", "snapToGrid", "vanish", "webHidden", "color", "spacing", "w", "kern",
+             "position", "sz", "szCs", "highlight", "u", "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs",
+             "em", "lang", "eastAsianLayout", "specVanish", "oMath"]
 
 
 def sort_children(parent, order: list[str]):

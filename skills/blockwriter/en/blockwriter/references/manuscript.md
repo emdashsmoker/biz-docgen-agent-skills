@@ -42,6 +42,7 @@ This is how a footnote that cites the same source again is written. The default 
     - Footnotes moved from source lines after body paragraphs are merged too
     - Check the number of merged citations on the build completion line (`merged footnote references`)
     - The number is a Hangul cross-reference in HWPX and a Word footnote number reference field in DOCX. The typesetting is in the object placement section of references/layout.md
+
 ## Tables
 
 - A table is written as a `<표> title` caption line followed by a pipe table. build assigns the caption number automatically
@@ -108,11 +109,42 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - (※ note line) A line starting with `※` or `* ` (an asterisk and a space)
 - A `> ` line gets its role from its content. It is a source line if it starts with a source line notation, and a ※ note line otherwise
 - Source lines and ※ note lines right after a table or figure are attached to the source rows of that table or figure. The ※ and * symbols are kept, and a `※ 출처:` line is attached as a `출처:` line
+- (Multiple sources) Separate several sources on one source line with `;`. Whether to join them on one line or break the line after each source is judged from the width of the table or figure, the length and number of the sources, and so on
+    - (Line break) Put `<br>` after the `;`. The `;` stays at the end of the line as on a joined line (`자료: Org A(2024), Title;<br>Org B(2023), Title`)
+    - (Examples of judgment) If a joined line wraps in the middle of a source or there are three or more sources, one source per line reads more easily. Two or three short sources look cleaner on one line
+    - (Alignment) build aligns the second and later lines with the text after the source label (`출처:`, `자료:`, `주:`, and so on). Lines that wrap because they are long align at the same position. Do not add spaces for alignment
+    - A `<br>` in a source line after a body paragraph (a line that becomes a footnote) turns into a space and the line is joined into one
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
 - A source line after a body paragraph becomes a footnote of the previous paragraph. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
+
+## Fit blocks
+
+This notation is used only when the user turned on the width and spacing fit or the line spacing fit in the step 1 planning questions. The criteria are in the Fit adjustments section of references/layout.md.
+
+- (Notation) Open a block with a `::: key value` line and close it with a `:::` line. The keys are width, spacing, and line (Korean 장평, 자간, 줄간격), and several keys can follow each other on one line
+- (Values) Changes (%p) added to the form style values. `spacing -2` lowers the style spacing by 2%p, and `line -10` lowers the style line spacing by 10%p (140% becomes 130%). Elements whose style spacing is already negative, such as table text, shrink by the same amount
+- (Targets) Body paragraphs (□, ○, -, ㆍ, ※) and table cells inside the block. Headings, captions, unit rows, and source rows keep the form values even inside a block
+- (Range) For one paragraph, wrap only that paragraph. For a page-level line spacing adjustment, wrap the elements on that page in one block
+- (Table row heights) Tables inside a block get their column widths and row heights recalculated with the adjusted values
+- Blocks are not nested. build reports a `[fit block]` lint when a closing line has no opening line, a closing line is missing, or a value cannot be read
+
+```
+::: spacing -3
+- A paragraph where line wrapping pushed only one or two characters to the next line
+:::
+
+::: line -10
+□ Schedule
+- The first survey starts in June
+<표> Schedule
+| Item | Period |
+|:---:|:---:|
+| 1st | 06.25-07.10 |
+:::
+```
 
 ## Content-writing rules
 

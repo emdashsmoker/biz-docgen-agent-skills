@@ -67,6 +67,8 @@ Table attachments
 
 - The unit row is a transparent merged row above the header, right-aligned. The source row is a transparent merged row below the table, left-aligned. Both are inside the table and move with it
 - Unit and source rows use dedicated 9pt styles without bullets (단위, 출처). A ※ note line attached to the source rows is printed in the source style with its ※ or * kept
+- A source row that starts with a source label (`출처:`, `자료:`, `주:`, and so on) hangs by the width of the label and the following space, so the second and later lines align with the text after the label. A `<br>` in the manuscript is printed as a line break inside the same paragraph
+    - The hanging width is calculated from the font size, width, and spacing of the source style and the NanumGothic glyph widths. In a user form with another font, the second line can be slightly off
 - Table captions go above the table and figure captions below the figure. The gap between the caption and the table is 850 HWPUNIT (about 3mm, CAPTION_GAP)
 - The caption width is the width of its table or figure table. A long caption wraps within this width
 - HWPX captions are caption objects attached to the table, and the number is an automatic number field. chapter restarts the numbering at 1 in each chapter through a number restart in the chapter's first paragraph
@@ -103,7 +105,7 @@ Figure layout
     - (DOCX) The table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
 - Figure size depends on the width to height ratio. A landscape figure (1.4 or more) is 140mm wide, a portrait figure (0.8 or less) is 110mm high, and anything in between is 90mm wide. Without resolution information, 96dpi is assumed
 - Tables and figures are centered in the body. The spacing before and after them comes from the paragraph margins of the table position and figure position styles
-    - A table without a caption is placed with the figure position style. The table position style has no top margin because a caption sits above the table, so a table without a caption touches the paragraph above
+    - A table without a caption is placed with the figure position style. The table position style assumes a caption above the table and has no top margin, so a table without a caption placed with it touches the paragraph above
 
 Source footnote merging
 
@@ -134,6 +136,8 @@ DOCX converts the same form.py definitions into Word units.
 - (Caption numbers) Word number fields (SEQ 표, SEQ 그림; the name follows the caption label of a label file) with prefilled results. chapter adds the chapter number as text, and the field restarts at 1 at each Heading 1. The first caption field of each chapter also carries a switch that resets the number to 1 (`\r 1`). LibreOffice does not restart numbering at Heading 1. flat numbers continuously through the document
 - (Caption width) The caption paragraph is indented on both sides by half the difference between the body width and the table width, so it wraps at the same width as the HWPX caption object
 - (Footnotes) Word footnotes with `)` after the footnote number. Repeated citations under source footnote merging are NOTEREF fields
+- (Source rows) The hanging indent after the source label becomes a Word hanging indent. The space in the width calculation uses the Word space width (SPACE_EM_DOCX). A `<br>` line break is a break inside the same paragraph (w:br)
+- (Fit adjustments) The width and spacing of a fit block are written as direct run formatting (character scale, character spacing) and the line spacing as the minimum line height of the paragraph. The style values stay unchanged
 - (Tables) A single row does not split across two pages. For tables of 25 rows or fewer, every row is kept with the next row so the table stays on one page. Long tables (engine) repeat the unit row and header rows as title rows
 - (Tables without a caption) The top margin of the figure position style moves into an empty paragraph before the table. It is left out for a table right after a page break
 - (Page settings) Hangul keeps a separate header area between the top margin and the body. The Word top margin is the Hangul top margin plus the header area, and the header position is the Hangul top margin. The bottom works the same way
@@ -148,21 +152,21 @@ DOCX converts the same form.py definitions into Word units.
 - Left margins are chapter 0, section 1500, subsection 3000, 가나다 4500 (HWPUNIT). Entries of the list of tables and list of figures use 0. Chapters use the TOC chapter style and the others the TOC section style
 - A TOC is created only on forms with TOC styles (toc_chapter, toc_section). flat has no TOC styles, so its TOC is skipped
 - The body section starts at page 1, so changes in the TOC length do not change body page numbers
-- Hangul's Make Table of Contents feature and Word's TOC field and table-of-figures field are not used. When Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles
+- Hangul's Make Table of Contents feature, Word's TOC field, and Word's table-of-figures field are not used. When Word updates a TOC field it deletes the typeset entries and rebuilds them from the heading styles
 
 Page numbers (when both `--toc` and `--page-number` are given)
 
 - Each listed item gets a bookmark, and the TOC page number is written as a page reference field to that bookmark. A page number exists only after a layout engine places the document, so only the values calculated by Hangul and Word match the real pages
 - (HWPX bookmark) The bookmark control is written as the first control of the first run of the paragraph. Headings use the heading paragraph; tables and figures use the first cell paragraph of the table object (for a figure, the one-column table that holds it)
-    - Placed inside the table object, the bookmark moves with the table. A bookmark inside the caption paragraph is not used because rhwp then draws the caption over the table
+    - Placed inside the table object, the bookmark moves with the table. A bookmark in the caption paragraph makes rhwp draw the caption over the table, so the caption paragraph gets no bookmark
     - The name is the TOC entry text. The characters `;` `?` `#`, which the page reference path uses, are removed, and a repeated text gets a sequence number starting at `(2)`
 - (HWPX page reference) Hangul's bookmark page-number cross-reference (CROSSREF field, RefType TARGET_BOOKMARK, RefContentType OBJECT_TYPE_PAGE), written in one run as field begin, stored value text, field end
     - The stored value is the placeholder `?`. Hangul recalculates it to the page of the bookmark when it loads the document, prints, or previews
     - rhwp and H2Orestart draw the stored value as it is, so review renders and their PDFs show `?`
 - (DOCX bookmark) The whole target paragraph is wrapped in a bookmark. Headings use the heading paragraph; tables and figures use the caption paragraph. The name is `toc_number_text` (only letters, digits, and underscores, within 40 characters, to meet Word's rules). Names starting with an underscore are not used because Word treats them as hidden bookmarks
 - (DOCX page reference) A `PAGEREF bookmarkname \h` complex field. Word does not recalculate PAGEREF when it opens a document; it updates with select all (Ctrl+A) then F9
-    - The result value is the placeholder `?`. An approximation calculated by another layout engine such as LibreOffice differs from Word's pages and looks like a plausible wrong number, so none is written
-    - Settings that update on open (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1. Putting a TOC field with the dirty flag before the page references gave the same result
+    - The result value is the placeholder `?`. An approximation calculated by another layout engine such as LibreOffice can differ from Word's real pages while the error is hard to notice, so none is written
+    - Settings that update fields when the document opens (`updateFields`, the dirty flag of a field) are not used. Word updates the fields before it lays out the pages, so every page number becomes 1. A TOC field with the dirty flag placed before the page references leads to the same result
 - build prints one line with the number of TOC entries and the number of bookmarks and page references
 
 Static conversion (`toc-static`; the procedure is in the TOC static conversion section of SKILL.md)
@@ -250,6 +254,29 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Prints `Chapter 1. Title`, `1.1 Title`, `(a) Title`, the TOC title `Contents`, the list titles `List of Tables` and `List of Figures`, and captions `<Table 1-1> Title` (SEQ Table) and `[Figure 1-1] Caption`
 - Recognizes `<Table> Title`, `[Figure] Caption`, `(Unit: %)`, `Source: `, `Note: `, `(Source)`, and `(Column widths: 15, 20, 25)` together with the Korean tokens
 
+## Page fill
+
+- In a report printed on both sides, the ideal layout fills the two pages of each spread evenly to the bottom and aligns their bottom lines. This is a recommendation, and no adjustment may harm how the information comes across
+- (Manuscript stage) Plan the size of tables and figures, the position of tables and figures, the placement of paragraphs, and so on for this layout from the start
+- (Review stage) When the bottoms of the two pages do not match, for example a large empty space at the bottom of a page or only a few lines carried to the next page, adjust the means below within a range that keeps the information intact
+    - Size and position of tables and figures, column width lines of tables
+    - Position and order of paragraphs, placement of □ groups
+    - The line spacing fit in the Fit adjustments section below, if the user turned it on in step 1
+
+## Fit adjustments
+
+Only the items the user turned on in the step 1 planning questions are carried out. Both items are off by default. The manuscript notation is in the Fit blocks section of references/manuscript.md.
+
+- (Common) Adjust conservatively. Excessive adjustment makes characters look squeezed or lines look cramped and lowers the quality of the document. There is no fixed limit; the limit is the range where the difference does not stand out next to the other paragraphs on the same page
+- (Width and spacing fit) Applies to a paragraph where line wrapping pushes only one or two characters to the next line or where one line is out of step with the lines around it and breaks their uniformity
+    - Start with small changes and stop when the line fits
+    - If width and spacing alone do not fit the line, shorten the wording without changing its meaning
+    - (Approximate renderer margin) The review renderers tend to fit more characters on a line than Hangul. Fit the line so that one or two characters of room remain at the end of the adjusted line in the review PNG. Keep the same margin for DOCX
+- (Line spacing fit) When the other means in the Page fill section do not align the bottoms of the two pages, shrink the line spacing of particular pages, paragraphs, tables, and so on
+    - A small change spread evenly over a whole page stands out less than a large change on one paragraph
+    - Start with small changes. If the pages still do not match, decide together with the other means in the Page fill section
+- State the adjusted positions and values in one line of the final report
+
 ## Review items
 
 - Check that the level symbols are printed and that each level steps in by its indent. ※ is a note on the previous item, so it is left out of the indent step check
@@ -266,11 +293,14 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
 - For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
-- If a TOC was inserted, confirm that the numbers of TOC entries and bookmarks in the build output match the scope, and check the entries, dotted leaders, and the alignment of the page-number positions on the TOC page PNG. The TOC page number `?` in an HWPX render is the placeholder and does not count as a defect. The TOC page numbers in a DOCX render are the values LibreOffice calculates
+- Check that the second line of a multi-line source row aligns with the text after the source label, and that the choice between one joined line and line breaks suits the width of the table or figure
+- For a document with fit adjustments, check that the adjusted paragraphs and pages do not look squeezed or cramped compared with their surroundings
+- If a TOC was inserted, compare the numbers of TOC entries and bookmarks in the build output with the scope. Check the entries, dotted leaders, and the alignment of the page-number positions on the TOC page PNG. The TOC page number `?` in an HWPX render is the placeholder and does not count as a defect. The TOC page numbers in a DOCX render are the values LibreOffice calculates
 - For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, footnotes, and TOC page references match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
 - Decide whether a difference found in the page PNGs is a defect with the judgment method in references/renderers.md
 - After the item checks, set the list aside and do one free review. Fix at your discretion anything that would look odd to a practitioner receiving the document for the first time, even if no rule covers it
     - (Design and alignment) Left alignment lines between levels, the balance of table and figure widths against the body width, the alignment lines of captions, unit lines, and source lines, consistent spacing, and the distribution of visual weight on a page
+    - (Page fill) The bottom lines of each two-page spread and empty space at the bottom of pages. The means of adjustment are in the Page fill section
     - (Character formatting) The hierarchy of fonts and sizes by level, the consistency of bold and color, uniform fonts inside and outside tables, and leftover unintended formatting
     - (Fix order) If the cause is the manuscript, fix the manuscript. If it is a rule, fix config.py or form.py. Change the typesetting code last. If 3 or more defects of the same kind appear, fix the rule to resolve them all at once
     - (Report) State discretionary fixes in one line of the final report
@@ -293,4 +323,6 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Manuscript parsing module) Manuscript parsing and the table and figure calculations live in one module, manuscript.py. The HWPX and DOCX typesetters use the same merge, alignment, and width calculations, so a rule change happens in one place
 - (TOC bookmarks and page references) Page numbers written as text go wrong with every edit. As bookmarks and page references, Hangul and Word recalculate the real pages
 - (DOCX language tag) With the Latin language set to ko-KR, LibreOffice breaks lines inside numbers such as `3,456,789`
-- (No DOCX TOC field) With a TOC field that only had prefilled result text, updating the fields in Word reset every page number to 1. TOC entries are ordinary paragraphs and only the page number is a PAGEREF, so the typeset entries stay
+- (No DOCX TOC field) With a TOC field that only has prefilled result text, updating the fields in Word was confirmed to reset every page number to 1. TOC entries are ordinary paragraphs and page numbers are PAGEREF fields, so the typeset entries stay
+- (Hanging indent of source rows) Alignment made with spaces drifts because the space width differs by font and renderer. With a hanging indent the editor calculates the position of the second line, so lines that wrap because they are long also align
+- (Fit adjustments as changes) The default width, spacing, and line spacing differ by style. Written as changes, the same notation works by the same amount in every style

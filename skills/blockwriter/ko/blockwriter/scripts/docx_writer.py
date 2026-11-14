@@ -138,6 +138,7 @@ class DocxBuilder(M.TocMarks):
         self.header_spec = None
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
+        self.fit = None   # 조판 중인 요소의 맞춤 조정 증감 (원고의 조정 블록)
         self._setup_styles()
         self._font_table()
 
@@ -306,14 +307,16 @@ class DocxBuilder(M.TocMarks):
         r = el("w:r")
         if rpr is not None:
             r.append(rpr)
-        parts = text.split("\t")
-        for i, part in enumerate(parts):
-            if i:
-                sub(r, "w:tab")
-            if part:
-                t = sub(r, "w:t")
-                t.text = part
-                t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        for li, line in enumerate(text.split("\n")):   # 줄바꿈은 같은 문단 안의 줄 나눔(w:br)
+            if li:
+                sub(r, "w:br")
+            for i, part in enumerate(line.split("\t")):
+                if i:
+                    sub(r, "w:tab")
+                if part:
+                    t = sub(r, "w:t")
+                    t.text = part
+                    t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
         return r
 
     def _fmt_rpr(self, kind: str, bold: bool = False):
@@ -346,9 +349,46 @@ class DocxBuilder(M.TocMarks):
                 sub(extra, "w:jc", w__val="left")
         elif not is_bullet and role in MANUAL_SYMBOLS:
             text = MANUAL_SYMBOLS[role] + text
+        fit = self.fit if role in C.FIT_ROLES else None
+        if fit and fit.get("line"):
+            extra = extra if extra is not None else el("w:pPr")
+            sub(extra, "w:spacing", w__line=self._fit_line(st), w__lineRule="atLeast")
         p = self._new_p(role, extra)
         self._append_inline(p, text, footnotes)
+        self._fit_runs(p, st, fit)
         return self._body_append(p)
+
+    # ── 맞춤 조정 (원고의 조정 블록) ──────────────────────────────────────────
+    def _fit_line(self, st) -> int:
+        """줄간격 증감을 더한 최소 줄 높이 (twip). 한/글 글자 크기 대비 비율을 최소 줄 높이로 옮기는 규칙과 같음"""
+        return round(st.char.size * M.fit_value("line", st.para.line, self.fit) / 100 * 20)
+
+    def _fit_runs(self, p, st, fit: dict | None):
+        """문단의 run마다 장평과 자간 증감을 더한 값을 직접 서식으로 기록. 스타일 값은 바꾸지 않음"""
+        if not fit or not (fit.get("ratio") or fit.get("spacing")):
+            return
+        ratio = M.fit_value("ratio", st.char.ratios[0], fit)
+        spacing = M.fit_value("spacing", st.char.spacings[0], fit)
+        for r in p.findall(qn("w:r")):
+            rpr = r.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = el("w:rPr")
+                r.insert(0, rpr)
+            for tag in ("w:spacing", "w:w"):
+                old = rpr.find(qn(tag))
+                if old is not None:
+                    rpr.remove(old)
+            sub(rpr, "w:spacing", w__val=round(st.char.size * spacing / 100 * 20))
+            sub(rpr, "w:w", w__val=ratio)
+            sort_children(rpr, RPR_ORDER)
+
+    def _label_hang(self, text: str, st) -> int:
+        """출처 행의 내어쓰기 폭. 출처 표기와 뒤 빈칸('자료: ')을 출처 스타일 글자로 그린 폭 (HWPUNIT)"""
+        label = M.source_label(text)
+        if not label:
+            return 0
+        ls = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
+        return round(M.text_units(label, C.SPACE_EM_DOCX, ls.ratio, ls.spacing) * ls.unit_w)
 
     def _append_inline(self, p, text: str, footnotes: dict | None = None):
         """인라인 서식(굵게, 기울임, 첨자)을 run으로 나누어 붙인다. 각주 참조는 footnotes가 있을 때만 처리"""
@@ -514,9 +554,10 @@ class DocxBuilder(M.TocMarks):
         if unit:
             self._transparent_row(tbl, widths, unit, "unit", "right", header=header_repeat)
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_scale = M.fit_value("line", cell_style.para.line, self.fit) / cell_style.para.line   # 줄간격 조정 배율
         for ri, row in enumerate(rows):
             is_head = ri < hdr
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], line_scale)
             tr = sub(tbl, "w:tr")
             trpr = sub(tr, "w:trPr")
             sub(trpr, "w:cantSplit")
@@ -586,8 +627,11 @@ class DocxBuilder(M.TocMarks):
             head = st.para.head if isinstance(st.para.head, tuple) and st.para.head[0] == "BULLET" else None
             lead = st.para.margin[1] + st.para.margin[2] + (bullet_hanging_pt(head, st.char.size) * 100 if head else 0)
             return M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0], lead)
-        plain = tuple(s for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
-        return M.CellFont(C.SPACE_EM_DOCX, plain, line_style("table_cell_bullet"), line_style("table_cell_dash"))
+        fit = self.fit   # 장평과 자간 조정은 열 폭과 줄 수 산정에도 반영
+        plain = tuple(M.fit_line_style(s, fit) for s in (line_style("table_cell"), line_style("table_cell_left")) if s)
+        bullet, dash = line_style("table_cell_bullet"), line_style("table_cell_dash")
+        return M.CellFont(C.SPACE_EM_DOCX, plain, bullet and M.fit_line_style(bullet, fit),
+                          dash and M.fit_line_style(dash, fit))
 
     def _cell_paragraphs(self, tc, text: str, align: str, is_head: bool, cell_style, keep: bool):
         lines = text.split("\n")
@@ -613,6 +657,9 @@ class DocxBuilder(M.TocMarks):
                     sub(extra, "w:jc", w__val="right")
                 elif is_head:
                     sub(extra, "w:jc", w__val=ALIGN[cell_style.para.align])
+            line_st = self.form.style(role)
+            if (self.fit or {}).get("line"):
+                sub(extra, "w:spacing", w__line=self._fit_line(line_st), w__lineRule="atLeast")
             p = el("w:p")
             ppr = sub(p, "w:pPr")
             sub(ppr, "w:pStyle", w__val=self.style_ids[role])
@@ -624,6 +671,7 @@ class DocxBuilder(M.TocMarks):
                     kind, seg = "plain", f"[^{seg}]"
                 rpr = self._fmt_rpr(kind, bold=is_head)
                 p.append(self._run(seg, rpr if len(rpr) else None))
+            self._fit_runs(p, line_st, self.fit)
             tc.append(p)
 
     def _transparent_row(self, tbl, widths, text: str, role: str, align: str, header: bool = False):
@@ -645,6 +693,12 @@ class DocxBuilder(M.TocMarks):
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val=self.style_ids[role])
         sub(ppr, "w:keepNext")
+        if role == "source":   # <br> 줄바꿈과 출처 표기 뒤 내어쓰기로 둘째 줄부터 출처 표기 뒤 글자에 맞춤
+            text = M.source_lines(text)
+            st = self.form.style("source")
+            if hang := self._label_hang(text, st):
+                sub(ppr, "w:ind", w__left=tw(st.para.margin[1] + hang), w__right=tw(st.para.margin[2]),
+                    w__hanging=tw(hang))
         sub(ppr, "w:jc", w__val=align)
         p.append(self._run(text))
 
@@ -697,7 +751,7 @@ class DocxBuilder(M.TocMarks):
         if not C.FIGURE_IN_TABLE:
             self._body_append(pic_p)
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.flat_source(src))
         else:
             # 표 폭은 twip 단위로 올림. 반올림으로 셀 안 폭이 그림 폭보다 좁아지면 고정 폭 표가 그림 오른쪽을 자름
             cell_w = math.ceil(table_w / HWPUNIT_PER_TWIP) * HWPUNIT_PER_TWIP
@@ -888,6 +942,7 @@ class DocxBuilder(M.TocMarks):
         self.doc.element.body.insert(0, self._first_line())
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # 제목 뒤 출처 줄이 앞 절 문단의 각주로 붙지 않게 연결을 끊음
@@ -897,9 +952,9 @@ class DocxBuilder(M.TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":   # 표·그림에 붙지 않은 출처 줄은 직전 문단의 각주로 이동
                 if self.last_para is not None:
-                    self._footnote_ref(self.last_para, e.text)
+                    self._footnote_ref(self.last_para, M.flat_source(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.flat_source(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -938,6 +993,13 @@ def field_runs(instr: str, result: str, rpr_factory=None) -> list:
     end = run()
     sub(end, "w:fldChar", w__fldCharType="end")
     return [begin, ins, sep, res, end]
+
+
+# w:rPr 하위 요소 순서 (ECMA-376 CT_RPr). 직접 서식을 더한 뒤 이 순서로 정렬해야 Word가 파일을 염
+RPR_ORDER = ["rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps", "strike", "dstrike", "outline", "shadow",
+             "emboss", "imprint", "noProof", "snapToGrid", "vanish", "webHidden", "color", "spacing", "w", "kern",
+             "position", "sz", "szCs", "highlight", "u", "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs",
+             "em", "lang", "eastAsianLayout", "specVanish", "oMath"]
 
 
 def sort_children(parent, order: list[str]):

@@ -10,7 +10,7 @@ import re
 import sys
 import unicodedata
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import config as C
@@ -40,6 +40,11 @@ NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
 BULLET_PREFIXES = ("·", "•", "ㆍ", "∙", "○", "◦", "❍", "□", "■", "※", "- ", "▪")
 CELL_BULLET_MARKS = ("◦", "○", "ㅇ", "·", "•", "ㆍ")   # 셀 ◦ 글머리 스타일로 바꾸는 줄 머리 기호
 CELL_MARK_RE = re.compile(r"^\s*[◦○ㅇ·•ㆍ-]\s*")        # 셀 글머리 줄에서 지우는 머리 기호와 뒤 빈칸
+FIT_OPEN_RE = re.compile(r"^:::\s*(\S.*?)\s*$")   # 맞춤 조정 블록 여는 줄 ('::: 자간 -2 줄간격 -10')
+FIT_CLOSE = ":::"                                # 맞춤 조정 블록 닫는 줄
+FIT_VALUE_RE = re.compile(r"^([+-]?\d+)(?:%p?)?$")
+SOURCE_BREAK_RE = re.compile(r"\s*<br\s*/?>\s*", re.I)   # 출처 줄 안의 줄바꿈 표기
+PARSE_ISSUES: list[str] = []   # 요소로 남지 않는 표기(조정 블록)의 결함. parse_markdown이 채우고 lint가 출력
 
 
 def _alt(tokens) -> str:
@@ -86,15 +91,42 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
     return None
 
 
+def parse_fit(spec: str) -> dict | None:
+    """조정 블록 여는 줄의 '키 값' 목록을 증감 사전으로 바꿈 ('자간 -2 줄간격 -10' → {'spacing': -2, 'line': -10}).
+    읽지 못하면 None"""
+    tokens = spec.split()
+    if not tokens or len(tokens) % 2:
+        return None
+    fit = {}
+    for key, value in zip(tokens[::2], tokens[1::2]):
+        kind, m = C.FIT_KEYS.get(key.lower()), FIT_VALUE_RE.match(value)
+        if kind is None or m is None or kind in fit:
+            return None
+        fit[kind] = int(m.group(1))
+    return fit
+
+
+def _tag_fit(elems: list[Element], fit: dict | None):
+    """직전 줄까지 만든 요소 중 조정 표시가 없는 요소에 현재 조정을 기록.
+    표는 앞의 캡션 요소를 흡수하며 만들어지므로 개수 대신 표시 유무로 새 요소를 찾음"""
+    for e in reversed(elems):
+        if "fit" in e.data:
+            break
+        e.data["fit"] = fit
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     footnotes: dict[str, str] = {}
+    PARSE_ISSUES.clear()
+    fit, fit_spec = None, ""   # 열린 조정 블록의 증감과 여는 줄 표기
     # 불릿 계위는 들여쓰기 폭의 순위로 판정 (폭 값 자체는 원고마다 다름)
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines if (m := BULLET_RE.match(ln))})
     elems: list[Element] = []
     i = 0
     blank = False   # 직전 줄이 빈 줄인지. 표·그림 뒤 ※ 줄은 빈 줄로 띄우면 블록에 붙지 않는다
     while i < len(lines):
+        _tag_fit(elems, fit or None)
         raw = lines[i]
         stripped = raw.strip()
         i += 1
@@ -102,6 +134,19 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             blank = True
             continue
         gap, blank = blank, False
+        if stripped == FIT_CLOSE:
+            if fit is None:
+                PARSE_ISSUES.append(msg("lint_fit_close"))
+            fit = None
+            continue
+        if m := FIT_OPEN_RE.match(stripped):
+            if fit is not None:
+                PARSE_ISSUES.append(msg("lint_fit_nested", text=stripped))
+            fit_spec, fit = stripped, parse_fit(m.group(1))
+            if fit is None:   # 읽지 못한 블록도 닫는 줄까지는 블록으로 보아 닫는 줄이 결함으로 남지 않게 함
+                PARSE_ISSUES.append(msg("lint_fit_spec", text=stripped))
+                fit = {}
+            continue
         if m := FOOTNOTE_DEF_RE.match(stripped):
             footnotes[m.group(1)] = m.group(2)
             continue
@@ -183,6 +228,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # 기호 없는 일반 문단은 ○ 서술
+    _tag_fit(elems, fit or None)
+    if fit is not None:
+        PARSE_ISSUES.append(msg("lint_fit_unclosed", text=fit_spec))
     return elems, footnotes
 
 
@@ -252,7 +300,7 @@ BODY_KINDS = ("square", "circle", "dash", "dot", "note")   # 조판기가 각주
 
 def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
     """원고를 고쳐야 해소되는 결함"""
-    issues = []
+    issues = list(PARSE_ISSUES)
     prev_level = 0
     for idx, e in enumerate(elems):
         if e.kind == "heading":
@@ -537,9 +585,46 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
-    """예상 줄 수에 맞는 행 최소 높이 (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+def row_height(lines: int, line_scale: float = 1.0) -> int:
+    """예상 줄 수에 맞는 행 최소 높이 (HWPUNIT). line_scale은 줄간격 조정 뒤 셀 줄 간격의 배율.
+    1줄 행도 최소 높이가 줄 높이보다 커서 배율을 첫 줄까지 반영해야 줄간격 조정이 행 높이에 나타남"""
+    return round(C.ROW_BASE_H + C.ROW_LINE_H * (line_scale * lines - 1))
+
+
+# ── 맞춤 조정과 출처 행 ───────────────────────────────────────────────────────
+def fit_value(kind: str, base: float, fit: dict | None) -> int:
+    """스타일 값에 조정 증감을 더하고 한/글 입력 범위로 제한한 값"""
+    lo, hi = C.FIT_RANGE[kind]
+    return int(min(max(base + (fit or {}).get(kind, 0), lo), hi))
+
+
+def fit_line_style(ls: LineStyle, fit: dict | None) -> LineStyle:
+    """장평과 자간 조정을 반영한 셀 줄 스타일 (열 폭과 줄 수 산정용)"""
+    if not fit or not (fit.get("ratio") or fit.get("spacing")):
+        return ls
+    return replace(ls, ratio=fit_value("ratio", ls.ratio, fit), spacing=fit_value("spacing", ls.spacing, fit))
+
+
+def source_lines(text: str) -> str:
+    """출처 행 글자. 원고의 <br> 표기를 줄바꿈으로 바꿈"""
+    return SOURCE_BREAK_RE.sub("\n", text)
+
+
+def flat_source(text: str) -> str:
+    """각주나 본문 문단으로 옮기는 출처 줄. <br> 표기를 빈칸으로 바꾸어 한 줄로 이음"""
+    return SOURCE_BREAK_RE.sub(" ", text)
+
+
+def source_label(text: str) -> str:
+    """출처 행 첫머리의 출처 표기와 뒤 빈칸 ('자료: '). 표기로 시작하지 않으면 빈 문자열.
+    둘째 줄부터 출처 표기 뒤 글자에 맞추는 내어쓰기 폭의 기준"""
+    m = SOURCE_RE.match(text)
+    if m is None:
+        return ""
+    end = m.end()
+    while end < len(text) and text[end] == " ":
+        end += 1
+    return text[:end]
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,

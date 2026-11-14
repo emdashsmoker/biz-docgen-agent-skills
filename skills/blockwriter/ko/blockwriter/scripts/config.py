@@ -108,6 +108,12 @@ CELL_MARGIN_TB = 141            # 셀 안 위아래 여백
 CELL_HANGUL_EM = 0.94           # 한글 1자 폭 / 글자 크기. 나눔고딕 실측값이며 가중 길이 단위와 행 높이의 줄 수 추정에 사용
 CAPTION_GAP = 850               # 캡션과 표 사이 간격
 
+# ── 맞춤 조정 (원고의 '::: 자간 -2' 펜스 블록). 값은 스타일 값에 더하는 증감(%p)
+# 장평과 자간은 줄바꿈으로 한두 글자가 넘치는 줄, 줄간격은 쪽 채움에 씀. 키는 한국어와 영어 표기를 모두 인식
+FIT_KEYS = {"장평": "ratio", "width": "ratio", "자간": "spacing", "spacing": "spacing", "줄간격": "line", "line": "line"}
+FIT_ROLES = ("square", "circle", "dash", "dot", "note")   # 본문 문단. 표 셀은 표 조판이 따로 적용하고 제목, 캡션, 단위 행, 출처 행은 양식 값 유지
+FIT_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글 입력 범위. 증감 결과를 이 범위로 제한
+
 # ── 그림 (mm, 본문 폭 약 170mm 기준). 좌우를 가득 채운 그림은 본문 계위와 어긋나고 세로형은 한 쪽을 넘긴다
 IMG_LANDSCAPE_RATIO = 1.4       # 폭/높이 비율이 이 값 이상이면 가로형
 IMG_PORTRAIT_RATIO = 0.8        # 이 값 이하면 세로형, 사이는 정사각형 근방
@@ -255,6 +261,21 @@ MESSAGES = {
     "lint_colwidth_alone": {
         "ko": "[열 폭 줄 위치] '{text}' 바로 뒤에 표가 없어 적용 안 됨. 캡션과 표 사이에 둠",
         "en": "[column width line] '{text}' is not followed by a table and is ignored. Put it between the caption and the table"},
+    "lint_fit_spec": {
+        "ko": "[조정 블록] '{text}' 표기를 읽지 못해 블록 안 요소를 조정 없이 조판. 형식은 '::: 장평 -3 자간 -2 줄간격 -10'",
+        "en": "[fit block] '{text}' could not be read; the elements in the block are typeset without adjustment. Format: '::: width -3 spacing -2 line -10'"},
+    "lint_fit_nested": {
+        "ko": "[조정 블록] '{text}' 블록이 앞 블록을 닫기 전에 열림. 앞 블록을 ':::' 줄로 먼저 닫음",
+        "en": "[fit block] '{text}' opens before the previous block is closed. Close the previous block with a ':::' line first"},
+    "lint_fit_close": {
+        "ko": "[조정 블록] 여는 줄 없이 ':::' 줄이 나옴",
+        "en": "[fit block] a ':::' line appears without an opening line"},
+    "lint_fit_unclosed": {
+        "ko": "[조정 블록] '{text}' 블록을 닫는 ':::' 줄이 없어 원고 끝까지 조정",
+        "en": "[fit block] '{text}' has no closing ':::' line, so the adjustment runs to the end of the manuscript"},
+    "warn_fit_line_type": {
+        "ko": "WARN: '{style}' 스타일의 줄 간격이 글자 크기 비율(%) 방식이 아니어서 줄간격 조정을 생략",
+        "en": "WARN: the line spacing of the '{style}' style is not a percentage of the font size; the line spacing adjustment is skipped"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},

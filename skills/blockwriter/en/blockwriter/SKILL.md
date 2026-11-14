@@ -1,6 +1,6 @@
 ---
 name: blockwriter
-description: "Typesets Korean-style reports (policy, research, planning) from one Markdown manuscript into HWPX (Hancom Hangul) or DOCX (Word) and reviews them by rendering. Two code-generated forms (chapter: 제N장 numbering; flat: N. numbering) place heading, □, ○, -, ㆍ, ※ levels, tables (numbered captions, unit and source rows, header shading, merging, long tables), figures, footnotes, cover, TOC, header, and page numbers. Also extracts user HWPX forms, fills blanks, and converts DOCX, XLSX, and HWPX into manuscripts. Use when the user mentions hwpx, Hangul or Hancom documents, Korean or Word reports, md to hwpx or docx, docx to hwpx, hwpx forms or rendering, or asks to produce, edit, or extract .hwpx or report-style .docx files. references/manuscript.md: manuscript notation and writing rules. references/layout.md: form values, typesetting rules, DOCX mapping, TOC, user forms, review items. references/renderers.md: renderer setup and limits, fonts."
+description: "Typesets Korean-style reports (policy, research, planning) from one Markdown manuscript into HWPX (Hancom Hangul) or DOCX (Word) and reviews them by rendering. Two code-generated forms (chapter: 제N장 numbering; flat: N. numbering) place heading, □, ○, -, ㆍ, ※ levels, tables (numbered captions, unit and source rows, header shading, merging, long tables), figures, footnotes, cover, TOC, header, and page numbers. Also extracts user HWPX forms, fills blanks, and converts DOCX, XLSX, and HWPX into manuscripts. Use when the user mentions hwpx, Hangul or Hancom documents, Korean or Word reports, md to hwpx or docx, docx to hwpx, hwpx forms or rendering, or asks to produce, edit, or extract .hwpx or report-style .docx files. references/manuscript.md: manuscript notation and writing rules. references/layout.md: form values, typesetting rules, DOCX mapping, TOC, user forms, page fill, fit adjustments, review items. references/renderers.md: renderer setup and limits, fonts."
 license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE.md
 ---
 
@@ -134,14 +134,20 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (off) Every footnote gives the full source
         - (short form) Only the first footnote in the scope gives the full source, and later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
         - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
+    - (Width and spacing fit) How to handle a paragraph where line wrapping pushes only one or two characters to the next line or where one line looks out of step with the lines around it. Choose off (default) or on. The criteria are in the Fit adjustments section of references/layout.md
+        - (off) The width and spacing of the form stay as they are
+        - (on) The width and spacing of that paragraph shrink within an unnoticeable range to fit the line, and the wording is shortened when that is not enough
+    - (Line spacing fit) How to fill a two-page spread to the bottom. Choose off (default) or on. The criteria are in the Fit adjustments section of references/layout.md
+        - (off) The line spacing of the form stays as it is
+        - (on) To align the bottoms of the two pages without cutting information, the line spacing of particular pages, paragraphs, tables, and so on shrinks within an unnoticeable range
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
-    - (TOC scope) When a TOC is inserted, also ask for its scope. The default is chapters, sections, tables, and figures. Offer subsections (N.N.N) and 가나다 headings as examples of items that can be added. Only tables and figures with captions are listed
+    - (TOC scope) When a TOC is inserted, also ask for its scope. The default is chapters, sections, tables, and figures. Also offer subsections (N.N.N) and 가나다 headings, which can be added. Only tables and figures with captions are listed
     - (Bookmark notice) When asking whether to insert a TOC, give the following notice with the question
-        - A TOC with page numbers attaches a bookmark to every listed item (heading paragraphs, tables and figures with captions), and each TOC page number follows its bookmark
+        - A TOC with page numbers places a bookmark on every listed item (heading paragraphs, tables and figures with captions) and calculates each page number from the position of its bookmark
         - Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. The bookmarks of tables and figures sit inside the table, so they move with the table
-        - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
+        - The initial page number is `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them with select all (Ctrl+A) and then the F9 key
         - Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
     - (Choice items) Present every choice and mark the default with "(default)"
@@ -150,6 +156,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - Write any item that does not fit in the question tool in the response body with all of its choices
     - (Render test results) Report the render test result of each format (engine, pass or fail) in one line with the questions. If a source build is running, add its progress to the same line. For a format without a renderer, also state that its rendering review is skipped and why
 2. (Manuscript) Write the Markdown manuscript with the level rules below and the writing rules in references/manuscript.md
+    - (Page fill) A layout in which the two pages of each spread fill evenly to the bottom is recommended. Plan the size of tables and figures, the placement of paragraphs, and so on for this layout from the manuscript stage (Page fill section of references/layout.md)
 3. (Typesetting) Run build and act on each output line prefix
     - (`LINT:`) A manuscript defect. Fix the manuscript and run build again
     - (`HITL:`) A typesetting choice for the user (page breaks, long tables). build prints it only when `--page-break` or `--long-table` is not given, so pass the items decided in step 1 as options
@@ -158,14 +165,16 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
+    - (Fit adjustments) Adjust only the items the user turned on in step 1 with fit blocks in the manuscript, then build again. The criteria are in the Fit adjustments section of references/layout.md
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason
+    - (Fit adjustments) If fit blocks were used, one line with the adjusted positions and values
     - (Renderer limits) One line saying that the review renderers are approximate, so the result may look different in Hangul or Word
     - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
-    - (TOC page numbers) If a TOC with page numbers was inserted, repeat the bookmark notice of step 1 and add the initial values of each format
+    - (TOC page numbers) If a TOC with page numbers was inserted, give the bookmark notice of step 1 together with the initial values of each format below
         - The TOC page numbers of an HWPX are written as the placeholder `?`. They change to the real pages when Hangul loads the document
-        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document, so they change to the real pages only after select all (Ctrl+A) then F9
+        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document. Select all (Ctrl+A) and then the F9 key change them to the real pages
         - If a PDF is bundled, the PDF from the HWPX review render keeps `?` as the TOC page numbers
     - (Font notice) If `fonts` can run on the computer where the user opens the documents (the skill runs on that computer or can send commands to it), run it. If every form font (NanumGothic, plus NanumBarunGothic for flat) is installed with all Hanja present, skip the notice. If a font is missing or lacks Hanja, name it and give the installation steps for the user's computer in references/renderers.md
     - (Remote workspace) If the user's computer cannot be checked, skip the font notice and the question about font installation. Give the installation steps when the user mentions a font or Hanja display problem
@@ -173,17 +182,17 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 ## TOC static conversion
 
 - Post-processing performed only when the user asks for it after the files are delivered. It is not part of the step 1 plan questions
-- (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
+- (Purpose) To reduce the editing burden after the output is final, the bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
 
-1. (Update request) Ask the user to open the delivered file once in Hangul or Word, update the page numbers, save it, and submit it again. Hangul updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save
-    - Only Hangul and Word calculate the real pages. Static conversion of the build output as it is freezes the placeholder
+1. (Update request) Ask the user to open the delivered file once in Hangul or Word, update the page numbers, save it, and submit the saved file again. Hangul updates the page numbers on load, so the file is saved right after opening. In Word, update them with select all (Ctrl+A) and the F9 key, then save
+    - Only Hangul and Word calculate the real pages. Static conversion of a build output that was not updated leaves the placeholder `?` as plain text
 2. (Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, table, figure) or all
 3. (Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
 4. (Report) Give the user the counts of items made static, skipped, and kept, and the output path
 
 - The bookmarks and page references of items outside the scope stay and keep updating in Hangul and Word
 - (File not updated) Items whose page number is the placeholder `?` are left as they are and reported in a `WARN:` line. Repeat step 1 to the user
-- (Item kind) Identified from where the bookmark sits (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all. They can be chosen with `--scope other`
+- (Item kind) Identified from the position of the bookmark (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other. other is not part of all, so it is chosen separately with `--scope other`
 - References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references are not changed
 - The processing rules are in the TOC section of references/layout.md
 
@@ -202,7 +211,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 | `※ remark` | note | ※ | ※ |
 | Source lines such as `출처: ` | source | after a table or figure: source row. After body text: footnote of the previous paragraph | same |
 
-- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, and source and unit lines are in references/manuscript.md
+- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, source and unit lines, line breaks between multiple sources, and fit blocks are in references/manuscript.md
 - The rules for statements under □, keyword versus sentence style, and the use of section numbers and 가나다 are also in references/manuscript.md
 
 ## Differences between formats

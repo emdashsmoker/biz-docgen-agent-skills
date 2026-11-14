@@ -108,6 +108,12 @@ CELL_MARGIN_TB = 141            # cell top/bottom padding
 CELL_HANGUL_EM = 0.94           # Hangul character width / font size. Measured on NanumGothic; used for the weighted-length unit and for estimating row line counts
 CAPTION_GAP = 850               # gap between caption and table
 
+# ── Fit adjustments (the '::: spacing -2' fenced block in the manuscript). Values are changes (%p) added to the style values
+# Width and spacing fix lines where one or two characters wrap; line spacing fills pages. Keys are recognized in Korean and English
+FIT_KEYS = {"장평": "ratio", "width": "ratio", "자간": "spacing", "spacing": "spacing", "줄간격": "line", "line": "line"}
+FIT_ROLES = ("square", "circle", "dash", "dot", "note")   # body paragraphs. Table typesetting applies it to cells separately; headings, captions, unit rows and source rows keep the form values
+FIT_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # Hangul input ranges. Adjusted values are clamped to them
+
 # ── Figures (mm, for a body width of about 170mm). Full-width figures break the level alignment and portrait figures overflow a page
 IMG_LANDSCAPE_RATIO = 1.4       # width/height ratio at or above this is landscape
 IMG_PORTRAIT_RATIO = 0.8        # at or below this is portrait; in between is near-square
@@ -255,6 +261,21 @@ MESSAGES = {
     "lint_colwidth_alone": {
         "ko": "[열 폭 줄 위치] '{text}' 바로 뒤에 표가 없어 적용 안 됨. 캡션과 표 사이에 둠",
         "en": "[column width line] '{text}' is not followed by a table and is ignored. Put it between the caption and the table"},
+    "lint_fit_spec": {
+        "ko": "[조정 블록] '{text}' 표기를 읽지 못해 블록 안 요소를 조정 없이 조판. 형식은 '::: 장평 -3 자간 -2 줄간격 -10'",
+        "en": "[fit block] '{text}' could not be read; the elements in the block are typeset without adjustment. Format: '::: width -3 spacing -2 line -10'"},
+    "lint_fit_nested": {
+        "ko": "[조정 블록] '{text}' 블록이 앞 블록을 닫기 전에 열림. 앞 블록을 ':::' 줄로 먼저 닫음",
+        "en": "[fit block] '{text}' opens before the previous block is closed. Close the previous block with a ':::' line first"},
+    "lint_fit_close": {
+        "ko": "[조정 블록] 여는 줄 없이 ':::' 줄이 나옴",
+        "en": "[fit block] a ':::' line appears without an opening line"},
+    "lint_fit_unclosed": {
+        "ko": "[조정 블록] '{text}' 블록을 닫는 ':::' 줄이 없어 원고 끝까지 조정",
+        "en": "[fit block] '{text}' has no closing ':::' line, so the adjustment runs to the end of the manuscript"},
+    "warn_fit_line_type": {
+        "ko": "WARN: '{style}' 스타일의 줄 간격이 글자 크기 비율(%) 방식이 아니어서 줄간격 조정을 생략",
+        "en": "WARN: the line spacing of the '{style}' style is not a percentage of the font size; the line spacing adjustment is skipped"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},

@@ -10,7 +10,7 @@ import re
 import sys
 import unicodedata
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import config as C
@@ -40,6 +40,11 @@ NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
 BULLET_PREFIXES = ("·", "•", "ㆍ", "∙", "○", "◦", "❍", "□", "■", "※", "- ", "▪")
 CELL_BULLET_MARKS = ("◦", "○", "ㅇ", "·", "•", "ㆍ")   # line-start marks that become the cell ◦ bullet style
 CELL_MARK_RE = re.compile(r"^\s*[◦○ㅇ·•ㆍ-]\s*")        # leading mark and following spaces removed from cell bullet lines
+FIT_OPEN_RE = re.compile(r"^:::\s*(\S.*?)\s*$")   # opening line of a fit block ('::: spacing -2 line -10')
+FIT_CLOSE = ":::"                                # closing line of a fit block
+FIT_VALUE_RE = re.compile(r"^([+-]?\d+)(?:%p?)?$")
+SOURCE_BREAK_RE = re.compile(r"\s*<br\s*/?>\s*", re.I)   # line break mark inside a source line
+PARSE_ISSUES: list[str] = []   # defects of marks that leave no element (fit blocks). parse_markdown fills it and lint prints it
 
 
 def _alt(tokens) -> str:
@@ -86,15 +91,42 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
     return None
 
 
+def parse_fit(spec: str) -> dict | None:
+    """Turns the 'key value' list of a fit block opening line into a change dict ('spacing -2 line -10' → {'spacing': -2, 'line': -10}).
+    None when it cannot be read"""
+    tokens = spec.split()
+    if not tokens or len(tokens) % 2:
+        return None
+    fit = {}
+    for key, value in zip(tokens[::2], tokens[1::2]):
+        kind, m = C.FIT_KEYS.get(key.lower()), FIT_VALUE_RE.match(value)
+        if kind is None or m is None or kind in fit:
+            return None
+        fit[kind] = int(m.group(1))
+    return fit
+
+
+def _tag_fit(elems: list[Element], fit: dict | None):
+    """Records the current adjustment on the elements made so far that carry no adjustment mark.
+    A table absorbs the caption element before it, so new elements are found by the mark rather than by count"""
+    for e in reversed(elems):
+        if "fit" in e.data:
+            break
+        e.data["fit"] = fit
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     footnotes: dict[str, str] = {}
+    PARSE_ISSUES.clear()
+    fit, fit_spec = None, ""   # changes and opening line of the open fit block
     # bullet levels are ranked by indent width (the width values themselves differ between manuscripts)
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines if (m := BULLET_RE.match(ln))})
     elems: list[Element] = []
     i = 0
     blank = False   # whether the previous line was blank. A ※ line after a table or figure is not attached to the block if separated by a blank line
     while i < len(lines):
+        _tag_fit(elems, fit or None)
         raw = lines[i]
         stripped = raw.strip()
         i += 1
@@ -102,6 +134,19 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             blank = True
             continue
         gap, blank = blank, False
+        if stripped == FIT_CLOSE:
+            if fit is None:
+                PARSE_ISSUES.append(msg("lint_fit_close"))
+            fit = None
+            continue
+        if m := FIT_OPEN_RE.match(stripped):
+            if fit is not None:
+                PARSE_ISSUES.append(msg("lint_fit_nested", text=stripped))
+            fit_spec, fit = stripped, parse_fit(m.group(1))
+            if fit is None:   # an unreadable block still runs to its closing line, so the closing line is not reported as a defect
+                PARSE_ISSUES.append(msg("lint_fit_spec", text=stripped))
+                fit = {}
+            continue
         if m := FOOTNOTE_DEF_RE.match(stripped):
             footnotes[m.group(1)] = m.group(2)
             continue
@@ -183,6 +228,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # a plain paragraph without a symbol is a ○ statement
+    _tag_fit(elems, fit or None)
+    if fit is not None:
+        PARSE_ISSUES.append(msg("lint_fit_unclosed", text=fit_spec))
     return elems, footnotes
 
 
@@ -252,7 +300,7 @@ BODY_KINDS = ("square", "circle", "dash", "dot", "note")   # body paragraphs whe
 
 def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
     """Defects that are resolved by fixing the manuscript"""
-    issues = []
+    issues = list(PARSE_ISSUES)
     prev_level = 0
     for idx, e in enumerate(elems):
         if e.kind == "heading":
@@ -537,9 +585,46 @@ def cell_lines(row: list[str], ci: int, widths: list[int], font: CellFont) -> in
     return sum(max(1, math.ceil(round(font.line_units(ln.strip()), 6) / int(per_line))) for ln in row[ci].split("\n"))
 
 
-def row_height(lines: int) -> int:
-    """Minimum row height for an expected line count (HWPUNIT)"""
-    return C.ROW_BASE_H + C.ROW_LINE_H * (lines - 1)
+def row_height(lines: int, line_scale: float = 1.0) -> int:
+    """Minimum row height for the expected line count (HWPUNIT). line_scale is the ratio of the cell line spacing after a line spacing adjustment.
+    Even a one-line row has a minimum height above its line height, so the ratio applies from the first line for the adjustment to show in row heights"""
+    return round(C.ROW_BASE_H + C.ROW_LINE_H * (line_scale * lines - 1))
+
+
+# ── Fit adjustments and source rows ──────────────────────────────────────────
+def fit_value(kind: str, base: float, fit: dict | None) -> int:
+    """Style value plus the fit change, clamped to the Hangul input range"""
+    lo, hi = C.FIT_RANGE[kind]
+    return int(min(max(base + (fit or {}).get(kind, 0), lo), hi))
+
+
+def fit_line_style(ls: LineStyle, fit: dict | None) -> LineStyle:
+    """Cell line style with the width and spacing adjustments (for column width and line count calculations)"""
+    if not fit or not (fit.get("ratio") or fit.get("spacing")):
+        return ls
+    return replace(ls, ratio=fit_value("ratio", ls.ratio, fit), spacing=fit_value("spacing", ls.spacing, fit))
+
+
+def source_lines(text: str) -> str:
+    """Source row text. The <br> marks of the manuscript become line breaks"""
+    return SOURCE_BREAK_RE.sub("\n", text)
+
+
+def flat_source(text: str) -> str:
+    """Source line moved into a footnote or body paragraph. <br> marks become spaces and join it into one line"""
+    return SOURCE_BREAK_RE.sub(" ", text)
+
+
+def source_label(text: str) -> str:
+    """Source label and following spaces at the start of a source row ('Source: '). Empty when the row does not start with a label.
+    Basis of the hanging width that aligns the second and later lines with the text after the label"""
+    m = SOURCE_RE.match(text)
+    if m is None:
+        return ""
+    end = m.end()
+    while end < len(text) and text[end] == " ":
+        end += 1
+    return text[:end]
 
 
 def row_line_counts(rows: list[list[str]], widths: list[int], font: CellFont,

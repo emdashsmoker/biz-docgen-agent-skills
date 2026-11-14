@@ -32,6 +32,7 @@ ROLE_KEYS = ("body", "chapter", "section", "subsection", "ganada", "square", "ci
              "table_pos", "table_cell", "table_cell_left", "table_title", "unit", "source", "fig_pos", "fig_title",
              "toc_chapter", "toc_section", "table_cell_bullet", "table_cell_dash")
 FORMAT_FLAGS = ("bold", "italic", "supscript", "subscript")
+FONT_SLOTS = ("hangul", "latin", "hanja", "japanese", "other", "symbol", "user")   # language slots of a character shape
 
 
 def load_profile(spec: str) -> dict:
@@ -102,6 +103,7 @@ class Builder(M.TocMarks):
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
         self.notes = M.NoteRegistry(None)   # source footnote merging (build --footnote-merge)
+        self.fit = None   # fit changes of the element being typeset (fit block in the manuscript)
 
     def _manual_symbols(self) -> dict[str, str]:
         """If the style's heading is BULLET, Hangul draws the symbol; otherwise the symbol is written into the text."""
@@ -173,6 +175,9 @@ class Builder(M.TocMarks):
             r["para_pr_id_ref"] = self._no_bullet_pp(str(r["para_pr_id_ref"]))
         else:
             text = self.manual_symbol.get(role, "") + text
+        if self.fit and role in C.FIT_ROLES:
+            r["para_pr_id_ref"] = self._fit_pp(str(r["para_pr_id_ref"]), role)
+            r["char_pr_id_ref"] = self._fit_cp(str(r["char_pr_id_ref"]))
         p = self.doc.add_paragraph("", **r, **self._take_break(attrs))
         cp = str(r["char_pr_id_ref"])
         for kind, seg in M.inline_segments(text):
@@ -338,17 +343,90 @@ class Builder(M.TocMarks):
         Justified alignment stretches the spaces of a wrapped first line and shifts the text after the number, so the alignment is left"""
         height = int(self.header.element.find(f".//{HH}charPr[@id='{cp}']").get("height"))
         hang = round(height * M.number_prefix_em(text, C.SPACE_EM_HWPX))
-        key = (base_pp, "NUMBERED", hang)
+        return self._hanging_pp(self._no_bullet_pp(base_pp), hang, "LEFT")
+
+    def _hanging_pp(self, base_pp: str, hang: int, align: str | None = None) -> str:
+        """Hanging indent paragraph shape. Hangul hanging indent keeps the first line at the left margin and starts later lines indented by the hanging width (negative intent)"""
+        key = (str(base_pp), "HANG", hang, align)
         if key not in self._pp_cache:
-            # Hangul hanging indent keeps the first line at the left margin and starts later lines indented by the hanging width (negative intent)
-            pp = self.header.ensure_paragraph_format(base_para_pr_id=self._no_bullet_pp(base_pp), alignment="LEFT",
-                                                     margins={"intent": -hang})
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment=align, margins={"intent": -hang})
             # the stored value for older Hangul versions (hp:default) is written as twice the new value (same rule as form generation)
             legacy = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HP}default/{HH}margin/{HC}intent")
             if legacy is not None:
                 legacy.set("value", str(-2 * hang))
             self._pp_cache[key] = pp
         return self._pp_cache[key]
+
+    # ── Fit adjustments (fit block in the manuscript) ───────────────────────────
+    def _fit_cp(self, base_cp: str) -> str:
+        """Character shape with the width and spacing changes added. The same change applies to every language slot"""
+        fit = self.fit or {}
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return base_cp
+        key = (base_cp, "FIT", fit.get("ratio", 0), fit.get("spacing", 0))
+        if key in self._cp_cache:
+            return self._cp_cache[key]
+        defaults = {"ratio": 100, "spacing": 0}
+
+        def add(e):
+            for kind in ("ratio", "spacing"):
+                if not fit.get(kind):
+                    continue
+                el = e.find(f"{HH}{kind}")
+                if el is None:   # a character shape without a width or spacing element gets a default element after the font reference
+                    el = ET.Element(f"{HH}{kind}", {k: str(defaults[kind]) for k in FONT_SLOTS})
+                    anchor = e.find(f"{HH}ratio" if kind == "spacing" else f"{HH}fontRef")
+                    e.insert(list(e).index(anchor) + 1 if anchor is not None else 0, el)
+                for k, v in list(el.attrib.items()):
+                    el.set(k, str(M.fit_value(kind, int(v), fit)))
+
+        target = copy.deepcopy(self.header.element.find(f".//{HH}charPr[@id='{base_cp}']"))
+        add(target)
+        want = _cp_signature(target)
+        el = self.header.ensure_char_property(predicate=lambda e: _cp_signature(e) == want, modifier=add,
+                                              base_char_pr_id=base_cp)
+        self._cp_cache[key] = el.get("id")
+        return self._cp_cache[key]
+
+    def _line_percent(self, pp_id: str) -> int | None:
+        """Line spacing of a paragraph shape (% of the font size). None when it is not a percentage"""
+        ls = self.header.element.find(f".//{HH}paraPr[@id='{pp_id}']//{HH}lineSpacing")
+        if ls is None or ls.get("type", "PERCENT") != "PERCENT":
+            return None
+        return int(ls.get("value"))
+
+    def _fit_pp(self, base_pp: str, role: str) -> str:
+        """Paragraph shape with the line spacing change added. Line spacing that is not a percentage stays unchanged with one warning per style"""
+        d = (self.fit or {}).get("line")
+        if not d:
+            return base_pp
+        key = (str(base_pp), "FIT_LINE", d)
+        if key not in self._pp_cache:
+            base = self._line_percent(base_pp)
+            if base is None:
+                if role not in self._warned:
+                    self._warned.add(role)
+                    print(msg("warn_fit_line_type", style=self.p.get(role) or role))
+                self._pp_cache[key] = base_pp
+            else:
+                self._pp_cache[key] = self.header.ensure_paragraph_format(
+                    base_para_pr_id=base_pp, line_spacing_percent=M.fit_value("line", base, self.fit))
+        return self._pp_cache[key]
+
+    def _fit_line_scale(self) -> float:
+        """Ratio of the table cell line spacing after a line spacing adjustment (for minimum row heights)"""
+        if not (self.fit or {}).get("line"):
+            return 1.0
+        base = self._line_percent(str(self.refs("table_cell")["para_pr_id_ref"]))
+        return 1.0 if base is None else M.fit_value("line", base, self.fit) / base
+
+    def _label_hang(self, text: str) -> int:
+        """Hanging width of a source row. Width of the source label and following spaces ('Source: ') in the source style (HWPUNIT)"""
+        label = M.source_label(text)
+        if not label:
+            return 0
+        ls = self._line_style("source")
+        return round(M.text_units(label, C.SPACE_EM_HWPX, ls.ratio, ls.spacing) * ls.unit_w)
 
     def gap(self):
         for _ in range(C.BLOCK_GAP_LINES):
@@ -507,9 +585,14 @@ class Builder(M.TocMarks):
         """Transparent merged row inside a table (unit, source). Kept inside the table so it moves with the table during manual editing."""
         no_border = self._border_fill([])
         u = self.refs(role)
+        pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
+        if role == "source":   # <br> line breaks and a hanging indent after the label align later lines with the text after the label
+            text = M.source_lines(text)
+            if hang := self._label_hang(text):
+                pp = self._hanging_pp(str(u["para_pr_id_ref"]), hang, align)
         t.set_cell_text(ri, 0, text)
         for pe in t.cell(ri, 0).element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", self._aligned_pp(str(u["para_pr_id_ref"]), align))
+            pe.set("paraPrIDRef", pp)
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
@@ -523,8 +606,10 @@ class Builder(M.TocMarks):
         """Line styles of table cells (for column widths and row line counts)"""
         bullet = self._line_style("table_cell_bullet") if self.p.get("table_cell_bullet") else None
         dash = self._line_style("table_cell_dash") if self.p.get("table_cell_dash") else None
-        return M.CellFont(C.SPACE_EM_HWPX, (self._line_style("table_cell"), self._line_style("table_cell_left")),
-                          bullet, dash)
+        plain = (self._line_style("table_cell"), self._line_style("table_cell_left"))
+        fit = self.fit   # width and spacing adjustments also apply to column width and line count calculations
+        return M.CellFont(C.SPACE_EM_HWPX, tuple(M.fit_line_style(s, fit) for s in plain),
+                          bullet and M.fit_line_style(bullet, fit), dash and M.fit_line_style(dash, fit))
 
     def _line_style(self, role: str) -> M.LineStyle:
         """Font size, width ratio, letter spacing, and in-cell line lead of a role style"""
@@ -638,8 +723,9 @@ class Builder(M.TocMarks):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
         total_h = 0
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
+        line_scale = self._fit_line_scale()
         for ri, row in enumerate(rows):
-            row_h = M.row_height(line_counts[ri])
+            row_h = M.row_height(line_counts[ri], line_scale)
             total_h += row_h
             for ci, val in enumerate(row):
                 lines_txt = val.split("\n")
@@ -660,9 +746,10 @@ class Builder(M.TocMarks):
                 for li, pe in enumerate(cell.element.iter(f"{HP}p")):
                     br = bullet_roles[li] if li < len(bullet_roles) and not is_head else None
                     bref = self.refs(br) if br else None
-                    pe.set("paraPrIDRef", str(bref["para_pr_id_ref"]) if bref else pp)
+                    line_role = br or ("table_cell_left" if is_left else "table_cell")
+                    pe.set("paraPrIDRef", self._fit_pp(str(bref["para_pr_id_ref"]) if bref else pp, line_role))
                     pe.set("styleIDRef", str(bref["style_id_ref"] if bref else ref["style_id_ref"]))
-                    line_cp = str(bref["char_pr_id_ref"]) if bref else cp
+                    line_cp = self._fit_cp(str(bref["char_pr_id_ref"]) if bref else cp)
                     for run in pe.iter(f"{HP}run"):
                         run.set("charPrIDRef", line_cp)
                     self._inline_runs(pe, line_cp)
@@ -735,7 +822,7 @@ class Builder(M.TocMarks):
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             self._mark_pending_caption()
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.flat_source(src))
             return
         # put the figure in a transparent one-column table and set the table's numbering type to figure. The inner picture is excluded from numbering
         t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r, **self._take_break())
@@ -780,6 +867,7 @@ class Builder(M.TocMarks):
             self.toc = False
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
             if e.kind == "heading":
                 self.heading(e.level, e.text)
                 self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
@@ -790,9 +878,9 @@ class Builder(M.TocMarks):
                 self.para("unit", e.text)
             elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
                 if self.last_para is not None:
-                    self._add_footnote(self.last_para, e.text, self.last_cp)
+                    self._add_footnote(self.last_para, M.flat_source(e.text), self.last_cp)
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", M.flat_source(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -837,6 +925,11 @@ def toc_page_ref(run, name: str, value: str):
     run.append(crossref_begin(field_id, f"?{name};6;0;0;0;", f"?{name};", "TARGET_BOOKMARK", "OBJECT_TYPE_PAGE"))
     ET.SubElement(run, f"{HP}t").text = value
     ET.SubElement(ET.SubElement(run, f"{HP}ctrl"), f"{HP}fieldEnd", beginIDRef=field_id, fieldid=C.HWPX_CROSSREF_FIELD_ID)
+
+
+def _cp_signature(e) -> tuple:
+    """Comparison value of a character shape. Shapes are equal when all attributes except id and all child elements match"""
+    return tuple(sorted((k, v) for k, v in e.attrib.items() if k != "id")), tuple(ET.tostring(c) for c in e)
 
 
 def new_object_id() -> str:
