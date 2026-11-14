@@ -25,7 +25,7 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 
 ## Source footnote inheritance
 
-This is how a footnote that cites the same source again is written. The default is off, and it applies only when the user chose short form or merging in the planning questions of step 1.
+This is how a footnote that cites the same source again is written. The default is off. It applies only when the user chose short form or merging in the planning questions of step 1.
 
 - (Scope) The unit the user chose among □, section, chapter, and whole document. When the scope changes, the same source counts as a first citation and the full source is written again
     - The □ scope runs from a □ line to just before the next □ line or heading. The section scope runs from a `##` heading to just before the next `##` or `#` heading. The chapter scope runs from a `#` heading to just before the next `#` heading
@@ -37,11 +37,12 @@ This is how a footnote that cites the same source again is written. The default 
     - Some documents use `위의`, as in `위의 보고서`, `위의 자료` or `Ibid.`, for the same source as the footnote just before. Use one convention within a document
     - When the cited page differs, write the page after the short form
     - When the user gives a citation rule or the user form shows a notation, follow it
-- (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, footnotes with the same text inside the scope become the first footnote, and the later citation positions show the first footnote number in superscript
-    - A footnote with different text stays a separate footnote. Write the same source in the same text, and keep citations of different pages as separate footnotes
+- (Merging) In the manuscript every footnote gives the full source in the same text. With `--footnote-merge scope` on build, footnotes with the same text inside the scope become the first footnote. The later citation positions show the first footnote number in superscript
+    - A footnote with different text stays a separate footnote. Write the same source in the same text. Keep citations of different pages as separate footnotes
     - Footnotes moved from source lines after body paragraphs are merged too
     - Check the number of merged citations on the build completion line (`merged footnote references`)
     - The number is a Hangul cross-reference in HWPX and a Word footnote number reference field in DOCX. The typesetting is in the object placement section of references/layout.md
+
 ## Tables
 
 - A table is written as a `<표> title` caption line followed by a pipe table. build assigns the caption number automatically
@@ -111,6 +112,16 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - To keep a ※ note line off a table or figure, leave one blank line between them. ※ note lines after the blank line are treated as body notes
 - A source line after a body paragraph becomes a footnote of the previous paragraph. A source line with no previous paragraph in the same section prints as a ※ note paragraph, and build reports it with the `[source line position]` lint
 - Write the sources of body statements as `[^n]` footnotes
+- (Multiple sources) When a table or figure has several sources, write them on one source line separated by semicolons (`;`). Put the source notation (`출처:`, `자료:`, and so on) only before the first source
+    - (Line break notation) Write `<br>` after the semicolon where a line should break, as in `자료: 기관명(연도), 자료명;<br>기관명(연도), 자료명`
+    - (Source layout) Pass the layout chosen in step 1 to build with `--source-layout`. automatic (auto) breaks lines only at `<br>` in the manuscript. always break (break) puts each source on its own line even without `<br>`, and always inline (inline) joins them into one line even with `<br>`
+    - (Alignment) In all three layouts the source row hangs by the label width. The second line and each source after a break start on the same vertical line as the first character after the label. build adds a missing semicolon at the end of a source
+    - A ※ note line attached to the source rows is a sentence, so it is not split at semicolons even in always break
+    - A source line after a body paragraph becomes a footnote, so it is joined into one line without `<br>`
+- (Automatic layout judgment) With automatic, decide for each source line whether to break it. The criterion is a layout that looks good on the open spread
+    - Most multiple sources go one per line. Even two or three short sources read better on separate lines
+    - When many short sources would make the source rows run long if broken, join them into one line
+    - Rarely, long sources also read better on one line. Judge by the balance of source row length, page layout, and so on
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 
@@ -128,3 +139,19 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - Distribute □ evenly across 가나다 groups. If the split is lopsided, such as 4 □ under 가. and 1 □ under 나., rearrange the □ or remove the 가나다 grouping
 - All formatting, including table header text and body text, uses the font, size, bold, and color set by the form styles as they are
 - Use only the □, ○, -, ㆍ, ※ level system of the SKILL.md table, which is familiar to readers of public documents
+
+## Adjust directives
+
+This manuscript notation adjusts character width (장평), spacing (자간), and line spacing per paragraph or table. Use it only when the user chose that adjustment in the planning questions of step 1. Pass `--adjust-chars` to build for width and spacing and `--adjust-lines` for line spacing. Without the option, build does not apply the directives. It reports them in a `WARN:` line instead.
+
+- (Notation) `(조정: 자간 -5)`, `(조정: 장평 -3, 자간 -5)`, `(조정: 줄 간격 -10)`, and so on. Values are integers in %p added to the style values. Negative values reduce and positive values increase
+- (Single directive) Applies to the one element right after the directive line (the first heading, paragraph, table, or figure). For a table, put the directive line before the caption line
+    - Tables and figures apply it to their cell paragraphs (unit and source rows included). Captions and footnote bodies stay as they are
+- (Range directive) Applies to every element between `(조정 시작: 줄 간격 -10)` and `(조정 끝)`. Use it to fit a page or several paragraphs at once. A single directive inside the range wins over the range values for its element
+- (When) In the step 4 review, find the target spots in the rendered PNGs, add the directives, and build again. Run the first build without directives
+- (Width and spacing targets) Paragraphs where one or two characters are left alone on the next line, spots where one line differs in length and breaks the evenness of a paragraph, and so on
+- (Line spacing targets) Spots where the bottoms of the two pages of a spread do not line up, spots where a table or paragraph moves to the next page by a few lines, and so on
+- (Conservative range) Width down to -5 (95%), spacing down to -8, and line spacing down to -20 form the conservative range. build reports directives beyond it in a `WARN:` line. If an adjusted spot looks more squeezed than the paragraphs around it, reduce the value
+- (Approximate renderer margin) The review renderers tend to fit slightly more characters on a line than Hangul. Adjust so that one or two characters of room remain at the end of the line in the rendered PNG. A line fitted with no room may wrap again in Hangul
+- (Shortening) If adjustment within the conservative range does not fit, try shortening the wording. Shorten particles, modifiers, repeated expressions, and so on without changing the meaning
+- (Report) List the spots with adjustments or shortening in one line of the final report

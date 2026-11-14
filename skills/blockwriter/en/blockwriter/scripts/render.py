@@ -2,6 +2,7 @@
 Renderers and fonts are not bundled with the skill; installed ones are located and used."""
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import os
@@ -267,6 +268,42 @@ def folder_file(face: str, dirs: list[str]) -> tuple[str, int] | None:
             except (OSError, TTLibError, KeyError):   # skip files that cannot be read or have no name table
                 continue
     return min(found)[1:] if found else None
+
+
+def font_file(face: str) -> tuple[str, int] | None:
+    """File and font index of the installed face. Uses the lookup method of the operating system (font_lookup)"""
+    lookup = font_lookup()
+    if lookup is FontLookup.FONTCONFIG:
+        return fontconfig_file(face)
+    if lookup is FontLookup.FOLDERS:
+        return folder_file(face, C.FONT_DIRS[sys.platform])
+    return None
+
+
+@functools.lru_cache(maxsize=None)
+def _glyph_widths(face: str) -> dict[int, float] | None:
+    """Advance width per code point of the face (relative to the font size). If it is not installed, measure the review substitute font; None if neither exists"""
+    try:
+        from fontTools.ttLib import TTFont, TTLibError
+    except ImportError:
+        return None
+    for name in (face, C.FONT_SUBSTITUTES.get(face)):
+        found = font_file(name) if name else None
+        if not found:
+            continue
+        try:
+            font = TTFont(found[0], fontNumber=found[1], lazy=True)
+            metrics, upm = font["hmtx"].metrics, font["head"].unitsPerEm
+            return {cp: metrics[g][0] / upm for cp, g in font.getBestCmap().items() if g in metrics}
+        except (OSError, TTLibError, KeyError):   # an unreadable file falls back to the substitute font
+            continue
+    return None
+
+
+def glyph_em(face: str, ch: str) -> float | None:
+    """Advance width of one character (relative to the font size). None if the font or the glyph is missing"""
+    widths = _glyph_widths(face)
+    return widths.get(ord(ch)) if widths else None
 
 
 def has_ksx1001_hanja(path: str, index: int) -> bool | None:

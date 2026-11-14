@@ -52,6 +52,8 @@ def cmd_build(a):
     # HITL lines are typesetting choices for the user. Items already chosen by option are not reported
     for notice in M.hitl_notices(elems, ask_page_break=a.page_break is None, ask_long_table=a.long_table is None):
         print("HITL:", notice)
+    for line in M.gate_adjust(elems, a.adjust_chars, a.adjust_lines):   # adjustments are OFF by default and apply only with their options
+        print(line)
     a.page_break = a.page_break or C.DEFAULT_PAGE_BREAK
     a.long_table = a.long_table or C.DEFAULT_LONG_TABLE
     if a.toc_scope and not a.toc:
@@ -208,6 +210,13 @@ def main():
                    help="source footnote merging (default OFF): replaces a footnote that repeats the same text inside the scope "
                         "with a cross-reference to the first footnote number. "
                         "Scope: square=□, section=section (##), chapter=chapter (#), document=whole document")
+    b.add_argument("--source-layout", choices=list(C.SOURCE_LAYOUTS), default=C.DEFAULT_SOURCE_LAYOUT,
+                   help="layout of multiple sources under tables and figures: auto=break at <br> in the manuscript (default), break=one source per line, "
+                        "inline=one line. Lines after the first align with the text after the label")
+    b.add_argument("--adjust-chars", action="store_true",
+                   help="apply '(조정: 장평 N, 자간 N)' (width, spacing) directives in the manuscript (default OFF). Values are %%p added to the style values")
+    b.add_argument("--adjust-lines", action="store_true",
+                   help="apply '(조정: 줄 간격 N)' (line spacing) directives in the manuscript (default OFF). Values are %%p added to the style value")
     b.add_argument("--toc", action="store_true",
                    help="insert a table of contents at the front (default OFF). With --page-number, each listed item gets a bookmark and its page number is written as a page reference field")
     b.add_argument("--toc-scope", help=f"TOC scope (comma-separated, default {','.join(C.TOC_SCOPE_DEFAULT)}). "

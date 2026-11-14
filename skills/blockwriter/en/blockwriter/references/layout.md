@@ -67,6 +67,10 @@ Table attachments
 
 - The unit row is a transparent merged row above the header, right-aligned. The source row is a transparent merged row below the table, left-aligned. Both are inside the table and move with it
 - Unit and source rows use dedicated 9pt styles without bullets (단위, 출처). A ※ note line attached to the source rows is printed in the source style with its ※ or * kept
+- (Source row alignment) A source row puts a tab after the label (`출처:`, `자료:`, `주:`, ※, and so on) and hangs the paragraph by the label width. The second line and each source after a break start on the same vertical line as the first character after the label
+    - (Hanging width) The label width plus one space, measured with the source style's character shape (font, size, width, spacing, relative size). Character widths are read from the installed font file. Without the font file, the review substitute font is measured, then the NanumGothic width table, and build reports it in an `INFO:` line
+    - (Tab) HWPX uses a tab definition with the automatic hanging tab (autoTabLeft) on. DOCX puts a left tab at the hanging position. The editor sends the tab to the hanging position, so a measuring error shows only in the gap after the label and the lines stay aligned
+    - (Line breaks) Breaks between sources are line breaks inside the paragraph (HWPX lineBreak, DOCX w:br). One source row is one paragraph
 - Table captions go above the table and figure captions below the figure. The gap between the caption and the table is 850 HWPUNIT (about 3mm, CAPTION_GAP)
 - The caption width is the width of its table or figure table. A long caption wraps within this width
 - HWPX captions are caption objects attached to the table, and the number is an automatic number field. chapter restarts the numbering at 1 in each chapter through a number restart in the chapter's first paragraph
@@ -112,6 +116,14 @@ Source footnote merging
     - A paragraph with a cross-reference uses a paragraph shape whose bullet takes the style's character shape. When the bullet character shape follows the text, Hangul shrinks the bullet along with the superscript characters
 - (DOCX) The first footnote reference is wrapped in a bookmark, and a NOTEREF field that points to the bookmark goes at each repeated citation position
 - The number stored in the field is the footnote number at typesetting time. When editing changes the footnote numbers, a field update in Hangul or Word brings the numbers along
+
+Adjust directives
+
+- Applied only by a build with `--adjust-chars` (width, spacing) or `--adjust-lines` (line spacing). The manuscript notation and the choice of targets are in the Adjust directives section of references/manuscript.md
+- (Width and spacing) The character shapes of the target paragraph runs are copied, and the adjustment is added to the width and spacing of every language slot. Values are clipped to the range Hangul allows (width 50-200%, spacing -50-50%). DOCX writes the same values as the run character scale (w:w) and character spacing (w:spacing)
+- (Line spacing) The paragraph shape of the target paragraph is copied, and the adjustment is added to its percentage line spacing. DOCX recalculates the minimum line height with the same percentage
+- Tables and figures cover all of their cell paragraphs. Captions and footnote bodies are left out
+- build prints the applied count in an `INFO:` line and directives beyond the conservative range (ADJUST_WARN) in a `WARN:` line
 
 HWPX package
 
@@ -266,11 +278,16 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML
 - For a document with source footnote merging, check that the number at each repeated citation position equals the first footnote number and that the bullet of that paragraph has the same size as in other paragraphs
+- Check that the second line of each source row and each source after a break start on the same vertical line as the first character after the label
+- Check that spots with adjust directives do not look more squeezed than the paragraphs around them
 - If a TOC was inserted, confirm that the numbers of TOC entries and bookmarks in the build output match the scope, and check the entries, dotted leaders, and the alignment of the page-number positions on the TOC page PNG. The TOC page number `?` in an HWPX render is the placeholder and does not count as a defect. The TOC page numbers in a DOCX render are the values LibreOffice calculates
 - For DOCX, confirm in the structure summary of `check document.docx` that the counts of tables, figures, footnotes, and TOC page references match the manuscript. The table count includes the one-column tables that hold figures, the footnote count includes footnotes moved from source lines and leaves out citations merged by source footnote merging, and the figure count is the number of image files in the document (one for the same file). The paragraph count is a reference value that includes cover, TOC, caption, and spacing paragraphs
 - Decide whether a difference found in the page PNGs is a defect with the judgment method in references/renderers.md
 - After the item checks, set the list aside and do one free review. Fix at your discretion anything that would look odd to a practitioner receiving the document for the first time, even if no rule covers it
     - (Design and alignment) Left alignment lines between levels, the balance of table and figure widths against the body width, the alignment lines of captions, unit lines, and source lines, consistent spacing, and the distribution of visual weight on a page
+    - (Filled spreads) Printed documents are read as two facing pages, so a layout where both pages of a spread are evenly filled to the bottom is recommended. Consider it from manuscript writing and typesetting on, and in the review adjust within a range that does not harm the information
+        - Means include the size and position of figures and tables, the position and order of paragraphs, page break positions, and so on
+        - If the user chose width and spacing adjustment or line spacing adjustment in step 1, adjust directives are among the means
     - (Character formatting) The hierarchy of fonts and sizes by level, the consistency of bold and color, uniform fonts inside and outside tables, and leftover unintended formatting
     - (Fix order) If the cause is the manuscript, fix the manuscript. If it is a rule, fix config.py or form.py. Change the typesetting code last. If 3 or more defects of the same kind appear, fix the rule to resolve them all at once
     - (Report) State discretionary fixes in one line of the final report
@@ -292,5 +309,8 @@ English example (a chapter document; the 가나다 level becomes (a), (b), (c))
 - (Code-generated forms) The references among styles, fonts, bullets, and outline numbering are created from one definition (form.py), which prevents missing references. If even one bullet definition reference is missing, Hangul omits the symbol, and checking the body text does not reveal such a gap
 - (Manuscript parsing module) Manuscript parsing and the table and figure calculations live in one module, manuscript.py. The HWPX and DOCX typesetters use the same merge, alignment, and width calculations, so a rule change happens in one place
 - (TOC bookmarks and page references) Page numbers written as text go wrong with every edit. As bookmarks and page references, Hangul and Word recalculate the real pages
+- (Source row tab alignment) A label width fixed as a number goes out of line when the font, size, or label text changes. With a tab and a hanging indent the editor computes the alignment position, so user forms fit too
+- (Relative adjustments) Adjust directives are changes from the style values, so the same directive has the same effect when the form changes
+- (Adjustments OFF by default) Width, spacing, and line spacing adjustment is a Korean editing practice that keeps the amount of information. Overdone, it hurts readability, so it applies only when the user chooses it
 - (DOCX language tag) With the Latin language set to ko-KR, LibreOffice breaks lines inside numbers such as `3,456,789`
 - (No DOCX TOC field) With a TOC field that only had prefilled result text, updating the fields in Word reset every page number to 1. TOC entries are ordinary paragraphs and only the page number is a PAGEREF, so the typeset entries stay

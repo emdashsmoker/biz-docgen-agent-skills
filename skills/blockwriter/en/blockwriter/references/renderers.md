@@ -104,11 +104,13 @@ Items not judged (every renderer)
 
 - Vertical position of the page header, compressed table row heights, long-table split positions and title row repetition, and line break positions caused by font substitution
 - How numbers computed by automatic numbering and fields (caption numbers, page numbers, TOC page numbers) are shown. Check the numbers in the XML's automatic numbers and fields; Hangul and Word compute them. HWPX TOC page numbers show as the placeholder `?`
+- (Line capacity) Approximate renderers tend to fit slightly more characters on a line than Hangul. A line break position that differs by one or two characters at the end of a line can change in Hangul. The margin rule for adjust directives is in the Adjust directives section of references/manuscript.md
 
 Confirmed examples (as of rhwp v0.8.6 and H2Orestart 0.6.1; behavior may change in later versions)
 
 - rhwp does not apply the keep-with-next setting, so a heading or □ can stay at the bottom of a page
 - H2Orestart does not draw caption objects of tables and figures, footnote bodies, or footer page numbers. Check these elements in the rhwp render and the XML
+- H2Orestart does not grow the height of a multi-line source row, so the lines after the first may look cut off. Check source rows in the rhwp render and the XML
 
 ## Fonts
 

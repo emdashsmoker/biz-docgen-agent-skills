@@ -89,7 +89,11 @@ build options
 - (`--page-break chapter|section|none`) The heading unit that starts a new page. chapter starts a new page at each chapter (`#`), and section at each chapter and section (`##`). none breaks pages only at `---` lines. Default chapter
     - (flat) `#` is the single document title, so chapter breaks pages only at `---` lines, the same as none. section starts a new page at each N. heading (`##`)
 - (`--long-table engine|split`) How tables over 25 rows including the header rows (long tables) are handled. engine splits one table at page boundaries and repeats the unit row and header rows on every page. split divides it into several tables, each with the header row. Default engine
+- (`--source-layout auto|break|inline`) Layout of multiple sources under tables and figures. auto breaks lines only at `<br>` in the manuscript. break puts each source on its own line, and inline joins them into one line. Default auto. Pass the answer received in step 1 (the Attached lines section of references/manuscript.md)
+    - In all three layouts the source row hangs by the label width. The second line and each source after a break start on the same vertical line as the first character after the label (`출처:`, `자료:`, and so on)
 - (`--footnote-merge square|section|chapter|document`) Source footnote merging. Footnotes with the same text inside the scope become one footnote, and the later citation positions show the number of that first footnote. The scope is □ (square), section (section), chapter (chapter), or the whole document (document). Default OFF. Set it only when the user chose merging in step 1 (the source footnote inheritance section of references/manuscript.md)
+- (`--adjust-chars`) Applies the character width and spacing directives in the manuscript. Default OFF. Set it only when the user chose width and spacing adjustment in step 1 (the Adjust directives section of references/manuscript.md)
+- (`--adjust-lines`) Applies the line spacing directives in the manuscript. Default OFF. Set it only when the user chose line spacing adjustment in step 1
 - (`--merge auto|explicit|none`) How table cells are merged. auto merges consecutive identical values in leading label columns and the `^` and `<` directives, and explicit merges only the directives. Default auto
 - (`--numbered-square`) Prints `□ 1. title` lines as numbered headings without the □ bullet. When the title wraps to two lines, the second line aligns with the text after the number
 - (`--page-number`) Footer page number `- N -` at center. Default OFF, so that page numbers do not clash when several documents are combined into one
@@ -97,7 +101,7 @@ build options
     - (`--toc-scope item,...`) TOC scope. Default `chapter,section,table,figure` (chapters, sections, tables, figures). The items that can be added are `subsection` and `ganada` (가나다 headings). Pass the answer received in step 1
     - `table` and `figure` are tables and figures that have captions. A list of tables and a list of figures follow the TOC, each on a new page
     - Entries are the text, a dotted tab, and the page number. Page numbers are written only when `--page-number` is also given
-    - A TOC with page numbers attaches a bookmark to every listed item and writes each page number as a page reference field to that bookmark (TOC section of references/layout.md)
+    - A TOC with page numbers attaches a bookmark to every listed item. Each page number is written as a page reference field to that bookmark (TOC section of references/layout.md)
     - Forms without TOC styles (including flat) skip the TOC with a warning
 - (`--cover "title=title;subtitle=subtitle;date=date;org=organization"`) Cover page. Default OFF. Title 24pt bold, subtitle 16pt, date 14pt, organization 16pt bold, centered
     - If a long title risks pushing the cover past one page, adjust only the cover values in config.py (the blank line counts and font sizes whose names start with COVER_)
@@ -132,16 +136,24 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (split) Divides the table into several tables, each with the header row
     - (Source footnote inheritance) How a footnote that cites the same source again is written. Choose off (default), short form, or merging. When the user chooses short form or merging, also ask the scope (□, section, chapter, whole document). The notation rules are in the source footnote inheritance section of references/manuscript.md
         - (off) Every footnote gives the full source
-        - (short form) Only the first footnote in the scope gives the full source, and later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
-        - (merging) The scope keeps one footnote per source, and later citation positions show that footnote number again
+        - (short form) Only the first footnote in the scope gives the full source. Later footnotes are shortened, as in `기관명(연도), 앞의 보고서`
+        - (merging) The scope keeps one footnote per source. Later citation positions show that footnote number again
+    - (Source layout) How multiple sources under a table or figure are laid out. Choose automatic (default), always break, or always inline. The criteria are in the Attached lines section of references/manuscript.md
+        - (automatic) For each source row, choose between line breaks and one line by the length and number of the sources
+        - (always break) Each source goes on its own line, and the second source onward aligns with the start of the first
+        - (always inline) All sources are joined with semicolons into one line
+    - (Width and spacing adjustment) A Korean editing practice that narrows character width (장평) and spacing (자간) where one or two characters spill onto the next line or one line breaks the evenness of a paragraph. Choose off (default) or on. Give the following notice with the question
+        - Heavy adjustment makes characters look squeezed, so adjust conservatively and only within a range that does not stand out
+        - Where width and spacing adjustment does not fit, try shortening the wording
+    - (Line spacing adjustment) A Korean editing practice that reduces the line spacing of a page, paragraph, table, and so on to fill a two-page spread and align the bottoms of both pages. Choose off (default) or on. Add the notice that heavy adjustment makes lines look cramped, so adjust conservatively and only within a range that does not stand out
     - (Alignment markers) If a manuscript the user provides has tables without alignment markers, ask whether to add markers that fit the role of each column. Without markers, unmarked columns get the default alignment (bullet columns left, all other columns center, number and descriptive text columns included). The criteria are in the Tables section of references/manuscript.md
     - (Missing styles in a user form) If build reports with `WARN:` a style missing from the profile, choose among deriving it from a close style, adding a style to the form, or merging into an existing level
     - (Optional elements) Page numbers, TOC, cover, and page header are OFF by default, so ask whether each is needed. Also ask for the cover title, subtitle, date, and organization, and the page header text. Change the page header alignment from right only when the user asks
-    - (TOC scope) When a TOC is inserted, also ask for its scope. The default is chapters, sections, tables, and figures. Offer subsections (N.N.N) and 가나다 headings as examples of items that can be added. Only tables and figures with captions are listed
+    - (TOC scope) When a TOC is inserted, also ask for its scope. The default is chapters, sections, tables, and figures. Offer subsections (N.N.N), 가나다 headings, and so on as examples of items that can be added. Only tables and figures with captions are listed
     - (Bookmark notice) When asking whether to insert a TOC, give the following notice with the question
-        - A TOC with page numbers attaches a bookmark to every listed item (heading paragraphs, tables and figures with captions), and each TOC page number follows its bookmark
+        - A TOC with page numbers attaches a bookmark to every listed item (heading paragraphs, tables and figures with captions). Each TOC page number follows the page of its bookmark
         - Bookmarks do not show on screen or in print. When content is moved, the bookmark control code must move with it for the page number to keep tracking. The bookmarks of tables and figures sit inside the table, so they move with the table
-        - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them only after select all (Ctrl+A) then F9
+        - Page numbers are first written as `?`. Hangul calculates the real pages automatically when it loads the document. Word calculates them with select all (Ctrl+A) then F9
         - Once the output is final, the user can request static conversion, which removes the bookmarks of the chosen items and turns their page numbers into plain text
     - (Document language and labels) Korean labels by default. If the user wants a document in another language, write a label file with the labels of that language (references/layout.md, Labels) and pass it with `--labels`
     - (Choice items) Present every choice and mark the default with "(default)"
@@ -158,14 +170,17 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 4. (Review) Check the structure with check, open the page PNGs made by render, check the review items in references/layout.md, and do a free review. Save the review PDF and PNGs outside the delivery folder with `--outdir`
     - (Renderer) Use the renderers obtained at the start. If render fails because a renderer is missing after the execution environment changed, repeat items 2-5 of the start order in Setup and run render again
     - (Column width defect) Only for a table whose automatically sized column widths show a defect in the rendered PNGs, add a column width line to the manuscript and build again. Judge defects by the review items in references/layout.md. Set its values from the build `INFO:` line with the column width defect steps in the Tables section of references/manuscript.md. Run the first build without column width lines
+    - (Filled spreads) A layout where both pages of a two-page spread are evenly filled to the bottom is recommended. The criteria and means are under filled spreads in the review items of references/layout.md
+    - (Adjust directives) If the user chose width and spacing adjustment or line spacing adjustment in step 1, find the target spots in the rendered PNGs, add adjust directives to the manuscript, and build again. Targets and the conservative range are in the Adjust directives section of references/manuscript.md
     - (PDF copy) If the user chose a PDF in step 1, copy the PDF made by the last render next to the document and deliver it with the document
 5. (Report) Give the user the following
     - Output path, what was fixed, which renderer was used, and the fallback reason
+    - (Adjustments) One line listing where width, spacing, or line spacing was adjusted or wording was shortened, with the values
     - (Renderer limits) One line saying that the review renderers are approximate, so the result may look different in Hangul or Word
     - (PDF copy) If a PDF was delivered, repeat the approximate rendering notice from step 1 in one line. Advise saving a PDF for submission from Hangul or Word
-    - (TOC page numbers) If a TOC with page numbers was inserted, repeat the bookmark notice of step 1 and add the initial values of each format
+    - (TOC page numbers) If a TOC with page numbers was inserted, give the bookmark notice of step 1 together with the initial values of each format
         - The TOC page numbers of an HWPX are written as the placeholder `?`. They change to the real pages when Hangul loads the document
-        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document, so they change to the real pages only after select all (Ctrl+A) then F9
+        - The TOC page numbers of a DOCX are also written as `?`. Word does not recalculate page references when it opens a document. They change to the real pages with select all (Ctrl+A) then F9
         - If a PDF is bundled, the PDF from the HWPX review render keeps `?` as the TOC page numbers
     - (Font notice) If `fonts` can run on the computer where the user opens the documents (the skill runs on that computer or can send commands to it), run it. If every form font (NanumGothic, plus NanumBarunGothic for flat) is installed with all Hanja present, skip the notice. If a font is missing or lacks Hanja, name it and give the installation steps for the user's computer in references/renderers.md
     - (Remote workspace) If the user's computer cannot be checked, skip the font notice and the question about font installation. Give the installation steps when the user mentions a font or Hanja display problem
@@ -173,17 +188,17 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 ## TOC static conversion
 
 - Post-processing performed only when the user asks for it after the files are delivered. It is not part of the step 1 plan questions
-- (Purpose) Bookmarks make editing inconvenient, so once the output is final, the bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
+- (Purpose) Removes the editing inconvenience of bookmarks once the output is final. The bookmarks of the items the user chooses are removed and their TOC page numbers become plain text
 
-1. (Update request) Ask the user to open the delivered file once in Hangul or Word, update the page numbers, save it, and submit it again. Hangul updates them on load, so just save. In Word, press select all (Ctrl+A) then F9, then save
+1. (Update request) Get back from the user the file saved after the page numbers were updated in Hangul or Word. Hangul updates them on load, so the user just saves. In Word, the user presses select all (Ctrl+A) then F9 and saves
     - Only Hangul and Word calculate the real pages. Static conversion of the build output as it is freezes the placeholder
-2. (Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers, then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, table, figure) or all
+2. (Scope check) Run `toc-static SUBMITTED_FILE` to see the count per item kind and the current page numbers. Then get the scope from the user. The scope is a combination of item kinds (chapter, section, subsection, ganada, table, figure) or all
 3. (Conversion) Run `toc-static SUBMITTED_FILE --scope item,...|all [-o output]`. It makes a copy in which the page references of the target items are plain text and the target bookmarks are removed. Without an output path the copy gets `_static` added to the submitted file name. The submitted file is not changed
 4. (Report) Give the user the counts of items made static, skipped, and kept, and the output path
 
 - The bookmarks and page references of items outside the scope stay and keep updating in Hangul and Word
-- (File not updated) Items whose page number is the placeholder `?` are left as they are and reported in a `WARN:` line. Repeat step 1 to the user
-- (Item kind) Identified from where the bookmark sits (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other and are not part of all. They can be chosen with `--scope other`
+- (File not updated) Items whose page number is the placeholder `?` are left out. toc-static reports them in a `WARN:` line. Repeat step 1 to the user
+- (Item kind) Identified from where the bookmark sits (inside a table or not) and from the paragraph style. For an HWPX built with a user form, also pass `--profile profile.json`. Bookmarks that cannot be identified are printed as other. other is not part of all, so choose it separately with `--scope other`
 - References the user inserted in the editor also become plain text when they target a target bookmark. Footnote number cross-references are not changed
 - The processing rules are in the TOC section of references/layout.md
 
@@ -202,7 +217,7 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
 | `※ remark` | note | ※ | ※ |
 | Source lines such as `출처: ` | source | after a table or figure: source row. After body text: footnote of the previous paragraph | same |
 
-- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, and source and unit lines are in references/manuscript.md
+- Heading number removal and automatic numbering, bullet level ranking, inline formatting, footnotes, source footnote inheritance, table and figure notation, source and unit lines, and adjust directives are in references/manuscript.md
 - The rules for statements under □, keyword versus sentence style, and the use of section numbers and 가나다 are also in references/manuscript.md
 
 ## Differences between formats

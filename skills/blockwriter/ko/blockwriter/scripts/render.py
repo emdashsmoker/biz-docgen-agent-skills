@@ -2,6 +2,7 @@
 렌더러와 글꼴은 스킬에 포함하지 않고 실행 환경에 설치된 것을 찾아 쓴다."""
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import os
@@ -267,6 +268,42 @@ def folder_file(face: str, dirs: list[str]) -> tuple[str, int] | None:
             except (OSError, TTLibError, KeyError):   # 읽을 수 없거나 이름표가 없는 파일은 건너뜀
                 continue
     return min(found)[1:] if found else None
+
+
+def font_file(face: str) -> tuple[str, int] | None:
+    """설치된 face 글꼴의 파일과 글꼴 번호. 운영체제별 탐색 방법(font_lookup)을 따름"""
+    lookup = font_lookup()
+    if lookup is FontLookup.FONTCONFIG:
+        return fontconfig_file(face)
+    if lookup is FontLookup.FOLDERS:
+        return folder_file(face, C.FONT_DIRS[sys.platform])
+    return None
+
+
+@functools.lru_cache(maxsize=None)
+def _glyph_widths(face: str) -> dict[int, float] | None:
+    """face 글꼴의 문자 코드별 글자 폭(글자 크기 대비). 설치되지 않았으면 검수 렌더링의 대체 글꼴로 재고 둘 다 없으면 None"""
+    try:
+        from fontTools.ttLib import TTFont, TTLibError
+    except ImportError:
+        return None
+    for name in (face, C.FONT_SUBSTITUTES.get(face)):
+        found = font_file(name) if name else None
+        if not found:
+            continue
+        try:
+            font = TTFont(found[0], fontNumber=found[1], lazy=True)
+            metrics, upm = font["hmtx"].metrics, font["head"].unitsPerEm
+            return {cp: metrics[g][0] / upm for cp, g in font.getBestCmap().items() if g in metrics}
+        except (OSError, TTLibError, KeyError):   # 읽을 수 없는 파일은 대체 글꼴로 넘어감
+            continue
+    return None
+
+
+def glyph_em(face: str, ch: str) -> float | None:
+    """글자 1자의 폭(글자 크기 대비). 글꼴이나 글자 모양이 없으면 None"""
+    widths = _glyph_widths(face)
+    return widths.get(ord(ch)) if widths else None
 
 
 def has_ksx1001_hanja(path: str, index: int) -> bool | None:

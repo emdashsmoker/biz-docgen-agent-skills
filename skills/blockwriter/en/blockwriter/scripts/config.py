@@ -152,6 +152,15 @@ BLOCK_GAP_LINES = 0             # blank paragraphs before and after table/figure
 # empty body-style paragraphs before and after a long table with treat-as-character off (HWPX engine).
 # Such a table is placed apart from the text flow, so the table position paragraph margins alone leave it touching the neighboring paragraphs
 LONG_TABLE_GAP_LINES = 1
+# source row layout (build --source-layout). auto breaks at <br> in the manuscript, break puts each source on its own line, inline joins them into one line
+SOURCE_LAYOUTS = ("auto", "break", "inline")
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_MARKS = ("※", "*")       # marks of note lines in source rows. They are sentences and are not split at semicolons even in break
+# adjust directives ('(조정: )' lines in the manuscript). Values are %p added to the style values. Width and spacing apply only with --adjust-chars, line spacing only with --adjust-lines
+ADJUST_OPTION_KEYS = {"chars": ("ratio", "spacing"), "lines": ("line",)}
+ADJUST_RANGE = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # ranges Hangul allows for paragraph and character shapes
+# build warns about adjustments beyond these sizes. Larger adjustments make characters and lines look visibly squeezed
+ADJUST_WARN = {"ratio": 5, "spacing": 8, "line": 20}
 # scope of source footnote merging (build --footnote-merge): □, section (##), chapter (#), whole document
 NOTE_MERGE_SCOPES = ("square", "section", "chapter", "document")
 NOTE_SCOPE_HEADING_LEVEL = {"section": 2, "chapter": 1}   # the scope changes at headings of this level or above
@@ -249,6 +258,38 @@ MESSAGES = {
     "lint_footnote_unused": {
         "ko": "[각주 참조 없음] '[^{key}]:' 정의를 참조하는 본문 문단이 없어 출력 안 됨",
         "en": "[footnote unused] no body paragraph references the '[^{key}]:' definition, so it is not printed"},
+    "lint_adjust_bad": {
+        "ko": "[조정 지시] '{text}' 값을 읽지 못함. '(조정: 장평 -3, 자간 -5)', '(조정: 줄 간격 -10)'처럼 항목과 정수를 씀",
+        "en": "[adjust directive] could not read '{text}'. Write items with integers, as in '(조정: 장평 -3, 자간 -5)' or '(조정: 줄 간격 -10)'"},
+    "lint_adjust_no_target": {
+        "ko": "[조정 지시] 마지막 조정 지시 뒤에 적용할 문단이나 표가 없음",
+        "en": "[adjust directive] no paragraph or table follows the last adjust directive"},
+    "lint_adjust_unclosed": {
+        "ko": "[조정 지시] '(조정 시작: )' 뒤에 '(조정 끝)'이 없어 문서 끝까지 적용",
+        "en": "[adjust directive] '(조정 시작: )' has no '(조정 끝)' and applies to the end of the document"},
+    "lint_adjust_end_alone": {
+        "ko": "[조정 지시] 짝이 되는 '(조정 시작: )' 없이 '(조정 끝)'이 있음",
+        "en": "[adjust directive] '(조정 끝)' appears without a matching '(조정 시작: )'"},
+    "lint_adjust_nested": {
+        "ko": "[조정 지시] '(조정 끝)' 전에 '(조정 시작: {text})'이 다시 나옴. 앞 구간은 여기서 끝남",
+        "en": "[adjust directive] '(조정 시작: {text})' appears again before '(조정 끝)'. The earlier range ends here"},
+    "warn_adjust_off_chars": {
+        "ko": "WARN: 조정 지시 {n}건의 장평과 자간 값을 적용하지 않음. 기획안에서 장평과 자간 조정을 고른 경우에만 --adjust-chars를 지정",
+        "en": "WARN: width and spacing values of {n} adjust directives not applied. Set --adjust-chars only when the plan chose this adjustment"},
+    "warn_adjust_off_lines": {
+        "ko": "WARN: 조정 지시 {n}건의 줄 간격 값을 적용하지 않음. 기획안에서 줄 간격 조정을 고른 경우에만 --adjust-lines를 지정",
+        "en": "WARN: line spacing values of {n} adjust directives not applied. Set --adjust-lines only when the plan chose this adjustment"},
+    "warn_adjust_large": {
+        "ko": "WARN: 조정 지시 {n}건이 보수 범위(장평 ±{ratio}, 자간 ±{spacing}, 줄 간격 ±{line})를 넘음. 글자와 줄이 눌려 보이는지 렌더 PNG에서 확인",
+        "en": "WARN: {n} adjust directives exceed the conservative range (width ±{ratio}, spacing ±{spacing}, line spacing ±{line}). "
+              "Check the rendered PNG for squeezed characters and lines"},
+    "info_adjust": {
+        "ko": "INFO: 조정 지시 적용 {n}건 (장평과 자간 {chars}건, 줄 간격 {lines}건)",
+        "en": "INFO: adjust directives applied to {n} elements (width and spacing {chars}, line spacing {lines})"},
+    "info_label_font_guess": {
+        "ko": "INFO: 출처 라벨 폭을 글꼴 파일 없이 추정 ({faces}). 줄 정렬은 편집기의 탭이 맞추며 라벨 뒤 간격만 조금 다를 수 있음",
+        "en": "INFO: source label width estimated without the font file ({faces}). The editor's tab keeps the lines aligned; "
+              "only the gap after the label may differ slightly"},
     "lint_source_no_para": {
         "ko": "[출처 줄 위치] '{text}' 앞에 같은 절의 본문 문단이 없어 ※ 주석 문단으로 출력. 근거 문단 바로 뒤에 둠",
         "en": "[source line position] '{text}' has no body paragraph before it in the same section and prints as a ※ note paragraph. Put it right after the paragraph it supports"},

@@ -74,7 +74,7 @@ def hwpx_to_md(src: str, out: str | None, profile_spec: str | None, image_dir: s
                         line = []
                         for pos in row:
                             key = id(pos.cell.element)
-                            line.append("" if key in seen else pos.cell.text.replace("\n", "<br>"))
+                            line.append("" if key in seen else pos.cell.text.replace("\t", " ").replace("\n", "<br>"))
                             seen.add(key)
                         grid.append(line)
                     cap = t.caption.text.strip() if getattr(t, "caption", None) else ""
@@ -133,7 +133,7 @@ def docx_to_md(src: str, out: str | None, mapping: str | None):
         elif tag == "tbl":
             t = d.tables[ti]
             ti += 1
-            lines.extend(_pipe_table([[c.text.strip().replace("\n", "<br>") for c in r.cells] for r in t.rows]))
+            lines.extend(_pipe_table([[c.text.strip().replace("\t", " ").replace("\n", "<br>") for c in r.cells] for r in t.rows]))
     o = out or os.path.splitext(src)[0] + ".md"
     Path(o).write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(msg("docx2md_ok", out=o, paras=pi, tables=ti))

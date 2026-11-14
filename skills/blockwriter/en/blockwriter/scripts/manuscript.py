@@ -31,6 +31,13 @@ IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
+# adjust directive lines: (조정: 장평 -3, 자간 -5), (조정 시작: 줄 간격 -10), (조정 끝)
+ADJUST_RE = re.compile(r"^[(（]\s*조정\s*(시작|끝)?\s*(?:[:：]\s*(.*?))?\s*[)）]$")
+ADJUST_ITEM_RE = re.compile(r"(장평|자간|줄\s*간격)\s*([+-]?\d+)")
+ADJUST_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line"}
+ADJUST_MODES = {"시작": "start", "끝": "end"}
+# target elements of adjust directives. Tables and figures apply them to their cell paragraphs (unit and source rows included)
+ADJUST_TARGETS = ("heading", "square", "circle", "dash", "dot", "note", "table", "image")
 INLINE_RE = re.compile(r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
@@ -60,7 +67,7 @@ def _format_re(fmt: str, fields: dict[str, str]) -> str | None:
 def compile_notation():
     """Builds the manuscript notation patterns from the active labels (built-in tokens plus those added by a label file).
     build calls it again after reading a label file. Heading numbers written in a label file's number format are removed like 제N장 and 가."""
-    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, NUM_PREFIX_RE
+    global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, COL_WIDTH_RE, SOURCE_RE, SOURCE_PAREN_RE, SOURCE_LABEL_RE, NUM_PREFIX_RE
     src = C.label("notation.source")
     paren = [t for t in src if t in C.SOURCE_PAREN_TOKENS or t not in C.LABEL_DEFAULTS["notation"]["source"]]
     CAPTION_RE = re.compile(rf"^[<＜]\s*(?:{_alt(C.label('notation.table'))})\s*[^>＞]*[>＞]\s*(.*)$")
@@ -69,6 +76,8 @@ def compile_notation():
     COL_WIDTH_RE = re.compile(rf"^\(\s*(?:{_alt(C.label('notation.colwidth'))})\s*[:：]\s*(.*)\)$")
     SOURCE_RE = re.compile(rf"^(?:[(（]\s*(?:{_alt(paren)})\s*[)）]|(?:{_alt(src)})\s*[:：])")
     SOURCE_PAREN_RE = re.compile(rf"^[(（]\s*({_alt(paren)})\s*[)）]\s*")
+    # label of a source row: a source token (the parenthesized form becomes 'token:' when parsed) or the note mark of a note line in a source row
+    SOURCE_LABEL_RE = re.compile(rf"^((?:{_alt(src)})\s*[:：]|[※*])\s*")
     extra = [_format_re(C.label(f"formats.{lv}").split("{t}")[0], dict.fromkeys(("n", "c", "s", "ss"), r"\d+"))
              for lv in ("chapter", "section", "subsection") if C.label(f"formats.{lv}") is not None]
     if C.label("letters") != C.LABEL_DEFAULTS["letters"]:
@@ -107,6 +116,9 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             continue
         if stripped == "---":
             elems.append(Element("pagebreak"))
+            continue
+        if m := ADJUST_RE.match(stripped):
+            elems.append(Element("adjust", m.group(2) or "", data={"mode": ADJUST_MODES.get(m.group(1), "next")}))
             continue
         if m := HEADING_RE.match(stripped):
             elems.append(Element("heading", m.group(2).strip(), len(m.group(1))))
@@ -183,7 +195,86 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))   # a plain paragraph without a symbol is a ○ statement
-    return elems, footnotes
+    return resolve_adjust(elems), footnotes
+
+
+ADJUST_ISSUES: list[str] = []   # adjust directive problems of the last parse_markdown. lint prints them too
+
+
+def parse_adjust(text: str) -> dict[str, int] | None:
+    """Values of an adjust directive. Width, spacing and line spacing are %p added to the style values. None if unknown text remains"""
+    found = {ADJUST_KEYS[re.sub(r"\s+", "", k)]: int(v) for k, v in ADJUST_ITEM_RE.findall(text)}
+    rest = ADJUST_ITEM_RE.sub("", text).replace(",", "").replace("，", "").strip()
+    return found if found and not rest else None
+
+
+def resolve_adjust(elems: list[Element]) -> list[Element]:
+    """Remove adjust directive lines and record their values in data["adjust"] of the target elements.
+    A single directive applies to the next target element; a start/end pair applies to every target element between them. A single directive wins where both apply"""
+    ADJUST_ISSUES.clear()
+    out, pending, active = [], None, None
+    for e in elems:
+        if e.kind != "adjust":
+            if e.kind in ADJUST_TARGETS and (active or pending):
+                e.data["adjust"] = {**(active or {}), **(pending or {})}
+                pending = None
+            out.append(e)
+            continue
+        if e.data["mode"] == "end":
+            if active is None:
+                ADJUST_ISSUES.append(msg("lint_adjust_end_alone"))
+            active = None
+            continue
+        values = parse_adjust(e.text)
+        if values is None:
+            ADJUST_ISSUES.append(msg("lint_adjust_bad", text=e.text[:30]))
+        elif e.data["mode"] == "start":
+            if active is not None:
+                ADJUST_ISSUES.append(msg("lint_adjust_nested", text=e.text[:30]))
+            active = values
+        else:
+            pending = {**(pending or {}), **values}
+    if pending:
+        ADJUST_ISSUES.append(msg("lint_adjust_no_target"))
+    if active:
+        ADJUST_ISSUES.append(msg("lint_adjust_unclosed"))
+    return out
+
+
+def gate_adjust(elems: list[Element], chars: bool, lines: bool) -> list[str]:
+    """Remove adjustment values that the build options do not allow, and return output lines for the applied count and the conservative range.
+    Width, spacing and line spacing are OFF by default, so only the adjustments chosen in the plan reach the document"""
+    allowed = {"chars": chars, "lines": lines}
+    off = {k: 0 for k in allowed}
+    applied, large = {k: 0 for k in allowed}, 0
+    for e in elems:
+        adj = e.data.get("adjust")
+        if not adj:
+            continue
+        for kind, keys in C.ADJUST_OPTION_KEYS.items():
+            if any(k in adj for k in keys):
+                if allowed[kind]:
+                    applied[kind] += 1
+                else:
+                    off[kind] += 1
+                    for k in keys:
+                        adj.pop(k, None)
+        large += any(abs(v) > C.ADJUST_WARN[k] for k, v in adj.items())
+        if not adj:
+            del e.data["adjust"]
+    out = [msg(f"warn_adjust_off_{kind}", n=n) for kind, n in off.items() if n]
+    if large:
+        out.append(msg("warn_adjust_large", n=large, **C.ADJUST_WARN))
+    total = sum(1 for e in elems if e.data.get("adjust"))
+    if total:
+        out.append(msg("info_adjust", n=total, chars=applied["chars"], lines=applied["lines"]))
+    return out
+
+
+def adjusted(base: float, delta: int, key: str) -> int:
+    """Add the adjustment to the style value and clip it to the range Hangul allows"""
+    low, high = C.ADJUST_RANGE[key]
+    return int(min(max(base + delta, low), high))
 
 
 def _opens_table(line: str) -> bool:
@@ -268,7 +359,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
             issues.append(msg("lint_no_caption"))
         if e.kind == "colwidth":   # a column width line not absorbed by a table is not used in typesetting
             issues.append(msg("lint_colwidth_alone", text=e.text[:30]))
-    return issues + _lint_attached(elems, footnotes or {})
+    return issues + ADJUST_ISSUES + _lint_attached(elems, footnotes or {})
 
 
 def _lint_attached(elems: list[Element], footnotes: dict) -> list[str]:
@@ -356,6 +447,94 @@ def text_units(text: str, space_em: float = C.SPACE_EM_HWPX, ratio: float = 100,
 def weighted_len(text: str, space_em: float = C.SPACE_EM_HWPX, ratio: float = 100, spacing: float = 0) -> int:
     """Rounded-up sum of character widths. Used for checks where text must not overflow, such as line counts and alignment"""
     return math.ceil(round(text_units(text, space_em, ratio, spacing), 6))   # round first so accumulated decimal error does not push the result up by 1
+
+
+# ── Source row layout ────────────────────────────────────────────────────
+SOURCE_BREAK_RE = re.compile(r"<br\s*/?>", re.I)   # line-break notation in source lines
+SOURCE_ITEM_RE = re.compile(r";\s+")              # boundary between sources (semicolon followed by a space)
+
+
+def source_text_inline(text: str) -> str:
+    """Remove the line-break notation of a source line and join it into one line. Used for source lines moved into footnotes or body paragraphs"""
+    parts = [p.strip() for p in SOURCE_BREAK_RE.split(text) if p.strip()]
+    return " ".join(_end_items(parts))
+
+
+def _end_items(items: list[str]) -> list[str]:
+    """End every source but the last with a semicolon. Line breaks and inline joining share the separator, so switching layouts keeps the notation"""
+    return [t if i == len(items) - 1 or t.endswith((";", "；")) else t + ";" for i, t in enumerate(items)]
+
+
+def source_row_lines(text: str, layout: str) -> tuple[str, list[str]] | None:
+    """Label and output lines of one source row. None without a label.
+    layout is one of C.SOURCE_LAYOUTS. auto breaks only at <br> in the manuscript, break puts each source on its own line, inline joins them into one line.
+    A ※ note line is a sentence and is not split at semicolons"""
+    m = SOURCE_LABEL_RE.match(text)
+    if m is None:
+        return None
+    label, body = m.group(1).strip(), text[m.end():]
+    parts = [p.strip() for p in SOURCE_BREAK_RE.split(body) if p.strip()]
+    if layout == "break" and label not in C.SOURCE_MARKS:
+        parts = [q.strip() for p in parts for q in SOURCE_ITEM_RE.split(p) if q.strip()]
+    parts = _end_items(parts)
+    if layout == "inline" or not parts:
+        return label, [" ".join(parts)]
+    return label, parts
+
+
+def char_slot(ch: str) -> str:
+    """Hangul font slot (form.LANGS). Characters outside Hangul, Latin, Hanja and kana count as the symbol slot"""
+    cp = ord(ch)
+    if 0xAC00 <= cp <= 0xD7A3 or 0x1100 <= cp <= 0x11FF or 0x3130 <= cp <= 0x318F:
+        return "hangul"
+    if cp < 0x0250:
+        return "latin"
+    if 0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF:
+        return "hanja"
+    if 0x3040 <= cp <= 0x30FF:
+        return "japanese"
+    return "symbol"
+
+
+@dataclass(frozen=True)
+class GlyphStyle:
+    """Fonts, width (%), spacing (%) and relative size (%) per slot, and the font size (HWPUNIT) of a character shape. Used to measure source labels.
+    When space_em is None a space uses the font's space width (Word, and Hangul shapes that use the font space)"""
+    size_hu: float
+    faces: dict
+    ratios: dict
+    spacings: dict
+    rel_sizes: dict
+    space_em: float | None = None
+
+
+def text_width_hu(text: str, gs: GlyphStyle) -> tuple[float, set[str]]:
+    """Width (HWPUNIT) of text printed with shape gs, and the names of fonts that had to be estimated.
+    Widths come from the installed font file, then the review substitute font, then the NanumGothic width table"""
+    import render   # font file lookup. Imported lazily so commands that only parse manuscripts do not load the renderer module
+    total, guessed = 0.0, set()
+    for ch in text:
+        slot = "hangul" if ch == " " and gs.space_em is not None else char_slot(ch)
+        face = gs.faces.get(slot, "")
+        size = gs.size_hu * gs.rel_sizes.get(slot, 100) / 100
+        if ch == " " and gs.space_em is not None:
+            em = gs.space_em
+        else:
+            em = render.glyph_em(face, ch)
+            if em is None:
+                guessed.add(face)
+                wide = unicodedata.east_asian_width(ch) in ("W", "F")
+                em = 1.0 if wide else C.GLYPH_EM.get(ch, C.SPACE_EM_HWPX)
+        total += size * (em * gs.ratios.get(slot, 100) + gs.spacings.get(slot, 0)) / 100
+    return total, guessed
+
+
+def label_hang_hu(label: str, gs: GlyphStyle) -> tuple[int, float, set[str]]:
+    """Hanging width after a source label, the label width, and estimated fonts. The hanging width is the label plus one space.
+    The editor sends the tab after the label to this position, so a width error shows only in the gap after the label and the lines stay aligned"""
+    label_w, guessed = text_width_hu(label, gs)
+    space_w, guessed_space = text_width_hu(" ", gs)
+    return math.ceil(label_w + space_w), label_w, guessed | guessed_space
 
 
 def pad_rows(rows: list[list[str]]) -> list[list[str]]:

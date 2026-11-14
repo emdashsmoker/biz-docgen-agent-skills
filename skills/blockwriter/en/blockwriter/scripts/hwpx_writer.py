@@ -19,7 +19,7 @@ import config as C
 import manuscript as M
 import toc_refs
 from config import msg
-from form import FORMS
+from form import FORMS, LANGS
 from hwpx_form import write_skeleton
 
 HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
@@ -101,6 +101,8 @@ class Builder(M.TocMarks):
         self.header_spec = None
         self.merge_mode = "auto"
         self.long_table_mode = "engine"
+        self.source_layout = C.DEFAULT_SOURCE_LAYOUT
+        self.guessed_fonts: set[str] = set()   # fonts whose source label width was estimated without the font file
         self.notes = M.NoteRegistry(None)   # source footnote merging (build --footnote-merge)
 
     def _manual_symbols(self) -> dict[str, str]:
@@ -519,6 +521,59 @@ class Builder(M.TocMarks):
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
+    def _source_row(self, t, ri: int, ncol: int, text: str):
+        """Source row. A tab follows the label and the paragraph hangs by the label width, so lines after the first align with the text after the label.
+        Multiple sources are split by line breaks and each line starts at the hanging position. A line without a label stays an ordinary source row"""
+        parsed = M.source_row_lines(text, self.source_layout)
+        if parsed is None:
+            self._transparent_row(t, ri, ncol, M.source_text_inline(text), "source", "LEFT")
+            return
+        label, lines = parsed
+        self._transparent_row(t, ri, ncol, label, "source", "LEFT")
+        u = self.refs("source")
+        pp, tab_w = self._source_pp(str(u["para_pr_id_ref"]), str(u["char_pr_id_ref"]), label)
+        pe = next(t.cell(ri, 0).element.iter(f"{HP}p"))
+        pe.set("paraPrIDRef", pp)
+        tnode = next(pe.iter(f"{HP}t"))
+        # Hangul recalculates the tab width from the paragraph shape. The saved value is for approximate renderers
+        node = ET.SubElement(tnode, f"{HP}tab", width=str(tab_w), leader="0", type="1")
+        node.tail = lines[0]
+        for line in lines[1:]:
+            node = ET.SubElement(tnode, f"{HP}lineBreak")
+            node.tail = line
+
+    def _glyph_style(self, cp_id: str) -> M.GlyphStyle:
+        """Font name, width, spacing and relative size per slot of a character shape. A space is half the font size when the shape does not use the font's space width"""
+        cp = self.header.element.find(f".//{HH}charPr[@id='{cp_id}']")
+        faces = {}
+        ref = cp.find(f"{HH}fontRef")
+        for lang in LANGS:
+            node = self.header.element.find(f".//{HH}fontface[@lang='{lang.upper()}']/{HH}font[@id='{ref.get(lang, '0')}']")
+            faces[lang] = node.get("face") if node is not None else ""
+
+        def per_lang(tag: str, default: int) -> dict:
+            node = cp.find(f"{HH}{tag}")
+            return {lang: int(node.get(lang, default)) if node is not None else default for lang in LANGS}
+        space = None if cp.get("useFontSpace") == "1" else C.SPACE_EM_HWPX
+        return M.GlyphStyle(int(cp.get("height")), faces, per_lang("ratio", 100), per_lang("spacing", 0),
+                            per_lang("relSz", 100), space)
+
+    def _source_pp(self, base_pp: str, cp: str, label: str) -> tuple[str, int]:
+        """Paragraph shape of a source row and the width of the tab after the label. The hanging width is the label width plus one space, measured with the source character shape's fonts.
+        The automatic hanging tab sends the first-line tab to the hanging position. No width is hard-coded, so user form fonts and labels fit too"""
+        hang, label_w, guessed = M.label_hang_hu(label, self._glyph_style(cp))
+        self.guessed_fonts |= guessed
+        key = (base_pp, "SOURCE", hang)
+        if key not in self._pp_cache:
+            tab = self.header.ensure_tab_definition(auto_tab_left=True)
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=self._aligned_pp(base_pp, "LEFT"),
+                                                     margins={"intent": -hang}, tab_pr_id_ref=tab)
+            legacy = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HP}default/{HH}margin/{HC}intent")
+            if legacy is not None:   # the value saved for older Hangul is twice the new value (same rule as form generation)
+                legacy.set("value", str(-2 * hang))
+            self._pp_cache[key] = pp
+        return self._pp_cache[key], max(round(hang - label_w), 1)
+
     def _cell_font(self) -> M.CellFont:
         """Line styles of table cells (for column widths and row line counts)"""
         bullet = self._line_style("table_cell_bullet") if self.p.get("table_cell_bullet") else None
@@ -635,7 +690,7 @@ class Builder(M.TocMarks):
         if unit:
             self._transparent_row(t, 0, ncol, unit, "unit", "RIGHT")
         for k, src in enumerate(sources):   # source row: transparent merged cell below the table, left-aligned
-            self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
+            self._source_row(t, head + nrow + k, ncol, src)
         total_h = 0
         line_counts = M.row_line_counts(rows, widths, font, plan["vspans"], hdr)
         for ri, row in enumerate(rows):
@@ -735,7 +790,7 @@ class Builder(M.TocMarks):
                 self.attach_caption(pic, "PICTURE", e.text, "BOTTOM", w_hu)
             self._mark_pending_caption()
             for src in sources:
-                self.para("source", src)
+                self.para("source", M.source_text_inline(src))
             return
         # put the figure in a transparent one-column table and set the table's numbering type to figure. The inner picture is excluded from numbering
         t = self.doc.add_table(1 + len(sources), 1, width=table_w, **r, **self._take_break())
@@ -759,7 +814,7 @@ class Builder(M.TocMarks):
             cm.set("right", str(C.CELL_MARGIN_LR))
         cell.set_size(height=h_hu + 2 * C.ROW_LINE_H)
         for k, src in enumerate(sources):
-            self._transparent_row(t, 1 + k, 1, src, "source", "LEFT")
+            self._source_row(t, 1 + k, 1, src)
         t.element.set("numberingType", "PICTURE")
         pos = t.element.find(f"{HP}pos")
         if pos is not None:
@@ -778,27 +833,13 @@ class Builder(M.TocMarks):
         if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
             print(msg("warn_no_toc_style"))
             self.toc = False
+        body = self.doc.sections[-1].element
         for e in M.attach_block_notes(elems):
             self.notes.enter(e.kind, e.level)
-            if e.kind == "heading":
-                self.heading(e.level, e.text)
-                self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
-            elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
-                self.last_cp = str(self.refs(e.kind)["char_pr_id_ref"])
-            elif e.kind == "unit":
-                self.para("unit", e.text)
-            elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
-                if self.last_para is not None:
-                    self._add_footnote(self.last_para, e.text, self.last_cp)
-                else:
-                    self.para("note", e.text, footnotes)
-            elif e.kind == "table":
-                self.table(e)
-            elif e.kind == "image":
-                self.image(e)
-            elif e.kind == "pagebreak":
-                self.pending_break = True
+            start = len(body)
+            self._dispatch(e, footnotes)
+            if e.data.get("adjust"):   # adjust directive: applies to the paragraphs this element made (cell paragraphs for tables and figures)
+                self._apply_adjust(body[start:], e.data["adjust"])
         if self.toc or self.cover:
             self._front_matter(self.cover)
         self.set_page_number(self.page_number)
@@ -812,6 +853,66 @@ class Builder(M.TocMarks):
                 print("   ", it)
         save_hwpx(self.doc, out)
         self.doc.close()
+
+    def _dispatch(self, e: M.Element, footnotes: dict):
+        """Typeset one manuscript element"""
+        if e.kind == "heading":
+            self.heading(e.level, e.text)
+            self.last_para = None   # cut the link so a source line after a heading does not become a footnote of the previous section's paragraph
+        elif e.kind in ("square", "circle", "dash", "dot", "note"):
+            self.last_para = self.para(e.kind, e.text, footnotes)
+            self.last_cp = str(self.refs(e.kind)["char_pr_id_ref"])
+        elif e.kind == "unit":
+            self.para("unit", e.text)
+        elif e.kind == "source":   # a source line not attached to a table or figure becomes a footnote of the previous paragraph
+            if self.last_para is not None:
+                self._add_footnote(self.last_para, M.source_text_inline(e.text), self.last_cp)
+            else:
+                self.para("note", M.source_text_inline(e.text), footnotes)
+        elif e.kind == "table":
+            self.table(e)
+        elif e.kind == "image":
+            self.image(e)
+        elif e.kind == "pagebreak":
+            self.pending_break = True
+
+    def _apply_adjust(self, nodes: list, adj: dict):
+        """Apply an adjust directive to paragraphs. Width and spacing go to the run character shapes and line spacing to the paragraph shape, as changes from the style values.
+        Captions and footnote bodies are left out"""
+        for node in nodes:
+            for pe in node.iter(f"{HP}p"):
+                if any(a.tag in (f"{HP}caption", f"{HP}footNote", f"{HP}endNote") for a in pe.iterancestors()):
+                    continue
+                if "line" in adj:
+                    pe.set("paraPrIDRef", self._line_pp(pe.get("paraPrIDRef"), adj["line"]))
+                if "ratio" in adj or "spacing" in adj:
+                    for run in pe.findall(f"{HP}run"):
+                        run.set("charPrIDRef", self._adjusted_cp(run.get("charPrIDRef"), adj.get("ratio", 0), adj.get("spacing", 0)))
+
+    def _adjusted_cp(self, cp: str, d_ratio: int, d_spacing: int) -> str:
+        """Character shape with the adjustment added to the width and spacing of every slot"""
+        key = (cp, "ADJUST", d_ratio, d_spacing)
+        if key not in self._pp_cache:
+            def modify(el):
+                for tag, delta, k in (("ratio", d_ratio, "ratio"), ("spacing", d_spacing, "spacing")):
+                    node = el.find(f"{HH}{tag}")
+                    if node is not None and delta:
+                        for lang in LANGS:
+                            node.set(lang, str(M.adjusted(int(node.get(lang, 100 if k == "ratio" else 0)), delta, k)))
+            self._pp_cache[key] = self.header.ensure_char_property(base_char_pr_id=cp, modifier=modify).get("id")
+        return self._pp_cache[key]
+
+    def _line_pp(self, pp: str, delta: int) -> str:
+        """Paragraph shape with the adjustment added to its line spacing (% of the font size). Line spacing that is not a percentage stays as is"""
+        key = (pp, "LINE", delta)
+        if key not in self._pp_cache:
+            node = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HH}lineSpacing")
+            if node is None or node.get("type", "PERCENT") != "PERCENT":
+                self._pp_cache[key] = pp
+            else:
+                value = M.adjusted(int(node.get("value")), delta, "line")
+                self._pp_cache[key] = self.header.ensure_paragraph_format(base_para_pr_id=pp, line_spacing_percent=value)
+        return self._pp_cache[key]
 
 
 def crossref_begin(field_id: str, command: str, ref_path: str, ref_type: str, content_type: str):
@@ -927,11 +1028,14 @@ def _build_hwpx(a, elems, footnotes, out: str, workdir: str):
     b.header_spec = a.header
     b.merge_mode = a.merge
     b.long_table_mode = a.long_table
+    b.source_layout = a.source_layout
     b.notes = M.NoteRegistry(a.footnote_merge)
     b.build(elems, footnotes, out)
     fixed = repair_manifest(out)
     if fixed:
         print(msg("manifest_fixed", n=fixed))
+    if b.guessed_fonts:
+        print(msg("info_label_font_guess", faces=", ".join(sorted(f for f in b.guessed_fonts if f) or ["?"])))
     refs = sum(1 for _, _, name in b.toc_items if name)
     if refs:   # Hangul recalculates page references when it loads the document, so the stored value stays a placeholder
         print(msg("toc_hwpx", n=len(b.toc_items), refs=refs, mark=toc_refs.PLACEHOLDER))

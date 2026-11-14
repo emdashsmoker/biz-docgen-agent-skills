@@ -51,6 +51,8 @@ def cmd_build(a):
     # HITL은 유저가 고르는 조판 선택지. 옵션으로 이미 고른 항목은 알리지 않음
     for notice in M.hitl_notices(elems, ask_page_break=a.page_break is None, ask_long_table=a.long_table is None):
         print("HITL:", notice)
+    for line in M.gate_adjust(elems, a.adjust_chars, a.adjust_lines):   # 기본 OFF인 조정은 옵션을 지정한 경우에만 반영
+        print(line)
     a.page_break = a.page_break or C.DEFAULT_PAGE_BREAK
     a.long_table = a.long_table or C.DEFAULT_LONG_TABLE
     if a.toc_scope and not a.toc:
@@ -208,6 +210,13 @@ def main():
     b.add_argument("--footnote-merge", choices=list(C.NOTE_MERGE_SCOPES),
                    help="출처 각주 통합 (기본 OFF): 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
                         "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")
+    b.add_argument("--source-layout", choices=list(C.SOURCE_LAYOUTS), default=C.DEFAULT_SOURCE_LAYOUT,
+                   help="표와 그림의 다중 출처 배치: auto=원고의 <br> 위치에서 줄바꿈(기본), break=출처마다 줄바꿈, "
+                        "inline=한 줄로 이어쓰기. 둘째 줄부터 라벨 뒤 글자에 맞춤")
+    b.add_argument("--adjust-chars", action="store_true",
+                   help="원고의 '(조정: 장평 N, 자간 N)' 지시 적용 (기본 OFF). 값은 스타일 장평과 자간에 더하는 %%p")
+    b.add_argument("--adjust-lines", action="store_true",
+                   help="원고의 '(조정: 줄 간격 N)' 지시 적용 (기본 OFF). 값은 스타일 줄 간격에 더하는 %%p")
     b.add_argument("--toc", action="store_true",
                    help="문서 앞에 목차 삽입 (기본 OFF). --page-number와 함께 켜면 수록 항목마다 책갈피를 붙이고 쪽번호를 쪽 참조 필드로 기록")
     b.add_argument("--toc-scope", help=f"목차 수록 범위 (쉼표 구분, 기본 {','.join(C.TOC_SCOPE_DEFAULT)}). "
