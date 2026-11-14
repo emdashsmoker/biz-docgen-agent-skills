@@ -558,8 +558,8 @@ class Builder(M.TocMarks):
         no_border = self._border_fill([])
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
-        label, body = M.source_label(text) if role == "source" and "\n" in text else ("", text)
-        if label:   # 줄을 나눈 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤
+        label, body = M.source_label(text) if role == "source" else ("", text)
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
             text = f"{label}\t{body}"
             pp = self._hanging_pp(pp, self._line_style(role).label_hang_hu(label, C.SPACE_EM_HWPX))
         t.set_cell_text(ri, 0, text)

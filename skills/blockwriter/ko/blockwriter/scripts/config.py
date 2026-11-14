@@ -46,7 +46,7 @@ SOURCE_PAREN_TOKENS = ("출처", "자료")
 SOURCE_SEP = ";"
 SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=원고에 쓴 줄 그대로, break=출처마다 줄 나눔, inline=한 줄로 이음
 DEFAULT_SOURCE_LAYOUT = "auto"
-SOURCE_LABEL_GAP_EM = 0.5       # 줄을 나눈 출처 행에서 출처 표기와 첫 출처 사이의 간격 (글자 크기 배수)
+SOURCE_LABEL_GAP_EM = 0.5       # 출처 행에서 출처 표기와 첫 출처 사이의 간격 (글자 크기 배수)
 # 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}

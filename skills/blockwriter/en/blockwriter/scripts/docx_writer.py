@@ -669,8 +669,8 @@ class DocxBuilder(M.TocMarks):
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val=self.style_ids[role])
         sub(ppr, "w:keepNext")
-        label, body = M.source_label(text) if role == "source" and "\n" in text else ("", text)
-        if label:   # broken source row: a tab and a hanging indent align the second and later lines with the start of the first source
+        label, body = M.source_label(text) if role == "source" else ("", text)
+        if label:   # source row that starts with a source label: a tab and a hanging indent align the second and later lines (forced breaks and wrapped lines) with the start of the first source
             style = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
             hang = tw(style.label_hang_hu(label, C.SPACE_EM_DOCX))
             sub(ppr, "w:ind", w__left=tw(st.para.margin[1]) + hang, w__hanging=hang)

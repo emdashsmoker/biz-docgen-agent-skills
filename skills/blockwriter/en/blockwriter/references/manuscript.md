@@ -107,7 +107,7 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - (Source line) A line starting with `출처:`, `자료:`, `주:`, `(출처)`, or `(자료)`. `(출처)` and `(자료)` are printed as `출처:` and `자료:`. Tokens added by a label file work as `token:` and `(token)` (`(Source)` prints as `Source:`)
 - (Several sources) When one table or figure has two or more sources, write the source label once and separate the sources with `;`. Choose between line breaks and joining
     - (Line breaks) End a source with `;` and write the next source on the next line. build breaks the lines inside the source row and aligns the second and later lines with the start of the first source
-    - (Joining) Write all sources on one line, separated by `; `
+    - (Joining) Write all sources on one line, separated by `; `. A line that wraps at the row width starts where the first source starts
     - (Line break example) Write a `자료: Agency(year), Title;` line, then an `Agency(year), Title;` line, then an `Agency(year), Title` line. The last source has no `;`
     - (Continued lines) After a source line that ends with `;`, a blank line or a line that starts with another manuscript notation (heading, bullet, table, figure, caption, unit, ※ and so on) is not read as a continuation
 - (Choosing the arrangement) When the user chose automatic in step 1, decide the arrangement for each table and figure by the criteria below. The aim is a source row that looks right next to its table or figure

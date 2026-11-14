@@ -615,7 +615,7 @@ class LineStyle:
         return dataclasses.replace(self, ratio=fit_value("ratio", self.ratio, fit), spacing=fit_value("spacing", self.spacing, fit))
 
     def label_hang_hu(self, label: str, space_em: float) -> int:
-        """Hanging indent width: the source label width plus the gap after it (HWPUNIT). It aligns the second line of a broken source row with the start of the first source.
+        """Hanging indent width: the source label width plus the gap after it (HWPUNIT). It aligns the second line of a source row with the start of the first source.
         A tab puts the first source at the same position, so the gap after the label absorbs glyph width differences between fonts"""
         return math.ceil(self.text_hu(label, space_em) - self.lead_hu + self.size_hu * C.SOURCE_LABEL_GAP_EM)
 

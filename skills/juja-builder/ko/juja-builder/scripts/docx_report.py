@@ -570,7 +570,7 @@ class DocxBuilder(lib.TocMarks):
         label, body = lib.source_label(text) if role == "source" else ("", text)
         p = self._cell_para(cell, f"{label}\t{body}" if label else text, role, align)
         row = self._row(role)
-        if label:   # 줄을 나눈 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
             hang = tw(lib.label_hang_hu(label, row[3] * 100))
             p.paragraph_format.left_indent = Twips(tw(row[6]) + hang)
             p.paragraph_format.first_line_indent = Twips(-hang)

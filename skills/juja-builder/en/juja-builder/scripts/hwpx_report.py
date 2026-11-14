@@ -170,7 +170,7 @@ SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(SOURCE_SEP)})\s+")   # spaces and
 # Glyph widths for the upper bound of a source label width (multiple of the font size). Hangul and Hanja are full width, others half width
 FULLWIDTH_EM = 1.0
 HALFWIDTH_EM = 0.5
-SOURCE_LABEL_GAP_EM = 0.25      # gap added to the upper bound of the source label width in a broken source row (multiple of the font size)
+SOURCE_LABEL_GAP_EM = 0.25      # gap added to the upper bound of the source label width in a source row (multiple of the font size)
 # Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
 FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
 DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # parenthesized directive line ((단위: ), (폭: ), (장표: ), (삽입: ) and so on): one pair of parentheses around the whole line with a colon inside
@@ -463,13 +463,13 @@ def source_text(text: str, layout: str) -> str:
 
 
 def source_label(text: str) -> tuple[str, str]:
-    """Splits a broken source row text into the source label ('자료:') and the text after it. A one-line text or a text without a label returns an empty label"""
+    """Splits a source row text into the source label ('자료:') and the text after it. A text without a label returns an empty label"""
     m = SOURCE_RE.match(text)
-    return (m.group(0), text[m.end():].lstrip(" ")) if m and "\n" in text else ("", text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m else ("", text)
 
 
 def label_hang_hu(label: str, size_hu: float, ratio: float = 100, spacing: float = 0) -> int:
-    """Hanging indent width: the upper bound of the source label width plus a gap (HWPUNIT). It aligns the second line of a broken source row with the start of the first source.
+    """Hanging indent width: the upper bound of the source label width plus a gap (HWPUNIT). It aligns the second line of a source row with the start of the first source.
     A tab puts the first source at the same position, so the gap after the label absorbs glyph width differences between fonts"""
     em = sum(FULLWIDTH_EM if _weighted_len(ch) == 2 else HALFWIDTH_EM for ch in label)
     return math.ceil(size_hu * (em * ratio + len(label) * spacing) / 100 + size_hu * SOURCE_LABEL_GAP_EM)
@@ -1557,7 +1557,7 @@ class Builder(TocMarks):
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
         label, body = source_label(text) if role == "source" else ("", text)
-        if label:   # broken source row: a tab and a hanging indent align the second and later lines with the start of the first source
+        if label:   # source row that starts with a source label: a tab and a hanging indent align the second and later lines (forced breaks and wrapped lines) with the start of the first source
             text = f"{label}\t{body}"
             pp = self._hanging_pp(pp, label_hang_hu(label, *self._char_metrics(u["char_pr_id_ref"])))
         t.set_cell_text(ri, 0, text)

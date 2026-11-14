@@ -615,7 +615,7 @@ class LineStyle:
         return dataclasses.replace(self, ratio=fit_value("ratio", self.ratio, fit), spacing=fit_value("spacing", self.spacing, fit))
 
     def label_hang_hu(self, label: str, space_em: float) -> int:
-        """출처 표기 폭에 표기 뒤 간격을 더한 내어쓰기 폭 (HWPUNIT). 줄을 나눈 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
+        """출처 표기 폭에 표기 뒤 간격을 더한 내어쓰기 폭 (HWPUNIT). 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
         첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 표기 뒤 간격이 받아 낸다"""
         return math.ceil(self.text_hu(label, space_em) - self.lead_hu + self.size_hu * C.SOURCE_LABEL_GAP_EM)
 

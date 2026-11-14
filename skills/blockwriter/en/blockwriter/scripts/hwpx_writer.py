@@ -558,8 +558,8 @@ class Builder(M.TocMarks):
         no_border = self._border_fill([])
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
-        label, body = M.source_label(text) if role == "source" and "\n" in text else ("", text)
-        if label:   # broken source row: a tab and a hanging indent align the second and later lines with the start of the first source
+        label, body = M.source_label(text) if role == "source" else ("", text)
+        if label:   # source row that starts with a source label: a tab and a hanging indent align the second and later lines (forced breaks and wrapped lines) with the start of the first source
             text = f"{label}\t{body}"
             pp = self._hanging_pp(pp, self._line_style(role).label_hang_hu(label, C.SPACE_EM_HWPX))
         t.set_cell_text(ri, 0, text)

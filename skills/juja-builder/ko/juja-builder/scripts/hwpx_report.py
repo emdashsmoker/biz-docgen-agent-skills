@@ -176,7 +176,7 @@ SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(SOURCE_SEP)})\s+")   # 출처 구
 # 출처 표기 폭의 상한 계산에 쓰는 글자 폭 (글자 크기 배수). 한글과 한자는 전각, 그 밖은 반각
 FULLWIDTH_EM = 1.0
 HALFWIDTH_EM = 0.5
-SOURCE_LABEL_GAP_EM = 0.25      # 줄을 나눈 출처 행에서 출처 표기 폭의 상한에 더하는 간격 (글자 크기 배수)
+SOURCE_LABEL_GAP_EM = 0.25      # 출처 행에서 출처 표기 폭의 상한에 더하는 간격 (글자 크기 배수)
 # 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
 FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
 DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # 괄호 지시 줄 ((단위: ), (폭: ), (장표: ), (삽입: ) 등). 괄호 한 쌍이 줄 전체를 감싸고 안에 쌍점이 있는 줄
@@ -469,13 +469,13 @@ def source_text(text: str, layout: str) -> str:
 
 
 def source_label(text: str) -> tuple[str, str]:
-    """줄을 나눈 출처 행 문구를 출처 표기('자료:')와 뒤 문구로 나눈다. 한 줄 문구와 출처 표기가 없는 문구는 표기를 빈 문자열로 돌려준다"""
+    """출처 행 문구를 출처 표기('자료:')와 뒤 문구로 나눈다. 출처 표기가 없는 문구는 표기를 빈 문자열로 돌려준다"""
     m = SOURCE_RE.match(text)
-    return (m.group(0), text[m.end():].lstrip(" ")) if m and "\n" in text else ("", text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m else ("", text)
 
 
 def label_hang_hu(label: str, size_hu: float, ratio: float = 100, spacing: float = 0) -> int:
-    """출처 표기 폭의 상한에 간격을 더한 내어쓰기 폭 (HWPUNIT). 줄을 나눈 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
+    """출처 표기 폭의 상한에 간격을 더한 내어쓰기 폭 (HWPUNIT). 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
     첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 출처 표기 뒤 간격이 받아 낸다"""
     em = sum(FULLWIDTH_EM if _weighted_len(ch) == 2 else HALFWIDTH_EM for ch in label)
     return math.ceil(size_hu * (em * ratio + len(label) * spacing) / 100 + size_hu * SOURCE_LABEL_GAP_EM)
@@ -1561,7 +1561,7 @@ class Builder(TocMarks):
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
         label, body = source_label(text) if role == "source" else ("", text)
-        if label:   # 줄을 나눈 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
             text = f"{label}\t{body}"
             pp = self._hanging_pp(pp, label_hang_hu(label, *self._char_metrics(u["char_pr_id_ref"])))
         t.set_cell_text(ri, 0, text)

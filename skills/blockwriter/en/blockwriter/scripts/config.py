@@ -46,7 +46,7 @@ SOURCE_PAREN_TOKENS = ("출처", "자료")
 SOURCE_SEP = ";"
 SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=lines as written, break=one line per source, inline=joined into one line
 DEFAULT_SOURCE_LAYOUT = "auto"
-SOURCE_LABEL_GAP_EM = 0.5       # gap between the source label and the first source in a broken source row (multiple of the font size)
+SOURCE_LABEL_GAP_EM = 0.5       # gap between the source label and the first source in a source row (multiple of the font size)
 # Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}

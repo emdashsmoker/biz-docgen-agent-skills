@@ -570,7 +570,7 @@ class DocxBuilder(lib.TocMarks):
         label, body = lib.source_label(text) if role == "source" else ("", text)
         p = self._cell_para(cell, f"{label}\t{body}" if label else text, role, align)
         row = self._row(role)
-        if label:   # broken source row: a tab and a hanging indent align the second and later lines with the start of the first source
+        if label:   # source row that starts with a source label: a tab and a hanging indent align the second and later lines (forced breaks and wrapped lines) with the start of the first source
             hang = tw(lib.label_hang_hu(label, row[3] * 100))
             p.paragraph_format.left_indent = Twips(tw(row[6]) + hang)
             p.paragraph_format.first_line_indent = Twips(-hang)

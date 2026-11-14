@@ -671,8 +671,8 @@ class DocxBuilder(M.TocMarks):
         ppr = sub(p, "w:pPr")
         sub(ppr, "w:pStyle", w__val=self.style_ids[role])
         sub(ppr, "w:keepNext")
-        label, body = M.source_label(text) if role == "source" and "\n" in text else ("", text)
-        if label:   # 줄을 나눈 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤
+        label, body = M.source_label(text) if role == "source" else ("", text)
+        if label:   # 출처 표기로 시작하는 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤 (나눈 줄과 폭을 넘어 접힌 줄 모두)
             style = M.LineStyle(st.char.size * 100, st.char.ratios[0], st.char.spacings[0])
             hang = tw(style.label_hang_hu(label, C.SPACE_EM_DOCX))
             sub(ppr, "w:ind", w__left=tw(st.para.margin[1]) + hang, w__hanging=hang)

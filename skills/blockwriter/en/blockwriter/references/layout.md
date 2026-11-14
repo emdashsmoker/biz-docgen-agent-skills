@@ -67,7 +67,7 @@ Table attachments
 
 - The unit row is a transparent merged row above the header, right-aligned. The source row is a transparent merged row below the table, left-aligned. Both are inside the table and move with it
 - Unit and source rows use dedicated 9pt styles without bullets (단위, 출처). A ※ note line attached to the source rows is printed in the source style with its ※ or * kept
-- A source row with line breaks is written as one paragraph with forced line breaks and a hanging indent. The second and later lines start where the first source starts, and so does a line that wraps at the row width
+- A source row that starts with a source label is written with a hanging indent. Lines after a line break and lines that wrap at the row width all start where the first source starts, and so does a joined source row that wraps. A line break is recorded as a forced line break inside one paragraph
     - (Hanging indent width) The width of the source label (such as `자료:`), calculated from the font size, ratio and letter spacing of the source style, plus a gap of 0.5 times the font size (SOURCE_LABEL_GAP_EM). When a user form has other source style values, the width is calculated from those values
     - (Tab) A tab after the source label puts the first source at the hanging indent position. HWPX uses the automatic tab for hanging indents and DOCX uses the default tab at the hanging indent. The first and second lines start at the same position even when fonts have different glyph widths
     - (Alignment) Written left-aligned. Justified alignment stretches the spaces of a line that ends with a forced line break
@@ -294,7 +294,7 @@ Line spacing adjustment
 - If automatic merging looks odd, switch to `--merge explicit` and merge only where needed with `^` and `<`. Whether a merge fits differs from table to table, so judge it in the free review
 - A long-text cell wrapping to 2 lines and a line break in the middle of a word (for example `대한민` and `국` on different lines) are normal placement and do not count as defects. They are not a reason to add a column width line either
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
-- For a source row with line breaks, check that the second and later lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
+- For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
 - Check the page fill of two facing pages (Page fill section)
 - For paragraphs and tables with a typesetting adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters (Typesetting adjustment section)
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
