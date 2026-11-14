@@ -400,7 +400,7 @@ class DocxBuilder(lib.TocMarks):
 
     def _note_crossref(self, p, fid: int, ref_run):
         """각주 번호 상호참조(Word NOTEREF 필드). 첫 각주의 참조 run을 책갈피로 감싸고 그 책갈피를 가리킴
-        번호는 저장값이며 Word가 필드를 갱신할 때 다시 매김. 각주는 문서 전체 연속 번호라 순번이 곧 번호"""
+        번호는 저장값이며 Word가 필드를 갱신할 때 다시 매김. 각주 번호는 문서 전체에서 이어지므로 순번과 같음"""
         name = f"{NOTE_BOOKMARK_PREFIX}{fid}"
         if ref_run.getprevious() is None or ref_run.getprevious().tag != qn("w:bookmarkStart"):
             ref_run.addprevious(_w("bookmarkStart", id=fid, name=name))   # 각주 순번이 id. 목차 책갈피는 TOC_BOOKMARK_ID_BASE부터

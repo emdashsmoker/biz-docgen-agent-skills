@@ -1,2 +1,2 @@
 e56c9641b5161ac90f45c9e40cfd2a950b2a8f4fde01c403b14f47e88e72cb9d  blockwriter-en.skill
-ad24fd368fe758104642418532933d5c6bc553e66d739529eda12ce8cc54dd81  blockwriter-ko.skill
+c8e9e7df20a9a307e922f7c8c2efcfd13d7deb8d783f2cbf3bc2330a746ad845  blockwriter-ko.skill

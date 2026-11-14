@@ -16,7 +16,7 @@ from lxml import etree as ET
 
 # ── 설정부 ─────────────────────────────────────────────────────────────────
 # 쪽 참조의 자리 표시 값. 한/글과 Word가 쪽번호를 계산하기 전까지 보이는 글자
-# Why 근사값을 넣지 않음: 다른 조판 엔진이 계산한 쪽은 Word와 달라 그럴듯한 틀린 숫자로 보임 (LibreOffice 값은 16건 중 11건이 Word와 달랐음)
+# Why 근사값을 넣지 않음: 다른 조판 엔진이 계산한 쪽은 Word와 달라 독자가 실제 쪽번호로 오인함 (LibreOffice 값은 16건 중 11건이 Word와 달랐음)
 PLACEHOLDER = "?"
 KINDS = ("chapter", "section", "subsection", "ganada", "module", "task", "table", "figure")   # 목차 수록 항목의 종류
 OTHER = "other"          # 종류를 판별하지 못한 책갈피
@@ -177,7 +177,7 @@ def _scan_hwpx(path: str, style_kinds: dict[str, str]) -> list[TocItem]:
 
 
 def _drop_ctrl(el):
-    """컨트롤 요소를 지움. 감싼 hp:ctrl에 다른 컨트롤이 없으면 hp:ctrl째 지움"""
+    """컨트롤 요소를 지움. 감싼 hp:ctrl에 다른 컨트롤이 없으면 hp:ctrl 전체를 지움"""
     parent = el.getparent()
     _drop(parent if parent.tag == f"{HP}ctrl" and len(parent) == 1 else el)
 

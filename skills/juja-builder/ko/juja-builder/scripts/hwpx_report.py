@@ -106,7 +106,7 @@ BORDER_WIDTH = "0.15 mm"        # 셀 선 굵기 (정책보고서 관행 값)
 BORDER_COLOR = "#000000"
 # Why: 표 좌우 바깥선을 비우는 것이 정책보고서 관행. 좌측 끝 셀은 왼선, 우측 끝 셀은 오른선 없음
 EDGE_OPEN_SIDES = True
-FIGURE_IN_TABLE = True          # 그림을 투명 1열 표에 넣고 표의 번호 유형을 그림으로 지정 (손 편집 관행)
+FIGURE_IN_TABLE = True          # 그림을 투명 1열 표에 넣고 표의 번호 유형을 그림으로 지정 (수동 편집 관행)
 ROW_BASE_H = 2000               # 1줄 행 높이 (한/글은 내용에 맞춰 자동 확장하므로 최소값 성격)
 ROW_LINE_H = 1400               # 접힘·개행 1줄 추가분
 NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
@@ -134,7 +134,7 @@ TOC_SCOPE_DEFAULT = ("chapter", "section", "table", "figure")
 TOC_LIST_KINDS = {"table": "toc.tables", "figure": "toc.figures"}   # 별도 목차로 싣는 종류 → 목차 제목 라벨 키
 # 목차 항목의 왼쪽 여백 (HWPUNIT). 장은 목차 장 스타일, 그 밖은 목차 절 스타일에 이 여백을 적용
 TOC_INDENT = {"chapter": 0, "section": 1500, "subsection": TOC_SUB_INDENT, "ganada": 4500, "module": TOC_SUB_INDENT, "task": 4500}
-BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값이 구분 문자와 표식으로 씀
+BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값에서 구분 문자와 표식으로 쓰는 문자
 DOCX_BOOKMARK_MAX = 40          # Word 책갈피 이름 길이 상한
 DOCX_BOOKMARK_NAME = "toc_{n:03d}_{slug}"   # 밑줄로 시작하는 이름은 Word가 숨은 책갈피로 다루므로 쓰지 않음
 CAPTION_GAP = 850               # 캡션과 표 사이 간격 (python-hwpx 기본값, 실코퍼스 다수 값)
@@ -484,7 +484,7 @@ def source_label(text: str) -> tuple[str, str]:
 
 def label_hang_hu(label: str, size_hu: float, ratio: float = 100, spacing: float = 0) -> int:
     """출처 표기 폭의 상한에 간격을 더한 내어쓰기 폭 (HWPUNIT). 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
-    첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 출처 표기 뒤 간격이 받아 낸다"""
+    첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 출처 표기 뒤 간격이 흡수한다"""
     em = sum(FULLWIDTH_EM if _weighted_len(ch) == 2 else HALFWIDTH_EM for ch in label)
     return math.ceil(size_hu * (em * ratio + len(label) * spacing) / 100 + size_hu * SOURCE_LABEL_GAP_EM)
 
@@ -1058,7 +1058,7 @@ def image_mm(data: bytes) -> tuple[float, float]:
 def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
     """그림 크기와 그림을 담는 투명 표의 폭 (HWPUNIT). 반환: (그림 폭, 그림 높이, 표 폭)
     그림이 놓이는 줄의 폭은 셀 폭에서 셀 좌우 여백을 뺀 값이므로 표 폭은 그림 폭 + 셀 좌우 여백.
-    여백을 더하지 않으면 여백만큼 그림 오른쪽이 잘리고, 더 넓게 주면 손 편집 때 표와 그림이 어긋남.
+    여백을 더하지 않으면 여백만큼 그림 오른쪽이 잘리고, 더 넓게 두면 수동 편집 때 표와 그림이 어긋남.
     표가 본문 폭을 넘으면 쪽 밖으로 나가므로 그림을 비율대로 줄임"""
     pad = CELL_MARGIN[0] + CELL_MARGIN[1]
     max_w = body_w - pad
@@ -1068,7 +1068,7 @@ def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
 
 
 def table_pos_role(profile: dict, has_caption: bool) -> str:
-    """표를 담는 문단의 역할. 표위치 스타일은 표 위에 캡션이 오는 것을 전제로 위 여백을 작게 둠.
+    """표를 담는 문단의 역할. 표위치 스타일은 표 위의 캡션을 전제로 위 여백을 작게 둠.
     캡션 없는 표는 위 문단에 붙으므로 위 여백이 있는 그림위치 스타일을 씀 (프로파일에 그림위치가 없으면 표위치)"""
     return "table_pos" if has_caption or not profile.get("fig_pos") else "fig_pos"
 
@@ -1700,7 +1700,7 @@ class Builder(TocMarks):
         r = self._centered_refs(table_pos_role(self.p, bool(e.text)))
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
-        head = 1 if unit else 0  # 단위 행: 머리글 위 투명 병합 셀 (손 편집 관행, 표 우측 끝 정렬)
+        head = 1 if unit else 0  # 단위 행: 머리글 위 투명 병합 셀 (수동 편집 관행, 표 우측 끝 정렬)
         engine_long = nrow > LONG_TABLE_ROWS and not e.data.get("split_done")   # 장표: 글자취급 해제 대상
         if engine_long:
             self._long_table_gap()
