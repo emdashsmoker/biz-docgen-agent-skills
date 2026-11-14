@@ -136,7 +136,6 @@ An adjustment line changes the glyph ratio, letter spacing or line spacing of a 
     - (Why changes) The ratio, letter spacing and line spacing differ between styles, and a user form has other values. Written as a change, the same notation gives the same degree of adjustment in any form
 - (Tables) Put the adjustment line of a table before the caption line. It applies to the text of the table cells including the header rows, and not to the caption, unit row or source row
 - (Single line inside a range) A single line inside a range applies to the next element together with the range adjustment. For the same item, the single line value is used
-- (Recommended range) Ratio ±5%p, letter spacing ±5%p, line spacing ±10%p. build reports a value beyond the range with `WARN:` and typesets the given value
 - (Lint) An unreadable item is reported as `[adjustment value]`, and an end line without a begin line or a begin line without an end line as `[adjustment range]`
 
 ## Content-writing rules

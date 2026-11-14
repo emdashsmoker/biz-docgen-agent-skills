@@ -177,7 +177,6 @@ DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # parenthesized di
 FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # one item of an adjustment line ('장평 -3')
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
-FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # recommended change range (±%p). build prints WARN beyond it
 FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # value range Hangul accepts (%)
 LINE_PERCENT_FALLBACK = 100     # value (%) used to estimate the line height of a style whose line spacing is not a % of the font size
 SOURCE_PAREN_EXCLUDE = ("주",)   # tokens left out of the parenthesized source mark. (주) abbreviates 주식회사 (Inc.), so it is not a source line
@@ -513,9 +512,6 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
             continue
         vals, bad = parse_fit(e.data["spec"])
         issues += [f"[adjustment value] cannot read '{p}' in '{e.text}'. Write an item (장평, 자간, 줄 간격) and a change, as in '장평 -3, 자간 -2'" for p in bad]
-        for key, val in vals.items():
-            if abs(val) > FIT_WARN[key]:
-                print(f"WARN: the change {val:+g} in adjustment '{e.text}' is beyond the recommended range (±{FIT_WARN[key]}%p). Check the glyph and line spacing shapes in the render")
         if e.data["range"] == "end":
             if ranged is None:
                 issues.append(f"[adjustment range] '{e.text}' has no begin line before it")

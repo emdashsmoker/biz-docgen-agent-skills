@@ -183,7 +183,6 @@ DIRECTIVE_LINE_RE = re.compile(r"^\([^()]*[:：][^()]*\)$")   # 괄호 지시 �
 FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # 조판 조정 줄의 항목 하나 ('장평 -3')
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
-FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # 권장 증감 범위 (±%p). 넘으면 build가 WARN
 FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글이 받는 값의 범위 (%)
 LINE_PERCENT_FALLBACK = 100     # 줄 간격이 글자 크기 대비 %가 아닌 스타일의 줄 높이 추정에 쓰는 값 (%)
 SOURCE_PAREN_EXCLUDE = ("주",)   # 괄호형 출처 표지에서 뺄 표기. (주)는 주식회사 약칭이므로 출처 줄로 보지 않음
@@ -519,9 +518,6 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
             continue
         vals, bad = parse_fit(e.data["spec"])
         issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재" for p in bad]
-        for key, val in vals.items():
-            if abs(val) > FIT_WARN[key]:
-                print(f"WARN: 조판 조정 '{e.text}'의 증감 {val:+g}이 권장 범위(±{FIT_WARN[key]}%p)를 넘음. 렌더에서 글자와 줄 간격의 모양을 확인")
         if e.data["range"] == "end":
             if ranged is None:
                 issues.append(f"[조판 조정 구간] '{e.text}' 앞에 시작 줄이 없음")

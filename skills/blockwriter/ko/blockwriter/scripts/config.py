@@ -50,7 +50,6 @@ SOURCE_LABEL_GAP_EM = 0.5       # 줄을 나눈 출처 행에서 출처 표기�
 # 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
-FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # 권장 증감 범위 (±%p). 넘으면 build가 WARN
 FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글이 받는 값의 범위 (%)
 LINE_PERCENT_FALLBACK = 100     # 줄 간격이 글자 크기 대비 %가 아닌 스타일의 줄 높이 추정에 쓰는 값 (%)
 # 형식별로 쓸 수 있는 자리표시와 반드시 들어갈 자리표시
@@ -276,9 +275,6 @@ MESSAGES = {
     "lint_fit_no_end": {
         "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠",
         "en": "[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range"},
-    "warn_fit_range": {
-        "ko": "WARN: 조판 조정 '{text}'의 증감 {val}이 권장 범위(±{limit}%p)를 넘음. 렌더에서 글자와 줄 간격의 모양을 확인",
-        "en": "WARN: the change {val} in adjustment '{text}' is beyond the recommended range (±{limit}%p). Check the glyph and line spacing shapes in the render"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},

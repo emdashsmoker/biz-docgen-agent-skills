@@ -266,9 +266,6 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
             continue
         vals, bad = parse_fit(e.data["spec"])
         issues += [msg("lint_fit_value", text=e.text, piece=p) for p in bad]
-        for key, val in vals.items():
-            if abs(val) > C.FIT_WARN[key]:
-                print(msg("warn_fit_range", text=e.text, val=f"{val:+g}", limit=C.FIT_WARN[key]))
         if e.data["range"] == "end":
             if ranged is None:
                 issues.append(msg("lint_fit_no_begin", text=e.text))

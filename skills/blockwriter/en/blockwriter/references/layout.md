@@ -271,7 +271,7 @@ Ratio and letter spacing adjustment
 
 - (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
 - (Method) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
-- (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop within the recommended range (ratio ±5%p, letter spacing ±5%p)
+- (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
 - (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin of 1-2 characters at the end of the line in the rendered PNGs
 - (Shortening the text) When the ratio and letter spacing adjustment does not solve it, shorten the wording as long as the meaning stays the same
 
@@ -279,7 +279,7 @@ Line spacing adjustment
 
 - (Targets) A page where only 1-2 lines carry over to the next page, facing pages whose fill does not match, a table that reads better on one page, and so on
 - (Method) Put an adjustment line before the paragraph range of the target page, a particular paragraph or a table, typeset again, and check the page layout in the rendered PNGs
-- (Values) Stay conservative, at a level where the line spacing does not look different from the pages around it. Try small values first and stop within the recommended range (±10%p)
+- (Values) Stay conservative, at a level where the line spacing does not look different from the pages around it. Try small values first and stop at the smallest value that solves the page layout
 - (Purpose) A way to match the page fill without cutting content. The page fill criteria are in the Page fill section
 
 ## Review items

@@ -50,7 +50,6 @@ SOURCE_LABEL_GAP_EM = 0.5       # gap between the source label and the first sou
 # Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
 FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
 FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
-FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # recommended change range (±%p). build prints WARN beyond it
 FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # value range Hangul accepts (%)
 LINE_PERCENT_FALLBACK = 100     # value (%) used to estimate the line height of a style whose line spacing is not a % of the font size
 # placeholders each format may use, and the one it must contain
@@ -276,9 +275,6 @@ MESSAGES = {
     "lint_fit_no_end": {
         "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠",
         "en": "[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range"},
-    "warn_fit_range": {
-        "ko": "WARN: 조판 조정 '{text}'의 증감 {val}이 권장 범위(±{limit}%p)를 넘음. 렌더에서 글자와 줄 간격의 모양을 확인",
-        "en": "WARN: the change {val} in adjustment '{text}' is beyond the recommended range (±{limit}%p). Check the glyph and line spacing shapes in the render"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
         "en": "WARN: table '{title}' column width line '{spec}' is not a list of positive numbers; automatic sizing used"},
