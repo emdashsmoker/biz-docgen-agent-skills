@@ -398,8 +398,8 @@ def estimate_table_lines(rows: list[list[str]]) -> int:
     return lines
 
 
-def lint(elems: list[Element]) -> list[str]:
-    out = lib.lint(elems) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems)
+def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
+    out = lib.lint(elems, long_table) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems, long_table)
     for e in elems:
         if e.kind != "table" or e.data.get("long_spec"):
             continue
@@ -620,6 +620,8 @@ class ProposalLayout:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            if e.kind == "note" and lib.SOURCE_RE.match(e.text):
+                e.kind = "source"   # a `※ 출처:` line after body text is a source line too. Body sources are footnotes, so it moves like a `출처:` line
             self.notes.enter(e.kind, e.level)
             self.fit = e.data.get("fit")
             if e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined
@@ -2181,7 +2183,7 @@ def cmd_build(a):
     if a.toc_scope and profile.get("caption_prefix") is None and set(toc_scope) & set(lib.TOC_LIST_KINDS):
         print("NOTE: captions in this profile have no numbers, so tables and figures are not listed in the TOC (only numbered captions are listed)")
     elems, footnotes = parse_markdown(src)
-    msgs = lint(elems)
+    msgs = lint(elems, a.long_table)
     for msg in msgs:
         print("LINT:", msg)
     if a.long_table is None and any("[long table HITL]" in m for m in msgs):

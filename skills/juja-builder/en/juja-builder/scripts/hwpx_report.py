@@ -581,7 +581,8 @@ def _parse_table(rows: list[str], elems: list[Element]) -> Element:
 SHORT_SECTION_ELEMS = 8  # below this many elements per section (##), a page break may leave only blank space
 
 
-def lint(elems: list[Element]) -> list[str]:
+def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
+    """Manuscript lint. long_table is the --long-table value given to build (when set, the long table notice reports the applied handling instead of asking)"""
     issues = []
     prev_level = 0
     sec_sizes, cur = [], None
@@ -610,7 +611,11 @@ def lint(elems: list[Element]) -> list[str]:
                 issues.append(f"[lone □] no ○ or - text under '{e.text[:30]}'")
         # A table whose method is set by a (장표: ) directive line (long_spec in proposal.py) is not asked again
         if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS and not e.data.get("long_spec"):
-            issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: ask the user to choose --long-table engine|split")
+            if long_table:   # handling set by the kickoff answer is not asked again; the notice lists the table for the report
+                issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: --long-table {long_table} applied. Report the applied handling to the user"
+                              " (write a (장표: ) directive line for a table that needs another handling)")
+            else:
+                issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: ask the user to choose --long-table engine|split")
         if e.kind == "table" and not e.text:
             issues.append("[table caption missing] a caption of the form '<표> title' on the line before the table is recommended")
     return [release_escapes(s) for s in issues]
@@ -1883,6 +1888,8 @@ class Builder(TocMarks):
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            if e.kind == "note" and SOURCE_RE.match(e.text):
+                e.kind = "source"   # a `※ 출처:` line after body text is a source line too. Body sources are footnotes, so it moves like a `출처:` line
             self.notes.enter(e.kind, e.level)
             self.fit = e.data.get("fit")
             if e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined

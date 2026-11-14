@@ -410,8 +410,8 @@ def estimate_table_lines(rows: list[list[str]]) -> int:
     return lines
 
 
-def lint(elems: list[Element]) -> list[str]:
-    out = lib.lint(elems) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems)
+def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
+    out = lib.lint(elems, long_table) + lib.lint_counts(elems) if hasattr(lib, "lint_counts") else lib.lint(elems, long_table)
     for e in elems:
         if e.kind != "table" or e.data.get("long_spec"):
             continue
@@ -632,6 +632,8 @@ class ProposalLayout:
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            if e.kind == "note" and lib.SOURCE_RE.match(e.text):
+                e.kind = "source"   # 본문 뒤 `※ 출처:` 줄도 출처 줄. 본문 출처는 각주 원칙에 따라 `출처:` 줄과 같이 각주로 옮김
             self.notes.enter(e.kind, e.level)
             self.fit = e.data.get("fit")
             if e.kind == "source":   # 본문 뒤 출처 줄은 각주로 옮겨지므로 한 줄로 이음
@@ -2193,7 +2195,7 @@ def cmd_build(a):
     if a.toc_scope and profile.get("caption_prefix") is None and set(toc_scope) & set(lib.TOC_LIST_KINDS):
         print("NOTE: 이 프로파일은 캡션에 번호가 없어 표와 그림이 목차에 수록되지 않음 (수록 대상은 번호 캡션)")
     elems, footnotes = parse_markdown(src)
-    msgs = lint(elems)
+    msgs = lint(elems, a.long_table)
     for msg in msgs:
         print("LINT:", msg)
     if a.long_table is None and any("[장표 HITL]" in m for m in msgs):

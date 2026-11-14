@@ -587,7 +587,8 @@ def _parse_table(rows: list[str], elems: list[Element]) -> Element:
 SHORT_SECTION_ELEMS = 8  # 절(##)당 요소 수가 이 값 미만이면 쪽 나눔 시 여백만 남을 가능성
 
 
-def lint(elems: list[Element]) -> list[str]:
+def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
+    """원고 린트. long_table은 build에 지정한 --long-table 값 (지정하면 장표 알림이 질의 대신 적용 결과 보고)"""
     issues = []
     prev_level = 0
     sec_sizes, cur = [], None
@@ -616,7 +617,11 @@ def lint(elems: list[Element]) -> list[str]:
                 issues.append(f"[□ 단독] '{e.text[:30]}' 아래에 ○ 또는 - 서술이 없음")
         # (장표: ) 지시 줄로 처리 방식을 정한 표(proposal.py의 long_spec)는 다시 묻지 않음
         if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS and not e.data.get("long_spec"):
-            issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
+            if long_table:   # 착수 질의 답변으로 정한 방식은 다시 묻지 않고 적용 결과를 보고 대상으로 알림
+                issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: --long-table {long_table} 적용. 적용 방식을 유저에게 보고"
+                              " (다른 방식이 나은 표는 (장표: ) 지시 줄로 지정)")
+            else:
+                issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
         if e.kind == "table" and not e.text:
             issues.append("[표 캡션 없음] 표 앞 줄에 '<표> 제목' 형식 캡션 권장")
     return [release_escapes(s) for s in issues]
@@ -1885,6 +1890,8 @@ class Builder(TocMarks):
                     consumed += 1
                 e.data["sources"] = srcs
                 skip = consumed
+            if e.kind == "note" and SOURCE_RE.match(e.text):
+                e.kind = "source"   # 본문 뒤 `※ 출처:` 줄도 출처 줄. 본문 출처는 각주 원칙에 따라 `출처:` 줄과 같이 각주로 옮김
             self.notes.enter(e.kind, e.level)
             self.fit = e.data.get("fit")
             if e.kind == "source":   # 본문 뒤 출처 줄은 각주로 옮겨지므로 한 줄로 이음
