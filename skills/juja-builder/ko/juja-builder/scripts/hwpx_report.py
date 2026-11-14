@@ -525,7 +525,7 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
             out.append(e)
             continue
         vals, bad = parse_fit(e.data["spec"])
-        issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재" for p in bad]
+        issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2' 형식으로 기재" for p in bad]
         if e.data["range"] == "end":
             if ranged is None:
                 issues.append(f"[조판 조정 구간] '{e.text}' 앞에 시작 줄이 없음")
@@ -535,7 +535,7 @@ def _apply_fit(elems: list[Element]) -> list[Element]:
         else:
             once = vals
     if ranged is not None:
-        issues.append("[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠")
+        issues.append("[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄 추가 필요")
     if issues and out:
         out[-1].data.setdefault("fit_issues", []).extend(issues)
     return out

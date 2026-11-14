@@ -267,13 +267,13 @@ MESSAGES = {
         "ko": "[열 폭 줄 위치] '{text}' 바로 뒤에 표가 없어 적용 안 됨. 캡션과 표 사이에 둠",
         "en": "[column width line] '{text}' is not followed by a table and is ignored. Put it between the caption and the table"},
     "lint_fit_value": {
-        "ko": "[조판 조정 값] '{text}'의 '{piece}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재",
+        "ko": "[조판 조정 값] '{text}'의 '{piece}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2' 형식으로 기재",
         "en": "[adjustment value] cannot read '{piece}' in '{text}'. Write an item (ratio, spacing, line) and a change, as in 'ratio -3, spacing -2'"},
     "lint_fit_no_begin": {
         "ko": "[조판 조정 구간] '{text}' 앞에 시작 줄이 없음",
         "en": "[adjustment range] '{text}' has no begin line before it"},
     "lint_fit_no_end": {
-        "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠",
+        "ko": "[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄 추가 필요",
         "en": "[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range"},
     "warn_colwidth_value": {
         "ko": "WARN: 표 '{title}' 열 폭 줄 '{spec}'이 양수 목록이 아니어서 자동 산정으로 조판",
