@@ -333,6 +333,14 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
+def _note_body(text: str) -> str | None:
+    """The note text if this is a ※ note, otherwise None. Text that starts with inline emphasis (**bold**, *italic*) is a statement, so it is not a note.
+    The italic test uses INLINE_RE itself, so it cannot drift from how the typesetter reads inline notation"""
+    if text.startswith("**") or (text.startswith("*") and INLINE_RE.match(text)):
+        return None
+    return _strip_marker(text, NOTE_MARK)
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -402,7 +410,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+        if (t := _note_body(stripped)) is not None:
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -415,8 +423,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
-                elems.append(Element("note", t))  # text that starts with bold (**) is not a note mark
+            elif (t := _note_body(body)) is not None:
+                elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -444,7 +452,7 @@ def _is_source_tail(line: str) -> bool:
         return False
     if DIRECTIVE_LINE_RE.match(s) or FIT_RE.match(s):
         return False
-    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK) is not None or _note_body(s) is not None:  # a line that starts with inline emphasis is not a note line, so it continues the row
         return False
     return not any(rx.match(s) for rx in (SOURCE_RE, CAPTION_RE, FIG_CAPTION_RE, FOOTNOTE_DEF_RE))
 
