@@ -16,7 +16,7 @@ from lxml import etree as ET
 
 # ── Settings ───────────────────────────────────────────────────────────────
 # placeholder of a page reference. The text shown until 한/글 or Word calculates the page number
-# Why no approximation: pages calculated by another layout engine differ from Word and look like plausible wrong numbers (LibreOffice values differed from Word in 11 of 16 entries)
+# Why no approximation: pages calculated by another layout engine differ from Word, and readers would take them for real page numbers (LibreOffice values differed from Word in 11 of 16 entries)
 PLACEHOLDER = "?"
 KINDS = ("chapter", "section", "subsection", "ganada", "module", "task", "table", "figure")   # kinds of items listed in the TOC
 OTHER = "other"          # bookmark whose kind was not identified

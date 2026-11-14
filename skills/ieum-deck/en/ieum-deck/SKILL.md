@@ -891,7 +891,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - A word wider than the inner width of a text box or table cell is cut in the middle by every renderer (check_layout WARN, skipped for character-level decks)
 - Resolve wide words by spacing them, shortening them or widening the box
 - LibreOffice may also split a word caught at the line end between a figure and its unit ('60|분'), inside brackets ('(|연구개발)', '가|정)') or before a comma ('협|약,') (check_layout WARN, skipped for character-level decks)
-    + A word made only of Hangul moves whole to the next line
+    + A word made only of Hangul moves to the next line without being split
     + For tables without `colW`, the build avoids these breaks by moving width between columns
     + Resolve the remaining warnings by rewriting the text (Page size item of the Design system section)
 - PowerPoint uses taller line heights than LibreOffice, so spacing distribution in bullet boxes is computed with PowerPoint line height (1.4 times the font size)

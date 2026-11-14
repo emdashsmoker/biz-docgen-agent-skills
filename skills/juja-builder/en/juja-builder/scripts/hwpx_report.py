@@ -99,7 +99,7 @@ BORDER_WIDTH = "0.15 mm"        # cell rule width (conventional value in policy 
 BORDER_COLOR = "#000000"
 # Why: leaving the outer left and right table rules empty is the policy report convention. The leftmost cell has no left rule and the rightmost cell no right rule
 EDGE_OPEN_SIDES = True
-FIGURE_IN_TABLE = True          # put a figure in a transparent one-column table and set the table's numbering type to figure (hand-editing convention)
+FIGURE_IN_TABLE = True          # put a figure in a transparent one-column table and set the table's numbering type to figure (manual editing convention)
 ROW_BASE_H = 2000               # one-line row height (한/글 expands to fit content, so this is a minimum)
 ROW_LINE_H = 1400               # addition per folded or broken line
 NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
@@ -1052,7 +1052,7 @@ def image_mm(data: bytes) -> tuple[float, float]:
 def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
     """Figure size and the width of the transparent table that holds it (HWPUNIT). Returns (figure width, figure height, table width)
     The line that holds the figure is as wide as the cell minus the left and right cell margins, so table width = figure width + those margins.
-    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure in hand editing.
+    Without the margins the right side of the figure is cut by that amount, and a wider table drifts from the figure during manual editing.
     A table wider than the body width leaves the page, so the figure is scaled down in proportion"""
     pad = CELL_MARGIN[0] + CELL_MARGIN[1]
     max_w = body_w - pad
@@ -1062,7 +1062,7 @@ def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
 
 
 def table_pos_role(profile: dict, has_caption: bool) -> str:
-    """Role of the paragraph that holds a table. The table position style keeps a small top margin because a caption sits above the table.
+    """Role of the paragraph that holds a table. The table position style keeps a small top margin because it assumes a caption above the table.
     A table without a caption touches the paragraph above, so it uses the figure position style, which has a top margin
     (the table position style when the profile has no figure position style)"""
     return "table_pos" if has_caption or not profile.get("fig_pos") else "fig_pos"
@@ -1608,7 +1608,7 @@ class Builder(TocMarks):
         return str(bid)
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
-        """Transparent merged rows inside a table (unit, source). Kept inside the table so they move with it during hand editing."""
+        """Transparent merged rows inside a table (unit, source). Kept inside the table so they move with it during manual editing."""
         no_border = self._border_fill([])
         u = self.refs(role)
         pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
@@ -1696,7 +1696,7 @@ class Builder(TocMarks):
         r = self._centered_refs(table_pos_role(self.p, bool(e.text)))
         unit = e.data.get("unit")
         sources = e.data.get("sources", [])
-        head = 1 if unit else 0  # unit row: a transparent merged cell above the header (hand-editing convention, aligned to the table's right end)
+        head = 1 if unit else 0  # unit row: a transparent merged cell above the header (manual editing convention, aligned to the table's right end)
         engine_long = nrow > LONG_TABLE_ROWS and not e.data.get("split_done")   # long table: treat-as-character goes off
         if engine_long:
             self._long_table_gap()

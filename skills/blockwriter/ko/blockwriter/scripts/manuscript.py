@@ -659,7 +659,7 @@ class LineStyle:
 
     def label_hang_hu(self, label: str, space_em: float) -> int:
         """출처 표기 폭에 표기 뒤 간격을 더한 내어쓰기 폭 (HWPUNIT). 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
-        첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 표기 뒤 간격이 받아 낸다"""
+        첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 표기 뒤 간격이 흡수한다"""
         return math.ceil(self.text_hu(label, space_em) - self.lead_hu + self.size_hu * C.SOURCE_LABEL_GAP_EM)
 
     def text_hu(self, text: str, space_em: float) -> float:
@@ -905,7 +905,7 @@ def image_size_mm(data: bytes) -> tuple[float, float]:
 def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
     """그림 크기와 그림을 담는 투명 표의 폭 (HWPUNIT). 반환: (그림 폭, 그림 높이, 표 폭)
     그림이 놓이는 줄의 폭은 셀 폭에서 셀 좌우 여백을 뺀 값이므로 표 폭은 그림 폭 + 셀 좌우 여백.
-    여백을 더하지 않으면 여백만큼 그림 오른쪽이 잘리고, 더 넓게 주면 손 편집 때 표와 그림이 어긋남.
+    여백을 더하지 않으면 여백만큼 그림 오른쪽이 잘리고, 더 넓게 두면 수동 편집 때 표와 그림이 어긋남.
     표가 본문 폭을 넘으면 쪽 밖으로 나가므로 그림을 비율대로 줄임"""
     pad = 2 * C.CELL_MARGIN_LR
     max_w = body_w - pad
@@ -915,7 +915,7 @@ def fit_figure(w_hu: int, h_hu: int, body_w: int) -> tuple[int, int, int]:
 
 
 def table_pos_role(has_caption: bool, has_fig_pos: bool) -> str:
-    """표를 담는 문단의 역할. 표 위치 스타일은 표 위에 캡션이 오는 것을 전제로 위 여백을 두지 않음.
+    """표를 담는 문단의 역할. 표 위치 스타일은 표 위의 캡션을 전제로 위 여백을 두지 않음.
     캡션 없는 표는 위 문단에 붙으므로 위 여백이 있는 그림 위치 스타일을 씀 (양식에 그림 위치가 없으면 표 위치)"""
     return "table_pos" if has_caption or not has_fig_pos else "fig_pos"
 

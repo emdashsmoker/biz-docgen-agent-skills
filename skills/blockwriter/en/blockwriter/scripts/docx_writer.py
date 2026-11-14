@@ -432,7 +432,7 @@ class DocxBuilder(M.TocMarks):
 
     def _note_crossref(self, p, nid: int, ref_run):
         """Cross-reference to a footnote number (Word NOTEREF field). Wraps the reference run of the first footnote in a bookmark and points to it.
-        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the sequence number is the number"""
+        The number is a stored value that Word renumbers when it updates the field. Footnotes are numbered continuously through the document, so the number equals the sequence number"""
         name = C.DOCX_NOTE_BOOKMARK.format(n=nid)
         prev = ref_run.getprevious()
         if prev is None or prev.tag != qn("w:bookmarkStart"):

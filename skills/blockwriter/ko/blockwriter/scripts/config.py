@@ -152,7 +152,7 @@ TOC_LIST_INDENT = 0             # 표 목차와 그림 목차 항목의 왼쪽 �
 TOC_INDENT = {"chapter": 0, "section": TOC_SECTION_INDENT, "subsection": TOC_SUB_INDENT, "ganada": 4500}
 TOC_UNIT_W = {"chapter": 700}   # 목차 탭 폭 추정용 글자 1자 폭 (장 14pt). 그 밖은 TOC_UNIT_W_DEFAULT. 한/글은 탭을 다시 계산하므로 근사 렌더러 표시용
 TOC_UNIT_W_DEFAULT = 600        # 절 12pt 글자 1자 폭 추정
-BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값이 구분 문자와 표식으로 씀
+BOOKMARK_DROP_CHARS = ";?#"     # HWPX 책갈피 이름에서 지우는 문자. 쪽 참조의 경로 값에서 구분 문자와 표식으로 쓰는 문자
 STATIC_SUFFIX = "_static"       # 정적화 산출 파일명에 붙이는 접미. 제출 파일은 덮어쓰지 않음
 STATIC_SCOPE_ALL = "all"        # toc-static --scope 값: 종류를 판별한 항목 전체
 # 정적화가 책갈피의 종류를 판별할 때 쓰는 스타일 역할 → 목차 항목 종류

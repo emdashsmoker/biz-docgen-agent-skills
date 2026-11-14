@@ -588,7 +588,7 @@ STANDARD_MASK = "\ufffc"
 
 
 def mask_standards(tx, standards):
-    """RFP 등록 명칭과 정확히 일치하는 구간을 가린 문구. standards 는 긴 명칭부터 정렬 (다른 명칭을 품은 명칭을 통째로 가림)"""
+    """RFP 등록 명칭과 정확히 일치하는 구간을 가린 문구. standards 는 긴 명칭부터 정렬 (다른 명칭을 품은 명칭 전체를 가림)"""
     for std in standards:
         tx = tx.replace(std, STANDARD_MASK)
     return tx
