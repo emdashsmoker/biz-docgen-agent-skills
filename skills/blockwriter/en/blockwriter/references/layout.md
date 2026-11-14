@@ -277,9 +277,9 @@ Line tidying
 
 - (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
 - (Levels) Use only the means of the level the user chose in step 1
-    - (No tidying) Leave the target lines as they are
-    - (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit. The default level
-    - (Ratio and letter spacing adjustment) Use both shortening and the ratio and letter spacing adjustment. Choose the means and their order to suit the target
+    - (No tidying) Leave the target lines as they are. The default level
+    - (Shorten the wording) Shorten the wording as long as the meaning stays the same, so the lines fit
+    - (Ratio and letter spacing adjustment) Use the ratio and letter spacing adjustment first, and shorten the wording when that does not solve it
 - (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Tidy so that the line end keeps a margin in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
 - (Method of the ratio and letter spacing adjustment) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
 - (Values of the ratio and letter spacing adjustment) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break

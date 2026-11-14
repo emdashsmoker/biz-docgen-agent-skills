@@ -139,10 +139,10 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (automatic) Picks the arrangement that fits the length and number of sources for each table and figure
         - (fixed line breaks) Puts each source on its own line and aligns the second and later sources with the start of the first one
         - (fixed joining) Writes all sources on one line, separated by `;`
-    - (Line tidying) How far to go in tidying cases such as a paragraph or table cell with only 1-2 characters on its last line. Choose no tidying, shorten the wording (default), or ratio and letter spacing adjustment. The criteria are in the Typesetting adjustment section of references/layout.md
+    - (Line tidying) How far to go in tidying cases such as a paragraph or table cell with only 1-2 characters on its last line. Choose no tidying (default), shorten the wording, or ratio and letter spacing adjustment. The criteria are in the Typesetting adjustment section of references/layout.md
         - (no tidying) Leaves those lines as they are
         - (shorten the wording) Shortens the wording as long as the meaning stays the same
-        - (ratio and letter spacing adjustment) In addition to shortening, adjusts the ratio and letter spacing of the paragraph or table within a narrow range
+        - (ratio and letter spacing adjustment) Adjusts the ratio and letter spacing of the paragraph or table within a narrow range, and shortens the wording when that does not solve it
     - (Line spacing adjustment) Whether to adjust the line spacing to tidy cases such as a page with only 1-2 lines carried to the next page. Choose off (default) or on. The criteria are in the Typesetting adjustment section of references/layout.md
         - (off) Typesets every paragraph with the line spacing of the form styles
         - (on) Adjusts the line spacing within a narrow range, only for pages, paragraphs and tables where the page fill is uneven
