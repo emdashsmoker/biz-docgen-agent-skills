@@ -272,7 +272,7 @@ Ratio and letter spacing adjustment
 - (Targets) A paragraph where a line break leaves only 1-2 characters on the next line, a paragraph or table cell where one line of a different length breaks the uniformity of the lines around it, and so on
 - (Method) Put an adjustment line before the target paragraph or table, typeset again, and check the line count and the glyph shapes in the rendered PNGs
 - (Values) Stay conservative, at a level where the adjusted text does not look different from the paragraphs around it. Try small values first and stop at the smallest value that solves the line break
-- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin of 1-2 characters at the end of the line in the rendered PNGs
+- (Renderer margin) The review renderers tend to fit more characters on a line than Hangul and Word. Choose a value that leaves a margin at the end of the line in the rendered PNGs: 1-2 characters in a paragraph and 1-3 characters in a table cell
 - (Shortening the text) When the ratio and letter spacing adjustment does not solve it, shorten the wording as long as the meaning stays the same
 
 Line spacing adjustment
@@ -296,7 +296,7 @@ Line spacing adjustment
 - Check whether the table, caption, and source row are separated across a page boundary. A whole table moving to the next page is normal placement
 - For a source row, check that lines after a line break and wrapped lines align with the start of the first source. When the source row is tall next to its table or figure, or a joined source row wraps over several lines and is hard to read, change the arrangement (Attached lines section of references/manuscript.md)
 - Check the page fill of two facing pages (Page fill section)
-- For paragraphs and tables with a typesetting adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters (Typesetting adjustment section)
+- For paragraphs and tables with a typesetting adjustment, check that the glyph width and line spacing do not look different from the surrounding text and that the line end keeps a margin of 1-2 characters in a paragraph and 1-3 characters in a table cell (Typesetting adjustment section)
 - Differences in how renderers show numbers computed by automatic numbering and fields (caption numbers, page numbers) do not count as defects. Check the numbers in the XML's automatic numbers and fields
 - Check figure size and caption position, and look for clipped or overlapping text
 - Check that all four sides of each figure are visible. When the right side is cut, compare the picture width with the inner cell width (the cell width minus the left and right cell margins) in the XML

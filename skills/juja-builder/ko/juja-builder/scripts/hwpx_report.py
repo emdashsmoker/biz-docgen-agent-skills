@@ -539,6 +539,11 @@ def fit_value(key: str, base: float, fit: dict | None) -> float:
     return min(high, max(low, base + (fit or {}).get(key, 0)))
 
 
+def fit_char_scale(fit: dict | None) -> float:
+    """조판 조정의 장평과 자간 증감이 글자 폭에 주는 배율 (스켈레톤 기준값 장평 100%, 자간 0%). 표 행의 줄 수 추정에 곱한다"""
+    return (fit_value("ratio", 100, fit) + fit_value("spacing", 0, fit)) / 100
+
+
 def fit_line_scale(base: float | None, fit: dict | None) -> float:
     """조판 조정의 줄 간격 증감이 줄 높이에 주는 배율. 표 행의 최소 높이에 곱한다"""
     return fit_value("line", base, fit) / base if base and (fit or {}).get("line") else 1.0
@@ -779,18 +784,19 @@ def edge_sides(c0: int, c1: int, ncol: int) -> list[str]:
     return sides
 
 
-def cell_line_count(val: str, width: int) -> int:
+def cell_line_count(val: str, width: int, char_scale: float = 1.0) -> int:
     """셀 글자 폭과 셀 폭으로 추정한 접힘 줄 수"""
     inner = max(width - CELL_MARGIN[0] - CELL_MARGIN[1], 1)
     return max(1, val.count("\n") + 1,
-               sum(-(-_weighted_len(ln) * CELL_UNIT_W // inner) for ln in val.split("\n")))
+               sum(math.ceil(_weighted_len(ln) * CELL_UNIT_W * char_scale / inner) for ln in val.split("\n")))
 
 
 def lines_to_height(lines: int) -> int:
     return ROW_BASE_H + ROW_LINE_H * (lines - 1)
 
 
-def row_heights(rows: list[list[str]], widths: list[int], hdr: int, vspans: list, hspans: list) -> list[int]:
+def row_heights(rows: list[list[str]], widths: list[int], hdr: int, vspans: list, hspans: list,
+                char_scale: float = 1.0) -> list[int]:
     """병합을 반영한 행별 최소 높이. 셀 글자 폭과 열 폭으로 접힘 줄 수를 추정 (한/글과 Word는 내용에 맞춰 확장).
     행 인덱스는 머리글 포함 원고 행 기준.
     Why: 자동 세로 병합 구간의 라벨을 행마다 세면 병합된 모든 행이 라벨 줄 수만큼 커짐.
@@ -803,11 +809,11 @@ def row_heights(rows: list[list[str]], widths: list[int], hdr: int, vspans: list
         covered |= {(ri, c) for c in range(c0 + 1, c1 + 1)}
     heights = []
     for ri, row in enumerate(rows):
-        lines = [cell_line_count(v, span_w.get((ri, ci), widths[ci])) for ci, v in enumerate(row)
+        lines = [cell_line_count(v, span_w.get((ri, ci), widths[ci]), char_scale) for ci, v in enumerate(row)
                  if (ri, ci) not in covered and (ri, ci) not in anchors_v]
         heights.append(lines_to_height(max(lines, default=1)))
     for (a, c), b in anchors_v.items():
-        need = lines_to_height(cell_line_count(rows[a][c], widths[c]))
+        need = lines_to_height(cell_line_count(rows[a][c], widths[c], char_scale))
         short = need - sum(heights[a:b + 1])
         if short > 0:
             n = b - a + 1
@@ -1665,7 +1671,7 @@ class Builder(TocMarks):
         vspans, hspans = table_spans(rows, hdr, self.merge_mode)
         fit = e.data.get("fit")
         line_scale = fit_line_scale(self._line_percent(self.refs("table_cell")["para_pr_id_ref"]), fit)
-        heights = [round(h * line_scale) for h in row_heights(rows, widths, hdr, vspans, hspans)]
+        heights = [round(h * line_scale) for h in row_heights(rows, widths, hdr, vspans, hspans, fit_char_scale(fit))]
         total_h = sum(heights)
         for ri, row in enumerate(rows):
             row_h = heights[ri]

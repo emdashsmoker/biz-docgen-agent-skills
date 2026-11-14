@@ -615,7 +615,7 @@ class DocxBuilder(lib.TocMarks):
         for k, src in enumerate(sources):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
         line_scale = lib.fit_line_scale(self._row("table_cell")[10], self.fit)
-        heights = [round(h * line_scale) for h in lib.row_heights(rows, widths, hdr, vspans, hspans)]
+        heights = [round(h * line_scale) for h in lib.row_heights(rows, widths, hdr, vspans, hspans, lib.fit_char_scale(self.fit))]
         for ri, row in enumerate(rows):
             is_head = ri < hdr
             self._row_height(t.rows[head + ri], heights[ri], cant_split=not long,
