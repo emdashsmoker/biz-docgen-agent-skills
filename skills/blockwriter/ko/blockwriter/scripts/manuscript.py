@@ -32,7 +32,11 @@ IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
-INLINE_RE = re.compile(r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# 강조 표기는 별표 안쪽 양끝이 빈칸이 아닌 글자이고 바깥쪽에 별표가 이어지지 않는 경우에만 인식
+# Why: 유의수준 범례('*p<0.05, **p<0.01') 등 글자 그대로 쓴 별표를 강조 표기와 구분
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "* ")   # '*' 주석은 뒤에 공백이 있을 때만. '*기울임*'과 '**굵게**'로 시작하는 줄은 서술
@@ -913,10 +917,14 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
     """인라인 서식을 (종류, 문자열) 목록으로 나눈다.
     종류: plain, bold, italic, code, sup, sub, footnote(각주 키)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # split 결과의 짝수 번째는 표기 밖 글자. 표기 문자로 시작해도 글자 그대로 둠
+            out.append(("plain", seg))
+        elif seg.startswith("***"):   # 굵은 기울임 표기는 굵게로 출력
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -928,10 +936,8 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("plain", seg))
     return out
 
 

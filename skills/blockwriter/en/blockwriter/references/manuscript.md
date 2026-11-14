@@ -17,6 +17,7 @@ Save the manuscript file as UTF-8. The role of each notation follows the manuscr
 ## Inline formatting
 
 - The supported inline formats are `**bold**`, `*italic*`, `^superscript^`, `<sup>superscript</sup>`, and `<sub>subscript</sub>`
+- Bold and italic are recognized only when both inner ends of the asterisks touch a character with no space. Other asterisks, such as a significance legend (`*p<0.05, **p<0.01`), are written as they are
 - Inline formats apply in body paragraphs, table cells, and footnote definitions
 - `` `text` `` is printed as plain text with the backticks removed
 - A footnote reference is written as `[^1]` in a body paragraph, and its definition `[^1]: content` can be anywhere in the manuscript. build attaches the footnote at the reference position

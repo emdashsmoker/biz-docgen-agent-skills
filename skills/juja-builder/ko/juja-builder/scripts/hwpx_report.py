@@ -339,6 +339,14 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
+def _note_text(text: str) -> str | None:
+    """주석 기호(※, *)를 뗀 주석 문구. 주석 줄이 아니면 None.
+    Why: '*'는 주석 기호와 강조 표기에 함께 쓰이므로 강조 표기(**굵게**, *기울임*)로 시작하는 줄은 서술로 읽음"""
+    if text.startswith("**") or ((m := INLINE_RE.match(text)) and m.group().startswith("*")):
+        return None
+    return _strip_marker(text, NOTE_MARK)
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -408,7 +416,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+        if (t := _note_text(stripped)) is not None:
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -421,8 +429,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
-                elems.append(Element("note", t))  # 굵게(**)로 시작하는 서술은 주석 표기 아님
+            elif (t := _note_text(body)) is not None:
+                elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -746,18 +754,24 @@ def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
 
 
 # ── 형식 무관 조판 판단 (hwpx와 docx 작성기가 함께 사용) ─────────────────────
-INLINE_RE = re.compile(
-    r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^"
-    r"|\[\^[^\]]+\])")
+# 강조 표기는 별표 안쪽 양끝이 빈칸이 아닌 글자이고 바깥쪽에 별표가 이어지지 않는 경우에만 인식
+# Why: 유의수준 범례('*p<0.05, **p<0.01') 등 글자 그대로 쓴 별표를 강조 표기와 구분
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 
 
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """인라인 표기를 (종류, 글자) 목록으로 분해. 종류는 text, bold, italic, code, sup, sub, footnote(각주 키)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # split 결과의 짝수 번째는 표기 밖 글자. 표기 문자로 시작해도 글자 그대로 둠
+            out.append(("text", seg))
+        elif seg.startswith("***"):   # 굵은 기울임 표기는 굵게로 출력
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -767,10 +781,8 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[5:-6] if seg.startswith("<") else seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("text", seg))
     return out
 
 

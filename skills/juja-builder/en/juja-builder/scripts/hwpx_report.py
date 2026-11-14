@@ -333,6 +333,14 @@ def _strip_marker(text: str, marks: tuple[str, ...]) -> str | None:
     return None
 
 
+def _note_text(text: str) -> str | None:
+    """The note text without its note mark (※, *). None when the line is not a note.
+    Why: '*' serves as both a note mark and an emphasis mark, so a line that starts with emphasis (**bold**, *italic*) is read as a statement"""
+    if text.startswith("**") or ((m := INLINE_RE.match(text)) and m.group().startswith("*")):
+        return None
+    return _strip_marker(text, NOTE_MARK)
+
+
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = open(path, encoding="utf-8").read().splitlines()
     footnotes: dict[str, str] = {}
@@ -402,7 +410,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
-        if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+        if (t := _note_text(stripped)) is not None:
             if SOURCE_RE.match(t):
                 t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
@@ -415,8 +423,8 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
                 elems.append(Element("circle", t))
             elif (t := _strip_marker(body, SQUARE_MARK)) is not None:
                 elems.append(Element("square", t))
-            elif (t := _strip_marker(body, NOTE_MARK)) is not None and not body.startswith("**"):
-                elems.append(Element("note", t))  # text that starts with bold (**) is not a note mark
+            elif (t := _note_text(body)) is not None:
+                elems.append(Element("note", t))
             else:
                 kind = ("circle", "dash", "dot")[min(rank, 2)]
                 elems.append(Element(kind, body))
@@ -740,18 +748,24 @@ def col_aligns(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
 
 
 # ── Format-agnostic typesetting judgments (shared by the hwpx and docx writers) ─────────────────────
-INLINE_RE = re.compile(
-    r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^"
-    r"|\[\^[^\]]+\])")
+# Emphasis is recognized only when both inner ends are non-space characters and no asterisk follows on the outside
+# Why: tells literal asterisks such as a significance legend ('*p<0.05, **p<0.01') apart from emphasis marks
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 
 
 def inline_segments(text: str) -> list[tuple[str, str]]:
     """Split inline notation into a list of (kind, text). Kinds are text, bold, italic, code, sup, sub, footnote (footnote key)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # even items of the split are text outside the marks. They stay literal even when they start with a mark character
+            out.append(("text", seg))
+        elif seg.startswith("***"):   # bold italic marks are written as bold
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -761,10 +775,8 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[5:-6] if seg.startswith("<") else seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("text", seg))
     return out
 
 

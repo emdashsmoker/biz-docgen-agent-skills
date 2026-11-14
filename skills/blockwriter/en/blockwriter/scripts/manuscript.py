@@ -32,7 +32,11 @@ IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
 COL_WIDTH_SEP_RE = re.compile(r"[,，\s]+")
 FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)$")
-INLINE_RE = re.compile(r"(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
+# Emphasis is recognized only when both inner ends are non-space characters and no asterisk follows on the outside
+# Why: tells literal asterisks such as a significance legend ('*p<0.05, **p<0.01') apart from emphasis marks
+EMPHASIS_RE = r"(?<!\*){mark}[^*\s](?:[^*]*[^*\s])?{mark}(?!\*)"
+INLINE_RE = re.compile("(" + "|".join(EMPHASIS_RE.format(mark=m) for m in (r"\*{3}", r"\*\*", r"\*"))
+                       + r"|`[^`]+`|<sup>.*?</sup>|<sub>.*?</sub>|\^[^^\s]+\^|\[\^[^\]]+\])")
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "* ")   # a '*' note needs a space after it. Lines starting with '*italic*' or '**bold**' are statements
@@ -912,10 +916,14 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
     """Splits inline formatting into a list of (kind, text).
     kind: plain, bold, italic, code, sup, sub, footnote (footnote key)"""
     out = []
-    for seg in INLINE_RE.split(text):
+    for i, seg in enumerate(INLINE_RE.split(text)):
         if not seg:
             continue
-        if seg.startswith("**"):
+        if i % 2 == 0:   # even items of the split are text outside the marks. They stay literal even when they start with a mark character
+            out.append(("plain", seg))
+        elif seg.startswith("***"):   # bold italic marks are written as bold
+            out.append(("bold", seg[3:-3]))
+        elif seg.startswith("**"):
             out.append(("bold", seg[2:-2]))
         elif seg.startswith("*"):
             out.append(("italic", seg[1:-1]))
@@ -927,10 +935,8 @@ def inline_segments(text: str) -> list[tuple[str, str]]:
             out.append(("sup", seg[1:-1]))
         elif seg.startswith("<sub>"):
             out.append(("sub", seg[5:-6]))
-        elif seg.startswith("[^"):
+        else:   # [^key]
             out.append(("footnote", seg[2:-1]))
-        else:
-            out.append(("plain", seg))
     return out
 
 
