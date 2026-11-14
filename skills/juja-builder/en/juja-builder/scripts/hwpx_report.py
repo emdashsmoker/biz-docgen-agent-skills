@@ -118,6 +118,7 @@ COVER_SUB_PT = 1600             # subtitle 16pt
 COVER_DATE_PT = 1400            # date 14pt
 COVER_ORG_PT = 1600             # organization 16pt
 COVER_GAP_LINES = 14            # empty lines between the date and the organization
+HEADER_ALIGNS = ("LEFT", "CENTER", "RIGHT")   # header alignment values (align in build --header)
 TOC_TAB_POS = 48100             # right dotted tab position of TOC styles (skeleton tabPr value)
 TOC_SUB_INDENT = 3000           # TOC subsection indent (twice the section's 1500, conventional policy report value)
 TOC_UNIT_W = (700, 600)         # width of one weighted unit for estimating TOC tab width (chapter, section). 한/글 recalculates tabs, so this is for approximate renderer display
@@ -607,7 +608,8 @@ def lint(elems: list[Element]) -> list[str]:
             nxt = elems[idx + 1].kind if idx + 1 < len(elems) else None
             if nxt not in ("circle", "dash", "dot", "note"):
                 issues.append(f"[lone □] no ○ or - text under '{e.text[:30]}'")
-        if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS:
+        # A table whose method is set by a (장표: ) directive line (long_spec in proposal.py) is not asked again
+        if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS and not e.data.get("long_spec"):
             issues.append(f"[long table HITL] table of {len(e.data['rows'])} rows: ask the user to choose --long-table engine|split")
         if e.kind == "table" and not e.text:
             issues.append("[table caption missing] a caption of the form '<표> title' on the line before the table is recommended")
@@ -896,11 +898,24 @@ def table_spans(rows: list[list[str]], hdr: int, merge_mode: str) -> tuple[list,
     return vspans, hspans
 
 
-def split_table(e: Element, rows: list[list[str]]) -> list[Element]:
-    """Physical split of a long table. Reattach the header row to each chunk and append (sequence) to the caption"""
+def parse_header_spec(spec: str) -> tuple[str, str]:
+    """Header text and alignment (build --header "text;align=LEFT|CENTER|RIGHT", RIGHT by default).
+    Why the alignment check: HWPX takes an undocumented value as another alignment
+    and DOCX stops with a traceback, so both formats stop with the same error"""
+    parts = spec.split(";")
+    align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+    if align not in HEADER_ALIGNS:
+        sys.exit(f"ERROR: align in --header does not accept '{align}'. Allowed values: {'|'.join(HEADER_ALIGNS)}")
+    return parts[0].strip(), align
+
+
+def split_table(e: Element, rows: list[list[str]], widths: list[int]) -> list[Element]:
+    """Physical split of a long table. Reattach the header row to each chunk and append (sequence) to the caption.
+    widths are the column widths sized from the whole table before the split. Every chunk shares them,
+    because sizing each chunk on its own would misalign the column borders between chunks"""
     chunks = [rows[i:i + LONG_TABLE_ROWS - 1] for i in range(1, len(rows), LONG_TABLE_ROWS - 1)]
     return [Element("table", f"{e.text} ({k})" if e.text else "",
-                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True})
+                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True, "split_widths": widths})
             for k, chunk in enumerate(chunks, 1)]
 
 
@@ -986,14 +1001,16 @@ def front_matter_items(cover: dict | None, toc: bool, toc_items: list[tuple[str,
         if cover.get("org"):
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
-        items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
-        items += [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
-                  for kind, text, name in toc_items if kind not in TOC_LIST_KINDS]
-        for list_kind, title_key in TOC_LIST_KINDS.items():
-            entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
-            if entries:
-                items.append({"kind": "toc_title", "text": label(title_key), "page_break": True})
-                items += [{"kind": "list_entry", "text": text, "name": name} for text, name in entries]
+        # Lists without entries are left out. A scope of tables and figures only would leave a page with the TOC title alone,
+        # so the first list takes the first page. With no entries at all, the TOC title stays alone to keep the front matter section
+        lists = [("toc.title", [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
+                                for kind, text, name in toc_items if kind not in TOC_LIST_KINDS])]
+        lists += [(title_key, [{"kind": "list_entry", "text": text, "name": name}
+                               for kind, text, name in toc_items if kind == list_kind])
+                  for list_kind, title_key in TOC_LIST_KINDS.items()]
+        for n, (title_key, entries) in enumerate([x for x in lists if x[1]] or lists[:1]):
+            items.append({"kind": "toc_title", "text": label(title_key), "page_break": n > 0 or bool(cover)})
+            items += entries
     return items
 
 
@@ -1551,9 +1568,7 @@ class Builder(TocMarks):
         python-hwpx writes the header in two places, inside secPr and in ctrl, so the copy inside secPr is removed and the paragraph alignment of the ctrl copy is set."""
         if not spec:
             return
-        parts = spec.split(";")
-        text = parts[0].strip()
-        align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+        text, align = parse_header_spec(spec)
         sec = self.doc.sections[-1]
         self.doc.page.set_header(text=text, section=sec)
         body_pp = str(self.refs("body")["para_pr_id_ref"])
@@ -1684,12 +1699,12 @@ class Builder(TocMarks):
     def table(self, e: Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
         nrow, ncol = len(rows), len(rows[0])
-        widths = calc_col_widths(rows, self.table_max_w)
+        widths = e.data.get("split_widths") or calc_col_widths(rows, self.table_max_w)
         aligns = col_aligns(rows, e.data["aligns"])
         hdr = header_rows(rows)
         table_w = sum(widths)
         if nrow > LONG_TABLE_ROWS and self.long_table_mode == "split":  # physical split: reattach the header row to each chunk
-            for sub in split_table(e, rows):
+            for sub in split_table(e, rows, widths):
                 self.table(sub)
             return
         self.gap()

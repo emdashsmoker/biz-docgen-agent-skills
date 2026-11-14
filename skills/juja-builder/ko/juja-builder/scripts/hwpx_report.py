@@ -125,6 +125,7 @@ COVER_SUB_PT = 1600             # 부제 16pt
 COVER_DATE_PT = 1400            # 일자 14pt
 COVER_ORG_PT = 1600             # 기관 16pt
 COVER_GAP_LINES = 14            # 일자와 기관 사이 빈 줄 수
+HEADER_ALIGNS = ("LEFT", "CENTER", "RIGHT")   # 머리말 정렬값 (build --header의 align)
 TOC_TAB_POS = 48100             # 목차 스타일의 오른쪽 점선 탭 위치 (스켈레톤 tabPr 값)
 TOC_SUB_INDENT = 3000           # 목차 소절 들여쓰기 (절 1500의 2배, 정책보고서 관행 값)
 TOC_UNIT_W = (700, 600)         # 목차 탭 폭 추정용 가중 1단위 폭 (장, 절). 한/글은 탭을 다시 계산하므로 근사 렌더러 표시용
@@ -613,7 +614,8 @@ def lint(elems: list[Element]) -> list[str]:
             nxt = elems[idx + 1].kind if idx + 1 < len(elems) else None
             if nxt not in ("circle", "dash", "dot", "note"):
                 issues.append(f"[□ 단독] '{e.text[:30]}' 아래에 ○ 또는 - 서술이 없음")
-        if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS:
+        # (장표: ) 지시 줄로 처리 방식을 정한 표(proposal.py의 long_spec)는 다시 묻지 않음
+        if e.kind == "table" and len(e.data["rows"]) > LONG_TABLE_ROWS and not e.data.get("long_spec"):
             issues.append(f"[장표 HITL] {len(e.data['rows'])}행 표: 유저에게 --long-table engine|split 택일을 질의")
         if e.kind == "table" and not e.text:
             issues.append("[표 캡션 없음] 표 앞 줄에 '<표> 제목' 형식 캡션 권장")
@@ -902,11 +904,22 @@ def table_spans(rows: list[list[str]], hdr: int, merge_mode: str) -> tuple[list,
     return vspans, hspans
 
 
-def split_table(e: Element, rows: list[list[str]]) -> list[Element]:
-    """장표 물리 분할. 청크마다 제목행을 다시 붙이고 캡션에 (순번)을 덧붙임"""
+def parse_header_spec(spec: str) -> tuple[str, str]:
+    """머리말 문구와 정렬값 (build --header "텍스트;align=LEFT|CENTER|RIGHT", 기본 RIGHT).
+    Why 정렬값 검증: 문서에 없는 값의 처리가 형식마다 달라서(HWPX는 다른 정렬로 대체, DOCX는 트레이스백) 두 형식 모두 같은 오류로 중단"""
+    parts = spec.split(";")
+    align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+    if align not in HEADER_ALIGNS:
+        sys.exit(f"ERROR: --header의 align에 쓸 수 없는 값 '{align}'. 쓸 수 있는 값: {'|'.join(HEADER_ALIGNS)}")
+    return parts[0].strip(), align
+
+
+def split_table(e: Element, rows: list[list[str]], widths: list[int]) -> list[Element]:
+    """장표 물리 분할. 청크마다 제목행을 다시 붙이고 캡션에 (순번)을 덧붙임.
+    widths는 분할 전 표 전체로 산정한 열 폭. 청크마다 다시 산정하면 청크 사이의 열 경계가 어긋나므로 모든 청크가 공유"""
     chunks = [rows[i:i + LONG_TABLE_ROWS - 1] for i in range(1, len(rows), LONG_TABLE_ROWS - 1)]
     return [Element("table", f"{e.text} ({k})" if e.text else "",
-                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True})
+                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True, "split_widths": widths})
             for k, chunk in enumerate(chunks, 1)]
 
 
@@ -992,14 +1005,16 @@ def front_matter_items(cover: dict | None, toc: bool, toc_items: list[tuple[str,
         if cover.get("org"):
             items.append({"kind": "cover", "text": cover["org"], "pt": COVER_ORG_PT, "bold": True})
     if toc:
-        items.append({"kind": "toc_title", "text": label("toc.title"), "page_break": bool(cover)})
-        items += [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
-                  for kind, text, name in toc_items if kind not in TOC_LIST_KINDS]
-        for list_kind, title_key in TOC_LIST_KINDS.items():
-            entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
-            if entries:
-                items.append({"kind": "toc_title", "text": label(title_key), "page_break": True})
-                items += [{"kind": "list_entry", "text": text, "name": name} for text, name in entries]
+        # 항목 없는 목차는 싣지 않음. 수록 범위가 표와 그림뿐이면 목차 제목만 있는 빈 쪽이 생기므로 첫 목차가 첫 쪽을 씀.
+        # 수록 항목이 하나도 없으면 목차 제목만 남겨 앞부분 구역을 유지
+        lists = [("toc.title", [{"kind": "toc_entry", "item": kind, "text": text, "name": name}
+                                for kind, text, name in toc_items if kind not in TOC_LIST_KINDS])]
+        lists += [(title_key, [{"kind": "list_entry", "text": text, "name": name}
+                               for kind, text, name in toc_items if kind == list_kind])
+                  for list_kind, title_key in TOC_LIST_KINDS.items()]
+        for n, (title_key, entries) in enumerate([x for x in lists if x[1]] or lists[:1]):
+            items.append({"kind": "toc_title", "text": label(title_key), "page_break": n > 0 or bool(cover)})
+            items += entries
     return items
 
 
@@ -1555,9 +1570,7 @@ class Builder(TocMarks):
         python-hwpx가 header를 secPr 안과 ctrl 두 곳에 쓰므로 secPr 안 사본을 제거하고 ctrl 사본의 문단 정렬을 지정."""
         if not spec:
             return
-        parts = spec.split(";")
-        text = parts[0].strip()
-        align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+        text, align = parse_header_spec(spec)
         sec = self.doc.sections[-1]
         self.doc.page.set_header(text=text, section=sec)
         body_pp = str(self.refs("body")["para_pr_id_ref"])
@@ -1688,12 +1701,12 @@ class Builder(TocMarks):
     def table(self, e: Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
         nrow, ncol = len(rows), len(rows[0])
-        widths = calc_col_widths(rows, self.table_max_w)
+        widths = e.data.get("split_widths") or calc_col_widths(rows, self.table_max_w)
         aligns = col_aligns(rows, e.data["aligns"])
         hdr = header_rows(rows)
         table_w = sum(widths)
         if nrow > LONG_TABLE_ROWS and self.long_table_mode == "split":  # 물리 분할: 청크마다 제목행 재부착
-            for sub in split_table(e, rows):
+            for sub in split_table(e, rows, widths):
                 self.table(sub)
             return
         self.gap()

@@ -842,13 +842,14 @@ def table_plan(e: Element, merge_mode: str) -> dict:
             "vspans": vspans, "hspans": hspans, "skipped": skipped}
 
 
-def split_long_table(e: Element) -> list[Element]:
-    """장표를 제목행을 반복한 청크 표로 나눈다 (--long-table split)"""
+def split_long_table(e: Element, widths: list[int]) -> list[Element]:
+    """장표를 제목행을 반복한 청크 표로 나눈다 (--long-table split).
+    widths는 분할 전 표 전체로 산정한 열 폭. 청크마다 다시 산정하면 청크 사이의 열 경계가 어긋나므로 모든 청크가 공유"""
     rows = pad_rows(e.data["rows"])
     step = C.LONG_TABLE_ROWS - 1
     chunks = [rows[i:i + step] for i in range(1, len(rows), step)]
     return [Element("table", f"{e.text} ({k})" if e.text else "",
-                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True})
+                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True, "split_widths": widths})
             for k, chunk in enumerate(chunks, 1)]
 
 
@@ -1031,16 +1032,18 @@ class TocMarks:
 
 def toc_layout(toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
     """목차 문단의 순서 (목차, 표 목차, 그림 목차). 조판기는 이 목록을 순서대로 기록만 한다.
-    kind: title(text, first), entry(item, text, name, indent). first는 첫 목차 제목인지 여부이며 그 밖의 제목은 새 쪽에서 시작"""
-    out = [{"kind": "title", "text": C.label("toc.title"), "first": True}]
-    out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": C.TOC_INDENT[kind]}
-            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS]
-    for list_kind, title_key in C.TOC_LIST_KINDS.items():
-        entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
-        if entries:
-            out.append({"kind": "title", "text": C.label(title_key), "first": False})
-            out += [{"kind": "entry", "item": list_kind, "text": text, "name": name, "indent": C.TOC_LIST_INDENT}
-                    for text, name in entries]
+    kind: title(text, first), entry(item, text, name, indent). first는 첫 목차 제목인지 여부이며 그 밖의 제목은 새 쪽에서 시작.
+    Why 항목 없는 목차 생략: 수록 범위가 표와 그림뿐이면 목차 제목만 있는 빈 쪽이 생기므로 항목이 있는 목차만 싣고 첫 목차가 첫 쪽을 씀.
+    수록 항목이 하나도 없으면 목차 제목만 남겨 앞부분 구역을 유지"""
+    lists = [("toc.title", [(kind, text, name, C.TOC_INDENT[kind])
+                            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS])]
+    lists += [(title_key, [(kind, text, name, C.TOC_LIST_INDENT) for kind, text, name in toc_items if kind == list_kind])
+              for list_kind, title_key in C.TOC_LIST_KINDS.items()]
+    out = []
+    for title_key, entries in [x for x in lists if x[1]] or lists[:1]:
+        out.append({"kind": "title", "text": C.label(title_key), "first": not out})
+        out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": indent}
+                for kind, text, name, indent in entries]
     return out
 
 

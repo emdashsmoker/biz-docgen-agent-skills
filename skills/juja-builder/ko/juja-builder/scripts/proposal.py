@@ -1924,6 +1924,8 @@ def check_volume(path: str, original: bool | None = None, style: bool | None = N
         elif e.kind == "square":
             cur_sq = {"name": e.text[:30], "title": e.text, "circle": 0, "evidence": 0, "chars": len(e.text), "block_first": False}
             squares.append(cur_sq)
+        elif e.kind == "note" and lib.SOURCE_RE.match(e.text):
+            continue   # `※ 출처:` 줄은 `출처:` 줄과 같이 서지 정보를 담은 출처 줄. ※ 부기의 줄 상한, 근거 줄 수, 글자 수에서 제외
         elif e.kind in ("circle", "dash", "dot", "note"):
             if len(e.text) > LINE_MAX[e.kind]:
                 warns.append(f"{e.kind} 항목 {len(e.text)}자 ({'1줄' if e.kind == 'note' else '2줄'} 상한 {LINE_MAX[e.kind]}자). 문장을 나누어 계위를 더하거나 표로 전환: {e.text[:24]}")
@@ -2519,7 +2521,7 @@ def main():
     p = sub.add_parser("figure", help="발표자료 쪽 → 삽입용 도식 PNG (발표자료/figures)")
     p.add_argument("work")
     p.add_argument("page", type=int)
-    p.add_argument("--grid", action="store_true", help="자르기 값을 읽기 위한 10% 눈금 PNG만 생성")
+    p.add_argument("--grid", action="store_true", help="자르기 값을 읽기 위한 10%% 눈금 PNG만 생성")
     p.add_argument("--crop", help="좌,상,우,하 백분율 (예: 4,28,97,96)")
     p.add_argument("--name", help="파일명 접미")
     p.add_argument("--no-trim", action="store_true", help="바깥 여백 자동 제거를 끔")
@@ -2553,7 +2555,7 @@ def main():
                                        f"항목: {', '.join(toc_refs.KINDS)}. table과 figure는 번호 캡션만 수록")
     p.add_argument("--page-number", action="store_true", help="꼬리말 쪽번호 (기본 OFF)")
     p.add_argument("--cover", help='표지: "title=제목;subtitle=부제;date=YYYY. M.;org=기관"')
-    p.add_argument("--header", help='머리말: "텍스트;align=RIGHT"')
+    p.add_argument("--header", help='머리말: "텍스트;align=LEFT|CENTER|RIGHT" (기본 RIGHT)')
     p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
                    help="표와 그림의 출처 행 줄 나눔(착수 질의 답변): auto=원고에 쓴 줄 그대로(기본), break=출처마다 줄 나눔, inline=한 줄로 이음")
     p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),

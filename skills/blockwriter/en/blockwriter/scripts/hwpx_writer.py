@@ -664,16 +664,16 @@ class Builder(M.TocMarks):
 
     # ── Tables ─────────────────────────────────────────────────────────────
     def table(self, e: M.Element):
-        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
-            for sub in M.split_long_table(e):   # physical split: reattach the header row to each chunk
-                self.table(sub)
-            return
         plan = M.table_plan(e, self.merge_mode)
         rows, hdr, aligns = plan["rows"], plan["hdr"], plan["aligns"]
         nrow, ncol = len(rows), len(rows[0])
         fit = e.data.get("fit")
         font = self._cell_font(fit)
-        widths = M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        widths = e.data.get("split_widths") or M.table_col_widths(rows, e.data.get("colwidth"), self.table_max_w, font, e.text)
+        if len(e.data["rows"]) > C.LONG_TABLE_ROWS and self.long_table_mode == "split" and not e.data.get("split_done"):
+            for sub in M.split_long_table(e, widths):   # physical split: reattach the header row to each chunk, widths from the whole table
+                self.table(sub)
+            return
         table_w = sum(widths)
         self.gap()
         r = self._centered_refs(M.table_pos_role(bool(e.text), bool(self.p.get("fig_pos"))))
@@ -925,8 +925,12 @@ def cell_sides(c0: int, c1: int, ncol: int) -> list[str]:
 
 
 def parse_header_spec(spec: str) -> tuple[str, str]:
+    """Header text and alignment. Why the alignment check: HWPX takes an undocumented value as another alignment
+    and DOCX stops with a traceback, so both formats stop with the same error"""
     parts = spec.split(";")
     align = next((kv.split("=", 1)[1].strip().upper() for kv in parts[1:] if kv.strip().lower().startswith("align=")), "RIGHT")
+    if align not in C.HEADER_ALIGNS:
+        sys.exit(msg("err_header_align", value=align, allowed="|".join(C.HEADER_ALIGNS)))
     return parts[0].strip(), align
 
 

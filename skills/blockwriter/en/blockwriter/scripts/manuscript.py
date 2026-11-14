@@ -842,13 +842,15 @@ def table_plan(e: Element, merge_mode: str) -> dict:
             "vspans": vspans, "hspans": hspans, "skipped": skipped}
 
 
-def split_long_table(e: Element) -> list[Element]:
-    """Splits a long table into chunk tables with the header row repeated (--long-table split)"""
+def split_long_table(e: Element, widths: list[int]) -> list[Element]:
+    """Splits a long table into chunk tables with the header row repeated (--long-table split).
+    widths are the column widths sized from the whole table before the split. Every chunk shares them,
+    because sizing each chunk on its own would misalign the column borders between chunks"""
     rows = pad_rows(e.data["rows"])
     step = C.LONG_TABLE_ROWS - 1
     chunks = [rows[i:i + step] for i in range(1, len(rows), step)]
     return [Element("table", f"{e.text} ({k})" if e.text else "",
-                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True})
+                    data={**e.data, "rows": [rows[0]] + chunk, "split_done": True, "split_widths": widths})
             for k, chunk in enumerate(chunks, 1)]
 
 
@@ -1030,16 +1032,19 @@ class TocMarks:
 
 def toc_layout(toc_items: list[tuple[str, str, str | None]]) -> list[dict]:
     """Order of TOC paragraphs (TOC, list of tables, list of figures). Builders only write this list in order.
-    kind: title(text, first), entry(item, text, name, indent). first tells whether it is the first TOC title; other titles start on a new page"""
-    out = [{"kind": "title", "text": C.label("toc.title"), "first": True}]
-    out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": C.TOC_INDENT[kind]}
-            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS]
-    for list_kind, title_key in C.TOC_LIST_KINDS.items():
-        entries = [(text, name) for kind, text, name in toc_items if kind == list_kind]
-        if entries:
-            out.append({"kind": "title", "text": C.label(title_key), "first": False})
-            out += [{"kind": "entry", "item": list_kind, "text": text, "name": name, "indent": C.TOC_LIST_INDENT}
-                    for text, name in entries]
+    kind: title(text, first), entry(item, text, name, indent). first tells whether it is the first TOC title; other titles start on a new page.
+    Why lists without entries are left out: a scope of tables and figures only would leave a page with the TOC title alone,
+    so only lists with entries are written and the first of them takes the first page.
+    With no entries at all, the TOC title stays alone to keep the front matter section"""
+    lists = [("toc.title", [(kind, text, name, C.TOC_INDENT[kind])
+                            for kind, text, name in toc_items if kind not in C.TOC_LIST_KINDS])]
+    lists += [(title_key, [(kind, text, name, C.TOC_LIST_INDENT) for kind, text, name in toc_items if kind == list_kind])
+              for list_kind, title_key in C.TOC_LIST_KINDS.items()]
+    out = []
+    for title_key, entries in [x for x in lists if x[1]] or lists[:1]:
+        out.append({"kind": "title", "text": C.label(title_key), "first": not out})
+        out += [{"kind": "entry", "item": kind, "text": text, "name": name, "indent": indent}
+                for kind, text, name, indent in entries]
     return out
 
 

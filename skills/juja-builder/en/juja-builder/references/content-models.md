@@ -30,6 +30,7 @@
 | ․ | 2 lines | 82 characters |
 
 - `check volume` warns on overruns. Resolve an overflowing sentence by splitting it and adding a lower level, or by converting to a table
+- Source lines (`출처:`, `※ 출처:`) carry bibliographic data, so they are left out of the line caps, evidence line counts, and character counts
 - When below a lower bound, add units in the order below
     1. Add evidence lines (one line of figures, one of material names, one of cases)
     2. Add ※ notes (term definitions, source dates, calculation bases)

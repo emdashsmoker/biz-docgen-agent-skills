@@ -96,6 +96,7 @@ Row layout
     - (engine) Splits the table by row at page boundaries and marks the unit row and header rows as title rows (rows that appear again at the top of the table on each new page). Hangul and Word repeat only title rows that run contiguously from the top of the table, so the unit row above the header is included in the title rows
     - (engine, HWPX) Treat-as-character goes off for the table, and one empty paragraph in the body style (바탕글) goes before and after it (LONG_TABLE_GAP_LINES). Such a table is placed apart from the text flow, so the margins of the table position paragraph alone leave it touching the neighboring paragraphs
     - (split) Divides the rows after the first row (header) into groups of 24 as separate tables and repeats the first row at the top of each table. The caption gets a sequence number (1), (2) at its end
+    - (split column widths) All the divided tables share the column widths sized from the whole table before the split, so the column borders line up between them. A column width line applies to the whole table, and the column width WARN and INFO lines print once for the table before the split
 
 Figure layout
 
@@ -149,7 +150,7 @@ DOCX converts the same form.py definitions into Word units.
 ## Table of contents
 
 - The scope is set with `--toc-scope`. The default is chapters, sections, tables, and figures; subsections and 가나다 headings can be added. Only tables and figures with captions are listed
-- Chapter, section, subsection, and 가나다 entries go into the TOC in document order. Tables and figures go into the list of tables and the list of figures after the TOC (each on a new page). An entry is the text, a dotted tab, and the page number
+- Chapter, section, subsection, and 가나다 entries go into the TOC in document order. Tables and figures go into the list of tables and the list of figures after the TOC (each on a new page). A list without entries is left out, so with a scope of tables and figures only there is no page with the TOC title alone, and the list of tables or the list of figures takes the first page. An entry is the text, a dotted tab, and the page number
 - Left margins are chapter 0, section 1500, subsection 3000, 가나다 4500 (HWPUNIT). Entries of the list of tables and list of figures use 0. Chapters use the TOC chapter style and the others the TOC section style
 - A TOC is created only on forms with TOC styles (toc_chapter, toc_section). flat has no TOC styles, so its TOC is skipped
 - The body section starts at page 1, so changes in the TOC length do not change body page numbers
