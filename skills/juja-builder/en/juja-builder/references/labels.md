@@ -40,6 +40,8 @@
 | `notation.unit` | unit line tokens (added only) | `단위` | `Unit` |
 | `notation.table` | table caption tokens (added only) | `표` | `Table` |
 | `notation.figure` | figure caption tokens (added only) | `그림` | `Figure` |
+| `notation.ratio`, `notation.spacing`, `notation.linespacing` | item names of the adjustment notation for the width ratio, letter spacing and line spacing (added only) | `장평`, `자간`, `줄 간격` | `Width ratio`, `Letter spacing`, `Line spacing` |
+| `notation.figwidth` | item name of the width notation at the end of a figure line (added only) | `폭` | `Width` |
 | `language.latin` | Latin language tag of docx default runs | `en-US` | `en-US` |
 | `language.east_asia` | East Asian language tag of docx default runs | `ko-KR` | `ko-KR` |
 | `output.proposal` | delivered file name of the proposal | `제안서` | `proposal` |
@@ -68,7 +70,8 @@
   "letters": {"items": "abcdefghijklmnopqrstuvwxyz", "format": "({x})"},
   "toc": {"title": "Contents", "tables": "List of Tables", "figures": "List of Figures"},
   "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
-  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"]},
+  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
+               "ratio": ["Width ratio"], "spacing": ["Letter spacing"], "linespacing": ["Line spacing"], "figwidth": ["Width"]},
   "language": {"latin": "en-US", "east_asia": "ko-KR"},
   "output": {"proposal": "proposal", "report": "pre-diagnosis-report", "plan": "planning-report"}
 }

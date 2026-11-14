@@ -314,11 +314,18 @@ class DocxBuilder(lib.TocMarks):
         return p
 
     def _run(self, p, text: str, role: str, pt: float | None = None, bold: bool | None = None,
-             color: str | None = None, font_key: str | None = None):
+             color: str | None = None, font_key: str | None = None, adjust: dict | None = None):
         """Text with a changed size (heading levels, bands, cover). Paragraph line spacing is recalculated from the changed size"""
         if pt is not None:
             p.paragraph_format.line_spacing = Twips(self._style_line(self._row(role), pt))
-        return self._text(p, text, pt or self._row(role)[3], bold=bold, color=color, font_key=font_key, size=pt)
+        self._line_adjust(p, role, (adjust or {}).get("line", 0), pt)
+        return self._text(p, text, pt or self._row(role)[3], bold=bold, color=color, font_key=font_key, size=pt, adjust=adjust)
+
+    def _line_adjust(self, p, role: str, delta: int, pt: float | None = None):
+        """Fixed line spacing with the adjustment (percentage points) added. With an adjustment of 0 the style value stays"""
+        if delta:
+            row = self._row(role)
+            p.paragraph_format.line_spacing = Twips(int(round((pt or row[3]) * (row[10] + delta) / 100 * TWIP_PER_PT)))
 
     def _space_twips(self, pt: float) -> int:
         """Difference between the 한/글 fixed space width (half the font size) and the font's space width. Added to docx spaces as character spacing"""
@@ -326,7 +333,9 @@ class DocxBuilder(lib.TocMarks):
 
     def _text(self, p, text: str, pt: float, **fmt):
         """Record text split into space units. Space pieces get character spacing that matches the 한/글 space width
-        fmt: bold, italic, script(sup|sub), color, font_key"""
+        fmt: bold, italic, script(sup|sub), color, font_key, adjust (width ratio and letter spacing adjustment from the manuscript notation, percentage points)"""
+        adjust = fmt.get("adjust") or {}
+        tracking = int(round(pt * adjust.get("spacing", 0) / 100 * TWIP_PER_PT))   # letter spacing adjustment, added after every character
         runs = []
         for part in SPACE_SPLIT_RE.split(text):
             if not part:
@@ -348,13 +357,19 @@ class DocxBuilder(lib.TocMarks):
                 f = self._font(fmt["font_key"])
                 r.font.name = f
                 r._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), f)
-            if part[0] == " " and self._space_twips(pt):
-                _insert_ordered(r._element.get_or_add_rPr(), _w("spacing", val=self._space_twips(pt)), RPR_ORDER)
+            spacing = tracking + (self._space_twips(pt) if part[0] == " " else 0)
+            if spacing:
+                _insert_ordered(r._element.get_or_add_rPr(), _w("spacing", val=spacing), RPR_ORDER)
+            if adjust.get("ratio"):
+                _insert_ordered(r._element.get_or_add_rPr(), _w("w", val=100 + adjust["ratio"]), RPR_ORDER)
             runs.append(r)
         return runs
 
-    def para(self, role: str, text: str, footnotes: dict | None = None, no_heading: bool = False, **_):
+    def para(self, role: str, text: str, footnotes: dict | None = None, no_heading: bool = False,
+             adjust: dict | None = None, **_):
+        """adjust holds the manuscript adjustment values (percentage points added to the style's width ratio, letter spacing and line spacing)"""
         p = self._new_para(role)
+        self._line_adjust(p, role, (adjust or {}).get("line", 0))
         if no_heading:  # the number is written in the body, so turn off the style's bullet
             numpr = p._p.get_or_add_pPr().get_or_add_numPr()
             numpr.get_or_add_numId().val = 0
@@ -367,7 +382,7 @@ class DocxBuilder(lib.TocMarks):
                     self.add_footnote(p, footnotes.get(seg, ""))
                 continue
             self._text(p, seg, pt, bold=True if kind == "bold" else None, italic=kind == "italic",
-                       script=kind if kind in ("sup", "sub") else None)
+                       script=kind if kind in ("sup", "sub") else None, adjust=adjust)
         return p
 
     def add_footnote(self, p, text: str):
@@ -537,9 +552,11 @@ class DocxBuilder(lib.TocMarks):
         if header:
             trPr.append(_w("tblHeader"))
 
-    def _cell_para(self, cell, text: str, role: str, align: str | None = None, bold: bool | None = None, first: bool = True):
+    def _cell_para(self, cell, text: str, role: str, align: str | None = None, bold: bool | None = None, first: bool = True,
+                   line_delta: int = 0):
         p = cell.paragraphs[0] if first else cell.add_paragraph()
         p.style = self.doc.styles[self.style_names[self._row(role)[0]]]
+        self._line_adjust(p, role, line_delta)
         if align:
             p.paragraph_format.alignment = JC[align]
         if text:
@@ -547,13 +564,23 @@ class DocxBuilder(lib.TocMarks):
         return p
 
     def _transparent_row(self, t, ri: int, ncol: int, text: str, role: str, align: str):
-        """Transparent merged rows inside a table (unit, source). They move with the table"""
+        """Transparent merged rows inside a table (unit, source). They move with the table
+        A source row splits into paragraphs at each line break notation (<br>) and hangs by the label width ("출처: ") so that later lines align with the start of the first source"""
         cell = t.cell(ri, 0).merge(t.cell(ri, ncol - 1)) if ncol > 1 else t.cell(ri, 0)
         if ncol > 1:
             cell.width = Emu(sum(c.width for c in t.columns))
-        self._cell_para(cell, text, role, align)
+        lines = lib.source_lines(text) if role == "source" else [text]
+        row = self._row(role)
+        hang = lib.source_label_hu(lines[0], row[3] * HU_PER_PT) if role == "source" else 0
+        for li, line in enumerate(lines):
+            pf = self._cell_para(cell, line, role, align, first=li == 0).paragraph_format
+            if li:   # later lines drop the space before the paragraph so that the lines of one source row are evenly spaced
+                pf.space_before = Twips(0)
+            if hang:   # the first line starts at the left margin; wrapped lines and later paragraphs are indented by the label width
+                pf.left_indent = Twips(tw(row[6] + hang))
+                pf.first_line_indent = Twips(0 if li else -tw(hang))
         self._tc_style(cell._tc, [], None, None)
-        self._row_height(t.rows[ri], lib.ROW_BASE_H)
+        self._row_height(t.rows[ri], lib.lines_to_height(len(lines)))
 
     def table(self, e: lib.Element):
         rows = [r + [""] * (max(len(x) for x in e.data["rows"]) - len(r)) for r in e.data["rows"]]
@@ -592,6 +619,10 @@ class DocxBuilder(lib.TocMarks):
         for k, src in enumerate(sources):
             self._transparent_row(t, head + nrow + k, ncol, src, "source", "LEFT")
         heights = lib.row_heights(rows, widths, hdr, vspans, hspans)
+        line_delta = e.data.get("adjust", {}).get("line", 0)   # line spacing adjustment from the manuscript notation (percentage points)
+        if line_delta:
+            base_line = self._row("table_cell")[10]
+            heights = [lib.scaled_height(h, (base_line + line_delta) / base_line) for h in heights]
         for ri, row in enumerate(rows):
             is_head = ri < hdr
             self._row_height(t.rows[head + ri], heights[ri], cant_split=not long,
@@ -605,7 +636,8 @@ class DocxBuilder(lib.TocMarks):
                 role, align = lib.cell_role(aligns[ci], is_head)
                 for li, line in enumerate(val.split("\n")):
                     br = roles[li] if li < len(roles) and not is_head else None
-                    self._cell_para(cell, line, br or role, None if br else align, True if is_head else None, first=li == 0)
+                    self._cell_para(cell, line, br or role, None if br else align, True if is_head else None, first=li == 0,
+                                    line_delta=line_delta)
                 r1, c1 = anchors.get((ri, ci), (ri, ci))
                 sides = lib.edge_sides(ci, c1, ncol)  # shaded cells also follow the table's outer left and right rule (same rules as hwpx)
                 style_fill = fill or (lib.HEADER_FILL if is_head else None)
@@ -651,7 +683,7 @@ class DocxBuilder(lib.TocMarks):
             if e.text and lib.FIG_CAPTION_SIDE != "TOP":
                 self._caption("PICTURE", e.text, "BOTTOM")
             for src in sources:
-                self.para("source", src)
+                self.para("source", lib.source_inline(src))
         else:  # put the picture and the source row in a transparent one-column table (same composition as hwpx)
             # round the table width up to a twip. If rounding makes the inner cell width narrower than the figure, the fixed-width table cuts the right side of the figure
             t = self._new_table(1 + len(sources), [math.ceil(table_w / HU_PER_TWIP) * HU_PER_TWIP])
@@ -698,11 +730,11 @@ class DocxBuilder(lib.TocMarks):
         self._spacer("band_pos", "after")
         return first
 
-    def heading_para(self, role: str, label: str, pt: int | None):
+    def heading_para(self, role: str, label: str, pt: int | None, adjust: dict | None = None):
         p = self._new_para(role)
         numpr = p._p.get_or_add_pPr().get_or_add_numPr()
         numpr.get_or_add_numId().val = 0
-        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None)
+        self._run(p, label, role, pt=pt / HU_PER_PT if pt else None, bold=True if pt else None, adjust=adjust)
         return p
 
     def chapter_started(self, p):

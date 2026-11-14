@@ -127,6 +127,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 | filled table (채움본) | A table filled with actual survey values or draft values. Named target list tables, preliminary survey result tables, criteria tables, and work product draft tables qualify |
 | long table (장표) | A table that runs past one page after typesetting |
 | source footnote inheritance (출처 각주 상속) | How a footnote that cites the same source again is written. Off (default), short form, or merging. Defined in the Manuscript Hierarchy section |
+| adjustment notation (조정 표기) | Manuscript notation that adjusts the width ratio (장평), letter spacing (자간) and line spacing (줄 간격) of a paragraph or a range, such as `{자간 -3}`. Used only when the user chose it in the kickoff questions. Defined in the Typesetting section |
+| page fill (쪽 채움) | A layout in which facing pages fill evenly down to the bottom margin. A recommendation. Defined in the Typesetting section |
 | stated needs (표면 니즈) | The procurement purpose written in the RFP text |
 | underlying needs (이면 니즈) | The client's circumstances at the time of procurement that the RFP does not write down |
 | key wording dictionary (핵심 워딩 사전) | The table in 00_제안전략서.md that collects noun phrases of the RFP task items in their original notation |
@@ -315,6 +317,8 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Whether to include a PDF. Not included by default. Give the approximate rendering notice with the question (PDF Copy in the Render Review section)
     + Long-table handling for tables that run past one page. engine (한/글 splits rows at the page boundary) or split (physically divide the table into several). The difference and the limit on deciding arbitrarily are in the Long Table Handling section
     + Source footnote inheritance. How a footnote that cites the same source again is written. Choose off (default, every footnote gives the full source), short form (later footnotes are shortened, as in `기관명(연도), 앞의 보고서`), or merging (one footnote per source, with that footnote number shown again at later citation positions). When the user chooses short form or merging, also ask the scope (□, section, chapter, whole document). Defined in the Manuscript Hierarchy section
+    + Width ratio and letter spacing adjustment. Whether to apply the editing practice that narrows the width ratio (장평) and letter spacing (자간) of paragraphs such as one where only 1-2 characters run over to the next line, so that the paragraph takes fewer lines. Choose off (default, every paragraph is typeset with the form values) or on (during review the target paragraphs are narrowed within the recommended range, and shortening the wording is also tried for paragraphs this does not resolve). Defined under the adjustment notation in the Typesetting section
+    + Line spacing adjustment. Whether to apply the editing practice that narrows the line spacing of some pages, paragraphs, tables and the like so that facing pages fill evenly without removing content. Choose off (default, every paragraph and table is typeset with the form values) or on (during review the target range is narrowed within the recommended range). Defined under the adjustment notation in the Typesetting section
     + Whether web search is allowed. If not, preliminary survey tables are filled from model knowledge (the note under the table is in the Task Description Standard section)
     + Whether 회사자료.md is filled. Items the user lacks stay as `[확인]`
     + The judged engagement type. Judge by comparing the identification signals in 01_RFP원문.md with the table in the Module Frameworks by Engagement Type section. For an engagement that matches no identification signal, judge with the stream table at the opening of methods.md. The user confirms the result
@@ -551,7 +555,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + If the directive line is missing or appears twice or more, build stops with ERROR
 - List the items of a work content cell with `◦` and `<br>`
 - When a Module or Task name joins two objects, use "및" (for example "현황 분석 및 진단"). The reason is the two-item listing rule in the Sentence Discipline section
-- When naming a Module or Task, put an action word after the object: 분석 (analysis), 진단 (diagnosis), 조사 (survey), 도출 (derivation), 수립 (development), 설계 (design), 운영 (operation), 지원 (support), and similar. For example, write "정책환경" as "정책환경 분석" (policy environment analysis), "중장기 전략" as "중장기 전략 수립" (mid- to long-term strategy development), and "이행과제" as "이행과제 도출" (implementation initiative derivation)
+- When naming a Module or Task, put an action word after the object: 분석 (analysis), 진단 (diagnosis), 조사 (survey), 도출 (derivation), 수립 (development), 설계 (design), 운영 (operation), 지원 (support), and similar. For example, write "정책환경" as "정책환경 분석" (policy environment analysis), "중장기 전략" as "중장기 전략 수립" (mid- to long-term strategy development), "이행과제" as "이행과제 도출" (implementation initiative derivation), and so on
     + A Module or Task is a unit of work. The action word at the end of the name shows the work of that unit
     + Write work product names in the 산출물 column and the (산출물) label. A name without an action word repeats the content of the 산출물 column
     + When taking an RFP task name or work product name, also put the action word after the original wording. The original wording of the key wording stays inside the name
@@ -641,12 +645,18 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 | `(폭: group name)` or `(폭: 1,3,2)` | Table width directive | Between caption and table. Unifies the widths of tables with the same layout or sets ratios |
 | `(삽입: 모듈총괄표)` | Module overview table | Inserts the table of 02_모듈총괄표.md at this point. Once in the whole manuscript set |
 | `(장표: engine)` or `(장표: split N)` | Long-table directive | Between caption and table. How to handle a table that runs past one page. Written after the user chooses |
+| `![caption](path) {폭 120}` | Figure width | At the end of the figure line. The figure width in mm. The height follows the original aspect ratio. A figure without it takes the default size of the typesetter's figure rules |
+| `{자간 -3}`, `{장평 -2, 자간 -3}`, `{줄 간격 -10}` and the like | Adjustment notation | At the end of a paragraph line, or alone on a line. Used only when the user chose it in the kickoff questions. Defined under the adjustment notation in the Typesetting section |
 
 - SKILL.md and the reference files call levels by their manuscript notation (□, ❍, hyphen, ․, ※). The symbols in the typeset result are set by the bullet definitions of the skeleton
 - build assigns heading numbers. Manuscript headings hold only the title
 - Do not use code block fences (three backticks) in manuscripts. `check tone` flags them as FAIL. Fences in reference file examples mark the extent of the example
 - The `(단위: )` (unit) line goes between caption and table. Give it only to numeric tables
 - The source line `※ 출처: ` or `출처: ` goes right after tables and figures. Give it only to tables of external data and external figures
+    + (Several sources) With two or more sources, split the line at each source with `<br>`. The typesetter aligns the later lines with the start of the first source (`출처: 기관명(연도), 자료명<br>기관명(연도), 자료명`)
+    + (One line) For a table or figure where all sources fit on one line and one line looks tidier, join them with `; ` (`출처: 기관명(연도), 자료명; 기관명(연도), 자료명`)
+    + (Choosing) Decide for each table and figure from the number and length of the sources, the width of the table or figure, the page layout and the like
+    + (Wrapped lines) When a source runs past one line, the wrapped lines also align with the start of the first source. In a source line under a paragraph, `<br>` becomes `; ` when it moves into a footnote
 - Sources of body text are `[^n]` footnotes. A source line placed under a paragraph moves into a footnote of the preceding paragraph at typesetting
     + Keep footnote labels unique within one manuscript file. build separates labels per file, so the same number in another file is allowed
     + Do not attach footnotes to a ※ note line right after a table or figure. This line is typeset as the bottom row of the table and cannot hold a footnote. Put the source on a `※ 출처:` line
@@ -660,6 +670,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Merging joins only footnotes with the same text. Write the same source in the same text. Citations of different pages stay separate footnotes. Check the number of merged citations on the build completion line (`merged footnote references`)
     + The merged number is a 한/글 cross-reference in hwpx and a Word footnote number reference field in docx. When editing after delivery changes the footnote numbers, a field update in 한/글 or Word brings the numbers along
     + Record the answer (method and scope) in the writing rules row of basic project conditions in 00_제안전략서.md. For the pre-diagnosis report, record it in the basic report information table of 00_진단서.md, and for the planning report in the basic information table of 00_기획설계.md
+- Record the kickoff answers for the width ratio and letter spacing adjustment and the line spacing adjustment in the same place. The notation and the criteria are under the adjustment notation in the Typesetting section
 - Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
 - The cell value `^` merges vertically with the cell above. `<` merges horizontally with the cell to the left. A line break in a cell is `<br>`. A line with only `---` is a page break
 - When a cell holds two or more items, list each item with `◦` and `<br>` in every table (`◦ item<br>◦ item`). A single item takes no `◦`, even when it wraps onto several lines. Columns with bullets are left-aligned at typesetting
@@ -1013,7 +1024,32 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - The transparent table that holds a figure is as wide as the figure plus the left and right cell margins, so the figure fits the inner cell width as is
     + The left and right margins used for the width are written into the figure cell. A figure wider than the body width is scaled down in proportion to fit the body width
     + In docx the table width is rounded up to a twip, and the picture's outer distances are written as zero. Without them LibreOffice adds 0.125 inch on the left and right to the picture width and cuts the right side of the picture
+    + `{폭 N}` at the end of a manuscript figure line sets the figure width to N mm. The height follows the original aspect ratio, and a value wider than the body width is reduced to the body width
 - A table without a caption is placed with the figure position style. The table position style has a small top margin because a caption sits above the table, so a table without a caption looks attached to the paragraph above
+- The source row of a table or figure splits into paragraphs at each `<br>` in the manuscript and hangs by the width of the label (such as `출처: ` or `자료: `), so that wrapped lines and the second and later lines align with the start of the first source
+    + The label width comes from the font size of the source style and approximate glyph widths of the default form font (`LABEL_EM_*` in the settings of hwpx_report.py). A ※ note line, which has no label, keeps the margins of the source style
+    + From the second paragraph, the space before the paragraph is 0 so that the lines of one source row are evenly spaced
+- The adjustment notation is manuscript notation that adjusts the width ratio (장평), letter spacing (자간) and line spacing (줄 간격) of a paragraph or a range. It is off by default. Use each item only when the user chose the width ratio and letter spacing adjustment or the line spacing adjustment in the kickoff questions
+    + (Notation) Write the item name and the adjustment value in braces, such as `{자간 -3}`, `{장평 -2, 자간 -3}`, `{줄 간격 -10}`. The value is an integer in percentage points added to the style value (`{줄 간격 -10}` on a style with 140% line spacing gives 130%)
+    + (One paragraph) Write it after a space at the end of a heading line or a body paragraph line (□, ❍, hyphen, ․, ※). It applies to that paragraph only. It is not applied to chapter titles, Module lines and Task lines, which are typeset as bands
+    + (A range) Written alone on a line, it applies to the paragraphs and tables from that line up to the next adjustment line. End the range with an adjustment line whose value is 0 (`{줄 간격 0}`). An adjustment line replaces the previous adjustment line
+    + Tables take the line spacing only. To adjust one table, put an adjustment line before the caption line and another after the source lines
+    + (Recommended range) -5 to +5 for the width ratio and the letter spacing, and -15 to +15 for the line spacing. For a value outside it, build reports `LINT: [adjustment range]` and typesets with the given value
+    + (When) Add it in the render review, after finding the targets in the PNGs. Use the smallest value that does the job, and reduce the value if an adjusted paragraph or page looks noticeably different from its neighbors
+    + (Typesetting) hwpx gives the target paragraph a character shape and a paragraph shape derived from the style. docx writes the character properties and a fixed line spacing on the target paragraph. The style definitions stay as they are. For a table, the line spacing of the cell paragraphs and the minimum row height change together
+- Do the width ratio and letter spacing adjustment only when the user chose it in the kickoff questions
+    + (Targets) A paragraph whose last line holds only 1-2 characters, a paragraph where one overflowing line gives it a different line count from neighboring paragraphs of the same level, and the like
+    + (Order) Narrow the letter spacing from -1 in steps of 1 and build again. If the letter spacing alone is not enough, narrow the width ratio as well
+    + (Room at the line end) The approximate renderers tend to fit more characters on a line than Hangul. Choose a value that leaves room for 1-2 characters at the line end in the PNGs
+    + (Shortening the wording) For a paragraph that adjustment within the recommended range does not resolve, also try shortening the wording, as far as the meaning is kept
+- Do the line spacing adjustment only when the user chose it in the kickoff questions
+    + (Targets) A page with empty space at the bottom because a table, a figure or a few lines of a paragraph moved to the next page, facing pages that fill unevenly, and the like
+    + (Unit) Apply the same value to a whole page, consecutive paragraphs, a table and the like
+    + (Order) Narrow from -5 in steps of 5 and build again
+- Page fill is a layout in which facing pages fill evenly down to the bottom margin. It is a recommendation, and adjustments go only as far as the information still comes across
+    + (Typesetting) From drafting the manuscript and the first build, choose the page break unit and the position and size of tables and figures with this in mind
+    + (Review) In the PNGs, find pages with noticeable empty space at the bottom and adjust with means such as `{폭 N}` at the end of a figure line, the table width directive, moving a table or figure earlier or later, changing the position of paragraphs, and adding or removing `---` lines
+    + When the user chose the line spacing adjustment in the kickoff questions, the adjustment notation is one of the means
 - Table width is computed per table by the typesetter's rules. The cap is the body width minus the level indent, and the floor is 50% of the cap
     + If every column fits on one line, each column gets its one-line width. If the table is narrower than the floor, it is scaled up proportionally
     + If not everything fits on one line, the table width is set to the cap. Short columns get their one-line width first. Long columns share the remaining width evenly
@@ -1077,7 +1113,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - For a document in another language, set a label file (JSON) with `build --labels file` or `check --labels file`. A path set for a workspace is recorded in state.json, and later check and build runs use the same labels. `--labels none` clears the record
 - The key groups are formats (heading number formats), letters (the 가나다 level), toc (table of contents titles), caption (caption word and brackets, docx number field), notation (added manuscript notation), language (docx language tags), and output (delivered file names). The key table, defaults, and an English example are in references/labels.md
 - A file may hold only some keys. Missing keys keep the default. Unknown keys and format errors stop build and check with ERROR
-- notation only adds tokens. Korean default notation such as `출처:`, `<표>`, and `(단위: )` stays recognized
+- notation only adds tokens. Korean default notation such as `출처:`, `<표>`, `(단위: )`, and `{자간 -3}` stays recognized
 - Roman chapter numbers and level symbols do not depend on language and are not labels
 - The default docx language tags are Latin en-US and East Asian ko-KR. With Latin ko-KR, LibreOffice breaks English words and numbers mid-token
 - For manuscripts not written in Korean, skip the Korean-specific checks with `check all --skip` (Checks section)
@@ -1096,6 +1132,9 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + Spacing before and after tables and figures. It is a defect if the next numbered title (chapter band, section 1., subsection 가., item 1)), a Module or Task band, □, or ❍ touches the bottom border of a table or figure, or if the table overlaps the paragraph above. Check for each table that it has the same spacing as other tables
     + Spacing defects occur mainly after `(장표: engine)` tables. When found, replace the directive line of that table with `(장표: split N)` and retypeset. Then check the PNG again
     + Tables separated from captions at page boundaries, split positions and header row repetition of tables that run past one page, blank pages right after a section starts, and bands, titles, and □ left alone at the end of a page
+    + Check that the wrapped lines of a source row and its second and later sources align with the start of the first source
+    + Find pages with noticeable empty space at the bottom and facing pages that fill unevenly, and adjust them with the page fill means in the Typesetting section (recommended)
+    + For a document that uses the adjustment notation, check that the line count of the target paragraphs and the page layout changed as intended, and that an adjusted paragraph does not look noticeably different from its neighbors. Summarize where and by how much in the final report
 - After the item review, do one free review without a list. Look together at left alignment lines across levels, the balance between table width and body width, consistency of margins, visual weight within a page, and differences in font size and weight across levels
 - If the cause is the manuscript, fix the manuscript. If the cause is a norm, fix the settings part of proposal.py. With three or more defects of the same kind, stop individual fixes and adjust the norm in the settings part of proposal.py
 

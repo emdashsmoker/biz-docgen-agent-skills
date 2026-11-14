@@ -40,6 +40,8 @@
 | `notation.unit` | 단위 줄 표기 (추가만) | `단위` | `Unit` |
 | `notation.table` | 표 캡션 표기 (추가만) | `표` | `Table` |
 | `notation.figure` | 그림 캡션 표기 (추가만) | `그림` | `Figure` |
+| `notation.ratio`, `notation.spacing`, `notation.linespacing` | 조정 표기의 장평, 자간, 줄 간격 항목 이름 (추가만) | `장평`, `자간`, `줄 간격` | `Width ratio`, `Letter spacing`, `Line spacing` |
+| `notation.figwidth` | 그림 줄 끝 폭 표기의 항목 이름 (추가만) | `폭` | `Width` |
 | `language.latin` | docx 기본 글자의 라틴 언어 태그 | `en-US` | `en-US` |
 | `language.east_asia` | docx 기본 글자의 동아시아 언어 태그 | `ko-KR` | `ko-KR` |
 | `output.proposal` | 제안서 납품 파일명 | `제안서` | `proposal` |
@@ -68,7 +70,8 @@
   "letters": {"items": "abcdefghijklmnopqrstuvwxyz", "format": "({x})"},
   "toc": {"title": "Contents", "tables": "List of Tables", "figures": "List of Figures"},
   "caption": {"table": {"label": "Table"}, "figure": {"label": "Figure"}},
-  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"]},
+  "notation": {"source": ["Source", "Note"], "unit": ["Unit"], "table": ["Table"], "figure": ["Figure"],
+               "ratio": ["Width ratio"], "spacing": ["Letter spacing"], "linespacing": ["Line spacing"], "figwidth": ["Width"]},
   "language": {"latin": "en-US", "east_asia": "ko-KR"},
   "output": {"proposal": "proposal", "report": "pre-diagnosis-report", "plan": "planning-report"}
 }

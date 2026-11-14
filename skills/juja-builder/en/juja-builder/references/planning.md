@@ -158,6 +158,7 @@
     + Whether to insert a table of contents, page numbers, a cover, and divider pages. With a table of contents, also ask for its scope (the default is chapters and sections; subsections, items, Module, and Task can be added) and give the bookmark notice of the SKILL.md Typesetting section
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
+    + Width ratio and letter spacing adjustment (off by default, on) and line spacing adjustment (off by default, on). Defined under the adjustment notation in the SKILL.md Typesetting section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 
 ## Planning Design

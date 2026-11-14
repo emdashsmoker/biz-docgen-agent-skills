@@ -430,9 +430,10 @@ class ProposalLayout:
             return None
         return super()._cell_line_role(line)
 
-    def heading(self, level: int, text: str):
+    def heading(self, level: int, text: str, adjust: dict | None = None):
         """로마자 장(Ⅰ.), 아라비아 절(1.), 가나다 항(가.), 목(1)). 번호는 본문에 기입하고 개요 번호는 끈다.
-        보고서 프로파일은 제1장, 1.1, 1.1.1, 가. 체계. 서식 문자열은 프로파일이 정함"""
+        보고서 프로파일은 제1장, 1.1, 1.1.1, 가. 체계. 서식 문자열은 프로파일이 정함.
+        adjust는 원고 조정 표기의 값. 밴드로 조판하는 장 제목에는 적용하지 않음"""
         text = lib.NUM_PREFIX_RE.sub("", text).strip()
         role = ("chapter", "section", "subsection", "ganada")[level - 1]
         pt = None
@@ -474,7 +475,7 @@ class ProposalLayout:
             else:
                 p = self.band(lib.Element("band", label, data={"kind": "chapter", "label": band_label, "title": text}))
         else:
-            p = self.heading_para(role, label, pt)
+            p = self.heading_para(role, label, pt, adjust)
             self.toc_mark(role, label, p)
         if level == 1:
             self.chapter_started(p)
@@ -626,18 +627,18 @@ class ProposalLayout:
                 skip = consumed
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
-                self.heading(e.level, e.text)
+                self.heading(e.level, e.text, e.data.get("adjust"))
             elif e.kind == "band":
                 self.band(e)
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
+                self.last_para = self.para(e.kind, e.text, footnotes, adjust=e.data.get("adjust"))
             elif e.kind == "unit":
                 self.para("unit", e.text)
             elif e.kind == "source":
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, lib.source_inline(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", lib.source_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -709,10 +710,10 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             and e.find(f"{HH}fontRef").get("hangul") == font and e.find(f"{HH}bold") is not None,
             modifier=mod, base_char_pr_id=base).get("id")
 
-    def heading_para(self, role: str, label: str, pt: int | None):
-        p = self.para(role, label, no_heading=True)
+    def heading_para(self, role: str, label: str, pt: int | None, adjust: dict | None = None):
+        p = self.para(role, label, no_heading=True, adjust=adjust)
         if pt:
-            cp = self._sized_char(pt, True)
+            cp = self._adjusted_cp(self._sized_char(pt, True), adjust)
             for run in p.element.iter(f"{HP}run"):
                 run.set("charPrIDRef", cp)
         return p
@@ -1779,6 +1780,7 @@ def check_tone(work: str, reset_whitelist: bool = False, kind: str = "proposal")
     for f in manuscript_files(work):
         name = os.path.basename(f)
         for i, raw in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
+            raw = lib.split_adjust(raw)[0]   # 줄 끝의 조정 표기는 조판 지시이므로 어조 판정에서 제외 (줄 끝 종결 판정이 표기에 가리지 않게 함)
             ln = _mask_whitelist(raw, terms)
             st = ln.strip()
             in_cell = st.startswith("|")

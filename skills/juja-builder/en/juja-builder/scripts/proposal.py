@@ -418,9 +418,10 @@ class ProposalLayout:
             return None
         return super()._cell_line_role(line)
 
-    def heading(self, level: int, text: str):
+    def heading(self, level: int, text: str, adjust: dict | None = None):
         """Roman chapters (Ⅰ.), Arabic sections (1.), 가나다 subsections (가.), items (1)). Numbers are written in the body and outline numbers are turned off.
-        The report profile uses 제1장, 1.1, 1.1.1, 가. The profile sets the format strings"""
+        The report profile uses 제1장, 1.1, 1.1.1, 가. The profile sets the format strings.
+        adjust holds the manuscript adjustment values. It is not applied to chapter titles, which are typeset as bands"""
         text = lib.NUM_PREFIX_RE.sub("", text).strip()
         role = ("chapter", "section", "subsection", "ganada")[level - 1]
         pt = None
@@ -462,7 +463,7 @@ class ProposalLayout:
             else:
                 p = self.band(lib.Element("band", label, data={"kind": "chapter", "label": band_label, "title": text}))
         else:
-            p = self.heading_para(role, label, pt)
+            p = self.heading_para(role, label, pt, adjust)
             self.toc_mark(role, label, p)
         if level == 1:
             self.chapter_started(p)
@@ -614,18 +615,18 @@ class ProposalLayout:
                 skip = consumed
             self.notes.enter(e.kind, e.level)
             if e.kind == "heading":
-                self.heading(e.level, e.text)
+                self.heading(e.level, e.text, e.data.get("adjust"))
             elif e.kind == "band":
                 self.band(e)
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
-                self.last_para = self.para(e.kind, e.text, footnotes)
+                self.last_para = self.para(e.kind, e.text, footnotes, adjust=e.data.get("adjust"))
             elif e.kind == "unit":
                 self.para("unit", e.text)
             elif e.kind == "source":
                 if self.last_para is not None:
-                    self.add_footnote(self.last_para, e.text)
+                    self.add_footnote(self.last_para, lib.source_inline(e.text))
                 else:
-                    self.para("note", e.text, footnotes)
+                    self.para("note", lib.source_inline(e.text), footnotes)
             elif e.kind == "table":
                 self.table(e)
             elif e.kind == "image":
@@ -697,10 +698,10 @@ class ProposalBuilder(ProposalLayout, lib.Builder):
             and e.find(f"{HH}fontRef").get("hangul") == font and e.find(f"{HH}bold") is not None,
             modifier=mod, base_char_pr_id=base).get("id")
 
-    def heading_para(self, role: str, label: str, pt: int | None):
-        p = self.para(role, label, no_heading=True)
+    def heading_para(self, role: str, label: str, pt: int | None, adjust: dict | None = None):
+        p = self.para(role, label, no_heading=True, adjust=adjust)
         if pt:
-            cp = self._sized_char(pt, True)
+            cp = self._adjusted_cp(self._sized_char(pt, True), adjust)
             for run in p.element.iter(f"{HP}run"):
                 run.set("charPrIDRef", cp)
         return p
@@ -1767,6 +1768,7 @@ def check_tone(work: str, reset_whitelist: bool = False, kind: str = "proposal")
     for f in manuscript_files(work):
         name = os.path.basename(f)
         for i, raw in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
+            raw = lib.split_adjust(raw)[0]   # the adjustment notation at the end of a line is a typesetting directive, so it is left out of the tone check (the line-ending checks then see the real ending)
             ln = _mask_whitelist(raw, terms)
             st = ln.strip()
             in_cell = st.startswith("|")
