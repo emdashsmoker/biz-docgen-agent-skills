@@ -615,7 +615,7 @@ class ProposalLayout:
                 srcs, consumed = [], 0
                 for nx in elems[idx + 1:]:
                     if nx.kind in ("note", "source"):  # 출처 줄은 그대로, 그 밖의 부기는 ※ 표지를 유지
-                        text = inline_note_footnotes(nx.text, footnotes)
+                        text = lib.source_text(inline_note_footnotes(nx.text, footnotes), self.source_layout)
                         srcs.append(text if nx.kind == "source" or lib.SOURCE_RE.match(text) else NOTE_PREFIX + text)
                     elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                         e.data["unit"] = nx.text
@@ -625,6 +625,9 @@ class ProposalLayout:
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
+            if e.kind == "source":   # 본문 뒤 출처 줄은 각주로 옮겨지므로 한 줄로 이음
+                e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind == "band":
@@ -646,6 +649,7 @@ class ProposalLayout:
                 self.pending_break = True
             if e.kind != "pagebreak":
                 self._body_started = True
+        self.fit = None
         if self.toc or self.cover:
             self._front_matter(self.cover)
         self.set_page_number(self.page_number)
@@ -1781,6 +1785,8 @@ def check_tone(work: str, reset_whitelist: bool = False, kind: str = "proposal")
         for i, raw in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
             ln = _mask_whitelist(raw, terms)
             st = ln.strip()
+            if lib.FIT_RE.match(st):   # 조판 조정 줄은 조판기가 읽는 표기이므로 문체 점검에서 제외
+                continue
             in_cell = st.startswith("|")
             for pat, label in TONE_FAIL + FRAMEWORK_FAIL:
                 if in_cell and "교차 참조" in label:  # 표 셀의 Task·Module 번호는 총괄표·조견표·일정표의 정상 용법
@@ -2191,6 +2197,7 @@ def cmd_build(a):
         else:
             b = ProposalDocxBuilder(docx_spec(), profile, page_break=a.page_break)
         b.numbered_square = False
+        b.source_layout = a.source_layout
         b.toc = a.toc
         b.page_number = a.page_number
         b.toc_scope = toc_scope
@@ -2520,6 +2527,8 @@ def main():
     p.add_argument("--page-number", action="store_true", help="꼬리말 쪽번호 (기본 OFF)")
     p.add_argument("--cover", help='표지: "title=제목;subtitle=부제;date=YYYY. M.;org=기관"')
     p.add_argument("--header", help='머리말: "텍스트;align=RIGHT"')
+    p.add_argument("--source-layout", default=lib.DEFAULT_SOURCE_LAYOUT, choices=list(lib.SOURCE_LAYOUTS),
+                   help="표와 그림의 출처 행 줄 나눔(착수 질의 답변): auto=원고에 쓴 줄 그대로(기본), break=출처마다 줄 나눔, inline=한 줄로 이음")
     p.add_argument("--footnote-merge", default=None, choices=list(lib.NOTE_MERGE_SCOPES),
                    help="출처 각주 통합(착수 질의에서 통합을 고른 경우에만 지정, 기본 미적용). 범위 안에서 문구가 같은 각주를 첫 각주 번호의 상호참조로 대체. "
                         "범위: square=□, section=절(##), chapter=장(#), document=문서 전체")

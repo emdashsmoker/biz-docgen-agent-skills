@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import pathlib
 import re
@@ -167,6 +168,23 @@ FORMAT_PROFILE_KEYS = {"chapter": "chapter_format", "chapter_label": "chapter_la
 # 서식별 자리 표시. n 장 번호, r 로마자 장 번호, c 장, s 절, ss 항, g 가나다 글자(letters.format 적용), i 목 번호, t 제목
 FORMAT_FIELDS = {"chapter": ("n", "r", "t"), "chapter_label": ("n", "r"), "section": ("c", "s", "t"),
                  "subsection": ("c", "s", "ss", "g", "t"), "item": ("i", "g", "t")}
+# 출처 행의 줄 나눔. 원고에서 출처 구분 기호로 끝낸 출처 줄은 다음 줄과 같은 출처 행을 이룸
+SOURCE_SEP = ";"
+SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=원고에 쓴 줄 그대로, break=출처마다 줄 나눔, inline=한 줄로 이음
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(SOURCE_SEP)})\s+")   # 출처 구분 기호 뒤의 빈칸과 줄 경계
+# 출처 표기 폭의 상한 계산에 쓰는 글자 폭 (글자 크기 배수). 한글과 한자는 전각, 그 밖은 반각
+FULLWIDTH_EM = 1.0
+HALFWIDTH_EM = 0.5
+SOURCE_LABEL_GAP_EM = 0.25      # 줄을 나눈 출처 행에서 출처 표기 폭의 상한에 더하는 간격 (글자 크기 배수)
+# 조판 조정 줄. 값은 스타일 값 대비 증감(%p)이므로 양식의 글자 모양과 줄 간격이 달라도 같은 표기를 씀
+FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
+FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # 조판 조정 줄의 항목 하나 ('장평 -3')
+FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
+FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
+FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # 권장 증감 범위 (±%p). 넘으면 build가 WARN
+FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # 한/글이 받는 값의 범위 (%)
+LINE_PERCENT_FALLBACK = 100     # 줄 간격이 글자 크기 대비 %가 아닌 스타일의 줄 높이 추정에 쓰는 값 (%)
 SOURCE_PAREN_EXCLUDE = ("주",)   # 괄호형 출처 표지에서 뺄 표기. (주)는 주식회사 약칭이므로 출처 줄로 보지 않음
 LANG_TAG_RE = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
 _labels: dict = json.loads(json.dumps(LABEL_DEFAULTS))   # 현재 라벨 (기본값 사본에 load_labels의 덮어쓰기 반영)
@@ -373,18 +391,26 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if UNIT_RE.match(stripped):
             elems.append(Element("unit", stripped))
             continue
+        if m := FIT_RE.match(stripped):
+            elems.append(Element("fit", stripped, data={"range": FIT_RANGE_WORDS.get(m.group(1)), "spec": m.group(2) or ""}))
+            continue
         if stripped.startswith(">"):  # 인용 줄은 내용으로 역할 판정 (출처 표기면 출처, 아니면 주석)
             body = stripped.lstrip("> ").strip()
             kind = "source" if SOURCE_RE.match(body) else "note"
+            if kind == "source":
+                body, i = _read_source(lines, i, body)
             elems.append(Element(kind, SOURCE_PAREN_RE.sub(r"\1: ", body)))
             continue
         if SOURCE_RE.match(stripped):
+            stripped, i = _read_source(lines, i, stripped)
             elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
         if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+            if SOURCE_RE.match(t):
+                t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
             continue
         if m := BULLET_RE.match(raw):
@@ -405,7 +431,118 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))  # 일반 문단은 ○ 서술로 처리
-    return elems, footnotes
+    return _apply_fit(elems), footnotes
+
+
+def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
+    """출처 구분 기호로 끝난 출처 줄의 다음 줄을 같은 출처 행의 줄로 이어 읽는다. 줄 경계는 '\\n'으로 남긴다"""
+    parts = [first]
+    while parts[-1].endswith(SOURCE_SEP) and i < len(lines) and _is_source_tail(lines[i]):
+        parts.append(lines[i].strip().lstrip("> ").strip())
+        i += 1
+    return "\n".join(parts), i
+
+
+def _is_source_tail(line: str) -> bool:
+    """출처 행에 이어 붙일 수 있는 줄. 빈 줄과 다른 원고 표기로 시작하는 줄은 제외"""
+    s = line.strip().lstrip("> ").strip()
+    if not s or s == "---" or s.startswith(("|", "#", "!", "(")) or BULLET_RE.match(line):
+        return False
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
+        return False
+    return not any(rx.match(s) for rx in (SOURCE_RE, CAPTION_RE, FIG_CAPTION_RE, FOOTNOTE_DEF_RE))
+
+
+def source_lines(text: str, layout: str) -> list[str]:
+    """출처 행의 조판 줄. auto는 원고에 쓴 줄 그대로, break는 출처마다 한 줄, inline은 한 줄로 이음"""
+    if layout == "break":
+        return SOURCE_SPLIT_RE.split(text)
+    lines = text.split("\n")
+    return lines if layout == "auto" else [" ".join(lines)]
+
+
+def source_text(text: str, layout: str) -> str:
+    """출처 표기로 시작하는 문구를 줄 나눔 방식에 맞춘 문구로 바꾼다 (줄 경계는 '\\n'). 그 밖의 부기는 그대로 둔다"""
+    return "\n".join(source_lines(text, layout)) if SOURCE_RE.match(text) else text
+
+
+def source_label(text: str) -> tuple[str, str]:
+    """줄을 나눈 출처 행 문구를 출처 표기('자료:')와 뒤 문구로 나눈다. 한 줄 문구와 출처 표기가 없는 문구는 표기를 빈 문자열로 돌려준다"""
+    m = SOURCE_RE.match(text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m and "\n" in text else ("", text)
+
+
+def label_hang_hu(label: str, size_hu: float, ratio: float = 100, spacing: float = 0) -> int:
+    """출처 표기 폭의 상한에 간격을 더한 내어쓰기 폭 (HWPUNIT). 줄을 나눈 출처 행의 둘째 줄을 첫 출처의 시작 위치에 맞춘다.
+    첫 출처는 탭으로 같은 위치에 놓이므로 글꼴마다 다른 글자 폭은 출처 표기 뒤 간격이 받아 낸다"""
+    em = sum(FULLWIDTH_EM if _weighted_len(ch) == 2 else HALFWIDTH_EM for ch in label)
+    return math.ceil(size_hu * (em * ratio + len(label) * spacing) / 100 + size_hu * SOURCE_LABEL_GAP_EM)
+
+
+def source_row_height(text: str, line_h: float) -> int:
+    """출처 행의 최소 높이 (HWPUNIT). 줄을 나눈 출처 행은 둘째 줄부터 스타일의 줄 높이만큼 높인다"""
+    return round(ROW_BASE_H + line_h * text.count("\n"))
+
+
+def parse_fit(spec: str) -> tuple[dict[str, float], list[str]]:
+    """조판 조정 줄의 값을 {항목: 증감}으로 읽는다. 읽지 못한 조각은 따로 돌려준다"""
+    vals: dict[str, float] = {}
+    bad: list[str] = []
+    for piece in filter(None, (s.strip() for s in re.split(r"[,，]", spec))):
+        m = FIT_ITEM_RE.match(piece)
+        key = FIT_KEYS.get(re.sub(r"\s+", "", m.group(1)).lower()) if m else None
+        if key is None:
+            bad.append(piece)
+        else:
+            vals[key] = float(m.group(2))
+    return vals, bad
+
+
+def _apply_fit(elems: list[Element]) -> list[Element]:
+    """조판 조정 줄을 대상 요소의 data['fit']으로 옮기고 요소 목록에서 뺀다. 단독 줄의 대상은 바로 다음 요소, 시작 줄의 대상은 끝 줄 앞까지의 요소.
+    읽지 못한 값과 짝이 없는 시작 줄, 끝 줄은 뒤 요소의 data['fit_issues']에 남겨 lint가 알린다"""
+    out: list[Element] = []
+    once = ranged = None
+    issues: list[str] = []
+    for e in elems:
+        if e.kind != "fit":
+            fit = {**(ranged or {}), **(once or {})}
+            if fit:
+                e.data["fit"] = fit
+            if issues:
+                e.data["fit_issues"], issues = issues, []
+            once = None
+            out.append(e)
+            continue
+        vals, bad = parse_fit(e.data["spec"])
+        issues += [f"[조판 조정 값] '{e.text}'의 '{p}'를 읽지 못함. 항목(장평, 자간, 줄 간격)과 증감 값을 '장평 -3, 자간 -2'처럼 기재" for p in bad]
+        for key, val in vals.items():
+            if abs(val) > FIT_WARN[key]:
+                print(f"WARN: 조판 조정 '{e.text}'의 증감 {val:+g}이 권장 범위(±{FIT_WARN[key]}%p)를 넘음. 렌더에서 글자와 줄 간격의 모양을 확인")
+        if e.data["range"] == "end":
+            if ranged is None:
+                issues.append(f"[조판 조정 구간] '{e.text}' 앞에 시작 줄이 없음")
+            ranged = None
+        elif e.data["range"] == "begin":
+            ranged = vals
+        else:
+            once = vals
+    if ranged is not None:
+        issues.append("[조판 조정 구간] 끝 줄이 없어 시작 줄의 조정이 문서 끝까지 적용됨. 구간 뒤에 끝 줄을 둠")
+    if issues and out:
+        out[-1].data.setdefault("fit_issues", []).extend(issues)
+    return out
+
+
+def fit_value(key: str, base: float, fit: dict | None) -> float:
+    """스타일 값에 조판 조정의 증감을 더한 값 (장평, 자간, 줄 간격). 한/글이 받는 범위 안으로 제한"""
+    low, high = FIT_BOUNDS[key]
+    return min(high, max(low, base + (fit or {}).get(key, 0)))
+
+
+def fit_line_scale(base: float | None, fit: dict | None) -> float:
+    """조판 조정의 줄 간격 증감이 줄 높이에 주는 배율. 표 행의 최소 높이에 곱한다"""
+    return fit_value("line", base, fit) / base if base and (fit or {}).get("line") else 1.0
 
 
 def _parse_table(rows: list[str], elems: list[Element]) -> Element:
@@ -442,6 +579,7 @@ def lint(elems: list[Element]) -> list[str]:
     prev_level = 0
     sec_sizes, cur = [], None
     for e in elems:
+        issues += e.data.get("fit_issues", [])
         if e.kind == "heading" and e.level <= 2:
             if cur is not None:
                 sec_sizes.append(cur)
@@ -995,6 +1133,9 @@ class Builder(TocMarks):
         self.manual_symbol = self._manual_symbols()
         self._warned: set[str] = set()
         self.numbered_square = False
+        self.source_layout = DEFAULT_SOURCE_LAYOUT
+        self.fit = None   # 조판 중인 요소의 조판 조정 (원고의 조판 조정 줄)
+        self._fit_cp_cache: dict[tuple, str] = {}
         self.toc = False
         self.page_number = False
         self.long_table_mode = "engine"
@@ -1075,6 +1216,8 @@ class Builder(TocMarks):
             r["para_pr_id_ref"] = self._no_bullet_pp(str(r["para_pr_id_ref"]))
         else:
             text = self.manual_symbol.get(role, "") + text
+        r["para_pr_id_ref"] = self._fit_pp(r["para_pr_id_ref"], self.fit)
+        r["char_pr_id_ref"] = self._fit_cp(r["char_pr_id_ref"], self.fit)
 
         if self.pending_break:
             attrs["pageBreak"] = "1"
@@ -1200,6 +1343,66 @@ class Builder(TocMarks):
         if key not in self._align_pp:
             self._align_pp[key] = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment=align)
         return self._align_pp[key]
+
+    def _hanging_pp(self, base_pp: str, hang: int) -> str:
+        """왼쪽 정렬 내어쓰기 문단 모양. 내어쓰기용 자동 탭을 켜서 첫 줄의 탭 뒤 글자를 둘째 줄의 시작 위치에 맞춘다.
+        양쪽 정렬은 강제 줄 나눔으로 끝난 줄의 빈칸을 늘리므로 왼쪽 정렬"""
+        key = (str(base_pp), "HANG", hang)
+        if key not in self._align_pp:
+            tab = self.header.ensure_tab_definition(auto_tab_left=True)
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment="LEFT",
+                                                     margins={"intent": -hang}, tab_pr_id_ref=str(tab))
+            node = self.header.element.find(f".//{HH}paraPr[@id='{pp}']")
+            for intent in node.iterfind(f".//{HP}default//*"):   # 구형 한/글용 저장값(hp:default)은 새 값의 2배로 기록
+                if intent.tag.endswith("}intent"):
+                    intent.set("value", str(-2 * hang))
+            self._align_pp[key] = pp
+        return self._align_pp[key]
+
+    def _char_metrics(self, cp) -> tuple[int, int, int]:
+        """글자 모양의 글자 크기(HWPUNIT), 장평(%), 자간(%)"""
+        node = self.header.element.find(f".//{HH}charPr[@id='{cp}']")
+        ratio, spacing = node.find(f"{HH}ratio"), node.find(f"{HH}spacing")
+        return (int(node.get("height")), int(ratio.get("hangul")) if ratio is not None else 100,
+                int(spacing.get("hangul")) if spacing is not None else 0)
+
+    def _line_percent(self, pp) -> int | None:
+        """문단 모양의 줄 간격 (글자 크기 대비 %). 줄 간격 종류가 다르면 None"""
+        ls = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HH}lineSpacing")
+        return int(ls.get("value")) if ls is not None and ls.get("type") == "PERCENT" else None
+
+    def _source_row_h(self, text: str) -> int:
+        """출처 행의 최소 높이 (HWPUNIT). 줄 높이는 출처 스타일의 글자 크기와 줄 간격으로 구한다"""
+        u = self.refs("source")
+        line = self._line_percent(u["para_pr_id_ref"]) or LINE_PERCENT_FALLBACK
+        return source_row_height(text, self._char_metrics(u["char_pr_id_ref"])[0] * line / 100)
+
+    def _fit_pp(self, pp, fit: dict | None) -> str:
+        """조판 조정의 줄 간격 증감을 더한 문단 모양. 줄 간격이 글자 크기 대비 %가 아닌 문단 모양은 그대로 둔다"""
+        base = self._line_percent(pp)
+        if not (fit or {}).get("line") or base is None:
+            return str(pp)
+        key = (str(pp), "FIT", fit["line"])
+        if key not in self._align_pp:
+            self._align_pp[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=pp, line_spacing_percent=round(fit_value("line", base, fit)))
+        return self._align_pp[key]
+
+    def _fit_cp(self, cp, fit: dict | None) -> str:
+        """조판 조정의 장평과 자간 증감을 더한 글자 모양"""
+        fit = fit or {}
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return str(cp)
+        key = (str(cp), fit.get("ratio", 0), fit.get("spacing", 0))
+        if key not in self._fit_cp_cache:
+            def shift(e):
+                for tag in ("ratio", "spacing"):
+                    node = e.find(f"{HH}{tag}")
+                    if node is not None:
+                        for lang, val in node.attrib.items():
+                            node.set(lang, str(round(fit_value(tag, int(val), fit))))
+            self._fit_cp_cache[key] = self.header.ensure_char_property(modifier=shift, base_char_pr_id=cp).get("id")
+        return self._fit_cp_cache[key]
 
     def _no_bullet_pp(self, base_pp: str) -> str:
         key = (base_pp, "NOBULLET")
@@ -1357,15 +1560,20 @@ class Builder(TocMarks):
         """표 안의 투명 병합 행 (단위, 자료). 손으로 편집할 때 표와 함께 이동하도록 표 내부에 둔다."""
         no_border = self._border_fill([])
         u = self.refs(role)
+        pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
+        label, body = source_label(text) if role == "source" else ("", text)
+        if label:   # 줄을 나눈 출처 행: 탭과 내어쓰기로 둘째 줄부터 첫 출처의 시작 위치에 맞춤
+            text = f"{label}\t{body}"
+            pp = self._hanging_pp(pp, label_hang_hu(label, *self._char_metrics(u["char_pr_id_ref"])))
         t.set_cell_text(ri, 0, text)
         for pe in t.cell(ri, 0).element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", self._aligned_pp(str(u["para_pr_id_ref"]), align))
+            pe.set("paraPrIDRef", pp)
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
-            t.cell(ri, ci).set_size(height=ROW_BASE_H)
+            t.cell(ri, ci).set_size(height=self._source_row_h(text) if role == "source" else ROW_BASE_H)
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
@@ -1456,7 +1664,9 @@ class Builder(TocMarks):
             bf[(ci, False)] = self._border_fill(sides)
         cell_cp = str(self.refs("table_cell")["char_pr_id_ref"])
         vspans, hspans = table_spans(rows, hdr, self.merge_mode)
-        heights = row_heights(rows, widths, hdr, vspans, hspans)
+        fit = e.data.get("fit")
+        line_scale = fit_line_scale(self._line_percent(self.refs("table_cell")["para_pr_id_ref"]), fit)
+        heights = [round(h * line_scale) for h in row_heights(rows, widths, hdr, vspans, hspans)]
         total_h = sum(heights)
         for ri, row in enumerate(rows):
             row_h = heights[ri]
@@ -1475,10 +1685,10 @@ class Builder(TocMarks):
                 for li, pe in enumerate(cell.element.iter(f"{HP}p")):
                     br = bullet_roles[li] if li < len(bullet_roles) and not is_head else None
                     bref = self.refs(br) if br else None
-                    pe.set("paraPrIDRef", str(bref["para_pr_id_ref"]) if bref else pp)
+                    pe.set("paraPrIDRef", self._fit_pp(str(bref["para_pr_id_ref"]) if bref else pp, fit))
                     pe.set("styleIDRef", str(bref["style_id_ref"] if bref else ref["style_id_ref"]))
                     for run in pe.iter(f"{HP}run"):
-                        run.set("charPrIDRef", str(bref["char_pr_id_ref"]) if bref else cp)
+                        run.set("charPrIDRef", self._fit_cp(str(bref["char_pr_id_ref"]) if bref else cp, fit))
                 cell.element.set("borderFillIDRef", str(bf[(ci, is_head)]))
                 cell.element.set("hasMargin", "1")  # cellMargin 값이 적용되려면 필요
                 cm = cell.element.find(f"{HP}cellMargin")
@@ -1489,7 +1699,7 @@ class Builder(TocMarks):
                     cell.element.set("header", "1")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:  # 표 높이가 행 높이 합보다 크면 렌더러가 마지막 행을 늘여 그린다
-            sz.set("height", str(total_h + ROW_BASE_H * (head + len(sources))))
+            sz.set("height", str(total_h + ROW_BASE_H * head + sum(map(self._source_row_h, sources))))
         pos = t.element.find(f"{HP}pos")
         if pos is not None:  # 글자취급 표는 문단 정렬을 따르므로 pos 정렬도 CENTER로 맞춰 해석 충돌 제거
             pos.set("horzAlign", "CENTER")
@@ -1577,7 +1787,7 @@ class Builder(TocMarks):
             pos.set("horzAlign", "CENTER")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
-            sz.set("height", str(h_hu + 2 * ROW_LINE_H + ROW_BASE_H * len(sources)))
+            sz.set("height", str(h_hu + 2 * ROW_LINE_H + sum(map(self._source_row_h, sources))))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, FIG_CAPTION_SIDE, table_w)
         t.mark_dirty()
@@ -1599,7 +1809,7 @@ class Builder(TocMarks):
                 srcs, consumed = [], 0
                 for nx in elems[idx + 1:]:
                     if nx.kind in ("note", "source"):
-                        srcs.append(nx.text)
+                        srcs.append(source_text(nx.text, self.source_layout))
                     elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                         e.data["unit"] = nx.text  # 표 뒤에 적힌 단위 줄도 표 위 단위 행으로 끌어올림
                     else:
@@ -1608,6 +1818,9 @@ class Builder(TocMarks):
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
+            if e.kind == "source":   # 본문 뒤 출처 줄은 각주로 옮겨지므로 한 줄로 이음
+                e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
@@ -1686,6 +1899,7 @@ def cmd_build(a):
     out = a.output or os.path.splitext(a.input)[0] + ".hwpx"
     b = Builder(skeleton, profile, page_break=a.page_break)
     b.numbered_square = a.numbered_square
+    b.source_layout = a.source_layout
     b.toc = a.toc
     b.page_number = a.page_number
     b.toc_scope = parse_toc_scope(a.toc_scope)
@@ -2171,6 +2385,8 @@ def main():
     b.add_argument("--header", help='머리말 (기본 OFF): "텍스트;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="셀 병합: auto=선행 라벨 열 연속 동일값 + '^'(세로)·'<'(가로) 지시(기본), explicit=지시만, none=병합 없음")
+    b.add_argument("--source-layout", default=DEFAULT_SOURCE_LAYOUT, choices=list(SOURCE_LAYOUTS),
+                   help="표와 그림의 출처 행 줄 나눔(착수 질의 답변): auto=원고에 쓴 줄 그대로(기본), break=출처마다 줄 나눔, inline=한 줄로 이음")
     b.add_argument("--numbered-square", action="store_true",
                    help="'□ 1. 제목' 처럼 숫자로 시작하는 □ 줄을 글머리 없는 숫자 헤더로 출력 (장 없는 문서용)")
     b.set_defaults(func=cmd_build)

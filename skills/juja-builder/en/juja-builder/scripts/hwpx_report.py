@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import pathlib
 import re
@@ -161,6 +162,23 @@ FORMAT_PROFILE_KEYS = {"chapter": "chapter_format", "chapter_label": "chapter_la
 # placeholders per format. n chapter number, r Roman chapter number, c chapter, s section, ss subsection, g 가나다 letter (letters.format applied), i item number, t title
 FORMAT_FIELDS = {"chapter": ("n", "r", "t"), "chapter_label": ("n", "r"), "section": ("c", "s", "t"),
                  "subsection": ("c", "s", "ss", "g", "t"), "item": ("i", "g", "t")}
+# Line layout of source rows. A manuscript source line that ends with the source separator shares one source row with the next line
+SOURCE_SEP = ";"
+SOURCE_LAYOUTS = ("auto", "break", "inline")   # auto=lines as written, break=one line per source, inline=joined into one line
+DEFAULT_SOURCE_LAYOUT = "auto"
+SOURCE_SPLIT_RE = re.compile(rf"(?<={re.escape(SOURCE_SEP)})\s+")   # spaces and line boundaries after the source separator
+# Glyph widths for the upper bound of a source label width (multiple of the font size). Hangul and Hanja are full width, others half width
+FULLWIDTH_EM = 1.0
+HALFWIDTH_EM = 0.5
+SOURCE_LABEL_GAP_EM = 0.25      # gap added to the upper bound of the source label width in a broken source row (multiple of the font size)
+# Typesetting adjustment lines. Values are changes (%p) against the style values, so one notation works with any form
+FIT_RE = re.compile(r"^\(\s*조판\s*조정\s*(시작|끝|begin|end)?\s*(?:[:：]\s*(.*))?\)$")
+FIT_ITEM_RE = re.compile(r"^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*(?:%p|%)?$")   # one item of an adjustment line ('장평 -3')
+FIT_KEYS = {"장평": "ratio", "자간": "spacing", "줄간격": "line", "ratio": "ratio", "spacing": "spacing", "line": "line"}
+FIT_RANGE_WORDS = {"시작": "begin", "끝": "end", "begin": "begin", "end": "end"}
+FIT_WARN = {"ratio": 5, "spacing": 5, "line": 10}                        # recommended change range (±%p). build prints WARN beyond it
+FIT_BOUNDS = {"ratio": (50, 200), "spacing": (-50, 50), "line": (50, 500)}   # value range Hangul accepts (%)
+LINE_PERCENT_FALLBACK = 100     # value (%) used to estimate the line height of a style whose line spacing is not a % of the font size
 SOURCE_PAREN_EXCLUDE = ("주",)   # tokens left out of the parenthesized source mark. (주) abbreviates 주식회사 (Inc.), so it is not a source line
 LANG_TAG_RE = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
 _labels: dict = json.loads(json.dumps(LABEL_DEFAULTS))   # current labels (a copy of the defaults with load_labels overrides applied)
@@ -367,18 +385,26 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if UNIT_RE.match(stripped):
             elems.append(Element("unit", stripped))
             continue
+        if m := FIT_RE.match(stripped):
+            elems.append(Element("fit", stripped, data={"range": FIT_RANGE_WORDS.get(m.group(1)), "spec": m.group(2) or ""}))
+            continue
         if stripped.startswith(">"):  # a quote line gets its role from its content (source if it is a source notation, otherwise a note)
             body = stripped.lstrip("> ").strip()
             kind = "source" if SOURCE_RE.match(body) else "note"
+            if kind == "source":
+                body, i = _read_source(lines, i, body)
             elems.append(Element(kind, SOURCE_PAREN_RE.sub(r"\1: ", body)))
             continue
         if SOURCE_RE.match(stripped):
+            stripped, i = _read_source(lines, i, stripped)
             elems.append(Element("source", SOURCE_PAREN_RE.sub(r"\1: ", stripped)))
             continue
         if (t := _strip_marker(stripped, SQUARE_MARK)) is not None:
             elems.append(Element("square", t))
             continue
         if (t := _strip_marker(stripped, NOTE_MARK)) is not None and not stripped.startswith("**"):
+            if SOURCE_RE.match(t):
+                t, i = _read_source(lines, i, t)
             elems.append(Element("note", t))
             continue
         if m := BULLET_RE.match(raw):
@@ -399,7 +425,118 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
             elems.append(Element("circle", t))
             continue
         elems.append(Element("circle", stripped))  # ordinary paragraphs are treated as ○ text
-    return elems, footnotes
+    return _apply_fit(elems), footnotes
+
+
+def _read_source(lines: list[str], i: int, first: str) -> tuple[str, int]:
+    """Reads the lines after a source line that ends with the source separator as lines of the same source row. Line boundaries stay as '\\n'"""
+    parts = [first]
+    while parts[-1].endswith(SOURCE_SEP) and i < len(lines) and _is_source_tail(lines[i]):
+        parts.append(lines[i].strip().lstrip("> ").strip())
+        i += 1
+    return "\n".join(parts), i
+
+
+def _is_source_tail(line: str) -> bool:
+    """A line that can continue a source row. Blank lines and lines that start with another manuscript notation are excluded"""
+    s = line.strip().lstrip("> ").strip()
+    if not s or s == "---" or s.startswith(("|", "#", "!", "(")) or BULLET_RE.match(line):
+        return False
+    if _strip_marker(s, SQUARE_MARK + CIRCLE_MARK + NOTE_MARK) is not None:
+        return False
+    return not any(rx.match(s) for rx in (SOURCE_RE, CAPTION_RE, FIG_CAPTION_RE, FOOTNOTE_DEF_RE))
+
+
+def source_lines(text: str, layout: str) -> list[str]:
+    """Typeset lines of a source row. auto keeps the manuscript lines, break gives one line per source, inline joins them into one line"""
+    if layout == "break":
+        return SOURCE_SPLIT_RE.split(text)
+    lines = text.split("\n")
+    return lines if layout == "auto" else [" ".join(lines)]
+
+
+def source_text(text: str, layout: str) -> str:
+    """Lays out a text that starts with a source label for the line layout (line boundaries are '\\n'). Other notes stay as they are"""
+    return "\n".join(source_lines(text, layout)) if SOURCE_RE.match(text) else text
+
+
+def source_label(text: str) -> tuple[str, str]:
+    """Splits a broken source row text into the source label ('자료:') and the text after it. A one-line text or a text without a label returns an empty label"""
+    m = SOURCE_RE.match(text)
+    return (m.group(0), text[m.end():].lstrip(" ")) if m and "\n" in text else ("", text)
+
+
+def label_hang_hu(label: str, size_hu: float, ratio: float = 100, spacing: float = 0) -> int:
+    """Hanging indent width: the upper bound of the source label width plus a gap (HWPUNIT). It aligns the second line of a broken source row with the start of the first source.
+    A tab puts the first source at the same position, so the gap after the label absorbs glyph width differences between fonts"""
+    em = sum(FULLWIDTH_EM if _weighted_len(ch) == 2 else HALFWIDTH_EM for ch in label)
+    return math.ceil(size_hu * (em * ratio + len(label) * spacing) / 100 + size_hu * SOURCE_LABEL_GAP_EM)
+
+
+def source_row_height(text: str, line_h: float) -> int:
+    """Minimum height of a source row (HWPUNIT). A broken source row grows by the style line height for each line after the first"""
+    return round(ROW_BASE_H + line_h * text.count("\n"))
+
+
+def parse_fit(spec: str) -> tuple[dict[str, float], list[str]]:
+    """Reads the values of an adjustment line as {item: change}. Pieces it cannot read are returned separately"""
+    vals: dict[str, float] = {}
+    bad: list[str] = []
+    for piece in filter(None, (s.strip() for s in re.split(r"[,，]", spec))):
+        m = FIT_ITEM_RE.match(piece)
+        key = FIT_KEYS.get(re.sub(r"\s+", "", m.group(1)).lower()) if m else None
+        if key is None:
+            bad.append(piece)
+        else:
+            vals[key] = float(m.group(2))
+    return vals, bad
+
+
+def _apply_fit(elems: list[Element]) -> list[Element]:
+    """Moves adjustment lines into data['fit'] of their target elements and drops them from the element list. A single line targets the next element, a begin line targets the elements up to the end line.
+    Unreadable values and unpaired begin or end lines are kept in data['fit_issues'] of the following element for lint to report"""
+    out: list[Element] = []
+    once = ranged = None
+    issues: list[str] = []
+    for e in elems:
+        if e.kind != "fit":
+            fit = {**(ranged or {}), **(once or {})}
+            if fit:
+                e.data["fit"] = fit
+            if issues:
+                e.data["fit_issues"], issues = issues, []
+            once = None
+            out.append(e)
+            continue
+        vals, bad = parse_fit(e.data["spec"])
+        issues += [f"[adjustment value] cannot read '{p}' in '{e.text}'. Write an item (장평, 자간, 줄 간격) and a change, as in '장평 -3, 자간 -2'" for p in bad]
+        for key, val in vals.items():
+            if abs(val) > FIT_WARN[key]:
+                print(f"WARN: the change {val:+g} in adjustment '{e.text}' is beyond the recommended range (±{FIT_WARN[key]}%p). Check the glyph and line spacing shapes in the render")
+        if e.data["range"] == "end":
+            if ranged is None:
+                issues.append(f"[adjustment range] '{e.text}' has no begin line before it")
+            ranged = None
+        elif e.data["range"] == "begin":
+            ranged = vals
+        else:
+            once = vals
+    if ranged is not None:
+        issues.append("[adjustment range] no end line, so the begin line applies to the end of the document. Put an end line after the range")
+    if issues and out:
+        out[-1].data.setdefault("fit_issues", []).extend(issues)
+    return out
+
+
+def fit_value(key: str, base: float, fit: dict | None) -> float:
+    """A style value plus the adjustment change (ratio, spacing, line spacing), limited to the range Hangul accepts"""
+    low, high = FIT_BOUNDS[key]
+    return min(high, max(low, base + (fit or {}).get(key, 0)))
+
+
+def fit_line_scale(base: float | None, fit: dict | None) -> float:
+    """Scale that a line spacing adjustment gives to the line height. Multiplied into the minimum table row height"""
+    return fit_value("line", base, fit) / base if base and (fit or {}).get("line") else 1.0
 
 
 def _parse_table(rows: list[str], elems: list[Element]) -> Element:
@@ -436,6 +573,7 @@ def lint(elems: list[Element]) -> list[str]:
     prev_level = 0
     sec_sizes, cur = [], None
     for e in elems:
+        issues += e.data.get("fit_issues", [])
         if e.kind == "heading" and e.level <= 2:
             if cur is not None:
                 sec_sizes.append(cur)
@@ -990,6 +1128,9 @@ class Builder(TocMarks):
         self.manual_symbol = self._manual_symbols()
         self._warned: set[str] = set()
         self.numbered_square = False
+        self.source_layout = DEFAULT_SOURCE_LAYOUT
+        self.fit = None   # adjustment of the element being typeset (manuscript adjustment line)
+        self._fit_cp_cache: dict[tuple, str] = {}
         self.toc = False
         self.page_number = False
         self.long_table_mode = "engine"
@@ -1070,6 +1211,8 @@ class Builder(TocMarks):
             r["para_pr_id_ref"] = self._no_bullet_pp(str(r["para_pr_id_ref"]))
         else:
             text = self.manual_symbol.get(role, "") + text
+        r["para_pr_id_ref"] = self._fit_pp(r["para_pr_id_ref"], self.fit)
+        r["char_pr_id_ref"] = self._fit_cp(r["char_pr_id_ref"], self.fit)
 
         if self.pending_break:
             attrs["pageBreak"] = "1"
@@ -1196,6 +1339,66 @@ class Builder(TocMarks):
         if key not in self._align_pp:
             self._align_pp[key] = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment=align)
         return self._align_pp[key]
+
+    def _hanging_pp(self, base_pp: str, hang: int) -> str:
+        """Left-aligned hanging indent paragraph shape. The automatic tab for hanging indents puts the text after the first-line tab at the start position of the second line.
+        Justified alignment stretches the spaces of a line that ends with a forced line break, so the shape is left-aligned"""
+        key = (str(base_pp), "HANG", hang)
+        if key not in self._align_pp:
+            tab = self.header.ensure_tab_definition(auto_tab_left=True)
+            pp = self.header.ensure_paragraph_format(base_para_pr_id=base_pp, alignment="LEFT",
+                                                     margins={"intent": -hang}, tab_pr_id_ref=str(tab))
+            node = self.header.element.find(f".//{HH}paraPr[@id='{pp}']")
+            for intent in node.iterfind(f".//{HP}default//*"):   # the value stored for older Hangul versions (hp:default) is twice the new value
+                if intent.tag.endswith("}intent"):
+                    intent.set("value", str(-2 * hang))
+            self._align_pp[key] = pp
+        return self._align_pp[key]
+
+    def _char_metrics(self, cp) -> tuple[int, int, int]:
+        """Font size (HWPUNIT), ratio (%), and spacing (%) of a character shape"""
+        node = self.header.element.find(f".//{HH}charPr[@id='{cp}']")
+        ratio, spacing = node.find(f"{HH}ratio"), node.find(f"{HH}spacing")
+        return (int(node.get("height")), int(ratio.get("hangul")) if ratio is not None else 100,
+                int(spacing.get("hangul")) if spacing is not None else 0)
+
+    def _line_percent(self, pp) -> int | None:
+        """Line spacing of a paragraph shape (% of the font size). None for another line spacing type"""
+        ls = self.header.element.find(f".//{HH}paraPr[@id='{pp}']//{HH}lineSpacing")
+        return int(ls.get("value")) if ls is not None and ls.get("type") == "PERCENT" else None
+
+    def _source_row_h(self, text: str) -> int:
+        """Minimum height of a source row (HWPUNIT). The line height comes from the font size and line spacing of the source style"""
+        u = self.refs("source")
+        line = self._line_percent(u["para_pr_id_ref"]) or LINE_PERCENT_FALLBACK
+        return source_row_height(text, self._char_metrics(u["char_pr_id_ref"])[0] * line / 100)
+
+    def _fit_pp(self, pp, fit: dict | None) -> str:
+        """Paragraph shape with the line spacing adjustment added. A shape whose line spacing is not a % of the font size is left as it is"""
+        base = self._line_percent(pp)
+        if not (fit or {}).get("line") or base is None:
+            return str(pp)
+        key = (str(pp), "FIT", fit["line"])
+        if key not in self._align_pp:
+            self._align_pp[key] = self.header.ensure_paragraph_format(
+                base_para_pr_id=pp, line_spacing_percent=round(fit_value("line", base, fit)))
+        return self._align_pp[key]
+
+    def _fit_cp(self, cp, fit: dict | None) -> str:
+        """Character shape with the ratio and spacing adjustment added"""
+        fit = fit or {}
+        if not (fit.get("ratio") or fit.get("spacing")):
+            return str(cp)
+        key = (str(cp), fit.get("ratio", 0), fit.get("spacing", 0))
+        if key not in self._fit_cp_cache:
+            def shift(e):
+                for tag in ("ratio", "spacing"):
+                    node = e.find(f"{HH}{tag}")
+                    if node is not None:
+                        for lang, val in node.attrib.items():
+                            node.set(lang, str(round(fit_value(tag, int(val), fit))))
+            self._fit_cp_cache[key] = self.header.ensure_char_property(modifier=shift, base_char_pr_id=cp).get("id")
+        return self._fit_cp_cache[key]
 
     def _no_bullet_pp(self, base_pp: str) -> str:
         key = (base_pp, "NOBULLET")
@@ -1353,15 +1556,20 @@ class Builder(TocMarks):
         """Transparent merged rows inside a table (unit, source). Kept inside the table so they move with it during hand editing."""
         no_border = self._border_fill([])
         u = self.refs(role)
+        pp = self._aligned_pp(str(u["para_pr_id_ref"]), align)
+        label, body = source_label(text) if role == "source" else ("", text)
+        if label:   # broken source row: a tab and a hanging indent align the second and later lines with the start of the first source
+            text = f"{label}\t{body}"
+            pp = self._hanging_pp(pp, label_hang_hu(label, *self._char_metrics(u["char_pr_id_ref"])))
         t.set_cell_text(ri, 0, text)
         for pe in t.cell(ri, 0).element.iter(f"{HP}p"):
-            pe.set("paraPrIDRef", self._aligned_pp(str(u["para_pr_id_ref"]), align))
+            pe.set("paraPrIDRef", pp)
             pe.set("styleIDRef", str(u["style_id_ref"]))
             for run in pe.iter(f"{HP}run"):
                 run.set("charPrIDRef", str(u["char_pr_id_ref"]))
         for ci in range(ncol):
             t.cell(ri, ci).element.set("borderFillIDRef", str(no_border))
-            t.cell(ri, ci).set_size(height=ROW_BASE_H)
+            t.cell(ri, ci).set_size(height=self._source_row_h(text) if role == "source" else ROW_BASE_H)
         if ncol > 1:
             t.merge_cells(ri, 0, ri, ncol - 1)
 
@@ -1452,7 +1660,9 @@ class Builder(TocMarks):
             bf[(ci, False)] = self._border_fill(sides)
         cell_cp = str(self.refs("table_cell")["char_pr_id_ref"])
         vspans, hspans = table_spans(rows, hdr, self.merge_mode)
-        heights = row_heights(rows, widths, hdr, vspans, hspans)
+        fit = e.data.get("fit")
+        line_scale = fit_line_scale(self._line_percent(self.refs("table_cell")["para_pr_id_ref"]), fit)
+        heights = [round(h * line_scale) for h in row_heights(rows, widths, hdr, vspans, hspans)]
         total_h = sum(heights)
         for ri, row in enumerate(rows):
             row_h = heights[ri]
@@ -1471,10 +1681,10 @@ class Builder(TocMarks):
                 for li, pe in enumerate(cell.element.iter(f"{HP}p")):
                     br = bullet_roles[li] if li < len(bullet_roles) and not is_head else None
                     bref = self.refs(br) if br else None
-                    pe.set("paraPrIDRef", str(bref["para_pr_id_ref"]) if bref else pp)
+                    pe.set("paraPrIDRef", self._fit_pp(str(bref["para_pr_id_ref"]) if bref else pp, fit))
                     pe.set("styleIDRef", str(bref["style_id_ref"] if bref else ref["style_id_ref"]))
                     for run in pe.iter(f"{HP}run"):
-                        run.set("charPrIDRef", str(bref["char_pr_id_ref"]) if bref else cp)
+                        run.set("charPrIDRef", self._fit_cp(str(bref["char_pr_id_ref"]) if bref else cp, fit))
                 cell.element.set("borderFillIDRef", str(bf[(ci, is_head)]))
                 cell.element.set("hasMargin", "1")  # needed for cellMargin values to apply
                 cm = cell.element.find(f"{HP}cellMargin")
@@ -1485,7 +1695,7 @@ class Builder(TocMarks):
                     cell.element.set("header", "1")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:  # if the table height exceeds the sum of row heights, renderers stretch the last row
-            sz.set("height", str(total_h + ROW_BASE_H * (head + len(sources))))
+            sz.set("height", str(total_h + ROW_BASE_H * head + sum(map(self._source_row_h, sources))))
         pos = t.element.find(f"{HP}pos")
         if pos is not None:  # a treat-as-character table follows paragraph alignment, so pos alignment is also set to CENTER to remove interpretation conflicts
             pos.set("horzAlign", "CENTER")
@@ -1573,7 +1783,7 @@ class Builder(TocMarks):
             pos.set("horzAlign", "CENTER")
         sz = t.element.find(f"{HP}sz")
         if sz is not None:
-            sz.set("height", str(h_hu + 2 * ROW_LINE_H + ROW_BASE_H * len(sources)))
+            sz.set("height", str(h_hu + 2 * ROW_LINE_H + sum(map(self._source_row_h, sources))))
         if e.text:
             self.attach_caption(t, "PICTURE", e.text, FIG_CAPTION_SIDE, table_w)
         t.mark_dirty()
@@ -1595,7 +1805,7 @@ class Builder(TocMarks):
                 srcs, consumed = [], 0
                 for nx in elems[idx + 1:]:
                     if nx.kind in ("note", "source"):
-                        srcs.append(nx.text)
+                        srcs.append(source_text(nx.text, self.source_layout))
                     elif nx.kind == "unit" and e.kind == "table" and not e.data.get("unit"):
                         e.data["unit"] = nx.text  # a unit line written after the table is also pulled up to the unit row above the table
                     else:
@@ -1604,6 +1814,9 @@ class Builder(TocMarks):
                 e.data["sources"] = srcs
                 skip = consumed
             self.notes.enter(e.kind, e.level)
+            self.fit = e.data.get("fit")
+            if e.kind == "source":   # a source line after body text moves into a footnote, so its lines are joined
+                e.text = " ".join(e.text.split("\n"))
             if e.kind == "heading":
                 self.heading(e.level, e.text)
             elif e.kind in ("square", "circle", "dash", "dot", "note"):
@@ -1682,6 +1895,7 @@ def cmd_build(a):
     out = a.output or os.path.splitext(a.input)[0] + ".hwpx"
     b = Builder(skeleton, profile, page_break=a.page_break)
     b.numbered_square = a.numbered_square
+    b.source_layout = a.source_layout
     b.toc = a.toc
     b.page_number = a.page_number
     b.toc_scope = parse_toc_scope(a.toc_scope)
@@ -2167,6 +2381,8 @@ def main():
     b.add_argument("--header", help='header (default OFF): "text;align=LEFT|CENTER|RIGHT"')
     b.add_argument("--merge", default="auto", choices=["auto", "explicit", "none"],
                    help="cell merges: auto=consecutive equal values in leading label columns + '^' (vertical) and '<' (horizontal) instructions (default), explicit=instructions only, none=no merges")
+    b.add_argument("--source-layout", default=DEFAULT_SOURCE_LAYOUT, choices=list(SOURCE_LAYOUTS),
+                   help="line layout of table and figure source rows (kickoff answer): auto=lines as written (default), break=one line per source, inline=joined into one line")
     b.add_argument("--numbered-square", action="store_true",
                    help="output □ lines that start with a number, like '□ 1. title', as numeric headings without bullets (for documents without chapters)")
     b.set_defaults(func=cmd_build)
