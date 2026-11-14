@@ -132,7 +132,7 @@
     + (Table cells) Lines that receive bullets by the comparison line condition or the whole table condition in the tables section below are an exception
     + (Module overview slides) The process, data used and deliverables boxes are an exception and take bullets (treated as a table where both conditions always hold)
 - Items in the same tier are consistent in having or not having numbers and symbols
-- Write each source item as `기관명(연도), 자료명` (organization (year), material name)
+- Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name). Use the organization for material it published and the author for papers and books
 - Separate several sources with semicolons (the build joins a `source` array)
     + (Line-broken source line) The build sets one source per line only when the source line passes one line (the semicolon stays at the line end)
     + (Alignment of line-broken sources) The second source onward aligns with the start of the first source, after the source mark (in a ※-style deck with footnoteSourceMark, after the width of ※ and the source mark, as in "※ Source:")
@@ -148,7 +148,7 @@
     + (Different-label notes in a number-style deck) Notes with different labels keep their own labels line by line without numbers
     + (Marks written by hand) The build removes a ※, * or number written before an item and adds the deck mark (superscript numbers or * marks paired with spots in the body are not supported)
 - Start the first source item and any note item that cites a source with the same source mark as the deck sourceLabel ("Source:" in a default deck)
-    + (Both styles) The source mark the author writes is typeset as is, without ※ (e.g. "Source: organization (year), material name; organization (year), material name")
+    + (Both styles) The source mark the author writes is typeset as is, without ※ (e.g. "Source: organization (year), material name; author (year), material name")
     + (Added label) The build adds sourceLabel to a source line without a source mark
     + (※ on sources) A ※-style deck with `meta.footnoteSourceMark` true adds ※, as in "※ Source:" (set when the user asks for it, for example to follow an RFP template)
     + (※ written before a source) In a ※-style deck, an item where the author wrote ※ before the source keeps the ※
