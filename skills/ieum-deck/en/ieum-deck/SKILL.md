@@ -117,7 +117,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 1 Input conversion                          python3 scripts/parse_input.py <RFP or manuscript> <work folder/output.md> [--pdf] → md (for hwpx, --pdf also creates a PDF for checking layout)
                                             python3 scripts/extract_images.py <source> <img_dir> → candidate images and manifest.json (pdf, hwpx, pptx, docx)
 2 RFP analysis and proposal strategy        00_rfp.md, 00_strategy.md (format in references/strategy.md). The conversion path extracts them back from the manuscript. Skip if not a proposal
-3 Structure confirmation (user confirmation 2)  Present 00_storyline.md (one-line storyline, message per chapter, headline per slide). For public-sector proposals, also present ledger.json (section ledger) and the score attribution table → start step 4 after approval
+3 Structure confirmation (user confirmation 2)  Read references/methods.md, then compose the modules and Tasks (also on the conversion path, where the manuscript already has a structure)
+                                            Present 00_storyline.md (one-line storyline, message per chapter, headline per slide). For public-sector proposals, also present ledger.json (section ledger) and the score attribution table → start step 4 after approval
 4 Storyboard writing                        Write the argument part first. Copy the common part (common-slides.json made by company2slides.py) last and place it at its position in the contents
 5 lint                                      python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → exit code 0 is the condition for building
 6 Build                                     node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
@@ -128,6 +129,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Check dependencies with `python3 scripts/setup_deps.py --check` before any other step
 - Install missing dependencies with `python3 scripts/setup_deps.py`
 - Accumulate the output of each step as files
+- Compose the modules and Tasks after reading `references/methods.md`
+    + (Reading scope) The Application rules, Type judgment and Common norms sections, plus the section for the engagement type
+    + (Manuscripts that already have a structure) Read the same scope even when the manuscript already has a module and Task structure, as in a proposal deck conversion (carrying that structure over still applies how the skeleton is used and the Common norms criteria for names, module overviews and Task items)
 - The basic items of 00_storyline.md are the one-line storyline, chapter messages and per-slide headlines
     + (Module and Task structure decks) Including the module structure overview slide in the slide list is recommended (criteria in the Contents section)
     + (Headline keyword emphasis decks) Also write the deck emphasis criterion and the emphasis phrases of each slide (criteria in the Headlines section)

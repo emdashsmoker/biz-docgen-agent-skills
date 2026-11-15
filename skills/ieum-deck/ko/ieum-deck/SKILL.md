@@ -104,7 +104,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 1 입력 변환                   python3 scripts/parse_input.py <RFP 또는 원고> <작업 폴더/출력.md> [--pdf] → md (hwpx 는 --pdf 로 배치 확인용 PDF 추가 생성)
                               python3 scripts/extract_images.py <원본> <img_dir> → 삽입 후보 이미지와 manifest.json (pdf, hwpx, pptx, docx)
 2 RFP 해부와 제안전략          00_rfp.md, 00_strategy.md (양식은 references/strategy.md). 변환 경로는 원고에서 역추출. 제안이 아니면 생략
-3 구성 확정 (사용자 확인 2)    00_storyline.md(1줄 스토리라인, 장별 메시지, 슬라이드별 헤드라인)를 제시. 공공 제안은 ledger.json(섹션대장)과 배점 귀속 표를 함께 제시 → 승인 후 4단계 착수
+3 구성 확정 (사용자 확인 2)    references/methods.md 를 읽고 모듈과 Task 를 구성 (원고에 구성이 있는 변환 경로 포함)
+                              00_storyline.md(1줄 스토리라인, 장별 메시지, 슬라이드별 헤드라인)를 제시. 공공 제안은 ledger.json(섹션대장)과 배점 귀속 표를 함께 제시 → 승인 후 4단계 착수
 4 storyboard 작성              논지 파트를 먼저 작성. 공통 파트(company2slides.py 로 만든 common-slides.json)는 마지막에 복사하여 목차 위치에 배치
 5 lint                         python3 scripts/lint.py storyboard.json [--ledger ledger.json] [--layout A4] → 종료 코드 0 이 빌드 조건
 6 빌드                         node scripts/build.js storyboard.json out.pptx [--layout A4] → python3 scripts/finalize.py out.pptx → python3 scripts/validate.py out.pptx
@@ -115,6 +116,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - 의존성은 다른 단계보다 먼저 `python3 scripts/setup_deps.py --check` 로 확인
 - 미충족 의존성은 `python3 scripts/setup_deps.py` 로 설치
 - 단계별 산출물은 파일로 누적
+- 모듈과 Task 는 `references/methods.md` 를 읽은 뒤에 구성
+    + (읽는 범위) 적용 규칙, 유형 판별, 공통 규범 절과 과업 유형에 해당하는 절
+    + (원고에 구성이 있는 과업) 제안 발표자료 변환처럼 원고에 모듈과 Task 구성이 있어도 같은 범위를 읽음 (원고 구성을 옮길 때도 골격의 적용 방식과 공통 규범의 명칭, 모듈 개요, Task 항목 기준을 적용)
 - 00_storyline.md 의 기본 기재 항목은 1줄 스토리라인, 장별 메시지, 슬라이드별 헤드라인
     + (모듈과 Task 구조 덱) 슬라이드 목록에 모듈 구조 개관 슬라이드를 포함하도록 권장 (기준은 목차 절)
     + (헤드라인 키워드 강조 덱) 덱의 강조 기준과 슬라이드별 강조 어구를 함께 기재 (기준은 헤드라인 절)
