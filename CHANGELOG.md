@@ -46,6 +46,8 @@ Changelog rules
 - Changed the regional bar chart of the analysis_four sample to 5 categories (previously 3) (#162)
 - Changed the image caption rule to cover any text that describes the image, such as a caption or a title (previously the caption field) (#164)
 - Added an image caption rule that gives an image left without a caption no describing text in another form either (#164)
+- Fixed the kickoff item 20 theme color option to describe the emphasized bar as a theme-family color deeper than the plain bars (previously deeper than the theme color) (#168)
+- Changed the secondary gray of custom-color decks to the achromatic #595959 written in themeColors.textMuted (previously the navy theme's blue gray #52596C) (#168)
 
 * 목차 템플릿의 장 범위를 Ⅰ-Ⅹ와 XI, XII 번호의 2-12개로 변경 (기존 2-7개) (#156)
 * 8개 이상 장의 목차를 좁힌 항목 간격과 슬라이드 위아래 가운데 배치로 변경 (#156)
@@ -63,6 +65,8 @@ Changelog rules
 * analysis_four 견본의 지역별 막대 차트 범주를 5개로 변경 (기존 3개) (#162)
 * 이미지 캡션 기준의 적용 대상을 캡션이나 제목 등 이미지를 설명하는 문구 전체로 변경 (기존 caption 필드) (#164)
 * 캡션 생략 대상 이미지에 다른 형식의 설명 문구도 달지 않는 기준 추가 (#164)
+* 착수 질의 20번 테마색 선택지의 강조 막대 설명을 일반 막대보다 짙은 테마 색 계열로 수정 (기존 테마 색보다 짙은 색) (#168)
+* 사용자 지정 색 덱의 보조 회색을 themeColors.textMuted의 무채색 #595959로 변경 (기존 navy 테마의 청회색 #52596C) (#168)
 
 ## 2026-11-14
 
