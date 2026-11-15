@@ -6,6 +6,7 @@
 - 덱 라벨: meta.labels 의 템플릿 또는 블록 이름, 슬롯 이름, 값 형식(문자열, 정해진 길이의 목록, 객체 키), 언어 태그 형식, em dash (FAIL). 형식 문자열에 {n} 이나 {t} 가 빠지면 WARN. 기본값과 키 목록은 assets/labels.json
 - 테마 색 글자 대비: 직접 지정한 색 키가 그 위에 얹는 글자색(흰색 또는 본문 글자색)과 대비 하한 미달 (WARN, 규칙은 limits.json THEME_TEXT)
 - 회사 사실 정보: 확인 표기와 자리 표기 잔존 (WARN, meta.final 이면 FAIL), 사실 정보 슬라이드의 factSource 부재 (WARN)
+- 목차 항목 수: contents 항목이 12개를 넘으면 FAIL (번호 표기 Ⅰ-Ⅹ, XI, XII 의 범위. 장을 병합하여 12개 이하로 구성)
 - 글자 수: 헤드라인 1줄 상한 50자(초과 WARN)와 2줄 상한 100자(초과 FAIL), 마커 30, 잔존 슬롯 {{ }} 와 [확인]. 판형(--layout 또는 meta.layout)의 1줄 상한(limits.json HEADLINE_LINE_CHARS, 16:9 상한을 헤드라인 폭 비율로 환산)이 50자보다 작으면 1줄 상한은 그 값, 2줄 상한은 그 2배
   글자 수는 빌드와 같은 폭 모델(text_metrics.py: 나눔고딕 실측 폭, 한글과 라틴 문자 사이 간격)로 잰 폭을 한글 1자 폭으로 나눈 한글 환산 글자 수 (한글만 쓴 문구는 글자 수와 같고 영문과 공백은 폭만큼 적게 셈). 커스텀 슬라이드 슬롯 분량 비교도 같은 기준
 - 문체: 헤드라인 문체(meta.headlineStyle: noun | polite), 본문 명사형(존댓말 종결 금지). 한글이 없는 헤드라인(영문 발표자료)은 문체 검사를 건너뜀
@@ -63,6 +64,7 @@ BASE_LAYOUT = "16:9"  # 판형 미지정 시 기준 판형
 LINE_BREAKS = ("word", "char")  # 줄바꿈 단위(meta.lineBreak). build.js 의 LINE_BREAKS 와 같은 목록
 CHART_EMPHASES = ("off", "tone", "contrast")  # 차트 강조 방식(meta.chartEmphasis). 첫 값이 기본. atoms.js 의 CHART_EMPHASES 와 같은 목록
 FOOTNOTE_STYLES = ("number", "mark")  # 각주 표기(meta.footnoteStyle). 첫 값이 기본. atoms.js 의 NOTE_STYLES 와 같은 목록
+CONTENTS_ITEMS_MAX = 12  # 목차 항목 상한. templates.js CONTENTS_NUMERALS(Ⅰ-Ⅹ, XI, XII)의 개수와 같은 값
 # 차트 계열 레이블 지정(series[].labelPos). 문자열은 위치, 객체는 위치(pos)와 pt 이동 거리(dx, dy). none 은 숨김
 # 위치는 ECMA-376 과 MS-OI29500 의 차트 형식별 허용 값
 # (누적 막대는 outEnd 불가, 영역형은 위치 지정 불가). 도넛은 빌더가 레이블을 그리지 않으므로 표에 없음
@@ -750,6 +752,10 @@ def lint(story, ledger=None, story_path=".", layout=None):
         else: run_tpl, run_n = key, 1
         if run_n == L.get("sameTemplateRun", 3) + 1: warns.append(f"[{sid}] 같은 구조 {key} {run_n}장 연속 (리듬 단조)")
         if tpl == "free": free_n += 1
+        if tpl == "contents":
+            n_items = len((s.get("slots") or {}).get("items") or s.get("items") or [])
+            if n_items > CONTENTS_ITEMS_MAX:
+                fails.append(f"[{sid}] 목차 항목 {n_items}개 > 상한 {CONTENTS_ITEMS_MAX}개 (번호 표기 Ⅰ-Ⅹ, XI, XII 의 범위. 장을 병합하여 {CONTENTS_ITEMS_MAX}개 이하로 구성)")
         for spec in chart_specs(s):
             cf, cw = label_pos_checks(sid, spec)
             fails.extend(cf); warns.extend(cw)

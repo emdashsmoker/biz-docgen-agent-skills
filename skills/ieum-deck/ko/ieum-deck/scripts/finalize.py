@@ -12,7 +12,8 @@ HOW: 1) OPC 정규화 - 디렉터리 엔트리 제거, [Content_Types].xml 선�
         OpenSymbol 불릿 글꼴을 본문 글꼴 따름으로 교체, 모든 문단에 줄바꿈 단위 속성 기록(meta.lineBreak),
         주석과 출처 행의 라벨 뒤 내어쓰기 문단에 marL, indent 기록 (같은 상자의 다른 불릿 없는 문단은 0 으로 기록),
         재직렬화가 0 으로 바꾼 내어쓰기 문단의 탭 위치를 marL 로 복원,
-        빌드 기록의 계열 레이블 지정(chartLabels)을 항목 레이블로 기록 (재직렬화 전후 각 1회)
+        빌드 기록의 계열 레이블 지정(chartLabels)을 항목 레이블로 기록 (재직렬화 전후 각 1회),
+        빌드 기록의 계열 기본 채움 색(chartSeriesFill)을 강조 막대 차트의 계열 직속 채움에 기록 (재직렬화 전후 각 1회)
      3) soffice 재직렬화 후 1과 2 재적용. soffice 부재 시 2단계까지 수행
      4) 처리 전후 수치 출력
 
@@ -80,6 +81,10 @@ LABEL_POSITIONS = (LABEL_HIDDEN, "bestFit", "b", "ctr", "inBase", "inEnd", "l", 
 
 CHART_PART_DIR = "ppt/charts/"
 SERIES_PATTERN = re.compile(r"<c:ser>.*?</c:ser>", re.S)
+# 계열 기본 채움 색(빌드 기록 chartSeriesFill)의 교체 대상. 계열 직속 spPr 은 c:tx 바로 뒤에 오며 막대별 서식(c:dPt), 레이블(c:dLbls), 표식(c:marker)보다 앞
+# 세 요소 안의 spPr 은 교체하지 않도록 첫 c:dPt, c:dLbls, c:marker 이전에서만 찾음
+SERIES_FILL_PATTERN = re.compile(r'^(<c:ser>(?:(?!<c:dPt>|<c:dLbls>|<c:marker>).)*?<c:spPr>\s*<a:solidFill>\s*<a:srgbClr val=")([0-9A-Fa-f]{6})(")', re.S)
+HEX_COLOR_PATTERN = re.compile(r"[0-9A-Fa-f]{6}")
 SERIES_LABELS_PATTERN = re.compile(r"<c:dLbls>(.*?)</c:dLbls>", re.S)
 POINT_LABEL_PATTERN = re.compile(r'<c:dLbl>\s*<c:idx val="(\d+)"/>(.*?)</c:dLbl>', re.S)
 LABEL_POSITION_PATTERN = re.compile(r'<c:dLblPos val="[^"]*"/>')
@@ -1036,6 +1041,53 @@ def record_chart_labels(pptx_path: Path) -> dict:
     return out
 
 
+def set_series_fill(xml: str, color: str) -> tuple[str, int | None]:
+    """차트 XML 의 첫 계열(c:ser) 직속 채움 색을 color 로 교체. 막대별(c:dPt), 레이블(c:dLbls), 표식(c:marker) 안의 채움은 유지
+    반환 변경 수: 1 교체, 0 이미 같은 색, None 계열 직속 채움 미발견"""
+    series = SERIES_PATTERN.search(xml)
+    found = SERIES_FILL_PATTERN.match(series.group(0)) if series else None
+    if not found:
+        return xml, None
+    if found.group(2).upper() == color.upper():
+        return xml, 0
+    start, end = series.start() + found.start(2), series.start() + found.end(2)
+    return xml[:start] + color + xml[end:], 1
+
+
+def apply_series_fills(data: bytes, fills: dict) -> tuple[bytes, int]:
+    """빌드 기록의 계열 기본 채움 색을 차트 부품에 기록. 기록이 없으면 패키지를 그대로 반환"""
+    if not fills:
+        return data, 0
+    fixed, total = [], 0
+    for name, payload in read_package(data):
+        color = fills.get(name[len(CHART_PART_DIR):]) if name.startswith(CHART_PART_DIR) else None
+        if color:
+            xml, changed = set_series_fill(payload.decode("utf-8"), color)
+            if changed is None:
+                print(f"[finalize] 계열 기본 채움 미발견으로 유지: {name}")
+            payload, total = xml.encode("utf-8"), total + (changed or 0)
+        fixed.append((name, payload))
+    return write_package(fixed), total
+
+
+def record_series_fills(pptx_path: Path) -> dict:
+    """빌드 기록(<파일명>.build.json)의 계열 기본 채움 색(chartSeriesFill). 차트 파일 이름 -> 6자리 색상 코드
+    색상 코드 형식이 아닌 값은 무시하고 개수를 출력"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return {}
+    try:
+        fills = json.loads(record.read_text(encoding="utf-8")).get("chartSeriesFill") or {}
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(fills, dict):
+        return {}
+    out = {part: color for part, color in fills.items() if isinstance(color, str) and HEX_COLOR_PATTERN.fullmatch(color)}
+    if len(out) < len(fills):
+        print(f"[finalize] 계열 기본 채움 색 {len(fills) - len(out)}개는 6자리 색상 코드가 아니어서 무시")
+    return out
+
+
 def record_language(pptx_path: Path) -> dict:
     """빌드 기록(<파일명>.build.json)의 언어 태그(meta.labels.language). 태그 형식이 아닌 값은 무시하고 기본값 유지"""
     record = pptx_path.with_suffix(".build.json")
@@ -1085,6 +1137,11 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     data, labeled = apply_label_overrides(data, chart_labels)
     if labeled:
         print(f"[finalize] 차트 항목 레이블 지정 {labeled}개 기록 (빌드 기록 chartLabels)")
+    # 계열 기본 채움 색도 레이블 지정과 같은 시점에 기록 (재직렬화를 생략하거나 실패해도 반영되고 재직렬화 결과에는 다시 기록)
+    series_fills = record_series_fills(pptx_path)
+    data, filled = apply_series_fills(data, series_fills)
+    if filled:
+        print(f"[finalize] 차트 계열 기본 채움 {filled}개를 기본색으로 기록 (빌드 기록 chartSeriesFill)")
     pptx_path.write_bytes(data)
 
     reserialized = False
@@ -1098,6 +1155,7 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
             data, _ = apply_label_overrides(data, chart_labels)
+            data, _ = apply_series_fills(data, series_fills)
             data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:

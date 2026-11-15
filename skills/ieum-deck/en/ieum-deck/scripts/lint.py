@@ -7,6 +7,7 @@ Checks
 - Deck labels: template or block names, slot names, value types (string, list of the set length, object keys), language tag format and em dashes in meta.labels (FAIL). A format string missing {n} or {t} is a WARN. Defaults and key lists are in assets/labels.json
 - Theme color text contrast: a directly set color key below the contrast minimum against the text color on it (white or body text color) (WARN, rules in limits.json THEME_TEXT)
 - Company facts: remaining check markers and placeholders (WARN, FAIL with meta.final), missing factSource on fact slides (WARN)
+- Contents item count: more than 12 contents items is FAIL (the range of the numbers Ⅰ-Ⅹ, XI, XII. Merge chapters to keep 12 or fewer)
 - Character counts: headline 1-line limit 50 (WARN above) and 2-line limit 100 (FAIL above), marker 30, leftover slots {{ }} and [확인]. If the 1-line limit of the page size (--layout or meta.layout, limits.json HEADLINE_LINE_CHARS, the 16:9 limit scaled by the headline width ratio) is below 50, the 1-line limit is that value and the 2-line limit is double it
   Characters are Hangul-equivalent characters: the width measured with the build's width model (text_metrics.py: measured NanumGothic widths and the gap between Hangul and Latin characters) divided by the width of one Hangul syllable (text written only in Hangul counts as its character count; Latin letters and spaces count less, by their width). The custom slide slot volume comparison uses the same measure
 - Style: headline style (meta.headlineStyle: noun | polite), noun-ending body text (no polite endings). Headlines without Hangul (English decks) skip the style check
@@ -64,6 +65,7 @@ BASE_LAYOUT = "16:9"  # Base page size when none is set
 LINE_BREAKS = ("word", "char")  # Line break unit (meta.lineBreak). Same list as LINE_BREAKS in build.js
 CHART_EMPHASES = ("off", "tone", "contrast")  # Chart emphasis mode (meta.chartEmphasis). The first value is the default. Same list as CHART_EMPHASES in atoms.js
 FOOTNOTE_STYLES = ("number", "mark")  # Footnote style (meta.footnoteStyle). The first value is the default. Same list as NOTE_STYLES in atoms.js
+CONTENTS_ITEMS_MAX = 12  # Contents item limit. Same value as the count of templates.js CONTENTS_NUMERALS (Ⅰ-Ⅹ, XI, XII)
 # Chart series label settings (series[].labelPos). A string is a position, an object is a position (pos) and a move distance in pt (dx, dy). none hides the label
 # Positions are the values ECMA-376 and MS-OI29500 allow per chart type
 # (stacked bars do not allow outEnd, area charts allow no position). Doughnuts are not in the table because the builder draws no labels on them
@@ -752,6 +754,10 @@ def lint(story, ledger=None, story_path=".", layout=None):
         else: run_tpl, run_n = key, 1
         if run_n == L.get("sameTemplateRun", 3) + 1: warns.append(f"[{sid}] same structure {key} {run_n} slides in a row (monotonous rhythm)")
         if tpl == "free": free_n += 1
+        if tpl == "contents":
+            n_items = len((s.get("slots") or {}).get("items") or s.get("items") or [])
+            if n_items > CONTENTS_ITEMS_MAX:
+                fails.append(f"[{sid}] {n_items} contents items > limit {CONTENTS_ITEMS_MAX} (the range of the numbers Ⅰ-Ⅹ, XI, XII. Merge chapters to keep {CONTENTS_ITEMS_MAX} or fewer)")
         for spec in chart_specs(s):
             cf, cw = label_pos_checks(sid, spec)
             fails.extend(cf); warns.extend(cw)
