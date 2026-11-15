@@ -793,7 +793,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (Chart use) Use item comparison and time series charts for data with 4 or more items on the category axis (4 or more periods for time series)
     + (How to apply) Apply the item counts as conventional examples, fitted to the nature of the source and the slide message
     + (2 items or fewer) Present two-year trends, two-item comparisons and similar data as a table with the two figures and the change
-    + (3 items) Present a bar chart only when the source gives just 3 categories or periods (e.g. public statistics published for 3 years and similar)
+    + (3 items) Present a bar chart when the source gives just 3 categories or periods (e.g. public statistics published for 3 years and similar)
     + (Placing 3 items) Place a 3-item bar chart in a cell narrowed to its bar count so that the bars do not spread thick (e.g. one side of a two-column layout, a cell about 1/3 of the body width and similar)
 - (Chart categories) Keep the category makeup of the source in the chart
     + (Item comparison) Use all categories of the source (when there are many, keep the top 4-5 and merge the rest into Other)
