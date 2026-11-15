@@ -38,6 +38,12 @@ Changelog rules
 - Changed the Harvey ball legend rule to place the legend next to the table (previously above the table) (#158)
 - Changed the procedure to read references/methods.md before composing modules and Tasks, including conversions where the manuscript already has a structure (#160)
 - Changed the methods.md reading scope to the Application rules, Type judgment, Common norms and engagement type sections (previously the engagement type section) (#160)
+- Added a chart use rule that charts item comparisons and time series with 4 or more category items, as a conventional example (#162)
+- Added a table rule for data with 2 or fewer items and a bar chart rule for sources that give just 3 items (#162)
+- Added a placement rule that puts a 3-item bar chart in a cell narrowed to its bar count (#162)
+- Added a chart categories rule that keeps all source categories, consecutive source periods and whole compositions (#162)
+- Changed the chart label adjustment step to keep only the series the message needs (previously the items and series) (#162)
+- Changed the regional bar chart of the analysis_four sample to 5 categories (previously 3) (#162)
 
 * 목차 템플릿의 장 범위를 Ⅰ-Ⅹ와 XI, XII 번호의 2-12개로 변경 (기존 2-7개) (#156)
 * 8개 이상 장의 목차를 좁힌 항목 간격과 슬라이드 위아래 가운데 배치로 변경 (#156)
@@ -47,6 +53,12 @@ Changelog rules
 * 하베이 볼 범례의 배치 규정을 표에 인접한 위치로 변경 (기존 표 위) (#158)
 * 모듈과 Task 구성 전에 references/methods.md를 읽도록 절차 변경 (원고에 구성이 있는 변환 경로 포함) (#160)
 * methods.md의 읽는 범위를 적용 규칙, 유형 판별, 공통 규범, 과업 유형 절로 변경 (기존 과업 유형 절) (#160)
+* 항목 비교와 시계열 차트에 범주 축 항목 4개 이상의 관행적 채택 기준 추가 (#162)
+* 항목 2개 이하 데이터의 표 제시 기준과 항목 3개만 제공하는 원자료의 막대 차트 기준 추가 (#162)
+* 항목 3개 막대 차트를 막대 수에 맞춘 좁은 칸에 두는 배치 기준 추가 (#162)
+* 원자료의 범주 전체, 연속 시점, 구성비 전체를 차트에 유지하는 범주 기준 추가 (#162)
+* 차트 레이블 조정 단계에서 남기는 대상을 메시지에 필요한 계열로 변경 (기존 항목과 계열) (#162)
+* analysis_four 견본의 지역별 막대 차트 범주를 5개로 변경 (기존 3개) (#162)
 
 ## 2026-11-14
 
