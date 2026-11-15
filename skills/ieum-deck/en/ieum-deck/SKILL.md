@@ -206,7 +206,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Emphasis color note) The navy theme and custom color themes use a color of the same family as the theme color, the mono theme uses red
     + (Choosing emphasis phrases) Follow the headline keyword emphasis item of the Headlines section
 20. (Chart emphasis color) Off (default), theme color or contrast color. Record the choice in `meta.chartEmphasis` as off, tone or contrast
-    + (Theme color option) The bar the message points to is shown in a deeper color of the same family as the theme color
+    + (Theme color option) The bar the message points to is shown in a color of the theme color family that is deeper than the plain bars
     + (Contrast color option) The bar the message points to is shown in a color of a different family from the theme color (orange in the navy theme, red in the mono theme)
     + (Contrast color of custom color themes) The build assigns orange for a cool base color, navy for a warm one and red for an achromatic one (tell the user the assigned color in the question)
     + (Choosing emphasized bars) Follow the chart emphasis item of the Design system section
@@ -677,6 +677,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (User-specified color) Write the color the user chose in `meta.themeColors.base` as a six-digit color code
     + For a color given by name, write a representative color code and tell the user the code applied
     + The build computes the colors of conclusion bands, charts and tints from the one base color (computation rules in deriveTheme of `scripts/tokens.js`)
+    + For the secondary gray (textMuted), which the base color computation leaves out, write the achromatic #595959 together with base (the same value as the mono theme. The navy theme's #52596C is a navy-tinted blue gray that mixes with base colors of other hues)
     + If the base color's contrast with white text is below 4.5:1, the build lowers its lightness and prints the color codes before and after the adjustment
     + Record the adjusted color code in the completion report
     + The pastel color that carries white text (navyPastel) is computed at a lightness with a white text contrast of 3:1 or more
