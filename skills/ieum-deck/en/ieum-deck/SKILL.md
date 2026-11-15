@@ -790,7 +790,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Show the legend only on multi-series charts
     + Chart colors are the pastel family of the theme color (single-series bars of the mono theme are dark gray #666666)
     + For bar charts with negative values, the builder typesets a zero baseline and room for figures below negative bars
-- (Chart use) Use item comparison and time series charts for data with 4 or more items on the category axis (4 or more periods for time series)
+- (Chart use) Prefer item comparison and time series charts for data with 4 or more items on the category axis (4 or more periods for time series)
     + (How to apply) Apply the item counts as conventional examples, fitted to the nature of the source and the slide message
     + (2 items or fewer) Present two-year trends, two-item comparisons and similar data as a table with the two figures and the change
     + (3 items) Present a bar chart when the source gives just 3 categories or periods (e.g. public statistics published for 3 years and similar)
