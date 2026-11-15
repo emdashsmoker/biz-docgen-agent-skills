@@ -794,7 +794,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (How to apply) Apply the item counts as conventional examples, fitted to the nature of the source and the slide message
     + (2 items or fewer) Present two-year trends, two-item comparisons and similar data as a table with the two figures and the change
     + (3 items) Present a bar chart only when the source gives just 3 categories or periods (e.g. public statistics published for 3 years and similar)
-    + (Placing 3 items) Place a 3-item bar chart in one side of chart_two or in a composite cell about 1/3 of the body width (the wide chart cell of chart_text spreads the 3 bars thick)
+    + (Placing 3 items) Place a 3-item bar chart in a cell narrowed to its bar count so that the bars do not spread thick (e.g. one side of a two-column layout, a cell about 1/3 of the body width and similar)
 - (Chart categories) Keep the category makeup of the source in the chart
     + (Item comparison) Use all categories of the source (when there are many, keep the top 4-5 and merge the rest into Other)
     + (Time series) Use consecutive periods of the source (when there are many, keep the latest 12 periods or a span of 4 or more periods that the message needs)
