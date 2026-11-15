@@ -776,6 +776,7 @@ function chart(pres, slide, box, spec) {
     showTitle: false, border: { pt: 0, color: "FFFFFF" }, plotArea: { border: { pt: 0, color: "FFFFFF" } },
   };
   let marks = highlightSet(spec);
+  let seriesFill = false; // Whether to record the series default fill color (recordSeriesFill)
   if (spec.type === "bar") {
     opt.barDir = spec.barDir === "bar" ? "bar" : "col";
     if (opt.barDir === "bar" && series.length === 1 && !spec.keepOrder) {
@@ -812,6 +813,8 @@ function chart(pres, slide, box, spec) {
     if (marks.size && series.length === 1) {
       const strong = CHART_EMPHASIS === "contrast" ? T.COLOR.chartAccent : T.COLOR.chartDeep;
       opt.chartColors = series[0].values.map((_, i) => (marks.has(i) ? strong : T.COLOR.chartBase));
+      // pptxgenjs writes per-bar colors (c:dPt) only when there are 2 or more bar colors. A one-bar chart takes its bar color from the series default fill, so it is not replaced
+      seriesFill = opt.chartColors.length > 1;
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
@@ -826,6 +829,7 @@ function chart(pres, slide, box, spec) {
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // Labels sit above the markers so they do not overlap the line
   slide.addChart(ctype, series, opt);
   if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length, box); // doughnuts draw no labels
+  if (seriesFill) recordSeriesFill(slide, T.COLOR.chartBase);
 }
 
 // Series label settings per chart file name (storyboard series[].labelPos)
@@ -850,6 +854,19 @@ function recordLabelPos(slide, labelPos, n, box) {
 }
 /** Series label settings for the build record (read by build.js) */
 function chartLabels() { return CHART_LABELS; }
+
+// Series default fill color per chart file name (single-series bar charts with highlighted bars)
+// WHY: pptxgenjs 3.12.0 writes the first chartColors value to both the series default fill (c:ser/c:spPr) and the first bar (c:dPt idx 0)
+//      When the first bar is highlighted, the series default fill becomes the highlight color, so a category added in PowerPoint shows a highlighted bar
+//      The options cannot separate the two values, so build.js keeps the color in the build record (chartSeriesFill) and finalize.py replaces only the series default fill with the base color
+const CHART_SERIES_FILL = {};
+/** Record the series default fill color of the chart just added. The chart file name comes the same way as recordLabelPos (last _relsChart entry) */
+function recordSeriesFill(slide, color) {
+  const rel = slide._relsChart[slide._relsChart.length - 1];
+  CHART_SERIES_FILL[rel.fileName] = color;
+}
+/** Series default fill colors for the build record (read by build.js) */
+function chartSeriesFill() { return CHART_SERIES_FILL; }
 
 let IMAGE_BASE = null; // Storyboard folder. Base for relative paths so the same storyboard finds the same images wherever it is built
 
@@ -1592,4 +1609,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, CHART_EMPHASES, setChartEmphasis, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, CHART_EMPHASES, setChartEmphasis, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, chartSeriesFill, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

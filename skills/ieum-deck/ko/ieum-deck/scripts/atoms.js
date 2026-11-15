@@ -776,6 +776,7 @@ function chart(pres, slide, box, spec) {
     showTitle: false, border: { pt: 0, color: "FFFFFF" }, plotArea: { border: { pt: 0, color: "FFFFFF" } },
   };
   let marks = highlightSet(spec);
+  let seriesFill = false; // 계열 기본 채움 색 기록 여부 (recordSeriesFill)
   if (spec.type === "bar") {
     opt.barDir = spec.barDir === "bar" ? "bar" : "col";
     if (opt.barDir === "bar" && series.length === 1 && !spec.keepOrder) {
@@ -812,6 +813,8 @@ function chart(pres, slide, box, spec) {
     if (marks.size && series.length === 1) {
       const strong = CHART_EMPHASIS === "contrast" ? T.COLOR.chartAccent : T.COLOR.chartDeep;
       opt.chartColors = series[0].values.map((_, i) => (marks.has(i) ? strong : T.COLOR.chartBase));
+      // pptxgenjs 는 막대 색이 2개 이상일 때만 막대별 색(c:dPt)을 기록. 막대 1개 차트는 계열 기본 채움이 곧 막대 색이므로 교체 대상에서 제외
+      seriesFill = opt.chartColors.length > 1;
     }
   }
   if (spec.type === "pie" || spec.type === "doughnut") {
@@ -826,6 +829,7 @@ function chart(pres, slide, box, spec) {
   if (spec.type === "line") { opt.lineSize = 2; opt.lineDataSymbol = "circle"; opt.lineDataSymbolSize = 6; opt.chartColors = categoryColors([T.COLOR.navy, T.COLOR.navyPastel, T.COLOR.navyPastel2], series.length); opt.dataLabelPosition = "t"; } // 레이블이 선과 겹치지 않도록 표식 위에 배치
   slide.addChart(ctype, series, opt);
   if (spec.type !== "doughnut") recordLabelPos(slide, labelPos, cats.length, box); // 도넛은 레이블을 그리지 않음
+  if (seriesFill) recordSeriesFill(slide, T.COLOR.chartBase);
 }
 
 // 차트 파일 이름별 계열 레이블 지정 (storyboard series[].labelPos)
@@ -850,6 +854,19 @@ function recordLabelPos(slide, labelPos, n, box) {
 }
 /** 빌드 기록용 계열 레이블 지정 (build.js 가 읽음) */
 function chartLabels() { return CHART_LABELS; }
+
+// 차트 파일 이름별 계열 기본 채움 색 (강조 막대가 있는 단일 계열 막대 차트)
+// WHY: pptxgenjs 3.12.0 은 chartColors 의 첫 값을 계열 기본 채움(c:ser/c:spPr)과 첫 막대(c:dPt idx 0)에 함께 기록
+//      첫 막대가 강조 막대이면 계열 기본 채움이 강조색이 되어 PowerPoint 에서 범주를 추가한 막대가 강조색으로 표시됨
+//      옵션으로는 두 값을 분리할 수 없으므로 build.js 가 빌드 기록(chartSeriesFill)에 남기고 finalize.py 가 계열 기본 채움만 기본색으로 교체
+const CHART_SERIES_FILL = {};
+/** 방금 추가한 차트의 계열 기본 채움 색 기록. 차트 파일 이름은 recordLabelPos 와 같은 방식(_relsChart 마지막 항목)으로 얻음 */
+function recordSeriesFill(slide, color) {
+  const rel = slide._relsChart[slide._relsChart.length - 1];
+  CHART_SERIES_FILL[rel.fileName] = color;
+}
+/** 빌드 기록용 계열 기본 채움 색 (build.js 가 읽음) */
+function chartSeriesFill() { return CHART_SERIES_FILL; }
 
 let IMAGE_BASE = null; // storyboard 폴더. 빌드한 위치와 관계없이 같은 storyboard 가 같은 이미지를 찾도록 상대 경로의 기준으로 사용
 
@@ -1592,4 +1609,4 @@ function substitute(paras, value) {
   });
 }
 
-module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, CHART_EMPHASES, setChartEmphasis, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };
+module.exports = { footnotes, noteBlock, sourceBlock, notePlan, noteParas, centerNoteBox, noteLeads, NOTE_STYLES, setNoteStyle, CHART_EMPHASES, setChartEmphasis, scrub, remap, face, estimateLines, wordSplits, fitParas, lineHeightIn, lineWidthIn, wordWidthIn, textEm, runsOf, parasFromString, text, shape, line, table, chart, chartLabels, chartSeriesFill, image, setImageBase, bodyBand, pageNo, markerGlyph, playOwn, substitute, lineOpt, mgPt, boxMargin, TEXT_MG_IN };

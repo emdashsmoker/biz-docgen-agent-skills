@@ -12,7 +12,8 @@ HOW: 1) OPC normalization - remove directory entries, put [Content_Types].xml fi
         replace the OpenSymbol bullet font with the text font, write the line break unit attributes on every paragraph (meta.lineBreak),
         write marL and indent on note and source paragraphs that hang after a label (other paragraphs without bullets in the same box get 0),
         restore the tab stop of hanging paragraphs that re-serialization set to 0 back to marL,
-        write the series label settings of the build record (chartLabels) as point labels (once before and once after re-serialization)
+        write the series label settings of the build record (chartLabels) as point labels (once before and once after re-serialization),
+        write the series default fill color of the build record (chartSeriesFill) into the direct series fill of highlighted bar charts (once before and once after re-serialization)
      3) Re-serialize with soffice and reapply 1 and 2. Without soffice, stop after step 2
      4) Print metrics before and after processing
 
@@ -80,6 +81,10 @@ LABEL_POSITIONS = (LABEL_HIDDEN, "bestFit", "b", "ctr", "inBase", "inEnd", "l", 
 
 CHART_PART_DIR = "ppt/charts/"
 SERIES_PATTERN = re.compile(r"<c:ser>.*?</c:ser>", re.S)
+# Target of the series default fill color (build record chartSeriesFill). The direct series spPr comes right after c:tx, before per-bar formats (c:dPt), labels (c:dLbls) and markers (c:marker)
+# The search stops before the first c:dPt, c:dLbls or c:marker so that the spPr inside those elements is never replaced
+SERIES_FILL_PATTERN = re.compile(r'^(<c:ser>(?:(?!<c:dPt>|<c:dLbls>|<c:marker>).)*?<c:spPr>\s*<a:solidFill>\s*<a:srgbClr val=")([0-9A-Fa-f]{6})(")', re.S)
+HEX_COLOR_PATTERN = re.compile(r"[0-9A-Fa-f]{6}")
 SERIES_LABELS_PATTERN = re.compile(r"<c:dLbls>(.*?)</c:dLbls>", re.S)
 POINT_LABEL_PATTERN = re.compile(r'<c:dLbl>\s*<c:idx val="(\d+)"/>(.*?)</c:dLbl>', re.S)
 LABEL_POSITION_PATTERN = re.compile(r'<c:dLblPos val="[^"]*"/>')
@@ -1036,6 +1041,53 @@ def record_chart_labels(pptx_path: Path) -> dict:
     return out
 
 
+def set_series_fill(xml: str, color: str) -> tuple[str, int | None]:
+    """Replace the direct fill color of the first series (c:ser) in the chart XML with color. Fills inside per-bar formats (c:dPt), labels (c:dLbls) and markers (c:marker) stay
+    Returns the change count: 1 replaced, 0 already the same color, None no direct series fill found"""
+    series = SERIES_PATTERN.search(xml)
+    found = SERIES_FILL_PATTERN.match(series.group(0)) if series else None
+    if not found:
+        return xml, None
+    if found.group(2).upper() == color.upper():
+        return xml, 0
+    start, end = series.start() + found.start(2), series.start() + found.end(2)
+    return xml[:start] + color + xml[end:], 1
+
+
+def apply_series_fills(data: bytes, fills: dict) -> tuple[bytes, int]:
+    """Write the series default fill colors of the build record into the chart parts. Returns the package unchanged when there is no record"""
+    if not fills:
+        return data, 0
+    fixed, total = [], 0
+    for name, payload in read_package(data):
+        color = fills.get(name[len(CHART_PART_DIR):]) if name.startswith(CHART_PART_DIR) else None
+        if color:
+            xml, changed = set_series_fill(payload.decode("utf-8"), color)
+            if changed is None:
+                print(f"[finalize] No direct series fill found, kept as is: {name}")
+            payload, total = xml.encode("utf-8"), total + (changed or 0)
+        fixed.append((name, payload))
+    return write_package(fixed), total
+
+
+def record_series_fills(pptx_path: Path) -> dict:
+    """Series default fill colors (chartSeriesFill) in the build record (<file name>.build.json). Chart file name -> 6-digit color code
+    Values that are not color codes are ignored and their count is printed"""
+    record = pptx_path.with_suffix(".build.json")
+    if not record.is_file():
+        return {}
+    try:
+        fills = json.loads(record.read_text(encoding="utf-8")).get("chartSeriesFill") or {}
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(fills, dict):
+        return {}
+    out = {part: color for part, color in fills.items() if isinstance(color, str) and HEX_COLOR_PATTERN.fullmatch(color)}
+    if len(out) < len(fills):
+        print(f"[finalize] {len(fills) - len(out)} series default fill colors ignored because they are not 6-digit color codes")
+    return out
+
+
 def record_language(pptx_path: Path) -> dict:
     """Language tags (meta.labels.language) in the build record (<file name>.build.json). Values that are not tags are ignored and the defaults stay"""
     record = pptx_path.with_suffix(".build.json")
@@ -1085,6 +1137,11 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
     data, labeled = apply_label_overrides(data, chart_labels)
     if labeled:
         print(f"[finalize] {labeled} chart point label settings written (build record chartLabels)")
+    # The series default fill colors are written at the same points as the label settings (applied even when re-serialization is skipped or fails, and written again into the re-serialized result)
+    series_fills = record_series_fills(pptx_path)
+    data, filled = apply_series_fills(data, series_fills)
+    if filled:
+        print(f"[finalize] {filled} chart series default fills set to the base color (build record chartSeriesFill)")
     pptx_path.write_bytes(data)
 
     reserialized = False
@@ -1098,6 +1155,7 @@ def finalize(pptx_path: Path, use_soffice: bool = True) -> dict:
             data, _ = fix_package_xml(data)
             data = restore_hole_sizes(data, holes)
             data, _ = apply_label_overrides(data, chart_labels)
+            data, _ = apply_series_fills(data, series_fills)
             data = restore_cell_fills(data, cell_fills)
             pptx_path.write_bytes(data)
         else:
