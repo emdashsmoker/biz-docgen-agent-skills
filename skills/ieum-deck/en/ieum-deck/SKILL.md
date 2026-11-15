@@ -818,9 +818,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + An image block without `src` is typeset as a dashed placeholder box
     + check_layout warns about the small text of placeholder boxes
     + Before delivery, set an image for placeholder boxes or replace them with another block
-- (Image captions) Decide for each image whether to write a caption (`caption`), by the slide message and the role of the image
+- (Image captions) Decide for each image whether to give it text that describes it, such as a caption or a title, by the slide message and the role of the image
     + (Write) Images whose nature readers could mistake without a caption (e.g. deliverable examples, drafts, photos that need the place or time stated and so on)
-    + (Omit) Decorative images, illustrations that show a body concept by analogy, sets of images listed as examples of items the body mentions and so on
+    + (Omit) Decorative images, illustrations that show a body concept by analogy, sets of images listed as examples of items the body mentions and so on (no describing text in another form either)
     + (Double description) A caption does not repeat what the body, a cell title or text inside the image already conveys
 
 ## Briefing deck
