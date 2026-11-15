@@ -44,6 +44,8 @@ Changelog rules
 - Added a chart categories rule that keeps all source categories, consecutive source periods and whole compositions (#162)
 - Changed the chart label adjustment step to keep only the series the message needs (previously the items and series) (#162)
 - Changed the regional bar chart of the analysis_four sample to 5 categories (previously 3) (#162)
+- Changed the image caption rule to cover any text that describes the image, such as a caption or a title (previously the caption field) (#164)
+- Added an image caption rule that gives an image left without a caption no describing text in another form either (#164)
 
 * 목차 템플릿의 장 범위를 Ⅰ-Ⅹ와 XI, XII 번호의 2-12개로 변경 (기존 2-7개) (#156)
 * 8개 이상 장의 목차를 좁힌 항목 간격과 슬라이드 위아래 가운데 배치로 변경 (#156)
@@ -59,6 +61,8 @@ Changelog rules
 * 원자료의 범주 전체, 연속 시점, 구성비 전체를 차트에 유지하는 범주 기준 추가 (#162)
 * 차트 레이블 조정 단계에서 남기는 대상을 메시지에 필요한 계열로 변경 (기존 항목과 계열) (#162)
 * analysis_four 견본의 지역별 막대 차트 범주를 5개로 변경 (기존 3개) (#162)
+* 이미지 캡션 기준의 적용 대상을 캡션이나 제목 등 이미지를 설명하는 문구 전체로 변경 (기존 caption 필드) (#164)
+* 캡션 생략 대상 이미지에 다른 형식의 설명 문구도 달지 않는 기준 추가 (#164)
 
 ## 2026-11-14
 
