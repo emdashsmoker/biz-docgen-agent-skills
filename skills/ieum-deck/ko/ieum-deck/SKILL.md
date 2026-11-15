@@ -683,7 +683,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 빈 셀에는 흰색을 지정
     + 역량 비교는 표 셀의 ● ◐ ○ 기호로 하베이 볼을 표기
     + 하베이 볼의 원 색은 본문 글자색
-    + 하베이 볼 범례는 표 위에 배치
+    + 하베이 볼 범례는 표와 붙여 배치
     + 열 폭은 셀 문구의 한 줄 폭으로 자동 산정
     + 역할 부호, 연도별 수치, 대안별 평가처럼 이어진 자료 열 묶음은 같은 폭
     + 불릿은 항목이 2개 이상인 셀과 `bulletRows`, `bulletCols` 로 지정한 줄의 셀에 적용 (`bulletRows` 는 `labelCols` 의 구분 열 제외. 줄바꿈으로 여러 줄이 된 문구는 항목 1개)

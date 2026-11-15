@@ -696,7 +696,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Set white for empty cells
     + Capability comparisons use Harvey balls with the ● ◐ ○ symbols in table cells
     + The circle color of Harvey balls is the body text color
-    + Place the Harvey ball legend above the table
+    + Keep the Harvey ball legend adjacent to the table
     + Column widths are computed automatically from the one-line width of cell text
     + Groups of continuous data columns, such as role codes, yearly figures and evaluations per option, have the same width
     + Bullets apply to cells with two or more items and to cells in the lines given with `bulletRows` and `bulletCols` (`bulletRows` leaves out the label columns of `labelCols`. Text wrapped into several lines is one item)
