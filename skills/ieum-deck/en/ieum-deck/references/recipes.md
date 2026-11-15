@@ -211,7 +211,7 @@
 
 - Resolve data label defects found on zoomed chart images (review system section of SKILL.md) in the order below (rebuild and re-check on zoomed chart images after each step)
 - (Chart design) Before using labelPos, design a chart that needs no label adjustment
-    + Keep only the points and series the one message needs
+    + Keep only the series the one message needs (categories follow the chart categories item of the SKILL.md design system)
     + When so many categories make labels overlap, keep the top 4-5 and merge the rest into Other (Other comes last, pies have six slices or fewer)
     + When so many periods make labels overlap, keep the latest 12 or only the span the message needs
     + Present item comparisons with long category names as horizontal bars
