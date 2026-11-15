@@ -27,6 +27,21 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-15
+
+### ieum-deck
+- Changed the contents template to take 2-12 chapters (previously 2-7), numbered Ⅰ-Ⅹ and then XI, XII (#156)
+- Changed contents with 8 or more chapters to a narrower item step, with the list centered vertically on the slide (#156)
+- Changed md2storyboard to number the 11th and 12th chapters XI and XII instead of 11 and 12 (#156)
+- Added a lint FAIL for contents with more than 12 items that asks to merge chapters (#156)
+- Fixed single-series bar charts with the first bar highlighted showing a category added in PowerPoint in the highlight color (#156)
+
+* 목차 템플릿의 장 범위를 Ⅰ-Ⅹ와 XI, XII 번호의 2-12개로 변경 (기존 2-7개) (#156)
+* 8개 이상 장의 목차를 좁힌 항목 간격과 슬라이드 위아래 가운데 배치로 변경 (#156)
+* md2storyboard의 11번째와 12번째 장 번호를 XI, XII로 변경 (기존 11, 12) (#156)
+* 목차 항목 12개 초과 시 장 병합을 안내하는 lint FAIL 추가 (#156)
+* 첫 막대를 강조한 단일 계열 막대 차트에서 PowerPoint로 추가한 범주의 강조색 표시 오류 수정 (#156)
+
 ## 2026-11-14
 
 ### Common
