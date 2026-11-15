@@ -22,7 +22,7 @@
 | theme | navy(기본), mono. 사용자 지정 색은 themeColors 로 지정 |
 | headlineAccent | 헤드라인 키워드 강조. false(기본), true. true 인 덱만 슬라이드의 accent 를 테마 강조색으로 조판 (착수 질의 19번) |
 | chartEmphasis | 차트 강조 방식. off(기본), tone(테마색), contrast(대비색). off 가 아닌 덱만 차트의 highlight 를 조판 (착수 질의 20번) |
-| themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산 (예: {"base": "1B4332"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
+| themeColors | 사용자 지정 테마 색. base 에 기준 색 6자리 색상 코드를 쓰면 빌드가 textMuted 를 뺀 테마 색 전체를 계산. 계산에서 빠지는 textMuted 는 meta.theme 의 값을 따름 (navy 52596C, mono 595959). 사용자 지정 색 덱은 textMuted 에 무채색 595959 를 기재 (예: {"base": "1B4332", "textMuted": "595959"}). 색 키를 함께 쓰면 기재한 키가 계산값보다 우선 (색 키 목록과 대비 하한은 아래 themeColors 색 키 절). navyRamp 를 쓰지 않으면 차트 계열 색은 최종 navy, navyPastel, navyPastel2 와 계산한 4번째 색으로 구성. 형식 오류는 lint FAIL 과 빌드 오류, 대비 하한 미달은 lint WARN |
 | track | 워딩 트랙. rnd, mgmt, general |
 | final | true 이면 남은 자리 표기를 lint FAIL 로 검사 (완료 보고 직전에 지정) |
 | ownDeck | 커스텀 슬라이드 own-deck.json 경로. storyboard 파일 기준 상대 경로 허용. 미지정 시 환경변수 IEUM_DECK_OWN 사용 (`references/custom-slides.md`) |
