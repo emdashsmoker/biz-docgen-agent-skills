@@ -3,7 +3,7 @@
 ## Application rules
 
 - Read this file at the execution plan design stage, before the step 3 structure confirmation
-- Read only the section for the engagement type
+- Read the Application rules, Type judgment and Common norms sections, plus the section for the engagement type
 - The RFP work details take priority over the skeleton
 - Stages the RFP does not require can be omitted
 - Place the environment analysis module before the strategy module
