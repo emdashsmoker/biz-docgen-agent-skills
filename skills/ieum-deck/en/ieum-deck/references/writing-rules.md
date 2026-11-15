@@ -80,9 +80,9 @@
 - Table cell text carries whichever of subject, criterion and figures is needed (enough to fill the column width)
 - If there is nothing to add, shrink the box and gather it to the center
 - If it still looks awkward after shrinking, change the form of expression or merge it with a neighboring box
-- Decide for each image whether to write a caption, by the slide message and the role of the image (criteria in the image captions item of the SKILL.md design system)
+- Decide for each image whether to give it text that describes it, such as a caption or a title, by the slide message and the role of the image (criteria in the image captions item of the SKILL.md design system)
     + (Write) Images whose nature readers could mistake without a caption, such as deliverable examples and drafts
-    + (Omit) Decorative images, analogy illustrations, sets of example images, images whose content the body or text inside the image already conveys and so on
+    + (Omit) Decorative images, analogy illustrations, sets of example images, images whose content the body or text inside the image already conveys and so on (no describing text in another form either)
 - Write the Key Point band only for judgment criteria, formulas, follow-up links, selection reasons, timing, principles or similar content that is not in the headline or body
 - Delete a band that only repeats the headline or summarizes the body
 - Put one-line formulas or caveats in `footnotes`
