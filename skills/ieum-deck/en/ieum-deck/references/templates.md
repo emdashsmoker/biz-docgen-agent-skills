@@ -98,8 +98,8 @@
 | Group | template | Use | slots fields | Variable range |
 |---|---|---|---|---|
 | Cover and divider | cover | Cover. One horizontal line above and one below the title. The title sits exactly between the two lines. client holds only the contracting agency name. Choose the client position with clientPos | title, label, date, client, logo, company | - |
-| Cover and divider | contents | Contents | items[] | 2-7 |
-| Cover and divider | divider | Divider | no("Ⅰ"), title, items[] | Sections 1-8 |
+| Cover and divider | contents | Contents. Chapter numbers use Ⅰ-Ⅹ for 1-10 and XI, XII for 11-12 (NanumGothic has no Ⅺ, Ⅻ glyphs, so Latin capitals are used). With 8 or more items the item step shrinks to 0.42in and the list is centered vertically on the slide. 13 or more items is a lint FAIL, so merge chapters to keep 12 or fewer | items[] | 2-12 |
+| Cover and divider | divider | Divider. Write the chapter number in no with the same scheme as the contents (Ⅰ-Ⅹ, XI, XII) | no("Ⅰ"), title, items[] | Sections 1-8 |
 | Cover and divider | end | Closing | title, company | - |
 | Proposal overview | purpose | Background and purpose | leads[{title, sub[], note}], purpose, issues[], leftHead, rightHead, purposeHead, issueHead, client, clientPos | Leads 2-4. Each lead has a one-sentence title and 2-3 evidence items. The purpose box label is purposeHead (default "목적") |
 | Proposal overview | scope | Vision, goal, module scope, outputs | vision, goal, goalHead, visionTag, scopeTag, outputTag, modules[{title, items[]}], outputs[text or per-module text array] | Modules 2-5. The goal label text is goalHead (default "본 과업의 최종 목표"). An OUTPUT label sits left of the output row (change the structure labels VISION, SCOPE and OUTPUT with visionTag, scopeTag and outputTag). If outputs is a list of arrays as long as the module count, items align under the module columns as multi-item bullets. If it is a text list, 1-2 items are centered in cells of module column width, 3-5 items take one line, 6-10 items take two lines with up to 5 cells per line |
@@ -208,7 +208,7 @@
 - The fixed text that is not a label slot is placeholders that show only while the content is empty, and numbering symbols unrelated to language
     + Image placeholder box text (이미지, 사진, 표본 화면, 산출물 화면, 로고) and staff placeholders ([인력A], [인력]) disappear once the content is filled
     + The stand-in text of empty custom slide image slots ([기관명], "접수 → 검토 → 승인 → 처리 → 통보", and a description when the source text contains "파쇄") and the sample items of empty chart slots (항목 A, B, C) also disappear once the slot is filled
-    + Contents Roman numerals (Ⅰ-Ⅶ), circled numbers (①-⑩), 1., 1-1. and 1) numbering and the ※ mark stay fixed
+    + Contents Roman numerals (Ⅰ-Ⅹ, XI, XII), circled numbers (①-⑩), 1., 1-1. and 1) numbering and the ※ mark stay fixed
 
 ### English label example
 

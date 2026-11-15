@@ -18,8 +18,9 @@ import re
 import sys
 from pathlib import Path
 
-# 장 번호 로마 숫자. 나눔고딕이 글리프를 갖는 Ⅰ-Ⅹ 까지 쓰고 11번째 장부터는 아라비아 숫자
-ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"]
+# 장 번호. 1-10번은 유니코드 로마 숫자 Ⅰ-Ⅹ, 11-12번은 라틴 대문자 XI, XII (templates.js CONTENTS_NUMERALS 와 같은 체계)
+# 나눔고딕에 Ⅺ, Ⅻ 글리프가 없어 라틴 대문자로 표기. 13번째 장부터는 아라비아 숫자 (lint 가 목차 13개 이상을 FAIL 로 보고)
+ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "XI", "XII"]
 
 
 def parse_table(lines):

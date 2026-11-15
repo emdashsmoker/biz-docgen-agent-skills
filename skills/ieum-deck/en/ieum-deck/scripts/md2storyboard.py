@@ -18,8 +18,9 @@ import re
 import sys
 from pathlib import Path
 
-# Chapter Roman numerals. Uses Ⅰ-Ⅹ, which NanumGothic has glyphs for, and Arabic numerals from the 11th chapter
-ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"]
+# Chapter numbers. 1-10 use the Unicode Roman numerals Ⅰ-Ⅹ and 11-12 use the Latin capitals XI, XII (same scheme as templates.js CONTENTS_NUMERALS)
+# NanumGothic has no Ⅺ, Ⅻ glyphs, so Latin capitals are used. Arabic numerals from the 13th chapter (lint reports 13 or more contents items as FAIL)
+ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "XI", "XII"]
 
 
 def parse_table(lines):

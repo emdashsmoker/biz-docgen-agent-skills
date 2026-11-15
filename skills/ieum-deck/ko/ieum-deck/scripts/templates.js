@@ -626,18 +626,26 @@ function cover(ctx, slide, sb) {
   const nameBox = { x: L.W / 2 - (COVER_NAME_W / 2) * S.sx, y: logoBox.y, w: COVER_NAME_W * S.sx, h: logoBox.h };
   if (s.logo) A.image(ctx.pres, slide, logoBox, s.logo); else A.text(slide, nameBox, s.company || ctx.meta.company || LB.label("common", "company"), { sz: T.SIZE.marker, bold: true, align: "center", mg: [0, 0, 0, 0] });
 }
+// 목차 장 번호 (2-12개 장). 11번과 12번은 유니코드 로마 숫자 Ⅺ, Ⅻ 대신 라틴 대문자로 표기
+// Why: 나눔고딕에 Ⅺ, Ⅻ(U+216A, U+216B) 글리프가 없어 다른 글꼴로 대체되고, 전각 폭 Ⅹ 와 Ⅰ 를 이어 쓰면 번호 칸(0.6in)을 넘어 줄바꿈됨
+const CONTENTS_NUMERALS = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "XI", "XII"];
+// 목차 항목 배치 (인치). 항목 간격은 목록 높이 3.0in 를 항목 수로 나눈 값을 0.42-0.62 범위로 제한
+// 하한 간격에서 목록이 길어지는 8개 이상은 목록을 슬라이드 위아래 가운데에 두고 제목 블록을 같은 거리만큼 올림 (7개 이하는 시작 위치 2.2 유지)
+const CONTENTS_TOP = 2.2, CONTENTS_SPAN = 3.0, CONTENTS_STEP_MIN = 0.42, CONTENTS_STEP_MAX = 0.62, CONTENTS_ROW_H = 0.45;
 function contents(ctx, slide, sb) {
   const S = ctx.S, items = (sb.slots && sb.slots.items) || sb.items || [];
   const L = S.layout;
-  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy, w: 2.2 * S.sx, h: 0.9 }, LB.label("contents", "title", sb.slots && sb.slots.title), { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
-  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 2.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
-  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 3.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
-  const roman = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ"];
-  const step = Math.min(0.62, 3.0 / Math.max(items.length, 1));
+  const step = Math.min(CONTENTS_STEP_MAX, Math.max(CONTENTS_SPAN / Math.max(items.length, 1), CONTENTS_STEP_MIN));
+  const blockH = (items.length - 1) * step + CONTENTS_ROW_H;
+  const top = Math.min(CONTENTS_TOP * S.sy, (L.H - blockH) / 2);
+  const dy = top - CONTENTS_TOP * S.sy; // 제목 블록(목차 글자와 위아래 가로선)의 이동 거리. 7개 이하는 0
+  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy + dy, w: 2.2 * S.sx, h: 0.9 }, LB.label("contents", "title", sb.slots && sb.slots.title), { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
+  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 2.1 * S.sy + dy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
+  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 3.1 * S.sy + dy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
   items.forEach((it, i) => {
-    const y = 2.2 * S.sy + i * step;
-    A.text(slide, { x: 6.5 * S.sx, y, w: 0.6, h: 0.45 }, `${roman[i] || i + 1}.`, { sz: T.SIZE.contentsItem, bold: true, align: "left", mg: [0, 0, 0, 0] });
-    A.text(slide, { x: 7.2 * S.sx, y, w: L.W - 7.2 * S.sx - S.marginX, h: 0.45 }, it, { sz: T.SIZE.contentsItem, align: "left", mg: [0, 0, 0, 0] });
+    const y = top + i * step;
+    A.text(slide, { x: 6.5 * S.sx, y, w: 0.6, h: CONTENTS_ROW_H }, `${CONTENTS_NUMERALS[i] || i + 1}.`, { sz: T.SIZE.contentsItem, bold: true, align: "left", mg: [0, 0, 0, 0] });
+    A.text(slide, { x: 7.2 * S.sx, y, w: L.W - 7.2 * S.sx - S.marginX, h: CONTENTS_ROW_H }, it, { sz: T.SIZE.contentsItem, align: "left", mg: [0, 0, 0, 0] });
   });
 }
 function divider(ctx, slide, sb) {

@@ -627,18 +627,26 @@ function cover(ctx, slide, sb) {
   const nameBox = { x: L.W / 2 - (COVER_NAME_W / 2) * S.sx, y: logoBox.y, w: COVER_NAME_W * S.sx, h: logoBox.h };
   if (s.logo) A.image(ctx.pres, slide, logoBox, s.logo); else A.text(slide, nameBox, s.company || ctx.meta.company || LB.label("common", "company"), { sz: T.SIZE.marker, bold: true, align: "center", mg: [0, 0, 0, 0] });
 }
+// Contents chapter numbers (2-12 chapters). Numbers 11 and 12 use Latin capitals instead of the Unicode Roman numerals Ⅺ, Ⅻ
+// Why: NanumGothic has no glyphs for Ⅺ, Ⅻ (U+216A, U+216B), so they fall back to another font, and the full-width Ⅹ followed by Ⅰ exceeds the number box (0.6in) and wraps
+const CONTENTS_NUMERALS = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "XI", "XII"];
+// Contents item placement (inches). The item step is the 3.0in list height divided by the item count, limited to 0.42-0.62
+// With 8 or more items the list grows at the minimum step, so the list is centered vertically on the slide and the title block moves up by the same distance (7 or fewer items keep the 2.2 start)
+const CONTENTS_TOP = 2.2, CONTENTS_SPAN = 3.0, CONTENTS_STEP_MIN = 0.42, CONTENTS_STEP_MAX = 0.62, CONTENTS_ROW_H = 0.45;
 function contents(ctx, slide, sb) {
   const S = ctx.S, items = (sb.slots && sb.slots.items) || sb.items || [];
   const L = S.layout;
-  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy, w: 2.2 * S.sx, h: 0.9 }, LB.label("contents", "title", sb.slots && sb.slots.title), { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
-  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 2.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
-  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 3.1 * S.sy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
-  const roman = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ"];
-  const step = Math.min(0.62, 3.0 / Math.max(items.length, 1));
+  const step = Math.min(CONTENTS_STEP_MAX, Math.max(CONTENTS_SPAN / Math.max(items.length, 1), CONTENTS_STEP_MIN));
+  const blockH = (items.length - 1) * step + CONTENTS_ROW_H;
+  const top = Math.min(CONTENTS_TOP * S.sy, (L.H - blockH) / 2);
+  const dy = top - CONTENTS_TOP * S.sy; // Shift of the title block (contents label and the rules above and below). 0 for 7 or fewer items
+  A.text(slide, { x: 2.5 * S.sx, y: 2.15 * S.sy + dy, w: 2.2 * S.sx, h: 0.9 }, LB.label("contents", "title", sb.slots && sb.slots.title), { sz: T.SIZE.contentsTitle, bold: true, align: "center", mg: [0, 0, 0, 0] });
+  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 2.1 * S.sy + dy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
+  slide.addShape(ctx.pres.ShapeType.line, { x: 2.5 * S.sx, y: 3.1 * S.sy + dy, w: 2.2 * S.sx, h: 0, line: { color: T.COLOR.border, width: 0.75 } });
   items.forEach((it, i) => {
-    const y = 2.2 * S.sy + i * step;
-    A.text(slide, { x: 6.5 * S.sx, y, w: 0.6, h: 0.45 }, `${roman[i] || i + 1}.`, { sz: T.SIZE.contentsItem, bold: true, align: "left", mg: [0, 0, 0, 0] });
-    A.text(slide, { x: 7.2 * S.sx, y, w: L.W - 7.2 * S.sx - S.marginX, h: 0.45 }, it, { sz: T.SIZE.contentsItem, align: "left", mg: [0, 0, 0, 0] });
+    const y = top + i * step;
+    A.text(slide, { x: 6.5 * S.sx, y, w: 0.6, h: CONTENTS_ROW_H }, `${CONTENTS_NUMERALS[i] || i + 1}.`, { sz: T.SIZE.contentsItem, bold: true, align: "left", mg: [0, 0, 0, 0] });
+    A.text(slide, { x: 7.2 * S.sx, y, w: L.W - 7.2 * S.sx - S.marginX, h: CONTENTS_ROW_H }, it, { sz: T.SIZE.contentsItem, align: "left", mg: [0, 0, 0, 0] });
   });
 }
 function divider(ctx, slide, sb) {

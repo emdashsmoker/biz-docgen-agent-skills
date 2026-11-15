@@ -98,8 +98,8 @@
 | 분류 | template | 용도 | slots 필드 | 가변 범위 |
 |---|---|---|---|---|
 | 표지와 간지 | cover | 표지. 가로선은 제목 위아래에 1개씩. 제목은 두 선 사이 정중앙. client 에는 발주기관명만 기재. client 위치는 clientPos 로 선택 | title, label, date, client, logo, company | - |
-| 표지와 간지 | contents | 목차 | items[] | 2-7 |
-| 표지와 간지 | divider | 간지 | no("Ⅰ"), title, items[] | 절 1-8 |
+| 표지와 간지 | contents | 목차. 장 번호는 1-10번에 Ⅰ-Ⅹ, 11-12번에 XI, XII 를 사용 (나눔고딕에 Ⅺ, Ⅻ 글리프가 없어 라틴 대문자로 표기). 8개 이상이면 항목 간격을 0.42인치로 줄이고 목록을 슬라이드 위아래 가운데에 배치. 13개 이상은 lint FAIL 이므로 장을 병합하여 12개 이하로 구성 | items[] | 2-12 |
+| 표지와 간지 | divider | 간지. no 에는 해당 장 번호를 목차와 같은 체계(Ⅰ-Ⅹ, XI, XII)로 기재 | no("Ⅰ"), title, items[] | 절 1-8 |
 | 표지와 간지 | end | 종료 | title, company | - |
 | 제안 개요 | purpose | 배경과 목적 | leads[{title, sub[], note}], purpose, issues[], leftHead, rightHead, purposeHead, issueHead, client, clientPos | 리드 2-4. 리드마다 제목 1문장과 근거 2-3항목. 목적 상자 라벨은 purposeHead (기본값 "목적") |
 | 제안 개요 | scope | 비전, 목표, 모듈 범위, 산출물 | vision, goal, goalHead, visionTag, scopeTag, outputTag, modules[{title, items[]}], outputs[문구 또는 모듈별 문구 배열] | 모듈 2-5. 목표 라벨 문구는 goalHead (기본값 "본 과업의 최종 목표"). 산출물 행 왼쪽에 OUTPUT 라벨 (구조 라벨 VISION, SCOPE, OUTPUT 은 visionTag, scopeTag, outputTag 로 변경). outputs 가 모듈 수와 같은 길이의 배열 목록이면 모듈 열 아래에 여러 항목 불릿으로 정렬. 문구 목록이면 1-2개는 모듈 열 폭 칸을 가운데 정렬, 3-5개는 한 줄, 6-10개는 줄당 5칸 이하로 두 줄 |
@@ -208,7 +208,7 @@
 - 라벨 슬롯이 아닌 고정 문구는 내용이 비었을 때만 나타나는 자리 표시와 언어와 무관한 번호 기호
     + 이미지 자리 상자의 문구(이미지, 사진, 표본 화면, 산출물 화면, 로고)와 인력 자리 표기([인력A], [인력])는 내용을 채우면 사라짐
     + 커스텀 슬라이드의 빈 이미지 슬롯 대체 문구([기관명], "접수 → 검토 → 승인 → 처리 → 통보", 원본 문구에 "파쇄" 가 있을 때의 설명 문구)와 빈 차트 슬롯의 견본 항목(항목 A, B, C)도 슬롯을 채우면 사라짐
-    + 목차 로마 숫자(Ⅰ-Ⅶ), 원 숫자(①-⑩), 1., 1-1., 1) 번호, ※ 표시는 고정
+    + 목차 로마 숫자(Ⅰ-Ⅹ, XI, XII), 원 숫자(①-⑩), 1., 1-1., 1) 번호, ※ 표시는 고정
 
 ### 영문 라벨 예시
 
