@@ -131,9 +131,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - Accumulate the output of each step as files
 - Compose the modules and Tasks after reading `references/methods.md`
     + (Reading scope) The Application rules, Type judgment and Common norms sections, plus the section for the engagement type
-    + (Manuscripts that already have a structure) Read the same scope even when the manuscript already has a module and Task structure, as in a proposal deck conversion (carrying that structure over still applies how the skeleton is used and the Common norms criteria for names, module overviews and Task items)
-    + (Record) Write the judged engagement type and the names of the sections read in 00_storyline.md
-- The basic items of 00_storyline.md are the one-line storyline, chapter messages and per-slide headlines
+    + (Manuscripts that already have a structure) Read the same scope even when the manuscript already has a module and Task structure, as in a proposal deck conversion (carrying that structure over still applies how the skeleton is used and the Common norms criteria for names, module overviews and Task items)- The basic items of 00_storyline.md are the one-line storyline, chapter messages and per-slide headlines
     + (Module and Task structure decks) Including the module structure overview slide in the slide list is recommended (criteria in the Contents section)
     + (Headline keyword emphasis decks) Also write the deck emphasis criterion and the emphasis phrases of each slide (criteria in the Headlines section)
 - Responses contain only file paths, progress status and items that need confirmation
