@@ -27,6 +27,19 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-16
+
+### ieum-deck
+- Changed term notes of number-style decks to a sentence with the term as its subject (previously `(term) explanation`, which ※-style decks keep) (#170)
+- Added a note rule that starts each note item of a number-style deck without an opening parenthesis (#170)
+- Changed run-on notes (`footnoteInline`) to separate items with 3 spaces (previously 1 space) (#170)
+- Changed notes with different labels on `footnoteInline` slides to keep one line each with its own label (previously run on in one paragraph) (#170)
+
+* 번호 표기 덱의 용어 주석 형식을 "용어는 설명"으로 변경 (기존 `(용어) 설명`, ※ 표기 덱은 기존 형식 유지) (#170)
+* 번호 표기 덱의 주석 항목을 괄호 없이 시작하는 기준 추가 (#170)
+* 이어 쓴 주석(`footnoteInline`)의 항목 사이 간격을 공백 3칸으로 변경 (기존 1칸) (#170)
+* `footnoteInline` 슬라이드에서 라벨이 다른 주석의 조판을 줄마다 각자의 라벨을 붙이는 형태로 변경 (기존 1문단 이어 쓰기) (#170)
+
 ## 2026-11-15
 
 ### ieum-deck
