@@ -366,6 +366,18 @@ const PARA = {
   bulletIndentIn: 0.18,
 };
 
+// 이어 쓴 번호 주석(슬라이드 footnoteInline)의 조판 (atoms.js noteBlock)
+const NOTE = {
+  // 항목 사이 공백 수. 항목 안 단어 사이(1칸)보다 넓혀 항목 경계를 간격으로 나타냄
+  // 200dpi 렌더 확인: 2칸은 단어 사이와 구분이 약하고 3칸부터 항목 경계가 드러남. 쉼표(항목 안 나열)와 세미콜론(출처 경계)은 다른 역할로 쓰이므로 기호를 더하지 않음
+  INLINE_GAP: 3,
+  // 번호와 항목 첫 단어를 묶는 줄바꿈 없는 공백(U+00A0). 줄 끝에 번호만 남는 조판을 줄임. 폭은 나눔고딕에서 공백과 같은 0.28em (font-metrics.json)
+  // LibreOffice 24.2 렌더 확인 (첫 항목 길이를 0.3em 씩 늘린 이어 쓰기 문단): 항목 첫 단어가 라틴 문자면 번호와 단어가 함께 다음 줄로 이동
+  //   첫 단어가 한글이면 단어의 둘째 글자부터 줄 폭을 넘을 때 번호 뒤에서 줄이 바뀜 (한글 묶음의 첫 글자에서 나누는 LibreOffice 규칙, atoms.js koBreak)
+  //   이 경우는 check_layout 이 어절 안 줄바꿈으로 보고 (예: '2) |매출액은')
+  NUM_BIND: "\u00a0",
+};
+
 // ---------------------------------------------------------------- 글자 수와 개수 상한 (Node 와 Python 공용: limits.json 으로도 기록)
 const LIMIT = {
   // 18pt 나눔고딕(한글 0.94em)이 헤드라인 폭 12.493in 에 수용하는 순수 한글 53자와 106자에 여유를 둔 값
@@ -470,4 +482,4 @@ function writeLimits(dir) {
   fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
-module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };
+module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, NOTE, LIMIT, METRIC, scaled, writeLimits };

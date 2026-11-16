@@ -131,7 +131,7 @@ HANGING = frozenset("!,.:;?、。！，．：；？")
 LB_CLASS = {**dict.fromkeys("([{〈《「『【〔（［｛", "OP"), **dict.fromkeys(")]}", "CP"), **dict.fromkeys("〉》」』】〕）］｝，．：；、。", "CL"),
             **dict.fromkeys("'\"“”‘’", "QU"), **dict.fromkeys(",.:;", "IS"), **dict.fromkeys("!?！？", "EX"), "/": "SY", "-": "HY",
             **dict.fromkeys("|–", "BA"), **dict.fromkeys("%℃°‰′″％", "PO"), **dict.fromkeys("$₩+±£¥＄￦", "PR"), "…": "IN",
-            **dict.fromkeys("0123456789", "NU")}
+            **dict.fromkeys("0123456789", "NU"), "\u00a0": "GL"}
 
 
 def is_hangul(ch):
@@ -149,8 +149,9 @@ def lb_class(ch):
 
 def latin_break_ok(a, b):
     """Whether the Latin rule allows a line break between characters a and b. Summary of the LibreOffice line.txt pair rules
-    (never before closing marks and commas, after opening marks and quotes, or between letters and digits. Allowed between a digit and Hangul, after a hyphen and between Hangul syllables)"""
+    (never before closing marks and commas, after opening marks and quotes, between letters and digits, or on either side of a no-break space (U+00A0). Allowed between a digit and Hangul, after a hyphen and between Hangul syllables)"""
     x, y = lb_class(a), lb_class(b)
+    if "GL" in (x, y): return False
     if y in ("CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA") or x in ("OP", "QU"): return False
     if x == "PR": return y not in ("NU", "AL", "H", "ID")
     if y == "PR": return x not in ("AL", "NU")

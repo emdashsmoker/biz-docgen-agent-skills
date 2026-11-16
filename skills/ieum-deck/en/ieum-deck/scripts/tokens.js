@@ -366,6 +366,18 @@ const PARA = {
   bulletIndentIn: 0.18,
 };
 
+// Setting of run-on numbered notes (slide footnoteInline) (atoms.js noteBlock)
+const NOTE = {
+  // Number of spaces between items. Wider than the gap between words in an item (1 space), so the gap itself marks the item boundary
+  // Checked on a 200dpi render: 2 spaces read close to a word gap and the item boundary shows from 3 spaces. No symbol is added because the comma (list inside an item) and the semicolon (source boundary) already have other roles
+  INLINE_GAP: 3,
+  // No-break space (U+00A0) that binds the number to the first word of its item, so fewer lines end with a number alone. Its width in NanumGothic equals the space, 0.28em (font-metrics.json)
+  // Checked on LibreOffice 24.2 renders (run-on paragraphs whose first item grows by 0.3em steps): when the first word of an item is Latin, the number and the word move to the next line together
+  //   When the first word is Hangul and the line width is passed from its second character on, the line breaks after the number (the LibreOffice rule that splits at the first character of a Hangul group, atoms.js koBreak)
+  //   check_layout reports that case as a break inside a word (e.g. '2) |매출액은')
+  NUM_BIND: "\u00a0",
+};
+
 // ---------------------------------------------------------------- Character and count limits (shared by Node and Python, also written to limits.json)
 const LIMIT = {
   // Values with a margin under the 53 and 106 pure Hangul characters that 18pt NanumGothic (Hangul 0.94em) fits in the 12.493in headline width
@@ -470,4 +482,4 @@ function writeLimits(dir) {
   fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 
-module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, LIMIT, METRIC, scaled, writeLimits };
+module.exports = { LAYOUTS, BASE_W, BASE_H, BAND, MARKER, PANEL, COLOR, COLOR_REMAP, THEMES, applyTheme, deriveTheme, themePalette, contrast, TINT_TEXT_CONTRAST_MIN, setOwnColorMap, FONT, SIZE, PARA, NOTE, LIMIT, METRIC, scaled, writeLimits };

@@ -185,11 +185,18 @@
 - Merge caveats on the same target into one item
 - A note that supplements a specific word, figure or similar item names that item in its sentence (e.g. "Revenue is based on the 2024 settled accounts")
 - Omit the definition note and the full name for terms and abbreviations readers use at work or in daily life (RFP, consulting, participation rate and so on)
-- Write a note that defines a term, abbreviation or symbol as `(term) explanation` (the term in parentheses names the target)
-    + Write the term in parentheses exactly as the body writes it
-    + Write the explanation as one noun phrase that spells out the meaning (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
+- In a number-style deck, start each note item with text, without an opening parenthesis (so the closing parenthesis of the number `1)` does not meet the opening parenthesis of the item)
+- Within one deck, use the same item form for single notes, multiple notes and run-on notes (in a number-style deck a single note, which takes no number, also starts without a parenthesis)
+- The form of a note that defines a term, abbreviation or symbol follows the note style of the deck (`meta.footnoteStyle`) (the term names the target)
+    + (Number-style deck) Write a sentence with the term as its subject (e.g. "Location quotient is the share of an industry in a region divided by the share of the same industry nationwide")
+    + (※-style deck) Write `(term) explanation` (e.g. "(Location quotient) Share of an industry in a region divided by the share of the same industry nationwide")
+    + (Notes in body slots) In a number-style deck, a definition note written directly in a body slot also takes the term as its subject (the build converts the hand-written ※ to the deck style)
+    + (Colon form) Do not write a definition note as `Term: explanation`, because the build sets the word before the colon as a content label
+- In both forms, write the term and the explanation as below
+    + Write the term exactly as the body writes it
+    + Write the explanation as one noun phrase that spells out the meaning
     + Do not repeat the defined term or use other technical terms in the explanation
-    + For an abbreviation, add the full name in parentheses at the end of the explanation. When the full name already gives the meaning, write the full name alone (e.g. "(TTL) Travel, transport, and logistics")
+    + For an abbreviation, add the full name in parentheses at the end of the explanation. When the full name already gives the meaning, write the full name alone (e.g. "TTL is travel, transport, and logistics" in a number-style deck, "(TTL) Travel, transport, and logistics" in a ※-style deck)
 - Write note items without a label by default
     + (Number-style deck) The build adds the note label, so legends, bases, caveats and similar notes share one style
     + (Items citing a source) An item that cites a source follows the source mark rule
@@ -199,6 +206,12 @@
 - In a ※-style deck, the build adds no ※ to a note that starts with a label
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
+- Each symbol and label in the note area has one role
+    + (Number) `1)` starts an item
+    + (Space) A space or a line break is the gap between items
+    + (Comma) Lists things inside an item
+    + (Semicolon) Marks the boundary between sources
+    + (Label) Sits only at the head of a line and tells what the line is (a label is never set mid-paragraph)
 - Compose note items without duplication or omission
 - Do not repeat in a note what the headline, body, Key Point band or similar parts already say
 - Keep the number of notes per slide to the minimum the body needs
@@ -211,7 +224,8 @@
     + (Body overflow) On the slide built in the line-broken form, the body overflows or overlaps (confirm with a check_layout FAIL or the PNG)
     + (Line saving) Running on removes two or more lines in total from the bottom notes and source line (confirm with the build)
 - Run-on notes and source lines are set as below
-    + (Notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A 2) B 3) C"
+    + (Same-label notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A   2) B   3) C" (3 spaces between items)
+    + (Different-label notes of a number-style deck) No run-on (each line keeps its own label)
     + (Source line) Runs on in one paragraph, as in "Source: A; B; C" ("※ Source: A; B; C" in a ※-style deck with footnoteSourceMark)
     + (Notes of a ※-style deck) No run-on (each line keeps its ※)
     + (Paragraph past the line end) A run-on paragraph that passes the line end aligns its second line onward after the label
