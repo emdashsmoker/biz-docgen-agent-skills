@@ -131,7 +131,7 @@ HANGING = frozenset("!,.:;?、。！，．：；？")
 LB_CLASS = {**dict.fromkeys("([{〈《「『【〔（［｛", "OP"), **dict.fromkeys(")]}", "CP"), **dict.fromkeys("〉》」』】〕）］｝，．：；、。", "CL"),
             **dict.fromkeys("'\"“”‘’", "QU"), **dict.fromkeys(",.:;", "IS"), **dict.fromkeys("!?！？", "EX"), "/": "SY", "-": "HY",
             **dict.fromkeys("|–", "BA"), **dict.fromkeys("%℃°‰′″％", "PO"), **dict.fromkeys("$₩+±£¥＄￦", "PR"), "…": "IN",
-            **dict.fromkeys("0123456789", "NU")}
+            **dict.fromkeys("0123456789", "NU"), "\u00a0": "GL"}
 
 
 def is_hangul(ch):
@@ -149,8 +149,9 @@ def lb_class(ch):
 
 def latin_break_ok(a, b):
     """라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
-    (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능)"""
+    (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이, 줄바꿈 없는 공백(U+00A0)의 앞뒤는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능)"""
     x, y = lb_class(a), lb_class(b)
+    if "GL" in (x, y): return False
     if y in ("CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA") or x in ("OP", "QU"): return False
     if x == "PR": return y not in ("NU", "AL", "H", "ID")
     if y == "PR": return x not in ("AL", "NU")

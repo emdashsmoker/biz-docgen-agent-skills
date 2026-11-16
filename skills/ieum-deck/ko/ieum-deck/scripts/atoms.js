@@ -12,6 +12,7 @@ const path = require("path");
 //       범주 키(hangul, cjkpunct, fullwidth, enclosed, other)는 범주별 대표 폭
 //       기호 키(× ÷ ± · 〉 … “ ” ‘ ’)도 hmtx 값. 범주 대표 폭과 차이가 커서 따로 둠 (× 0.592 와 범주 0.509, … 0.94 와 범주 0.509 등)
 //       같은 기호 10개를 이은 문구의 LibreOffice 렌더 폭과 0.001em 안에서 일치 (일반체, 굵은체 같은 값)
+//       줄바꿈 없는 공백(U+00A0) 키도 hmtx 값. 공백과 같은 글리프(0.28em)이며 키가 없으면 범주 대표 폭 0.509 로 넓게 잡힘 (이어 쓴 번호 주석의 번호 뒤에 사용, tokens.NOTE)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -106,16 +107,17 @@ const HANGING = new Set("!,.:;?、。！，．：；？");
 /** 라틴 규칙의 글자 분류 (LibreOffice line.txt 가 쓰는 UAX #14 분류 중 업무 문서에 나오는 것). 목록에 없는 글자는 AL (영문자, ○ ① · 등) */
 const LB_CLASS = Object.fromEntries([
   ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
-  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"], ["\u00a0", "GL"],
 ].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
 /** LibreOffice 가 한글 어절 보호에 쓰는 한글 범위: 음절, 자모, 호환 자모, 확장 자모 */
 const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
 /** 라틴 규칙의 글자 분류. 한글은 H, 한자는 ID */
 const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
 /** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
- *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
+ *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이, 줄바꿈 없는 공백(U+00A0)의 앞뒤는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
 function latinBreakOk(a, b) {
   const x = lbClass(a), y = lbClass(b);
+  if (x === "GL" || y === "GL") return false;
   if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
   if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
   if (y === "PR") return !["AL", "NU"].includes(x);
@@ -1024,7 +1026,9 @@ function noteLeads() {
  *    + 항목 1개: 라벨 뒤에 내용
  *    + 라벨이 모두 같은 2개 이상: 첫 줄에만 라벨을 쓰고 항목마다 1) 2) 를 붙여 1줄에 1항목 (출처 라벨이면 번호 없이 출처 행처럼 세미콜론으로 구분)
  *    + 라벨이 서로 다른 2개 이상: 번호 없이 줄마다 각자 라벨
- *    + 슬라이드 footnoteInline 이면 위 줄들을 1줄로 이어 씀
+ *    + 슬라이드 footnoteInline 이면 라벨이 모두 같은 묶음만 1문단으로 이어 씀
+ *      번호 묶음은 "Note: 1) A   2) B" (항목 사이는 공백 T.NOTE.INLINE_GAP 칸, 번호와 항목 첫 단어 사이는 T.NOTE.NUM_BIND), 출처 라벨 묶음은 "출처: A; B"
+ *      라벨이 서로 다른 묶음은 줄마다 각자 라벨을 유지 (라벨은 줄 머리에 놓이는 표기이므로 문단 중간에 두지 않음)
  *  leads 는 줄마다 앞에 붙는 라벨 (빈 칸은 앞줄 라벨 뒤 위치에 정렬, notePlan). lead 는 첫 줄 라벨. items 는 내용 있는 항목 수
  *  join 은 출처 라벨 묶음을 1줄로 이은 문구 (notePlan 이 폭에 들어가면 사용)
  *  Why: 작성자가 붙인 ※, *, 번호를 떼고 덱 기준 표기를 다시 붙여 주석 위치와 관계없이 한 덱의 표기를 하나로 유지
@@ -1060,10 +1064,9 @@ function noteBlock(items, state) {
       const one = rows.map((r) => r.text).join("; ");
       return ns.inline ? block([lead], [one]) : block([lead], rows.map((r, i) => (i < rows.length - 1 ? `${r.text};` : r.text)), one);
     }
-    const nums = rows.map((r, i) => `${i + 1}) ${r.text}`);
-    return block([lead], ns.inline ? [nums.join(" ")] : nums);
+    const numbered = (bind) => rows.map((r, i) => `${i + 1})${bind}${r.text}`);
+    return block([lead], ns.inline ? [numbered(T.NOTE.NUM_BIND).join(" ".repeat(T.NOTE.INLINE_GAP))] : numbered(" "));
   }
-  if (ns.inline) return block([lead], [rows.map((r, i) => (i ? `${r.label} ${r.text}` : r.text)).join(" ")]);
   return block(labels, rows.map((r) => r.text));
 }
 /** 출처 행 표기 { lead, lines, items }. 출처마다 앞의 ※, 출처 표기, 출처 라벨을 떼고 세미콜론 경계로 나눔 (세미콜론으로 이은 문자열도 나눔)

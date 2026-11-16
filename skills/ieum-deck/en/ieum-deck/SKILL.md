@@ -563,7 +563,8 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Body overflow) On the slide built in the line-broken form, the body overflows or overlaps (confirm with a check_layout FAIL or the PNG)
     + (Line saving) Running on removes two or more lines in total from the bottom notes and source line (confirm with the build)
 - Run-on notes and source lines are set as below
-    + (Notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A 2) B 3) C"
+    + (Same-label notes of a number-style deck) Runs on in one paragraph, as in "Note: 1) A   2) B   3) C" (3 spaces between items)
+    + (Different-label notes of a number-style deck) No run-on (each line keeps its own label)
     + (Source line) Runs on in one paragraph, as in "Source: A; B; C" ("※ Source: A; B; C" in a ※-style deck with footnoteSourceMark)
     + (Notes of a ※-style deck) No run-on (each line keeps its ※)
     + (Paragraph past the line end) A run-on paragraph that passes the line end aligns its second line onward after the label

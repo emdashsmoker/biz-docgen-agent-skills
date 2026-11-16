@@ -86,7 +86,7 @@
 | source | 출처 행. 문자열 또는 배열 (문자열은 세미콜론 경계로 출처를 나눔). 첫 항목은 덱의 sourceLabel 과 같은 출처 표기(기본 "Source:")로 시작. 두 표기 공통으로 출처 행은 ※ 없이 첫 출처 표기 1개로 시작하여 "출처: A; B" 로 조판 (footnoteSourceMark 를 지정한 ※ 표기 덱은 "※ 출처: A; B"). 출처 표기가 없는 출처 행은 common.sourceLabel 로 시작. 둘째 항목부터는 앞의 ※ 와 출처 표기(출처:, 자료:, Source:, `meta.labels.notation.source` 토큰 등)를 빌드가 삭제. 한 줄을 넘는 출처 행은 1줄에 출처 1개로 조판 (둘째 출처부터 첫 출처의 시작 위치에 정렬) |
 | footnotes | 각주 배열. 출처 행 위에 배치 (출처 행이 없으면 마지막 줄을 출처 행 위치에 배치). 빌드가 `meta.footnoteStyle` 의 ※, 번호, 라벨을 붙임. 항목 앞에 직접 쓴 ※, *, 번호는 덱 기준 표기로 교체. 내용 유형 라벨("출처:", "산식:" 등)은 유지 (※ 표기 덱에서 라벨 앞에 직접 쓴 ※ 도 유지) |
 | footnoteLabel, sourceLabel | 이 슬라이드의 라벨 없는 주석(번호 표기 덱)과 출처 표기 없는 출처 행(두 표기 공통)에 붙는 라벨. `meta.labels.common` 보다 우선 |
-| footnoteInline | true 이면 이 슬라이드의 주석과 출처 행을 1문단으로 이어 씀 (예: 번호 표기 덱의 주석 "Note: 1) A 2) B", 출처 행 "출처: A; B"). ※ 표기 덱의 주석은 줄마다 ※ 를 붙이는 형태 유지. 기본 false. 지정 조건은 `references/writing-rules.md` 주석 절. lint 와 build 가 지정 슬라이드 목록을 INFO 로 출력 |
+| footnoteInline | true 이면 이 슬라이드의 이어 쓰기 대상을 1문단으로 조판. 대상은 번호 표기 덱의 같은 라벨 주석(예: "Note: 1) A   2) B", 항목 사이는 공백 3칸)과 출처 행(예: "출처: A; B"). 번호 표기 덱의 다른 라벨 주석과 ※ 표기 덱의 주석은 대상에서 제외 (줄마다 각자의 라벨이나 ※ 를 붙이는 줄 나눔 형태 유지). 기본 false. 지정 조건은 `references/writing-rules.md` 주석 절. lint 와 build 가 지정 슬라이드 목록을 INFO 로 출력 |
 | pointLabel | 이 슬라이드 Key Point 밴드의 전용 라벨. 라벨 칸 형식 덱에서만 기재 (작성 원칙은 `references/writing-rules.md` Key Point 라벨 절). 생략하면 meta.pointLabel 사용. 라벨이 없으면 틴트 상자 형식 |
 | markerNote | 마커 우측 부제 (단위, 기준 시점 등) |
 | rfpTasks, moduleTasks, evalItems | 대응 ID 목록. lint 가 전수 대응과 배점 귀속을 검사 |

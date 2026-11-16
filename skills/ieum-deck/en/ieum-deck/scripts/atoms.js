@@ -12,6 +12,7 @@ const path = require("path");
 //       Category keys (hangul, cjkpunct, fullwidth, enclosed, other) hold a representative width per category
 //       Symbol keys (× ÷ ± · 〉 … “ ” ‘ ’) are hmtx values too. Kept separately because they differ widely from the category width (× 0.592 vs category 0.509, … 0.94 vs category 0.509, etc.)
 //       They match the LibreOffice rendered width of a run of 10 identical symbols within 0.001em (same values in regular and bold)
+//       The no-break space (U+00A0) key is an hmtx value too. It shares the glyph of the space (0.28em); without the key it would take the wider category width 0.509 (used after the numbers of run-on numbered notes, tokens.NOTE)
 let METRICS = null;
 try { METRICS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "font-metrics.json"), "utf8")); } catch (e) { METRICS = null; }
 
@@ -106,16 +107,17 @@ const HANGING = new Set("!,.:;?、。！，．：；？");
 /** Character classes of the Latin rule (the UAX #14 classes used by LibreOffice line.txt that appear in business documents). Characters not listed are AL (letters, ○ ① · and so on) */
 const LB_CLASS = Object.fromEntries([
   ["([{〈《「『【〔（［｛", "OP"], [")]}", "CP"], ["〉》」』】〕）］｝，．：；、。", "CL"], ["'\"“”‘’", "QU"], [",.:;", "IS"], ["!?！？", "EX"],
-  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"],
+  ["/", "SY"], ["-", "HY"], ["|–", "BA"], ["%℃°‰′″％", "PO"], ["$₩+±£¥＄￦", "PR"], ["…", "IN"], ["0123456789", "NU"], ["\u00a0", "GL"],
 ].flatMap(([chars, cls]) => Array.from(chars, (ch) => [ch, cls])));
 /** Hangul range LibreOffice uses to keep Hangul words whole: syllables, jamo, compatibility jamo, extended jamo */
 const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
 /** Character class of the Latin rule. Hangul is H, Hanja is ID */
 const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
 /** Whether the Latin rule allows a line break between characters a and b. Summary of the LibreOffice line.txt pair rules
- *  (never before closing marks and commas, after opening marks and quotes, or between letters and digits. Allowed between a digit and Hangul, after a hyphen and between Hangul syllables) */
+ *  (never before closing marks and commas, after opening marks and quotes, between letters and digits, or on either side of a no-break space (U+00A0). Allowed between a digit and Hangul, after a hyphen and between Hangul syllables) */
 function latinBreakOk(a, b) {
   const x = lbClass(a), y = lbClass(b);
+  if (x === "GL" || y === "GL") return false;
   if (["CP", "CL", "IS", "EX", "SY", "QU", "HY", "BA"].includes(y) || x === "OP" || x === "QU") return false;
   if (x === "PR") return !["NU", "AL", "H", "ID"].includes(y);
   if (y === "PR") return !["AL", "NU"].includes(x);
@@ -1024,7 +1026,9 @@ function noteLeads() {
  *    + One item: the label, then the text
  *    + Two or more items with the same label: the label on the first line only and 1) 2) on each item, one item per line (a source label gets no numbers and separates the items with semicolons like the source line)
  *    + Two or more items with different labels: no numbers, each line with its own label
- *    + With the slide footnoteInline, these lines run on in one line
+ *    + With the slide footnoteInline, only a group whose labels are all the same runs on in one paragraph
+ *      A numbered group is set as "Note: 1) A   2) B" (T.NOTE.INLINE_GAP spaces between items, T.NOTE.NUM_BIND between a number and the first word of its item), a source label group as "Source: A; B"
+ *      A group with different labels keeps its own label on each line (a label is a line-head mark, so it is not placed mid-paragraph)
  *  leads holds the label before each line (an empty slot aligns after the label above, notePlan). lead is the first line's label. items is the number of items with text
  *  join is a source label group run on in one line (notePlan uses it when it fits the width)
  *  Why: removing the author's ※, * or number and adding the deck mark again keeps one note style in a deck wherever the note sits
@@ -1060,10 +1064,9 @@ function noteBlock(items, state) {
       const one = rows.map((r) => r.text).join("; ");
       return ns.inline ? block([lead], [one]) : block([lead], rows.map((r, i) => (i < rows.length - 1 ? `${r.text};` : r.text)), one);
     }
-    const nums = rows.map((r, i) => `${i + 1}) ${r.text}`);
-    return block([lead], ns.inline ? [nums.join(" ")] : nums);
+    const numbered = (bind) => rows.map((r, i) => `${i + 1})${bind}${r.text}`);
+    return block([lead], ns.inline ? [numbered(T.NOTE.NUM_BIND).join(" ".repeat(T.NOTE.INLINE_GAP))] : numbered(" "));
   }
-  if (ns.inline) return block([lead], [rows.map((r, i) => (i ? `${r.label} ${r.text}` : r.text)).join(" ")]);
   return block(labels, rows.map((r) => r.text));
 }
 /** Marks of the source line { lead, lines, items }. Removes the ※, source mark and source label before each source and splits at semicolons (a string joined with semicolons is split too)
