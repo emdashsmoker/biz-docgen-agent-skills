@@ -33,7 +33,7 @@
 - The start sequence is dependency installation, securing the renderer, `init workspace --kind report`, `selftest workspace`, `rfp RFP_file workspace`, and kickoff questions
     + `init --kind report` places assets/diagnosis.md as 00_진단서.md
 - Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in SKILL.md, Chat Replies section
-    + Output range. Full table of contents or selected chapters
+    + Output range. Full or partial. Take a partial output range as item names from the RFP task content. The chapters to produce are set at step 2. For requirement items outside the range, enter `범위 외` (out of scope) in the placement section column of the requirement table
     + Report title and the real name notation of the client
     + Whether web search is allowed. If not, figures in literature sections are model knowledge values with a reference year and the `[확인]` marker
     + Whether a field research plan exists (survey targets, sample size, survey timing, and so on). If there is no plan, the model writes a draft survey design
@@ -43,7 +43,7 @@
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
     + Source line layout (automatic by default, fixed line breaks, fixed joining). Defined in the SKILL.md Manuscript Hierarchy section
     + The line tidying level (no tidying by default, shorten the wording, ratio and letter spacing adjustment) and whether to apply the line spacing adjustment (off by default). Defined in the SKILL.md Typesetting section
-    + The judged report type and engagement type. Judge with the TOC example table of the Table of Contents Design section and the SKILL.md Module Frameworks by Engagement Type section
+    + The judged report type and engagement type. Judge with the identification signals column of the TOC example table in the Table of Contents Design section and the identification signals column of the SKILL.md Module Frameworks by Engagement Type section. Write only the type names in the question. The chapter structure example column of the TOC example table is used in the step 2 omission check
 - Step 1 applies the requirement transfer rules of the SKILL.md RFP Dissection section. In a pre-diagnosis report workspace, `rfp` places only the requirement table (no scoring table). After the transfer, fill 00_진단서.md according to the Diagnosis Design section
 - Step 2 writes 02_모듈총괄표.md (SKILL.md Module Overview Table section) and 02_스토리라인.md. For 02_스토리라인.md, copy `<SKILL>/assets/report-storyline.md` into the workspace and fill it
     + In the placement section column of the requirement table, enter section numbers (for example 2.1)
