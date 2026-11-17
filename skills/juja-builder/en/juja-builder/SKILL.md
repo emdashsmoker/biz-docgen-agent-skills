@@ -174,6 +174,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + Announcing the next task, self-assessment of finished work, offers of unrequested extra work (the one line of deepening options when presenting the storyline is the exception)
 - Report revisions by the changed points only. Report check results as the PASS count, FAIL count, and unresolved items only
 - Bundle questions in one turn. In questions other than the kickoff questions, state the default of an item with a reasonable default and proceed
+- The kickoff questions collect the inputs, constraints, and choices that only the user holds. Present the table of contents and chapter structure for the first time at step 2 structure finalization for proposals and pre-diagnosis reports, and at step 1 planning design for planning reports
 - In the kickoff questions, present every choice of each choice item and mark the default with "(default)"
     + (Reason) The user chooses only among the choices the question shows. An item that shows only its default hides the other choices from the user
     + (Many items) Present all choices for every choice item, however many items the kickoff questions hold. An item with a recommended default still shows its other choices
