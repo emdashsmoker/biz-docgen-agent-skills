@@ -33,7 +33,7 @@
 - The start sequence is dependency installation, securing the renderer, `init workspace --kind report`, `selftest workspace`, `rfp RFP_file workspace`, and kickoff questions
     + `init --kind report` places assets/diagnosis.md as 00_진단서.md
 - Ask the items below all at once as kickoff questions. The rules for presenting the choices of choice items are in SKILL.md, Chat Replies section
-    + Output range. Full or partial. Take a partial output range as item names from the RFP task content. The mapping to chapters is set at step 2 by the `범위 외` (out of scope) marks in the requirement table
+    + Output range. Full or partial. Take a partial output range as item names from the RFP task content. The chapters to produce are set at step 2. For requirement items outside the range, enter `범위 외` (out of scope) in the placement section column of the requirement table
     + Report title and the real name notation of the client
     + Whether web search is allowed. If not, figures in literature sections are model knowledge values with a reference year and the `[확인]` marker
     + Whether a field research plan exists (survey targets, sample size, survey timing, and so on). If there is no plan, the model writes a draft survey design
