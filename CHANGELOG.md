@@ -27,6 +27,24 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-17
+
+### ieum-deck
+- Changed the kickoff questions to collect only the inputs, constraints and choices that the user alone holds, with the table of contents first presented at step 3 structure confirmation for every output type (#172)
+- Changed kickoff item 9 to check whether designated contents exist (RFP contents, evaluation item order, user-set contents and so on), with the table of contents of other decks designed at step 3 (previously a table of contents proposed at kickoff for general use) (#172)
+
+* 착수 질의의 수집 대상을 사용자만 가진 입력, 제약, 선택지로 변경 (목차 첫 제시는 산출 대상과 관계없이 3단계 구성 확정) (#172)
+* 착수 질의 9번을 지정 목차의 유무 확인으로 변경 (지정 목차가 없는 덱의 목차는 3단계에서 설계, 기존 일반 용도의 착수 시점 목차 제안) (#172)
+
+### juja-builder
+- Changed the kickoff questions to collect only the inputs, constraints and choices that the user alone holds, with the table of contents first presented at step 2 structure finalization for proposals and pre-diagnosis reports and at step 1 planning design for planning reports (#172)
+- Changed the output range item of the pre-diagnosis report kickoff questions to full or partial, with a partial range given as RFP task item names (previously full table of contents or selected chapters) (#172)
+- Changed the type items of the pre-diagnosis report and planning report kickoff questions to show type names only (previously the planning report example tables with chapter structures) (#172)
+
+* 착수 질의의 수집 대상을 유저만 가진 입력, 제약, 선택지로 변경 (목차 첫 제시는 제안서와 사전진단보고서의 2단계 구성 확정, 기획보고서의 1단계 기획 설계) (#172)
+* 사전진단보고서 착수 질의의 산출 범위를 전체 또는 일부로 변경 (일부 범위는 RFP 과업 내용의 항목명으로 지정, 기존 전체 목차 또는 선택 장) (#172)
+* 사전진단보고서와 기획보고서 착수 질의의 유형 제시를 유형명으로 변경 (기존 기획보고서의 장 구성 포함 예시 표 제시) (#172)
+
 ## 2026-11-16
 
 ### ieum-deck
