@@ -18,6 +18,7 @@
 | Long-table handling | engine or split [확인] |
 | Source footnote inheritance | One of off, short form, or merging. For short form and merging, add the scope (□, section, chapter, whole document) [확인] |
 | Source line layout | One of automatic, fixed line breaks, or fixed joining [확인] |
+| Source omission judgment | Off or on [확인] |
 | Line tidying | One of no tidying, shorten the wording, or ratio and letter spacing adjustment [확인] |
 | Line spacing adjustment | On or off [확인] |
 | Document composition | Items to insert among table of contents, page numbers, cover, and divider pages [확인] |

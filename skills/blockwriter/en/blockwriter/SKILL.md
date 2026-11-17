@@ -140,6 +140,10 @@ The `--expect` value of check is passed as is to rhwp verify as its expectation 
         - (automatic) Picks the arrangement that fits the length and number of sources for each table and figure
         - (fixed line breaks) Puts each source on its own line and aligns the second and later sources with the start of the first one
         - (fixed joining) Writes all sources on one line, separated by `;`
+    - (Source omission judgment) How sources are handled in sections where a source is not customary (business overview, summary, To-Be, future plans, expected effects, methodology and so on). Choose off (default) or on. The criteria are in the Attached lines section of references/manuscript.md
+        - (off) Every statement based on external material gives its source
+        - (on) While writing the manuscript, the model leaves out the sources of those sections after weighing their content and the document's conventions
+        - (risk notice) Present the risks of missing sources (a statement based on external material may remain without a source) and untraceable sources (readers cannot follow the statement back to its source material) with the on choice. When the request already turned the option on and this question is skipped, give the same notice in the step 1 response
     - (Line tidying) How far to go in tidying cases such as a paragraph or table cell with only 1-2 characters on its last line. Choose no tidying (default), shorten the wording, or ratio and letter spacing adjustment. The criteria are in the Typesetting adjustment section of references/layout.md
         - (no tidying) Leaves those lines as they are
         - (shorten the wording) Shortens the wording as long as the meaning stays the same
