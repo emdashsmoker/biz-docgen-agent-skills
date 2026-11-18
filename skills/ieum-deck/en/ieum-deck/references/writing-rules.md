@@ -20,6 +20,10 @@
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
+- Secure formality through vocabulary and endings. Do not imitate formality by piling up jargon beyond the reader's level or engineering and software-design phrasing (input value, output, mapping, interface, pipeline, and so on) (use software-design phrasing only where a system architecture is explained)
+- Plain writing must not talk down to evaluators and client officials through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on)
+- State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
+- Keep grammar correct (subject-predicate agreement, particles, endings, and so on) regardless of the headline style, technicality, or plainness
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
@@ -65,6 +69,8 @@
 - 3-4 items per tier are recommended
 - Group items when there are more than 5
 - One message per slide
+- Write each slide so it reads on its own. When referring to another slide, page, source, data, and so on, put the needed content on that slide so the reader does not have to look it up
+- Do not replace content with codes, numbers, abbreviations, or summary labels, and so on. Where a number is used, write the name with it
 - 3-4 or fewer components support the message
 - Resolve department-store listing by splitting slides
 - The message of a Task bundle slide is one module-level sentence
