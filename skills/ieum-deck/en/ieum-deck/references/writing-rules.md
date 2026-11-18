@@ -18,8 +18,13 @@
 - Body style is noun-ending regardless of the headline style
 - Headlines and body text use no colloquial or informal style (including a colloquial or informal tone in endings, words, expressions and similar elements)
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
-- Delete colloquial markers or replace them with formal expressions
+- Delete colloquial markers or replace them with formal expressions (a rewritten sentence keeps its particles and predicate)
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
+- Secure formality through vocabulary and endings (do not imitate formality by piling up difficult Sino-Korean words and technical terms)
+    + (Word choice) Where an everyday word conveys the same meaning exactly, use the everyday word (keep a technical term that has no exact substitute and explain its meaning in a definition note)
+    + (Engineering phrasing) Use engineering and software design phrasing (입력, 출력, 매핑, 인터페이스, 파이프라인, 병목 and similar words) only on slides that explain that concept itself
+    + (Plain explanation) Plain wording applies to the flow of logic and the explanation of concepts (do not talk down to the reader with childish analogies or oversimplification)
+    + (Accurate statement) State professional and technical content with accurate terms that keep the scope and meaning of the original concept (e.g. paraphrasing 입지계수 as "지역 산업 점수" (regional industry score) loses the ratio concept)
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
@@ -51,6 +56,7 @@
     + The subject term repeated in every section ("본 과업은")
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
     + Colloquial markers (correct them by the list in the Sentences section)
+    + Technical terms and engineering phrasing the reader does not use at work, paraphrases that change the original concept, childish analogies and oversimplification (correct them by the formality rule in the Sentences section)
     + Two nouns joined with "와" or "과" (change to "및")
 
 ## lint WARN vocabulary
