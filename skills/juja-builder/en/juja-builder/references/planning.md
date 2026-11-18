@@ -159,6 +159,7 @@
     + Long-table handling for tables that run past one page (engine or split). Defined in the SKILL.md Long Table Handling section
     + Source footnote inheritance (off by default, short form, merging) and its scope (□, section, chapter, whole document). Defined in the SKILL.md Manuscript Hierarchy section
     + Source line layout (automatic by default, fixed line breaks, fixed joining). Defined in the SKILL.md Manuscript Hierarchy section
+    + Source omission judgment (off by default, on). Whether the model leaves out by its own judgment the sources of sections where a source is not customary (business overview, summary, To-Be, future plans, expected effects, methodology and so on). Present the risk notice of the SKILL.md Manuscript Hierarchy section with the on choice. Defined in the SKILL.md Manuscript Hierarchy section
     + The line tidying level (no tidying by default, shorten the wording, ratio and letter spacing adjustment) and whether to apply the line spacing adjustment (off by default). Defined in the SKILL.md Typesetting section
 - At session handover, read state.json and 00_기획설계.md first. Judge whether step 1 is complete from the `(Approval)` line
 

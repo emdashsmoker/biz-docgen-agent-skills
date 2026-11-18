@@ -128,7 +128,12 @@ Attached lines are the source lines and ※ note lines that belong to a table, a
 - Write the sources of body statements as `[^n]` footnotes
 - Write a source as `organization or author (year), material name`. Source lines and footnotes share this format
 - Write source lines for tables with external data and figures taken from outside. Explanatory tables, methodology tables, methodology figures, and figures made with generative AI get no source line
-- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request, or the drafting process)
+- Sources and notes cite only external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, security-restricted material, personal information, the user's request, internal reasoning, or the drafting process)
+- Form elements where a source does not belong, such as the cover, the table of contents and the page header, get no source
+- Source omission judgment is how sources are handled in sections where a source is not customary. The default is off (every statement based on external material gives its source). Apply it only when the user chose on in the step 1 planning questions
+    - (Target sections) Business overview, summary, To-Be, future plans, expected effects, methodology and so on. Judge whether a section qualifies by its content and by the conventions of the document type
+    - (Omission scope) Every source notation in a target section, such as source lines and footnotes. The model judges the omission section by section while writing the manuscript
+    - (Common rules) The external material rule and the form element rule above apply whether the option is on or off
 
 ## Adjustment lines
 

@@ -212,6 +212,12 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + (Contrast color option) The bar the message points to is shown in a color of a different family from the theme color (orange in the navy theme, red in the mono theme)
     + (Contrast color of custom color themes) The build assigns orange for a cool base color, navy for a warm one and red for an achromatic one (tell the user the assigned color in the question)
     + (Choosing emphasized bars) Follow the chart emphasis item of the Design system section
+21. (Source omission judgment) Off (default) or on
+    + (Off option) Every item based on external material gives its source
+    + (On option) In chapters and slides where a source is not customary (business overview, summary, To-Be, future plans, expected effects, methodology and so on), the model leaves out sources after weighing the content and deck conventions
+    + (Omission scope) Every source notation on the target chapters and slides, such as `source`, source notes and the source organization given with a number (the omission is judged slide by slide)
+    + (Risk notice) Present the risks of missing sources (an item based on external material may remain without a source) and untraceable sources (readers, evaluators and others cannot follow the item back to its source material) with the on option. When the request itself turned the option on and this question was skipped, give the same notice in the kickoff response
+    + (Common rules) The rule that gives no source on the cover, contents, dividers and so on and the rule that limits sources to external material apply whichever option is chosen
 
 ## Company facts
 
@@ -550,7 +556,9 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - In a ※-style deck, the build adds no ※ to a note that starts with a label
     + (Reason) The label already tells what the line is
     + (Customization) When ※ is needed, for example by a client template, the author writes ※ before that item (the build keeps it)
-- Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, the user's request or the drafting process as sources)
+- Material cited in source lines and notes is external material the reader can look up (do not cite items such as the target RFP, input files, internal documents, security-restricted material, personal information, the user's request, internal reasoning or the drafting process as sources)
+- Slides where a source does not belong, such as the cover, contents and dividers, get no source
+- (Source omission judgment) A deck that chose on in kickoff item 21 leaves out, by the model's judgment, the sources of chapters and slides where a source is not customary (targets and omission scope in kickoff item 21)
 - Write each source item as `기관명 또는 저자명(연도), 자료명` (organization or author (year), material name)
 - Start the first source item and any note item that cites a source with the same source mark as the deck sourceLabel ("Source:" in a default deck; details in the notation section of `references/writing-rules.md`)
 - Keep the note label and the source mark in one language pair across the deck (e.g. "Note:" with "Source:", "참조:" with "출처:")
