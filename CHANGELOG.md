@@ -27,6 +27,17 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-18
+
+### Common
+- Added the source omission judgment item to the kickoff questions, which lets the model leave out sources in sections where a source is not customary (business overview, summary, To-Be, future plans, expected effects, methodology and so on), off by default and with a notice of the risks of missing and untraceable sources when turned on (#174)
+- Added security-restricted material, personal information and internal reasoning to the items never cited as sources, whether or not source omission judgment is on (#174)
+- Added a rule that puts no source on form elements such as the cover, table of contents and dividers (cover, table of contents and page header in blockwriter), whether or not source omission judgment is on (#174)
+
+* 관행상 출처 표기가 어울리지 않는 절(사업 개요, 요약, To-Be, 향후 계획, 기대효과, 방법론 등)의 출처를 모델 판단으로 생략하는 출처 생략 판단 항목을 착수 질의에 추가 (기본 미적용, 적용 시 출처 누락과 출처 추적 불가 위험 안내) (#174)
+* 출처로 기재하지 않는 대상에 보안 자료, 개인정보 자료, 내부 추론 추가 (출처 생략 판단의 적용 여부와 관계없이 적용) (#174)
+* 표지, 목차, 간지 등 양식 요소에 출처를 달지 않는 규칙 추가 (blockwriter는 표지, 목차, 머리말 등, 출처 생략 판단의 적용 여부와 관계없이 적용) (#174)
+
 ## 2026-11-17
 
 ### ieum-deck
