@@ -20,12 +20,12 @@
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
-- While avoiding colloquial style, informal style and placeholder nouns, do not replace them with wording such as jargon beyond the reader's level, engineering expressions or software design expressions (input value, mapping, interface, pipeline and similar expressions)
-- Write professional or technical content in accurate terms and clear sentences without changing its meaning
+- Do not replace colloquial style, informal style or placeholder nouns with wording such as jargon beyond the reader's level, engineering expressions or software design expressions (input value, mapping, interface, pipeline and similar expressions)
+- Write professional or technical content in accurate terms and clear sentences without distorting its meaning
 - Do not use oversimplification that underestimates the reader (plain rewording that blurs the meaning, a childish tone and similar forms)
 - Keep every sentence grammatical
 - When referring to another slide, document, data set or similar material, write the key content on the slide itself so the reader does not need to look it up
-- Do not let a code, number, abbreviation, summary label or similar stand in for the content, and write the content it refers to alongside it (e.g. the Task name after a Task number and similar cases)
+- Do not let a code, number, abbreviation, summary label or similar substitute for the content, and write the content alongside it (e.g. the Task name after a Task number and similar cases)
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
