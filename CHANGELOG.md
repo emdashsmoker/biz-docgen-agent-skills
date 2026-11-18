@@ -38,6 +38,24 @@ Changelog rules
 * 출처로 기재하지 않는 대상에 보안 자료, 개인정보 자료, 내부 추론 추가 (출처 생략 판단의 적용 여부와 관계없이 적용) (#174)
 * 표지, 목차, 간지 등 양식 요소에 출처를 달지 않는 규칙 추가 (blockwriter는 표지, 목차, 머리말 등, 출처 생략 판단의 적용 여부와 관계없이 적용) (#174)
 
+### ieum-deck
+- Added a vocabulary-level rule that keeps jargon and software-design phrasing within the reader's level, with design phrasing limited to system architecture explanations, and prevents oversimplification that underestimates the reader (#176)
+- Added a rule that states specialized and technical content accurately, plainly and clearly (#176)
+- Added a grammar rule that applies regardless of headline style, technicality or plainness (#176)
+- Added a self-contained slide rule that puts the needed content on the slide when referring to another slide, page, source, data and so on, without replacing content with codes, numbers, abbreviations or summary labels (#176)
+
+* 독자 수준에 맞춘 어휘 규칙 추가 (전문용어와 소프트웨어 설계 어투의 남발 및 독자를 과소평가한 과잉 평이화 방지, 설계 어투는 시스템 아키텍처 설명에만 사용) (#176)
+* 전문적, 기술적 내용의 정확하고 쉽고 명료한 서술 규칙 추가 (#176)
+* 헤드라인 문체, 글의 전문성 및 평이함 정도와 무관한 문법 준수 규칙 추가 (#176)
+* 슬라이드 자기완결 규칙 추가 (다른 슬라이드, 쪽, 문헌, 데이터 등의 언급 시 필요한 내용의 해당 슬라이드 기재 및 코드, 번호, 약칭, 요약 문구 등으로의 내용 치환 금지) (#176)
+
+### juja-builder
+- Added a rule against oversimplification that underestimates the reader (#176)
+- Added a rule that states specialized and technical content accurately, plainly and clearly (#176)
+
+* 독자를 과소평가한 과잉 평이화 방지 규칙 추가 (#176)
+* 전문적, 기술적 내용의 정확하고 쉽고 명료한 서술 규칙 추가 (#176)
+
 ## 2026-11-17
 
 ### ieum-deck
