@@ -21,9 +21,9 @@
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
 - Secure formality through vocabulary and endings. Do not imitate formality by piling up jargon beyond the reader's level or engineering and software-design phrasing (input value, output, mapping, interface, pipeline, and so on) (use software-design phrasing only where a system architecture is explained)
-- Plain writing must not talk down to evaluators and client officials through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on)
+- Plain writing must not talk down to the reader through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on)
 - State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
-- Keep grammar correct (subject-predicate agreement, particles, endings, and so on) regardless of the headline style, technicality, or plainness
+- Keep grammar correct regardless of the headline style, technicality, or plainness
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
