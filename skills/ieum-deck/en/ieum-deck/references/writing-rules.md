@@ -20,6 +20,8 @@
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
+- Do not add technical terms above the reader's level or engineering and software design wording (입력, 출력, 매핑, 파이프라인, 인터페이스 and similar words) to raise formality (use engineering and software design wording only on slides that explain an actual system)
+- Write professional and technical content simply and clearly while keeping the exact terms and relations (do not make it easier by switching to a vague umbrella word that changes the meaning or to a tone that talks down to the reader, and keep every sentence grammatical)
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
@@ -67,6 +69,7 @@
 - One message per slide
 - 3-4 or fewer components support the message
 - Resolve department-store listing by splitting slides
+- Write each slide so that it reads on its own (do not replace content from another slide, the manuscript or a document with a number, code, short label or summary phrase; write the core content on the slide itself)
 - The message of a Task bundle slide is one module-level sentence
 - On a Task bundle slide, Tasks are components of the message
 - Items in boxes and table cells hold 1 item per line
