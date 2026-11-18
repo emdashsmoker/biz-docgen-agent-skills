@@ -937,7 +937,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not expose thinking framework names (MECE, pyramid, first principles, SCQA, SCR, WWH) or skill-operation vocabulary (배점 역산, 밀도, 섹션대장) in the body. "역산" exposes the calculation process even in a schedule context. Do not use it. Describe schedules by result and character, as in "체계적 일정 수립" and "효율적 일정 편성". Module and Task names are the substance of the engagement design. Write them in the manuscripts
 - Use the conventional vocabulary by function in references/lexicon.md. Do not create colloquial or figurative words ("쓰임새", "얼개", "손질") as workarounds for banned words. When `check tone` flags them, replace them from the replacement table
 - Do not use management loanwords (작업분해도, 마일스톤, 임계경로) or software design phrasing ("입력값", "인계"). Replace semi-colloquial words (포인트, 세팅, 케이스, 니즈, 픽스, 체크, 컨펌, 어필, 메리트) with the formal words of the lexicon.md replacement table
-- Secure formality through vocabulary and endings. Do not imitate formality by piling up difficult Sino-Korean words. The vocabulary level is that of the client's official letters and higher-level plans
+- Secure formality through vocabulary and endings. Do not imitate formality by piling up difficult Sino-Korean words, jargon, or engineering-style phrasing. The vocabulary level is that of the client's official letters and higher-level plans
 - Do not use expressions that suggest shortcomings in the client's policy or the RFP. Convert to positive statements
 - Do not state the budget of the project you are bidding on in the body. Turn unconfirmed figures into `[확인]` or a survey task
 - Recalculate ratios and totals in code. Do not use ratios whose numerator and denominator have different reference dates
