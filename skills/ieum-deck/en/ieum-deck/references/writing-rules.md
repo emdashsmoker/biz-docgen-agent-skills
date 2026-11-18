@@ -20,7 +20,7 @@
 - Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름) and similar forms
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
-- Do not replace colloquial style, informal style or placeholder nouns with wording such as jargon beyond the reader's level, engineering expressions or software design expressions (input value, mapping, interface, pipeline and similar expressions)
+- When revising wording to fit a formal style, do not replace it with jargon beyond the reader's level or engineering expressions unrelated to the subject (input value, mapping, interface, pipeline and similar expressions)
 - Write professional or technical content in accurate terms and clear sentences without distorting its meaning
 - Do not use oversimplification that underestimates the reader (plain rewording that blurs the meaning, a childish tone and similar forms)
 - Keep every sentence grammatical
