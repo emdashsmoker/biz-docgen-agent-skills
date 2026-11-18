@@ -938,6 +938,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Use the conventional vocabulary by function in references/lexicon.md. Do not create colloquial or figurative words ("쓰임새", "얼개", "손질") as workarounds for banned words. When `check tone` flags them, replace them from the replacement table
 - Do not use management loanwords (작업분해도, 마일스톤, 임계경로) or software design phrasing ("입력값", "인계"). Replace semi-colloquial words (포인트, 세팅, 케이스, 니즈, 픽스, 체크, 컨펌, 어필, 메리트) with the formal words of the lexicon.md replacement table
 - Secure formality through vocabulary and endings. Do not imitate formality by piling up difficult Sino-Korean words. The vocabulary level is that of the client's official letters and higher-level plans
+- Plain writing must not underestimate the reader's level through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on). State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
 - Do not use expressions that suggest shortcomings in the client's policy or the RFP. Convert to positive statements
 - Do not state the budget of the project you are bidding on in the body. Turn unconfirmed figures into `[확인]` or a survey task
 - Recalculate ratios and totals in code. Do not use ratios whose numerator and denominator have different reference dates
