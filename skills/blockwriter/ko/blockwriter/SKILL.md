@@ -36,7 +36,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 pip install -U "python-hwpx==6.12.0" python-docx lxml pillow openpyxl fonttools --break-system-packages
 ```
 
-- python-hwpx는 6.12.0으로 고정. 7.0 이상은 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)를 사용 중단 예고 없이 삭제하여 build가 중단됨. 다른 버전이 설치되어 있으면 위 명령으로 6.12.0을 다시 설치
+- python-hwpx는 6.12.0으로 고정. 7.0 이상에서는 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)가 삭제되어 build가 중단됨. 다른 버전이 설치되어 있으면 위 명령으로 6.12.0을 다시 설치
 - 나머지 패키지는 최신 버전 설치를 먼저 시도하고 설치된 최신 버전으로 작업
 - 나머지 패키지의 최신 API 변경으로 스크립트가 실패하면 스크립트를 최신 API에 맞게 수정
 - 버전 고정은 수정할 수 없을 때의 마지막 수단. 고정하면 사유를 최종 보고에 기재

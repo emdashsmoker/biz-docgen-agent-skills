@@ -199,7 +199,7 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
 ```
 
 - 의존성 설치를 다른 작업보다 먼저 수행. 로컬 환경은 가상환경 안에서 `--break-system-packages` 없이 설치. python-hwpx 외 패키지의 최신 API 변경으로 스크립트가 실패하면 실패한 호출부만 최신 API에 맞게 수정
-- python-hwpx는 6.12.0으로 고정. 7.0 이상은 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)를 사용 중단 예고 없이 삭제하여 build가 중단됨. 다른 버전이 설치되어 있으면 위 명령으로 6.12.0을 다시 설치
+- python-hwpx는 6.12.0으로 고정. 7.0 이상에서는 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)가 삭제되어 build가 중단됨. 다른 버전이 설치되어 있으면 위 명령으로 6.12.0을 다시 설치
 - 착수 순서는 아래로 고정. 렌더러 확보와 렌더 시험은 착수 질의보다 먼저 수행
     + 6단계는 원고와 점검 기록으로 컨텍스트가 가장 찬 구간. 이 시점의 렌더러 확보는 시도 축소와 조기 포기로 실패율이 높음. 착수 시점의 확보와 시험은 실패 원인을 해결할 시간을 남김
     1. 의존성 설치(위 pip 명령)

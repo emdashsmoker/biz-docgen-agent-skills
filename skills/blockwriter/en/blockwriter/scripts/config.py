@@ -11,7 +11,7 @@ from pathlib import Path
 LANG = "en"   # CLI message language: ko | en
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# python-hwpx 7.0 removed APIs the scripts use without a deprecation notice, so the version is pinned to 6.12.0
+# python-hwpx 7.0 removed APIs the scripts use, so the version is pinned to 6.12.0
 HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 
 # ── Numbering per form. Style names are defined in form.py ─────────────────────────

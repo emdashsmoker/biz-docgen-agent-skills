@@ -39,7 +39,7 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx가 DeprecationWarning으로 예고한 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 예고 없는 삭제(7.0)는 버전 고정으로 대응
+# python-hwpx가 DeprecationWarning으로 알리는 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 7.0의 API 변경은 버전 고정으로 대응
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")

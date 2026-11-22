@@ -27,7 +27,7 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# Keep python-hwpx DeprecationWarnings visible so announced API removals show during runs. Unannounced removals (7.0) are handled by the version pin
+# Keep python-hwpx DeprecationWarnings visible so API removals show during runs. The version pin covers the 7.0 API changes
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")

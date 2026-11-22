@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import toc_refs
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx가 DeprecationWarning으로 예고한 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 예고 없는 삭제(7.0)는 버전 고정으로 대응
+# python-hwpx가 DeprecationWarning으로 알리는 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 7.0의 API 변경은 버전 고정으로 대응
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -55,7 +55,7 @@ HANCOM_TRADEMARK_NOTICE = "한/글, 한컴오피스, HWPX는 한글과컴퓨터�
 HANCOM_AFFILIATION_NOTICE = "이 도구는 한글과컴퓨터와 제휴 관계가 없는 독립 도구"
 # CLI --help 하단 출력용. 고지마다 1줄 (RawDescriptionHelpFormatter로 줄바꿈 유지)
 CLI_NOTICE = "\n".join((HANCOM_FORMAT_NOTICE, HANCOM_TRADEMARK_NOTICE, HANCOM_AFFILIATION_NOTICE))
-# Why 고정: python-hwpx 7.0은 이 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)를 사용 중단 예고 없이 삭제
+# Why 고정: python-hwpx 7.0에서 이 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)가 삭제됨
 HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
