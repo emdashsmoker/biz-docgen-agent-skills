@@ -25,8 +25,8 @@
 - State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
 - Keep grammar correct regardless of the headline style, technicality, or plainness
 - When the content is the same, state it in the positive form (e.g. "정형 데이터 확보 시 전환 가능" in place of "데이터 준비도 부족")
-- A positive sentence states the target state directly, so it is concise and easy to revise and combine sentence by sentence
-- A negative sentence describes problems case by case, so it grows long and the reader has to infer the target state
+- A positive sentence states the target state directly, so it is clear and easy to revise and combine sentence by sentence
+- A negative sentence describes problems case by case, so it is complex and the reader has to infer the target state
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
