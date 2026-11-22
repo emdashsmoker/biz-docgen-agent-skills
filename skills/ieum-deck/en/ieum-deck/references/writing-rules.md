@@ -24,6 +24,9 @@
 - Plain writing must not underestimate the reader's level through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on)
 - State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
 - Keep grammar correct regardless of the headline style, technicality, or plainness
+- When the content is the same, write it in positive form (e.g. "secure data cannot be taken off site" becomes "secure data analysis through on-site viewing at OO Corporation")
+    + Negative phrasing has to describe each missing element case by case, which lengthens the text
+    + Positive phrasing states the means and the target state at once, so each text item is easy to revise or move
 - Headline limits are 50 characters for 1 line and 100 for 2 lines (over 50 is a lint WARN, over 100 is a lint FAIL)
 - The 1-line limit is 43 characters on the A4 page size, 40 on 10.83×7.5 and 37 on 4:3 (the 2-line limit is double the 1-line limit)
 - Character limits count Hangul-equivalent characters (text width divided by the width of one Hangul syllable; Latin letters and spaces count less, by their width)
