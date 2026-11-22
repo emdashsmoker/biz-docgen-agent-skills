@@ -11,7 +11,7 @@ from pathlib import Path
 LANG = "ko"   # CLI 메시지 언어: ko | en
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# python-hwpx 7.0은 스크립트가 쓰는 API를 사용 중단 예고 없이 삭제하여 6.12.0으로 고정
+# python-hwpx 7.0에서 스크립트가 쓰는 API가 삭제되어 6.12.0으로 고정
 HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 
 # ── 양식별 번호 체계. 스타일 이름은 form.py가 정한다 ─────────────────────────

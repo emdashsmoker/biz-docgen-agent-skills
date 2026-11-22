@@ -40,7 +40,7 @@ Run every command as `python3 scripts/report.py <command>`. The command notation
 pip install -U "python-hwpx==6.12.0" python-docx lxml pillow openpyxl fonttools --break-system-packages
 ```
 
-- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph) without a deprecation notice, which stops build. If another version is installed, reinstall 6.12.0 with the command above
+- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph), which stops build. If another version is installed, reinstall 6.12.0 with the command above
 - For the other packages, try to install the latest versions first and work with the installed latest versions
 - If a latest API change in the other packages breaks a script, update the script to the latest API
 - Pinning a version is the last resort when the script cannot be updated. If pinned, state the reason in the final report

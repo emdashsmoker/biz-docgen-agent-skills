@@ -208,7 +208,7 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
 ```
 
 - Install dependencies before any other work. In a local environment, install inside a virtual environment without `--break-system-packages`. If a script fails because of a recent API change in a package other than python-hwpx, update only the failing call site to the latest API
-- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph) without a deprecation notice, which stops build. If another version is installed, reinstall 6.12.0 with the command above
+- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph), which stops build. If another version is installed, reinstall 6.12.0 with the command above
 - The start sequence is fixed as below. Securing the renderer and the render test come before the kickoff questions
     + Step 6 is the stretch where the context is fullest with manuscripts and check records. Securing a renderer at that point fails often because attempts shrink and are abandoned early. Securing and testing at the start leaves time to resolve the cause of a failure
     1. Install dependencies (the pip command above)

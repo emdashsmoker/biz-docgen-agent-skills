@@ -30,9 +30,9 @@ Changelog rules
 ## 2026-11-22
 
 ### Common
-- Fixed HWPX processing broken by python-hwpx 7.0, which removed the style_id_ref argument of add_paragraph without a deprecation notice and moved export_markdown to a separate package, by pinning python-hwpx to 6.12.0 (HWPX builds stopping in blockwriter and juja-builder, tables missing from hwpx inputs in ieum-deck) (#178)
+- Fixed HWPX processing broken by python-hwpx 7.0, which removed the style_id_ref argument of add_paragraph and moved export_markdown to a separate package, by pinning python-hwpx to 6.12.0 (HWPX builds stopping in blockwriter and juja-builder, tables missing from hwpx inputs in ieum-deck) (#178)
 
-* python-hwpx 7.0의 add_paragraph style_id_ref 인자 예고 없는 삭제와 export_markdown 이동에 따른 HWPX 처리 오류 수정 (python-hwpx 6.12.0 고정, blockwriter와 juja-builder의 HWPX 생성 중단, ieum-deck의 hwpx 입력 표 누락) (#178)
+* python-hwpx 7.0의 add_paragraph style_id_ref 인자 삭제와 export_markdown 이동에 따른 HWPX 처리 오류 수정 (python-hwpx 6.12.0 고정, blockwriter와 juja-builder의 HWPX 생성 중단, ieum-deck의 hwpx 입력 표 누락) (#178)
 
 ### blockwriter
 - Changed the error messages for a missing python-hwpx and a failed skeleton load to guide the reinstall of the pinned version (#178)

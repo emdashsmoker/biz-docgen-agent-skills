@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 import toc_refs
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# Keep python-hwpx DeprecationWarnings visible so announced API removals show during runs. Unannounced removals (7.0) are handled by the version pin
+# Keep python-hwpx DeprecationWarnings visible so API removals show during runs. The version pin covers the 7.0 API changes
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -48,7 +48,7 @@ HANCOM_TRADEMARK_NOTICE = "한/글, 한컴오피스, HWPX는 한글과컴퓨터�
 HANCOM_AFFILIATION_NOTICE = "이 도구는 한글과컴퓨터와 제휴 관계가 없는 독립 도구"
 # For output at the bottom of CLI --help. One line per notice (line breaks kept with RawDescriptionHelpFormatter)
 CLI_NOTICE = "\n".join((HANCOM_FORMAT_NOTICE, HANCOM_TRADEMARK_NOTICE, HANCOM_AFFILIATION_NOTICE))
-# Why pinned: python-hwpx 7.0 removed APIs this script uses (such as the style_id_ref argument of add_paragraph) without a deprecation notice
+# Why pinned: python-hwpx 7.0 removed APIs this script uses (such as the style_id_ref argument of add_paragraph)
 HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
