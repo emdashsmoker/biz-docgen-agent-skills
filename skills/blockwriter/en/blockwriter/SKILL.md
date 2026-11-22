@@ -37,11 +37,12 @@ Run every command as `python3 scripts/report.py <command>`. The command notation
 ## Setup
 
 ```bash
-pip install -U python-hwpx python-docx lxml pillow openpyxl fonttools --break-system-packages
+pip install -U "python-hwpx==6.12.0" python-docx lxml pillow openpyxl fonttools --break-system-packages
 ```
 
-- Try to install the latest versions first and work with the installed latest versions
-- If a latest API change breaks a script, update the script to the latest API
+- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph) without a deprecation notice, which stops build. If another version is installed, reinstall 6.12.0 with the command above
+- For the other packages, try to install the latest versions first and work with the installed latest versions
+- If a latest API change in the other packages breaks a script, update the script to the latest API
 - Pinning a version is the last resort when the script cannot be updated. If pinned, state the reason in the final report
 - Review rendering needs a renderer. For HWPX obtain one in this order: rhwp release binary, rhwp source build, LibreOffice with H2Orestart. DOCX uses LibreOffice. The procedure (tag choice, asset choice, command set check) is in references/renderers.md
     - (rhwp origin) Options 1 and 2 use the releases and source of the rhwp repository (https://github.com/edwardkim/rhwp)

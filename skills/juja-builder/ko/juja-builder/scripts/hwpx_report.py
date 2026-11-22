@@ -2,7 +2,7 @@
 """hwpx_report.py: Markdown 원고를 참조 양식에서 추출한 스켈레톤 위에 조판하는 단일 CLI.
 
 명령
-  build     원고.md → 문서.hwpx          (python-hwpx 6.x, 스켈레톤 스타일 참조)
+  build     원고.md → 문서.hwpx          (python-hwpx 6.12.0, 스켈레톤 스타일 참조)
   skeleton  참조.hwpx → 스켈레톤.hwpx     (header.xml + 본문 구역 secPr만 남긴 빈 양식)
   export    문서.hwpx → 원고.md           (text.markdown(rich=True))
   fill      문서.hwpx + 치환.json → 문서   (플레이스홀더 치환, 표 라벨 경로 채우기)
@@ -10,7 +10,7 @@
   check     문서.hwpx 스키마 검증 + rhwp verify 기대값
 
 동작 확인 환경: python-hwpx 6.3.0, lxml 6.0.2, pillow 12.1.1, python-docx 1.2.0, openpyxl 3.1.5,
-Python 3.12.3, poppler 24.02, rhwp v0.8.6. 항상 최신 버전을 먼저 설치하며 위 기록은 회귀 원인 추적용.
+Python 3.12.3, poppler 24.02, rhwp v0.8.6. python-hwpx는 6.12.0으로 고정하고 나머지는 최신 버전을 먼저 설치하며 위 기록은 회귀 원인 추적용.
 
 형식 고지: 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 상표 고지: 한/글, 한컴오피스, HWPX는 한글과컴퓨터의 상표
@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import toc_refs
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
+# python-hwpx가 DeprecationWarning으로 예고한 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 예고 없는 삭제(7.0)는 버전 고정으로 대응
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -55,6 +55,8 @@ HANCOM_TRADEMARK_NOTICE = "한/글, 한컴오피스, HWPX는 한글과컴퓨터�
 HANCOM_AFFILIATION_NOTICE = "이 도구는 한글과컴퓨터와 제휴 관계가 없는 독립 도구"
 # CLI --help 하단 출력용. 고지마다 1줄 (RawDescriptionHelpFormatter로 줄바꿈 유지)
 CLI_NOTICE = "\n".join((HANCOM_FORMAT_NOTICE, HANCOM_TRADEMARK_NOTICE, HANCOM_AFFILIATION_NOTICE))
+# Why 고정: python-hwpx 7.0은 이 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)를 사용 중단 예고 없이 삭제
+HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 
@@ -1194,7 +1196,7 @@ class Builder(TocMarks):
         try:
             from hwpx import HwpxDocument
         except ImportError:
-            sys.exit("ERROR: python-hwpx 미설치. `pip install -U python-hwpx --break-system-packages` 후 재실행")
+            sys.exit(f"ERROR: python-hwpx 미설치. `pip install {HWPX_PIP_SPEC} --break-system-packages` 후 재실행")
         try:
             with zipfile.ZipFile(skeleton) as z:
                 bad = z.testzip()
@@ -1205,8 +1207,9 @@ class Builder(TocMarks):
             raise
         except Exception as ex:
             sys.exit(f"ERROR: 스켈레톤 로드 실패 ({type(ex).__name__}: {ex}). "
-                     "스켈레톤 파일은 정상이므로 python-hwpx 버전 문제 가능성. `pip show python-hwpx` 확인 후 최신 버전 재설치. "
-                     "python-hwpx API를 직접 호출하여 문서를 새로 조립하지 말고 이 스크립트를 최신 API에 맞게 수정할 것")
+                     "스켈레톤 파일은 정상이므로 python-hwpx 버전 문제 가능성. `pip show python-hwpx` 확인 후 "
+                     f"`pip install {HWPX_PIP_SPEC} --break-system-packages`로 고정 버전 재설치. "
+                     "python-hwpx API를 직접 호출하여 문서를 새로 조립하지 말고 이 스크립트의 실패 호출부를 수정할 것")
         self.p = profile
         self.page_break = page_break  # chapter | section | none
         self.styles = {s.name: (sid, s) for sid, s in self.doc.styles.items()}

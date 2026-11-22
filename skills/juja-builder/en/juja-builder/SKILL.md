@@ -204,10 +204,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ## Preparation
 
 ```bash
-pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
+pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-system-packages
 ```
 
-- Install dependencies before any other work. In a local environment, install inside a virtual environment without `--break-system-packages`. If a script fails because of a recent API change, update only the failing call site to the latest API
+- Install dependencies before any other work. In a local environment, install inside a virtual environment without `--break-system-packages`. If a script fails because of a recent API change in a package other than python-hwpx, update only the failing call site to the latest API
+- Pin python-hwpx to 6.12.0. Version 7.0 and later removed APIs the scripts use (such as the style_id_ref argument of add_paragraph) without a deprecation notice, which stops build. If another version is installed, reinstall 6.12.0 with the command above
 - The start sequence is fixed as below. Securing the renderer and the render test come before the kickoff questions
     + Step 6 is the stretch where the context is fullest with manuscripts and check records. Securing a renderer at that point fails often because attempts shrink and are abandoned early. Securing and testing at the start leaves time to resolve the cause of a failure
     1. Install dependencies (the pip command above)
@@ -222,7 +223,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + A docx delivery requires PASS in this record
     + If LibreOffice is missing, install it with the apt command of priority 3
 - In an environment where the skill folder is read-only and the scripts need changes, copy the whole skill folder to a writable path. From then on `<SKILL>` is the copy
-- Verified environment: Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. Install the latest versions. This record is the reference for tracing causes when version differences cause failures
+- Verified environment: Python 3.11-3.12, python-hwpx 6.12.0, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. Pin python-hwpx to 6.12.0 and install the latest versions of the others. This record is the reference for tracing causes when version differences cause failures
 - Renderer priority 1 is the rhwp CLI (https://github.com/edwardkim/rhwp). Obtain the CLI executable directly from GitHub releases with the procedure below. The npm packages (@rhwp/core, @rhwp/editor) are for library and editor use and are excluded as a CLI source. Packages of the same name on PyPI or other package registries are also excluded. The condition for moving to priority 2 (source build) is confirmed failure to obtain a release. A permission denial by the execution environment follows the rhwp permission denial item below
     + (GitHub repository attach) If the execution environment has a tool that attaches a GitHub repository to the session, call it before the first GitHub access. Pass the owner `edwardkim` and the repository name `rhwp` as separate values. Apply any access route the tool's reply names to the steps below. Skip this step when no such tool exists or the call is refused
     + GitHub's address scheme and page layout can change. The model checks the current state and obtains the release in the order below

@@ -29,15 +29,29 @@ Changelog rules
 
 ## 2026-11-22
 
+### Common
+- Fixed HWPX processing broken by python-hwpx 7.0, which removed the style_id_ref argument of add_paragraph without a deprecation notice and moved export_markdown to a separate package, by pinning python-hwpx to 6.12.0 (HWPX builds stopping in blockwriter and juja-builder, tables missing from hwpx inputs in ieum-deck) (#178)
+
+* python-hwpx 7.0의 add_paragraph style_id_ref 인자 예고 없는 삭제와 export_markdown 이동에 따른 HWPX 처리 오류 수정 (python-hwpx 6.12.0 고정, blockwriter와 juja-builder의 HWPX 생성 중단, ieum-deck의 hwpx 입력 표 누락) (#178)
+
+### blockwriter
+- Changed the error messages for a missing python-hwpx and a failed skeleton load to guide the reinstall of the pinned version (#178)
+
+* python-hwpx 미설치 오류와 스켈레톤 로드 실패 오류의 안내를 고정 버전 재설치로 변경 (#178)
+
 ### ieum-deck
 - Added a sentence rule that states the same content in the positive form, with the reason that a positive sentence states the target state directly (#177)
+- Added a python-hwpx version check to `setup_deps.py --check`, which fails when a version other than 6.12.0 is installed (#178)
 
 * 같은 내용의 긍정 표현 서술 규칙 추가 (목표 상태를 직접 나타내는 긍정 문장의 명료성을 근거로 명시) (#177)
+* `setup_deps.py --check`의 python-hwpx 버전 판정 추가 (6.12.0 외 버전 설치 시 실패 처리) (#178)
 
 ### juja-builder
 - Added a sentence rule that states the same content in the positive form, with the reason that a positive sentence states the target state directly (#177)
+- Changed the error messages for a missing python-hwpx and a failed skeleton load to guide the reinstall of the pinned version (#178)
 
 * 같은 내용의 긍정 표현 서술 규칙 추가 (목표 상태를 직접 나타내는 긍정 문장의 명료성을 근거로 명시) (#177)
+* python-hwpx 미설치 오류와 스켈레톤 로드 실패 오류의 안내를 고정 버전 재설치로 변경 (#178)
 
 ## 2026-11-18
 

@@ -11,6 +11,8 @@ from pathlib import Path
 LANG = "en"   # CLI message language: ko | en
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# python-hwpx 7.0 removed APIs the scripts use without a deprecation notice, so the version is pinned to 6.12.0
+HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 
 # ── Numbering per form. Style names are defined in form.py ─────────────────────────
 # numbering: manual writes numbers into the text, auto leaves them to Hangul outline numbering
@@ -293,8 +295,8 @@ MESSAGES = {
         "en": "INFO: table '{title}' as % of the ○ level width: current {cur}% (columns {cur_cols}), no-wrap {nowrap}% (columns {nowrap_cols})"},
     "warn_image_missing": {"ko": "WARN: 이미지 없음 {path}", "en": "WARN: image not found {path}"},
     "err_no_hwpx": {
-        "ko": "ERROR: python-hwpx 미설치. `pip install -U python-hwpx` 후 재실행",
-        "en": "ERROR: python-hwpx is not installed. Run `pip install -U python-hwpx` and retry"},
+        "ko": f"ERROR: python-hwpx 미설치. `pip install {HWPX_PIP_SPEC}` 후 재실행",
+        "en": f"ERROR: python-hwpx is not installed. Run `pip install {HWPX_PIP_SPEC}` and retry"},
     "err_no_docx": {
         "ko": "ERROR: python-docx 미설치. `pip install -U python-docx` 후 재실행",
         "en": "ERROR: python-docx is not installed. Run `pip install -U python-docx` and retry"},
@@ -302,10 +304,12 @@ MESSAGES = {
         "ko": "ERROR: 스켈레톤 zip 손상 항목 {item}. 양식 파일을 다시 확인",
         "en": "ERROR: skeleton zip has a corrupt entry {item}. Check the form file"},
     "err_skeleton_load": {
-        "ko": "ERROR: 스켈레톤 로드 실패 ({err}). python-hwpx 버전 문제 가능성. `pip show python-hwpx` 확인 후 최신 버전 재설치. "
-              "이후에도 실패하면 이 스크립트를 최신 API에 맞게 수정 (python-hwpx API로 문서를 새로 조립하는 우회는 결함)",
+        "ko": "ERROR: 스켈레톤 로드 실패 ({err}). python-hwpx 버전 문제 가능성. `pip show python-hwpx` 확인 후 "
+              f"`pip install {HWPX_PIP_SPEC}`로 고정 버전 재설치. "
+              "이후에도 실패하면 이 스크립트의 실패 호출부를 수정 (python-hwpx API로 문서를 새로 조립하는 우회는 결함)",
         "en": "ERROR: failed to load the skeleton ({err}). Likely a python-hwpx version issue: check `pip show python-hwpx` "
-              "and reinstall the latest. If it still fails, update this script to the latest API (assembling the document directly with the python-hwpx API is a defect)"},
+              f"and reinstall the pinned version with `pip install {HWPX_PIP_SPEC}`. "
+              "If it still fails, fix the failing call site in this script (assembling the document directly with the python-hwpx API is a defect)"},
     "err_missing_styles": {
         "ko": "ERROR: 스켈레톤에 없는 스타일 {names}: 프로파일 수정 또는 `skeleton` 명령으로 스타일 목록 확인",
         "en": "ERROR: styles missing from the skeleton {names}: fix the profile or list the styles with the `skeleton` command"},

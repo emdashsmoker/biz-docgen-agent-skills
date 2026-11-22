@@ -5,7 +5,7 @@
 Composition: hwpx_report.py is the format-agnostic typesetting layer (manuscript parser, inline notation, table layout calculation, figure size, TOC order) and the hwpx writer,
 docx_report.py is the docx writer. This file handles judgments per output type (heading numbers, bands, caption numbers, table width directives) and the verdict rules.
 Why the split: one content source (MD manuscripts) and one format source (settings), with judgments computed once, so hwpx and docx record the same result.
-Verified environment: Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, poppler 24.02, rhwp v0.8.6, LibreOffice (docx rendering)
+Verified environment: Python 3.11-3.12, python-hwpx 6.12.0, python-docx 1.2.0, lxml, pillow, poppler 24.02, rhwp v0.8.6, LibreOffice (docx rendering)
 
 Format notice: 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 Trademark notice: 한/글 (Hangul), Hancom Office, and HWPX are trademarks of Hancom Inc. (한글과컴퓨터)
@@ -27,7 +27,7 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
+# Keep python-hwpx DeprecationWarnings visible so announced API removals show during runs. Unannounced removals (7.0) are handled by the version pin
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
@@ -1146,7 +1146,7 @@ def write_default_skeleton(base_dir: str) -> str:
     Why regenerate every time: keeps the workspace template from diverging from the settings part even when the skill is updated. Change the template by editing the settings part or with build --skeleton"""
     base = _skeleton_base_path()
     if not os.path.exists(base):
-        sys.exit(f"ERROR: empty new python-hwpx document not found {base}. Check the python-hwpx installation and version (API call site fixes in the Preparation section)")
+        sys.exit(f"ERROR: empty new python-hwpx document not found {base}. Check the python-hwpx installation and version (reinstall the pinned version with `pip install {lib.HWPX_PIP_SPEC}`)")
     out = default_skeleton_path(base_dir)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     tmp = out + ".tmp"
@@ -1168,7 +1168,7 @@ def write_default_skeleton(base_dir: str) -> str:
     except (SkeletonBaseError, AttributeError, KeyError, ValueError, etree.XMLSyntaxError) as e:
         if os.path.exists(tmp):
             os.remove(tmp)
-        sys.exit(f"ERROR: failed to create the default skeleton ({e}). The structure of the empty new python-hwpx document presumably changed (API call site fixes in the Preparation section)")
+        sys.exit(f"ERROR: failed to create the default skeleton ({e}). The structure of the empty new python-hwpx document presumably changed (reinstall the pinned version with `pip install {lib.HWPX_PIP_SPEC}`)")
     os.replace(tmp, out)
     return out
 

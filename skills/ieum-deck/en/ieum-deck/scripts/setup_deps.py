@@ -2,7 +2,7 @@
 """setup_deps.py: installs and checks dependencies (assumes network access. No offline bundle)
 Usage: python3 setup_deps.py          install, then check
        python3 setup_deps.py --check  check only (exit code 0 means pass)
-Installs: pptxgenjs 3.12.0(npm), python-pptx, pypdf 6.19 or later, python-hwpx, pyhwp, markitdown(pip), fonts-nanum(apt), soffice, pdftoppm
+Installs: pptxgenjs 3.12.0(npm), python-pptx, pypdf 6.19 or later, python-hwpx 6.12.0, pyhwp, markitdown(pip), fonts-nanum(apt), soffice, pdftoppm
 Viewing hwpx as PDF additionally needs rhwp(https://github.com/edwardkim/rhwp) or the LibreOffice H2Orestart extension
 """
 import os
@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPDF_MIN = "6.19"  # Lowest version verified for PDF image extraction (decode_as_image). 3.x often fails to decode images
-PIP_PKGS = ["python-pptx", f"pypdf>={PYPDF_MIN}", "python-hwpx", "pyhwp", "markitdown[all]", "pdfplumber", "pillow", "numpy", "lxml"]
+HWPX_PIN = "6.12.0"  # 7.0 moved export_markdown to a separate package, which sends hwpx to a fallback path without Markdown tables
+PIP_PKGS = ["python-pptx", f"pypdf>={PYPDF_MIN}", f"python-hwpx=={HWPX_PIN}", "pyhwp", "markitdown[all]", "pdfplumber", "pillow", "numpy", "lxml"]
 NPM_PKG = "pptxgenjs@3.12.0"
 
 
@@ -72,6 +73,13 @@ def check():
         pypdf_ver, pypdf_ok = "not installed", False
     print(f"[{'OK' if pypdf_ok else 'FAIL'}] python pypdf {pypdf_ver} ({PYPDF_MIN} or later required)")
     ok &= pypdf_ok
+    try:
+        hwpx_ver = version("python-hwpx")
+    except PackageNotFoundError:
+        hwpx_ver = "not installed"
+    hwpx_ok = hwpx_ver == HWPX_PIN
+    print(f"[{'OK' if hwpx_ok else 'FAIL'}] python python-hwpx {hwpx_ver} ({HWPX_PIN} pinned)")
+    ok &= hwpx_ok
     node_ok = subprocess.run(["node", "-e", "require('pptxgenjs')"], cwd=ROOT, capture_output=True).returncode == 0
     print("[OK] pptxgenjs" if node_ok else "[FAIL] pptxgenjs (npm install pptxgenjs@3.12.0 in skill root)")
     ok &= node_ok
