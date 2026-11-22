@@ -27,6 +27,18 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-22
+
+### ieum-deck
+- Added a sentence rule that states the same content in the positive form, with the reason that a positive sentence states the target state directly (#177)
+
+* 같은 내용의 긍정 표현 서술 규칙 추가 (목표 상태를 직접 나타내는 긍정 문장의 명료성을 근거로 명시) (#177)
+
+### juja-builder
+- Added a sentence rule that states the same content in the positive form, with the reason that a positive sentence states the target state directly (#177)
+
+* 같은 내용의 긍정 표현 서술 규칙 추가 (목표 상태를 직접 나타내는 긍정 문장의 명료성을 근거로 명시) (#177)
+
 ## 2026-11-18
 
 ### Common
