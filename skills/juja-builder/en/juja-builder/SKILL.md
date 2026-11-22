@@ -939,9 +939,9 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
 - Do not use management loanwords (작업분해도, 마일스톤, 임계경로) or software design phrasing ("입력값", "인계"). Replace semi-colloquial words (포인트, 세팅, 케이스, 니즈, 픽스, 체크, 컨펌, 어필, 메리트) with the formal words of the lexicon.md replacement table
 - Secure formality through vocabulary and endings. Do not imitate formality by piling up difficult Sino-Korean words. The vocabulary level is that of the client's official letters and higher-level plans
 - Plain writing must not underestimate the reader's level through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on). State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
-- When the content is the same, write it in positive form. For example, "secure data cannot be taken off site" → "analyze secure data through on-site viewing at OO Corporation"
+- When the content is the same, write it in positive form. For example, "no work gap when staff change" → "work continuity maintained when staff change"
     + Negative phrasing has to describe each missing element case by case, which lengthens the sentence
-    + Positive phrasing states the means and the target state at once, so each level item is easy to revise or move
+    + Positive phrasing states the target state at once, so each level item is easy to revise or move
 - Do not use expressions that suggest shortcomings in the client's policy or the RFP. Convert to positive statements
 - Do not state the budget of the project you are bidding on in the body. Turn unconfirmed figures into `[확인]` or a survey task
 - Recalculate ratios and totals in code. Do not use ratios whose numerator and denominator have different reference dates
