@@ -28,7 +28,7 @@ import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
+# Keep python-hwpx DeprecationWarnings visible so announced API removals show during runs. Unannounced removals (7.0) are handled by the version pin
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 import config as C  # noqa: E402

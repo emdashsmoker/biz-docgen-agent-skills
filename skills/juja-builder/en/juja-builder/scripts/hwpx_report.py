@@ -3,7 +3,7 @@
 
 
 Verified environment: python-hwpx 6.3.0, lxml 6.0.2, pillow 12.1.1, python-docx 1.2.0, openpyxl 3.1.5,
-Python 3.12.3, poppler 24.02, rhwp v0.8.6. Always install the latest versions first. The record above is for tracing regression causes.
+Python 3.12.3, poppler 24.02, rhwp v0.8.6. Pin python-hwpx to 6.12.0 and install the latest versions of the others first. The record above is for tracing regression causes.
 
 Format notice: 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 Trademark notice: 한/글 (Hangul), Hancom Office, and HWPX are trademarks of Hancom Inc. (한글과컴퓨터)
@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 import toc_refs
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx announces APIs it will drop in the next major release with DeprecationWarning, so keep those visible
+# Keep python-hwpx DeprecationWarnings visible so announced API removals show during runs. Unannounced removals (7.0) are handled by the version pin
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -48,6 +48,8 @@ HANCOM_TRADEMARK_NOTICE = "한/글, 한컴오피스, HWPX는 한글과컴퓨터�
 HANCOM_AFFILIATION_NOTICE = "이 도구는 한글과컴퓨터와 제휴 관계가 없는 독립 도구"
 # For output at the bottom of CLI --help. One line per notice (line breaks kept with RawDescriptionHelpFormatter)
 CLI_NOTICE = "\n".join((HANCOM_FORMAT_NOTICE, HANCOM_TRADEMARK_NOTICE, HANCOM_AFFILIATION_NOTICE))
+# Why pinned: python-hwpx 7.0 removed APIs this script uses (such as the style_id_ref argument of add_paragraph) without a deprecation notice
+HWPX_PIP_SPEC = '"python-hwpx==6.12.0"'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
 
@@ -1191,7 +1193,7 @@ class Builder(TocMarks):
         try:
             from hwpx import HwpxDocument
         except ImportError:
-            sys.exit("ERROR: python-hwpx not installed. Run `pip install -U python-hwpx --break-system-packages` and retry")
+            sys.exit(f"ERROR: python-hwpx not installed. Run `pip install {HWPX_PIP_SPEC} --break-system-packages` and retry")
         try:
             with zipfile.ZipFile(skeleton) as z:
                 bad = z.testzip()
@@ -1202,8 +1204,9 @@ class Builder(TocMarks):
             raise
         except Exception as ex:
             sys.exit(f"ERROR: failed to load the skeleton ({type(ex).__name__}: {ex}). "
-                     "The skeleton file is intact, so a python-hwpx version problem is likely. Check `pip show python-hwpx` and reinstall the latest version. "
-                     "Do not assemble a new document by calling the python-hwpx API directly. Update this script to the latest API")
+                     "The skeleton file is intact, so a python-hwpx version problem is likely. Check `pip show python-hwpx` and reinstall the pinned version with "
+                     f"`pip install {HWPX_PIP_SPEC} --break-system-packages`. "
+                     "Do not assemble a new document by calling the python-hwpx API directly. Fix the failing call site in this script")
         self.p = profile
         self.page_break = page_break  # chapter | section | none
         self.styles = {s.name: (sid, s) for sid, s in self.doc.styles.items()}

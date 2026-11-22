@@ -2,7 +2,7 @@
 """setup_deps.py: 의존성 설치와 확인 (네트워크 가능 환경 기준. 오프라인 번들 없음)
 사용: python3 setup_deps.py          설치 후 확인
       python3 setup_deps.py --check  확인만 (종료 코드 0 이면 통과)
-설치 대상: pptxgenjs 3.12.0(npm), python-pptx, pypdf 6.19 이상, python-hwpx, pyhwp, markitdown(pip), fonts-nanum(apt), soffice, pdftoppm
+설치 대상: pptxgenjs 3.12.0(npm), python-pptx, pypdf 6.19 이상, python-hwpx 6.12.0, pyhwp, markitdown(pip), fonts-nanum(apt), soffice, pdftoppm
 hwpx 를 PDF 로 볼 때는 rhwp(https://github.com/edwardkim/rhwp) 또는 LibreOffice H2Orestart 확장이 추가로 필요
 """
 import os
@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPDF_MIN = "6.19"  # PDF 이미지 추출(decode_as_image)을 검증한 최저 버전. 3.x 는 이미지 디코딩 실패가 잦음
-PIP_PKGS = ["python-pptx", f"pypdf>={PYPDF_MIN}", "python-hwpx", "pyhwp", "markitdown[all]", "pdfplumber", "pillow", "numpy", "lxml"]
+HWPX_PIN = "6.12.0"  # 7.0 은 export_markdown 을 별도 패키지로 옮겨 hwpx 표가 마크다운 표로 나오지 않는 대체 경로로 넘어감
+PIP_PKGS = ["python-pptx", f"pypdf>={PYPDF_MIN}", f"python-hwpx=={HWPX_PIN}", "pyhwp", "markitdown[all]", "pdfplumber", "pillow", "numpy", "lxml"]
 NPM_PKG = "pptxgenjs@3.12.0"
 
 
@@ -72,6 +73,13 @@ def check():
         pypdf_ver, pypdf_ok = "미설치", False
     print(f"[{'OK' if pypdf_ok else 'FAIL'}] python pypdf {pypdf_ver} ({PYPDF_MIN} 이상 필요)")
     ok &= pypdf_ok
+    try:
+        hwpx_ver = version("python-hwpx")
+    except PackageNotFoundError:
+        hwpx_ver = "미설치"
+    hwpx_ok = hwpx_ver == HWPX_PIN
+    print(f"[{'OK' if hwpx_ok else 'FAIL'}] python python-hwpx {hwpx_ver} ({HWPX_PIN} 고정)")
+    ok &= hwpx_ok
     node_ok = subprocess.run(["node", "-e", "require('pptxgenjs')"], cwd=ROOT, capture_output=True).returncode == 0
     print("[OK] pptxgenjs" if node_ok else "[FAIL] pptxgenjs (npm install pptxgenjs@3.12.0 in skill root)")
     ok &= node_ok

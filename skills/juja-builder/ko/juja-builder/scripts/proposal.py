@@ -17,7 +17,7 @@
 구성: hwpx_report.py는 형식 무관 조판 계층(원고 파서, 인라인 표기, 표 배치 산정, 그림 크기, 목차 순서)과 hwpx 작성기,
 docx_report.py는 docx 작성기. 이 파일은 산출 유형별 판단(제목 번호, 밴드, 캡션 번호, 표 폭 지시)과 판정 규칙을 담당한다.
 Why 분리: 내용 원천(MD 원고)과 양식 원천(설정부)을 하나로 두고 판단은 1회만 계산하여 hwpx와 docx가 같은 결과를 기록하게 한다.
-동작 확인 환경: Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, poppler 24.02, rhwp v0.8.6, LibreOffice(docx 렌더)
+동작 확인 환경: Python 3.11-3.12, python-hwpx 6.12.0, python-docx 1.2.0, lxml, pillow, poppler 24.02, rhwp v0.8.6, LibreOffice(docx 렌더)
 
 형식 고지: 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 상표 고지: 한/글, 한컴오피스, HWPX는 한글과컴퓨터의 상표
@@ -39,7 +39,7 @@ import zipfile
 from datetime import datetime
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-# python-hwpx는 다음 major에서 지울 API를 DeprecationWarning으로 예고하므로 이 경고만 보이게 둔다
+# python-hwpx가 DeprecationWarning으로 예고한 API 삭제를 실행 중에 보도록 이 경고만 보이게 둔다. 예고 없는 삭제(7.0)는 버전 고정으로 대응
 warnings.filterwarnings("default", category=DeprecationWarning, message=r".*hwpx")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "assets")
@@ -1158,7 +1158,7 @@ def write_default_skeleton(base_dir: str) -> str:
     Why 매번 재생성: 스킬을 갱신해도 작업폴더의 양식이 설정부와 어긋나지 않게 함. 양식 변경은 설정부 수정이나 build --skeleton"""
     base = _skeleton_base_path()
     if not os.path.exists(base):
-        sys.exit(f"ERROR: python-hwpx 빈 새 문서 없음 {base}. python-hwpx 설치 상태와 버전 확인 (준비 절의 API 호출부 수정)")
+        sys.exit(f"ERROR: python-hwpx 빈 새 문서 없음 {base}. python-hwpx 설치 상태와 버전 확인 (`pip install {lib.HWPX_PIP_SPEC}`로 고정 버전 재설치)")
     out = default_skeleton_path(base_dir)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     tmp = out + ".tmp"
@@ -1180,7 +1180,7 @@ def write_default_skeleton(base_dir: str) -> str:
     except (SkeletonBaseError, AttributeError, KeyError, ValueError, etree.XMLSyntaxError) as e:
         if os.path.exists(tmp):
             os.remove(tmp)
-        sys.exit(f"ERROR: 기본 스켈레톤 생성 실패 ({e}). python-hwpx 빈 새 문서의 구조 변경 추정 (준비 절의 API 호출부 수정)")
+        sys.exit(f"ERROR: 기본 스켈레톤 생성 실패 ({e}). python-hwpx 빈 새 문서의 구조 변경 추정 (`pip install {lib.HWPX_PIP_SPEC}`로 고정 버전 재설치)")
     os.replace(tmp, out)
     return out
 

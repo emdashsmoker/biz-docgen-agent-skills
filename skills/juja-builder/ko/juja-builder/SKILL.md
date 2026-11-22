@@ -195,10 +195,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 ## 준비
 
 ```bash
-pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
+pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-system-packages
 ```
 
-- 의존성 설치를 다른 작업보다 먼저 수행. 로컬 환경은 가상환경 안에서 `--break-system-packages` 없이 설치. 최신 API 변경으로 스크립트가 실패하면 실패한 호출부만 최신 API에 맞게 수정
+- 의존성 설치를 다른 작업보다 먼저 수행. 로컬 환경은 가상환경 안에서 `--break-system-packages` 없이 설치. python-hwpx 외 패키지의 최신 API 변경으로 스크립트가 실패하면 실패한 호출부만 최신 API에 맞게 수정
+- python-hwpx는 6.12.0으로 고정. 7.0 이상은 스크립트가 쓰는 API(add_paragraph의 style_id_ref 인자 등)를 사용 중단 예고 없이 삭제하여 build가 중단됨. 다른 버전이 설치되어 있으면 위 명령으로 6.12.0을 다시 설치
 - 착수 순서는 아래로 고정. 렌더러 확보와 렌더 시험은 착수 질의보다 먼저 수행
     + 6단계는 원고와 점검 기록으로 컨텍스트가 가장 찬 구간. 이 시점의 렌더러 확보는 시도 축소와 조기 포기로 실패율이 높음. 착수 시점의 확보와 시험은 실패 원인을 해결할 시간을 남김
     1. 의존성 설치(위 pip 명령)
@@ -213,7 +214,7 @@ pip install -U python-hwpx pillow python-docx pdfplumber --break-system-packages
     + docx 납품은 이 기록의 PASS가 조건
     + LibreOffice가 없으면 3순위의 apt 명령으로 설치
 - 스킬 폴더가 읽기 전용인 환경에서 스크립트 수정이 필요하면 스킬 폴더 전체를 쓰기 가능한 경로에 복사. 이후 `<SKILL>`은 사본 폴더
-- 동작 확인 환경은 Python 3.11-3.12, python-hwpx 6.x, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. 설치는 최신 버전으로 수행. 이 기록은 버전 차이로 실패할 때 원인을 추적하는 기준
+- 동작 확인 환경은 Python 3.11-3.12, python-hwpx 6.12.0, python-docx 1.2.0, lxml, pillow, pdfplumber 0.11, pypdfium2 5.x, poppler 24.02, rhwp v0.8.6, LibreOffice 24.x. 설치는 python-hwpx만 6.12.0으로 고정하고 나머지는 최신 버전으로 수행. 이 기록은 버전 차이로 실패할 때 원인을 추적하는 기준
 - 렌더러 1순위는 rhwp CLI(https://github.com/edwardkim/rhwp). 아래 절차로 GitHub 릴리스의 CLI 실행 파일을 직접 확보. npm 패키지(@rhwp/core, @rhwp/editor)는 라이브러리와 편집기 용도. CLI 확보 경로에서 제외. PyPI 등 다른 패키지 저장소의 같은 이름 패키지도 제외 대상. 2순위(소스 빌드)로의 이동 조건은 릴리스 확보 실패의 확인. 실행 환경의 권한 거부는 아래 rhwp 권한 거부 항목을 따름
     + (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 첫 GitHub 접근 전에 호출. 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp`를 각각 따로 전달. 도구 응답이 안내하는 접근 경로는 아래 절차에 반영. 도구가 없거나 호출이 거부되면 이 단계를 건너뜀
     + GitHub의 주소 체계와 페이지 구성은 바뀔 수 있음. 모델은 현재 상태를 확인하여 아래 순서로 릴리스를 확보
