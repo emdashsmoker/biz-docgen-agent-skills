@@ -61,7 +61,7 @@
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
     + Colloquial markers (correct them by the list in the Sentences section)
     + Two nouns joined with "와" or "과" (change to "및")
-    + Sentences that read naturally, with their meaning unchanged, when "the author", "to the author", "the model", or "the AI provider" is put in front (meta information the evaluator does not need, so delete them or replace them with slide content)
+    + Sentences that read naturally, with their meaning unchanged, when "the author", "to the author", "the model", or "the AI provider" is put in front (unneeded meta information, so rewrite them as content that reads naturally from the reader's point of view)
 
 ## lint WARN vocabulary
 
