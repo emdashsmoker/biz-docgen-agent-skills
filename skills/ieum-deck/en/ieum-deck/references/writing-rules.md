@@ -59,6 +59,8 @@
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
     + Colloquial markers (correct them by the list in the Sentences section)
     + Two nouns joined with "와" or "과" (change to "및")
+    + Vague sentences that answer "So what?" and "Why so?" only after further breakdown (rewrite them until both answers show)
+    + Meta sentences that still read naturally with "the writer", "I", "the model", "the LLM", or "the AI provider" as the subject (rewrite them from the reader's point of view)
 
 ## lint WARN vocabulary
 

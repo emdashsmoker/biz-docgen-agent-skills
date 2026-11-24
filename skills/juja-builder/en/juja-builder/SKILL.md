@@ -935,6 +935,8 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
 - Do not use contrast constructions ("X가 아닌 Y", "단순한 X를 넘어 Y"). Describe Y directly
 - For count declarations, apply the verdict in the Reader-Perspective Writing section
 - Do not write sentences that describe the text itself or the writing process. Delete "본 제안서는", "앞서 언급한", and "정리하면". Sentences start with content
+- After writing a sentence, ask "So what?" and "Why so?". A sentence that needs further breakdown before it answers is vague. Rewrite it until both answers show
+- After writing a sentence, put "the writer", "I", "the model", "the LLM", or "the AI provider" in the subject position. A sentence that still reads naturally carries meta information. Rewrite it from the reader's point of view
 - Do not expose thinking framework names (MECE, pyramid, first principles, SCQA, SCR, WWH) or skill-operation vocabulary (배점 역산, 밀도, 섹션대장) in the body. "역산" exposes the calculation process even in a schedule context. Do not use it. Describe schedules by result and character, as in "체계적 일정 수립" and "효율적 일정 편성". Module and Task names are the substance of the engagement design. Write them in the manuscripts
 - Use the conventional vocabulary by function in references/lexicon.md. Do not create colloquial or figurative words ("쓰임새", "얼개", "손질") as workarounds for banned words. When `check tone` flags them, replace them from the replacement table
 - Do not use management loanwords (작업분해도, 마일스톤, 임계경로) or software design phrasing ("입력값", "인계"). Replace semi-colloquial words (포인트, 세팅, 케이스, 니즈, 픽스, 체크, 컨펌, 어필, 메리트) with the formal words of the lexicon.md replacement table
