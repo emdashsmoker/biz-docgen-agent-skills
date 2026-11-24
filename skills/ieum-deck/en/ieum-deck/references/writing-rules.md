@@ -6,6 +6,8 @@
 
 - One message per sentence
 - Each 5W1H element appears once in a sentence
+- After writing a sentence, check it by asking "So what does it mean?" and "Why can you say that?"
+- A sentence that must be made more specific or broken down before it can answer the two questions is vague, so rewrite it until it answers them right away
 - Resolve connectives (그리고, 그러나, 하며, 이는) and compound sentences by splitting sentences
 - Use commas for lists of items
 - Write list commas without omission

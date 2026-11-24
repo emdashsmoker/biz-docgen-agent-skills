@@ -913,6 +913,7 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
 ## Sentence Discipline
 
 - One message per sentence. A short sentence in which subject and predicate have only one relation
+- After writing a sentence, ask "So what does it mean?" and "Why can you say that?" A sentence that must be made more specific or broken down before it can answer is vague. Rewrite a vague sentence until it answers both questions right away
 - One sentence per level item. Do not join two sentences on one line with a period. Split the second sentence into a hyphen level or the next ❍. Do not put a period at the end of a line. `check tone` flags periods inside lines and at line ends on □, ❍, hyphen, and ※ lines as FAIL (table cells, footnotes, source lines, and captions are excluded)
     + When a ※ note holds two facts, wrap one in parentheses. For example "※ 사전조사 결과 (착수 후 OO공단 자료로 갱신)"
 - 5W1H short sentences. A sentence holds at most one element each of who, what, when, where, why, and how. If two or more of an element overlap, split the sentence
