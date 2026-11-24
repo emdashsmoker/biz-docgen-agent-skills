@@ -6,6 +6,8 @@
 
 - One message per sentence
 - Each 5W1H element appears once in a sentence
+- After writing a sentence, check it by asking "So what does it mean?" and "Why can you say that?"
+- A sentence that must be made more specific or broken down before it can answer the two questions is vague, so rewrite it until it answers them right away
 - Resolve connectives (그리고, 그러나, 하며, 이는) and compound sentences by splitting sentences
 - Use commas for lists of items
 - Write list commas without omission
@@ -59,6 +61,7 @@
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
     + Colloquial markers (correct them by the list in the Sentences section)
     + Two nouns joined with "와" or "과" (change to "및")
+    + Sentences that read naturally, with their meaning unchanged, when "the author", "to the author", "the model that wrote the text", or "the AI provider" is put in front (unneeded meta information, so rewrite them as content that reads naturally from the reader's point of view)
 
 ## lint WARN vocabulary
 

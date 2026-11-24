@@ -27,6 +27,24 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-24
+
+### ieum-deck
+- Added a sentence rule that asks "So what does it mean?" and "Why can you say that?" after a sentence is written, and rewrites a sentence that cannot answer both questions right away (#180)
+- Added an item to the expressions checked in review: a sentence that still reads naturally, with its meaning unchanged, when "the author", "to the author", "the model that wrote the text", or "the AI provider" is put in front of it, rewritten as content that reads naturally from the reader's point of view (#180)
+
+* 문장을 쓴 뒤 "그래서 무엇을 뜻하는가"와 "왜 그렇게 말할 수 있는가"를 되묻는 문장 규칙 추가 (두 질문에 바로 답하지 못하는 문장의 재작성) (#180)
+* 검수 확인 표현에 문장 앞에 '작성자가', '작성자에게', '글을 작성한 모델이', 'AI 제공자가'를 붙여도 원래 뜻 그대로 읽히는 문장 항목 추가 (독자 관점의 자연스러운 내용으로 재작성) (#180)
+
+### juja-builder
+- Added a sentence rule that asks "So what does it mean?" and "Why can you say that?" after a sentence is written, and rewrites a sentence that cannot answer both questions right away (#180)
+- Added a step to the reader perspective rules that restores an omitted subject by putting "the author", "to the author", "the model that wrote the text", or "the AI provider" in front of the sentence, and rewrites a sentence that still reads naturally with its meaning unchanged (#180)
+- Changed the fix for a sentence that fails the deletion test from replacing it with engagement content to rewriting it as content that reads naturally from the reader's point of view (#180)
+
+* 문장을 쓴 뒤 "그래서 무엇을 뜻하는가"와 "왜 그렇게 말할 수 있는가"를 되묻는 문장 규칙 추가 (두 질문에 바로 답하지 못하는 문장의 재작성) (#180)
+* 독자 관점 서술 규칙에 문장 앞에 '작성자가', '작성자에게', '글을 작성한 모델이', 'AI 제공자가'를 붙이는 생략 주어 복원 절차 추가 (원래 뜻 그대로 읽히는 문장의 재작성) (#180)
+* 삭제 테스트에 해당하는 문장의 처리를 과업 내용 교체에서 독자 관점의 자연스러운 내용 재작성으로 변경 (#180)
+
 ## 2026-11-22
 
 ### Common
