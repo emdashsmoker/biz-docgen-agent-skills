@@ -1,2 +1,2 @@
-fe1856d47aa1741fc9029319f91e3fdea196815a731d5e567c5d575700e360e0  juja-builder-en.skill
-8e6ab610d2fd1277d4290d9fa58a71e7528998d18641c6fa1e85ce155f6b1d1f  juja-builder-ko.skill
+34210b319fa4fc236fb93900c71cea388ded8ecb85aafdaa54ead73a93349040  juja-builder-en.skill
+bb054a1aed1b1e7a7d60b5ac35d10ee8519974023616420d415bf45af93fa52f  juja-builder-ko.skill
