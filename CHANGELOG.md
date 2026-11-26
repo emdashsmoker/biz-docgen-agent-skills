@@ -27,6 +27,18 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-26
+
+### ieum-deck
+- Added a rule that describes the work, actions, procedures and guidelines of individuals, organizations and society through the actor and the actual action, without depicting them as the workings of a computer, machine or software architecture (input, processing, output, pass, gate and so on) (#181)
+
+* 개인, 조직, 사회의 업무, 행동, 절차, 지침 등을 행위 주체와 실제 행위로 서술하는 규칙 추가 (컴퓨터, 기계, 소프트웨어 구조의 작동 방식처럼 묘사한 서술의 방지) (#181)
+
+### juja-builder
+- Changed the scope of the rule against writing materials and people's opinions as if machine-processed to cover the work, actions, procedures and guidelines of individuals, organizations and society (#181)
+
+* 자료와 사람의 의견을 기계 처리처럼 적지 않는 규칙의 적용 범위를 개인, 조직, 사회의 업무, 행동, 절차, 지침 등으로 확대 변경 (#181)
+
 ## 2026-11-24
 
 ### ieum-deck

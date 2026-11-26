@@ -23,6 +23,7 @@
 - Delete colloquial markers or replace them with formal expressions
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
 - Secure formality through vocabulary and endings. Do not overuse jargon beyond the reader's level or engineering and software-design phrasing (input value, output, mapping, interface, pipeline, and so on) as a substitute for formality (use software-design phrasing only where a system architecture is explained)
+- Describe organic and complex matters such as the work, actions, procedures, and guidelines of individuals, organizations, and society through the actor and the actual action. Do not depict them as the workings of a computer, machine, or software architecture (input, processing, output, pass, gate, function-like code schemes, and so on)
 - Plain writing must not underestimate the reader's level through oversimplification (vague catch-all words, childish wording, analogies that distort the substance, and so on)
 - State specialized and technical content accurately, plainly, and clearly, without distorting its meaning
 - Keep grammar correct regardless of the headline style, technicality, or plainness
