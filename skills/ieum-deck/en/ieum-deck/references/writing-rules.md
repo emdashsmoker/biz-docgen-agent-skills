@@ -13,6 +13,8 @@
 - Write list commas without omission
 - Body text uses noun endings
 - Correct a remaining adnominal form ("달성할 필요") to a noun phrase ("달성 필요")
+- Check a noun-ending sentence by restoring it to a predicate form with an added or substituted ending such as -이다, -한다, or -다
+- A sentence that reads unnaturally or carries a different message after restoration is a grammar error and needs rewriting
 - A form with the predicate cut off ("수립하는 것을 목적") is a grammar error
 - Rewrite a sentence with the predicate cut off in the "수립을 목적으로 추진" form (noun-ending conversion rules in `references/headline-patterns.md`)
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
