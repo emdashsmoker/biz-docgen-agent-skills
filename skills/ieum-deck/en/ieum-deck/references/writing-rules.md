@@ -15,6 +15,8 @@
 - Correct a remaining adnominal form ("달성할 필요") to a noun phrase ("달성 필요")
 - A form with the predicate cut off ("수립하는 것을 목적") is a grammar error
 - Rewrite a sentence with the predicate cut off in the "수립을 목적으로 추진" form (noun-ending conversion rules in `references/headline-patterns.md`)
+- Check a noun-ending sentence by restoring it to a plain declarative sentence: fill in the omitted particles and change the ending to "-이다", "-한다", or "-다", or add one of them (e.g. "달성 필요" restores to "달성이 필요하다")
+- A sentence that does not restore to a natural declarative sentence, or whose restored form differs in meaning from the original, is a grammar error, so rewrite it
 - The headline style is chosen in kickoff question 5 (noun style by default, polite style optional)
 - Polite headlines end in the formal 하십시오체 style (e.g. "수립합니다", "확보합니다", "보유하고 있습니다", "추진하겠습니다" and similar forms)
 - Body style is noun-ending regardless of the headline style
