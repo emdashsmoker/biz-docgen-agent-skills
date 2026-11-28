@@ -58,7 +58,7 @@
     + "…으로 추진됩니다" → "…으로 추진"
     + "…을 보유하고 있습니다" → "…보유"
 - The last word of the result is a noun or a noun-form ending (추진, 도출, 제시, 확보, 수행)
-- Check agreement by reading the result with "함" added at the end (e.g. it passes if it reads naturally, like "수립을 목적으로 추진함")
+- Check agreement with the declarative restoration check in the Sentences section of `references/writing-rules.md` (e.g. it passes if "수립을 목적으로 추진" restores naturally to "수립을 목적으로 추진한다" or a similar form)
 - The polite style applies the conversion rules in reverse to the noun patterns to get polite predicates
 
 ## Patterns by topic
