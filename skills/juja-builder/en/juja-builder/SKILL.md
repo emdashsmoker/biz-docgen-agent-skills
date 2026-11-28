@@ -954,6 +954,8 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
     + The full name given in the body on first use covers an abbreviation's full name. The ※ note gives only the meaning
 - Omit the term definition ※ note and the first-use full name for terms and abbreviations readers use at work or in daily life (RFP, consulting, participation rate and so on)
 - Do not use exaggerating modifiers (획기적, 혁신적, 선도적) or glue expressions (이러한 맥락에서)
+- Replace noun-predicate pairs carried over from English word for word ("-로 기능", "회귀 발생", "주장이 약해짐", "경고가 붙음", and similar) with the predicate Korean speakers pair with that noun
+- Use 판정 for an official decision of a review or an inspection. Do not use it in place of 판단, 평가, 확인, 결정, and similar words
 
 ## Common Part
 
@@ -978,7 +980,7 @@ pip install -U "python-hwpx==6.12.0" pillow python-docx pdfplumber --break-syste
 | Figure check | All manuscripts | A table's total row does not match the sum of its items |
 | Common part substitution | 원고/4*.md, 6*.md | Leftover `[확인]`, participation rate above 100% |
 
-- Warnings detect em dashes, compound sentences with connective endings, conjunctive adverbs, contrast constructions, meta statement markers, exposure of thinking framework names, mentions of the RFP, leftover '발주처' naming, superlative assertions, exaggerating modifiers, and level counts over the cap (`check volume` of the original part). They do not count toward the verdict. Check them in the manuscripts and fix
+- Warnings detect em dashes, compound sentences with connective endings, conjunctive adverbs, contrast constructions, meta statement markers, exposure of thinking framework names, mentions of the RFP, leftover '발주처' naming, superlative assertions, exaggerating modifiers, the word 판정, and level counts over the cap (`check volume` of the original part). They do not count toward the verdict. Check them in the manuscripts and fix
 - The source of the judgment criteria is the constants and verdict lists in the settings part of scripts/proposal.py (FORBIDDEN_DEFAULT, TONE_FAIL, TONE_WARN, SENTENCE_WARN, VOLUME_*). If SKILL.md and the settings part disagree, the settings part rules
 - The whitelist (Terms section) is collected automatically from the key wording dictionary of 00_제안전략서.md (RFP terms, proposal notation), the `RFP 용어` table of 00_진단서.md, and the Module and Task names of 02_모듈총괄표.md. Original RFP terms ("데이터 인터페이스 개선") and Module and Task names the user confirmed are masked from the tone verdict
     + It is fixed after step 2 is complete. The fixing conditions are that the module overview table exists and the dictionary has zero `[확인]`. The first `check tone` after the conditions are met fixes it in state.json. Before that, only masking of the collected terms applies. An unfixed state is reported as WARN

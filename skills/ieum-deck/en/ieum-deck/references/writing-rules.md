@@ -63,12 +63,13 @@
     + The subject term repeated in every section ("본 과업은")
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
     + Colloquial markers (correct them by the list in the Sentences section)
+    + Noun-predicate pairs carried over from English word for word ("-로 기능", "회귀 발생", "주장이 약해짐", "경고가 붙음", and similar. Replace them with the predicate Korean speakers pair with that noun)
     + Two nouns joined with "와" or "과" (change to "및")
     + Sentences that read naturally, with their meaning unchanged, when "the author", "to the author", "the model that wrote the text", or "the AI provider" is put in front (unneeded meta information, so rewrite them as content that reads naturally from the reader's point of view)
 
 ## lint WARN vocabulary
 
-- 맥락, 패러다임, 인사이트, 함의, 축, 층위, 정립, 선제, 선점, 게이트, 매핑, 컨틴전시, 딥다이브
+- 맥락, 패러다임, 인사이트, 함의, 축, 층위, 정립, 선제, 선점, 게이트, 매핑, 컨틴전시, 딥다이브, 판정
 - The check targets these words when no other Hangul is attached before or after them
 
 ## Content composition
