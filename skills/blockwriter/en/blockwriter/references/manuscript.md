@@ -155,7 +155,7 @@ An adjustment line changes the glyph ratio, letter spacing or line spacing of a 
 - For □, choose keyword style or sentence style (a 1-2 line message ending in a noun form) by the nature of the section, and use one style consistently within a section
     - (Argument sections) Background, necessity, implications, and strategy derivation sections use sentence style. Examples are "중앙정부는 공공 서비스 전환을 위한 제도 기반 마련" (the central government lays the institutional basis for public service transition) and "주요국의 기술 표준 경쟁 심화" (intensifying technical standards competition among major countries)
     - (Summary sections) Project purpose and scope, process, trend analysis, and related-law list sections use keyword style. Examples are "과업 범위" (project scope), "정책 동향" (policy trends), and "관련 법률 (제정 연도, 최근 개정 연도)" (related laws (year enacted, year last amended))
-    - (Ending of sentence style) Write a sentence-style □ so that filling in the omitted particles and the sentence ending ("-이다", "-한다", "-다" and similar) restores it to a natural declarative sentence with the same meaning
+    - (Ending of sentence style) Write a sentence-style □ so that adding the omitted particles and the sentence ending ("-이다", "-한다", "-다" and similar) restores it to a natural declarative sentence with the same meaning
 - The section and subsection levels form the TOC skeleton, so they stay fixed once the TOC is set. The levels that grow or shrink as needed are 가나다 and □
 - Use section numbers only to the depth the content needs to be divided. The usual depth of a chapter document is the subsection (N.N.N)
 - For a flat document, section numbers (`1.`, `2.`) and 가나다 are the natural structure. Use a subsection (`1.1`) only when a section needs one more level of division
