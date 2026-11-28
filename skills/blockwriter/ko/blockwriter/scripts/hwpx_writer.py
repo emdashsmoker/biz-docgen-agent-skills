@@ -836,7 +836,7 @@ class Builder(M.TocMarks):
 
     # ── 실행 ────────────────────────────────────────────────────────────
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
-        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음
+        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 확인하여 쓰이지 않을 책갈피를 붙이지 않음
         if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
             print(msg("warn_no_toc_style"))
             self.toc = False

@@ -208,7 +208,7 @@ FREE_FONT_LICENSE_FILE = "OFL.txt"
 USER_FONT_DIR = os.path.expanduser("~/.local/share/fonts/blockwriter")
 FONTCONFIG_FILE = os.path.expanduser("~/.config/fontconfig/conf.d/60-blockwriter.conf")
 # KS X 1001 한자 영역(EUC-KR 첫 바이트 0xCA-0xFD, 둘째 바이트 0xA1-0xFE, 4,888자). fonts는 이 중 통합 한자 4,620자가
-# 모두 있는지로 글꼴의 한자 포함 여부를 판정. 나머지 268자는 같은 한자의 음이 다른 호환 코드
+# 모두 있는지로 글꼴의 한자 포함 여부를 확인. 나머지 268자는 같은 한자의 음이 다른 호환 코드
 KSX1001_HANJA_LEAD = range(0xCA, 0xFE)
 KSX1001_HANJA_TRAIL = range(0xA1, 0xFF)
 CJK_UNIFIED_RANGE = (0x4E00, 0x9FFF)   # 한중일 통합 한자 기본 영역
@@ -218,7 +218,7 @@ FONT_DIRS = {
     "darwin": ["/Library/Fonts", "~/Library/Fonts", "/System/Library/Fonts"],
 }
 FONT_FILE_EXTS = (".ttf", ".otf", ".ttc")
-REGULAR_WEIGHT = 400   # 같은 이름의 파일이 여럿이면 보통 굵기 파일로 한자를 판정
+REGULAR_WEIGHT = 400   # 같은 이름의 파일이 여럿이면 보통 굵기 파일로 한자를 확인
 # 양식 글꼴의 확보 경로
 FONT_SOURCES = {"나눔고딕": "src_nanum_auto", "나눔바른고딕": "src_nanum_manual"}   # 값은 MESSAGES 키
 

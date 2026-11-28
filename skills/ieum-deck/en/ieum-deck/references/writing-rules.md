@@ -59,6 +59,7 @@
 
 - Expressions lint does not check are checked in the in-depth review and visual review
     + Self-posed questions answered by the writer
+    + Literal translations of English predicates (-로 기능한다 "functions as", 중요한 역할을 한다 "plays an important role", 방어 가능하다 "defensible", 강해진다 and 약해진다 "strengthens, weakens"), rewritten as the actual act or the property that changes
     + Exposed framework names (MECE, pyramid)
     + The subject term repeated in every section ("본 과업은")
     + Sentences implying shortcomings in the contracting agency's policies or RFP (turn them into positive statements)
@@ -68,7 +69,7 @@
 
 ## lint WARN vocabulary
 
-- 맥락, 패러다임, 인사이트, 함의, 축, 층위, 정립, 선제, 선점, 게이트, 매핑, 컨틴전시, 딥다이브
+- 맥락, 패러다임, 인사이트, 함의, 축, 층위, 정립, 선제, 선점, 게이트, 매핑, 컨틴전시, 딥다이브, 판정
 - The check targets these words when no other Hangul is attached before or after them
 
 ## Content composition

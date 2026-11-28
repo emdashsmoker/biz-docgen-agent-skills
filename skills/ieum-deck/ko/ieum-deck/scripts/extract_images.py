@@ -5,11 +5,11 @@
 manifest.json 항목: {file, source, page, member, w, h, bytes, ratio, kind}
 - page 는 PDF 쪽 번호이며 hwpx, docx, pptx 는 null (파일 안에 쪽 구분이 없음)
 - member 는 hwpx, docx, pptx 의 ZIP 안 이미지 경로이며 PDF 는 null. 본문 XML 에서 이 파일을 참조하는 위치로 쓰임새를 확인
-kind 판정: logo(작은 이미지와 가로형 CI), photo(사진), diagram(도식으로 추정), map(가로세로 비 1에 가까운 대형)
+kind 분류: logo(작은 이미지와 가로형 CI), photo(사진), diagram(도식으로 추정), map(가로세로 비 1에 가까운 대형)
 사용 지침 (SKILL.md 와 동일)
 - 재사용 대상: 유사 실적 사진, 지도, 현장 사진, 회사·기관 로고, 재현이 어려운 복잡한 아키텍처 도식
 - 재사용 금지: 본 스킬이 재현하는 방법론 도식, 차트, 모듈·Task 구조도, 표를 캡처한 이미지
-- 판정은 사람이 수행. 스크립트는 후보만 제시
+- 결정은 사람이 수행. 스크립트는 후보만 제시
 """
 import io
 import json

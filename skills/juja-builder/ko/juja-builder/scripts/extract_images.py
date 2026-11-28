@@ -3,11 +3,11 @@
 사용: python3 extract_images.py <입력 파일> <출력 디렉터리> [--min-px 64] [--min-kb 2]
 산출: 출력 디렉터리에 img_0001.png 형식 파일과 manifest.json
 manifest.json 항목: {file, page(또는 slide), w, h, bytes, ratio, kind}
-kind 판정: logo(작은 이미지와 가로형 CI), photo(사진), diagram(도식으로 추정), map(가로세로 비 1에 가까운 대형)
+kind 분류: logo(작은 이미지와 가로형 CI), photo(사진), diagram(도식으로 추정), map(가로세로 비 1에 가까운 대형)
 사용 지침 (SKILL.md 와 동일)
 - 채택 대상: 발주처 사업 개념도와 추진체계도, 유사 실적의 현장 사진과 결과물 화면, 차트, 구조도와 아키텍처 도식, 지도, 회사·기관 로고
 - 미채택 대상: 표를 캡처한 이미지(표로 재구성), 불릿과 배경 조각, 저해상도 이미지, 다른 제안사의 도식
-- 판정은 사람이 수행. 스크립트는 후보만 제시
+- 판단은 사람이 수행. 스크립트는 후보만 제시
 """
 import json
 import sys
@@ -90,7 +90,7 @@ def from_zip(src, out, prefix):
                 continue  # hwpx의 Preview/PrvImage.png는 첫 쪽 미리보기라 삽입 후보가 아님
             data = zf.read(name)
             if data[:2] == b"BM":
-                data = bmp_to_png(data)  # 압축하지 않은 BMP는 용량 하한과 유형 판정(kind_of)을 무력화하므로 PNG로 통일
+                data = bmp_to_png(data)  # 압축하지 않은 BMP는 용량 하한과 유형 분류(kind_of)를 무력화하므로 PNG로 통일
             items.append((Path(name).stem, data, 0, 0, None))
     return items
 

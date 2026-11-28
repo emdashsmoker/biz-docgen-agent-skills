@@ -62,7 +62,7 @@ POINTS_PER_INCH = 72        # PDF 좌표 단위. 렌더 배율 = DPI ÷ 72
 GRID_STEP_PERCENT = 10      # 눈금 간격. --crop 값은 눈금에서 읽은 백분율
 GRID_COLOR = (220, 0, 0)
 TRIM_TOLERANCE = 12         # 여백 제거 시 배경색과 같은 색으로 보는 채널 차이
-RECOMPRESSOR_PRODUCERS = ("ghostscript", "ilovepdf", "smallpdf", "pdfcompressor", "sejda")  # 용량 압축과 재저장 도구의 producer 표지 (안내 문구용. 중단 판정은 텍스트 검사가 담당)
+RECOMPRESSOR_PRODUCERS = ("ghostscript", "ilovepdf", "smallpdf", "pdfcompressor", "sejda")  # 용량 압축과 재저장 도구의 producer 표지 (안내 문구용. 중단 결정은 텍스트 검사가 담당)
 METRIC_COMPATIBLE_FONTS = ("arial", "calibri", "cambria", "times new roman", "courier new")  # LibreOffice가 글자 폭이 같은 대체 글꼴(Liberation, Carlito, Caladea)로 바꾸므로 배치가 유지됨
 EXIT_GARBLED = 2            # 텍스트 레이어 불완전으로 중단했음을 호출부가 구분하기 위한 종료 코드
 F_PDF, F_PAGES_JSON, F_TEXT = "발표자료.pdf", "pages.json", "원문.md"
@@ -134,7 +134,7 @@ def to_pdf(src: str, out_dir: str) -> str:
 
 # ── 텍스트 ───────────────────────────────────────────────────────────
 def _is_common_hangul(ch: str) -> bool:
-    # Why 길이 판정: 파이썬 euc-kr 코덱은 KS X 1001 밖의 음절도 8바이트 조합열로 부호화하므로 예외가 나지 않음
+    # Why 길이 확인: 파이썬 euc-kr 코덱은 KS X 1001 밖의 음절도 8바이트 조합열로 부호화하므로 예외가 나지 않음
     return len(ch.encode("euc-kr", "ignore")) == 2
 
 
@@ -408,7 +408,7 @@ def extract_embedded_images(pdf: str, out_dir: str) -> None:
 def probe_text_layer(doc) -> tuple[bool, str]:
     """쪽 렌더링 전에 텍스트 레이어를 검사. 반환은 (불완전 여부, 안내 문구)
     Why 선행 검사: 용량 압축 도구로 재저장한 PDF는 글자가 임의 코드로 바뀌거나 윤곽선이 되어 본문 추출이 무의미해짐.
-      수십 쪽을 렌더링한 뒤에 알리면 시간과 열람 비용을 이미 쓴 뒤이므로 가장 먼저 판정"""
+      수십 쪽을 렌더링한 뒤에 알리면 시간과 열람 비용을 이미 쓴 뒤이므로 가장 먼저 확인"""
     text = "\n".join((page.extract_text() or "") for page in doc.pages)
     _, fixed, rare, hangul = repair_shifted_hangul(text)
     # Why 오자만 중단 사유: 공백만 빠진 본문은 글자가 온전하여 띄어쓰기 복원으로 이관 가능. 다른 음절로 바뀐 본문은 복원 불가

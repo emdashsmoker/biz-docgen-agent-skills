@@ -60,7 +60,7 @@ SHAPE_ID_START = 2
 # 누적 계열 차트의 묶음 방식. 이 값이면 데이터 레이블 위치를 지정할 수 없음
 STACKED_GROUPINGS = ("stacked", "percentStacked")
 
-# 묶음 방식을 갖는 차트 종류. 누적 판정 대상
+# 묶음 방식을 갖는 차트 종류. 누적 여부 확인 대상
 GROUPING_CHART_TAGS = (
     "c:barChart",
     "c:bar3DChart",
@@ -92,7 +92,7 @@ LABEL_LAYOUT_PATTERN = re.compile(r"<c:layout>.*?</c:layout>", re.S)
 # 계열 레이블 묶음에만 허용되는 요소. 계열 서식을 항목 레이블에 복사할 때 제외
 SERIES_ONLY_LABEL_PATTERN = re.compile(r"<c:showLeaderLines[^>]*/>|<c:leaderLines>.*?</c:leaderLines>|<c:extLst>.*?</c:extLst>", re.S)
 
-# 슬라이드 부품 판정. id 중복 집계 대상
+# 슬라이드 부품 여부 확인. id 중복 집계 대상
 SLIDE_PART_PATTERN = re.compile(r"^ppt/slides/slide\d+\.xml$")
 
 # LibreOffice 변환 제한 시간. 초 단위
@@ -797,7 +797,7 @@ def count_xml_defects(data: bytes) -> dict:
 
 
 def inspect(pptx_path: Path) -> dict:
-    """PPTX 1개의 결함 수치 전체. validate.py가 같은 함수를 사용하여 판정을 일치시킴"""
+    """PPTX 1개의 결함 수치 전체. validate.py가 같은 함수를 사용하여 검사 결과를 일치시킴"""
     data = pptx_path.read_bytes()
     metrics = count_package_defects(data)
     metrics.update(count_xml_defects(data))

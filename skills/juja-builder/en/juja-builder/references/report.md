@@ -198,7 +198,7 @@
     + The verdict is one of 지지 (supporting), 반증 (refuting), or 배경 (background). Background is a current-state fact unrelated to the hypothesis
     + The source is organization or author (year), material name, and the address of the subpage where the information appears. For figures retrieved from a database, state the database name, query conditions, and retrieval date together
 
-| ID | 가설 | 판정 | 사실 | 수치와 단위 | 기준 시점 | 출처 | 반영 절 |
+| ID | 가설 | 평가 | 사실 | 수치와 단위 | 기준 시점 | 출처 | 반영 절 |
 |---|---|---|---|---|---|---|---|
 | F01 | H1 | 지지 | [확인] | [확인] | [확인] | [확인] | [확인] |
 

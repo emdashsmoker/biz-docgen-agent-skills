@@ -572,7 +572,7 @@ FAIL_PATTERNS = [
     (r"그리고 |그러나 |하지만 |그러므로 |그렇기 때문에|(?:^|\s)이는 ", "connective"),  # endings such as "줄이는 ", "높이는 " are excluded
     (r"(하는|되는|인) 것을 목적$|것을 목표$|것으로 함$", "noun form with the predicate cut off (grammar error. Rewrite in the '수립을 목적으로 추진' form)"),
 ]
-WARN_WORDS = ["맥락", "패러다임", "인사이트", "함의", "축", "층위", "정립", "선제", "선점", "게이트", "매핑", "컨틴전시", "딥다이브"]
+WARN_WORDS = ["맥락", "패러다임", "인사이트", "함의", "축", "층위", "정립", "선제", "선점", "게이트", "매핑", "컨틴전시", "딥다이브", "판정"]
 POLITE_END = re.compile(r"(합니다|입니다|됩니다|습니다|십시오)\s*$")
 # Company fact placeholders. Kept until the user confirms
 FACT_PLACEHOLDERS = ["[회사 확인]", "[실적 확인]", "[인력 확인]", "[전문분야]", "[대표 실적]", "[N]명", "[기관명]", "[발주기관]", "[발주처]", "[과제명]", "[금액]"]

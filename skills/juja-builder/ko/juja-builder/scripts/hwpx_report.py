@@ -252,7 +252,7 @@ def _alt(tokens: list[str]) -> str:
 
 
 def _compile_notation():
-    """원고 표기 정규식을 현재 라벨로 다시 만듦. 기본 라벨이면 종전 정규식과 같은 판정"""
+    """원고 표기 정규식을 현재 라벨로 다시 만듦. 기본 라벨이면 종전 정규식과 같은 결과"""
     global CAPTION_RE, FIG_CAPTION_RE, UNIT_RE, SOURCE_RE, SOURCE_PAREN_RE
     n = _labels["notation"]
     paren = _alt([t for t in n["source"] if t not in SOURCE_PAREN_EXCLUDE])
@@ -405,7 +405,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if m := FIT_RE.match(stripped):
             elems.append(Element("fit", stripped, data={"range": FIT_RANGE_WORDS.get(m.group(1)), "spec": m.group(2) or ""}))
             continue
-        if stripped.startswith(">"):  # 인용 줄은 내용으로 역할 판정 (출처 표기면 출처, 아니면 주석)
+        if stripped.startswith(">"):  # 인용 줄은 내용으로 역할 분류 (출처 표기면 출처, 아니면 주석)
             body = stripped.lstrip("> ").strip()
             kind = "source" if SOURCE_RE.match(body) else "note"
             if kind == "source":
@@ -632,7 +632,7 @@ def lint(elems: list[Element], long_table: str | None = None) -> list[str]:
 def lint_source_position(elems: list[Element]) -> list[str]:
     """표와 그림에 붙지 않은 출처 줄 가운데 같은 제목이나 밴드 아래에 앞 문단이 없는 줄.
     조판기는 이 줄을 각주로 옮기지 못하고 ※ 주석 문단으로 출력.
-    표와 그림 직후의 부기, 출처, 단위 줄은 블록 하단 행으로 붙으므로 판정에서 제외"""
+    표와 그림 직후의 부기, 출처, 단위 줄은 블록 하단 행으로 붙으므로 점검에서 제외"""
     issues, has_para, after_block = [], False, False
     for e in elems:
         if after_block and e.kind in ("note", "source", "unit"):
@@ -1004,7 +1004,7 @@ class TocMarks:
         self.toc_items.append((kind, text, name))
 
     def check_toc_styles(self):
-        """목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음"""
+        """목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 확인하여 쓰이지 않을 책갈피를 붙이지 않음"""
         if self.toc and not (self.p.get("toc_chapter") and self.p.get("toc_section")):
             print("WARN: 프로파일에 목차 스타일(toc_chapter, toc_section)이 없어 --toc 생략")
             self.toc = False

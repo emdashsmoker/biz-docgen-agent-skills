@@ -79,7 +79,7 @@ def release_escapes_in_file(path: str) -> None:
 SQUARE_MARK = ("□", "■", "☐")
 CIRCLE_MARK = ("○", "❍", "◦", "ㅇ")
 NOTE_MARK = ("※", "* ")   # '*' 주석은 뒤에 공백이 있을 때만. '*기울임*'과 '**굵게**'로 시작하는 줄은 서술
-MERGE_MARKS = ("^", "<")  # 병합 지시 셀. 내용이 없으므로 폭, 줄 수, 정렬 판정에서 제외
+MERGE_MARKS = ("^", "<")  # 병합 지시 셀. 내용이 없으므로 폭, 줄 수, 정렬 결정에서 제외
 NUMERIC_CELL = re.compile(r"^[-+±(]?[\d,]+(?:\.\d+)?%?\)?$")
 BULLET_PREFIXES = ("·", "•", "ㆍ", "∙", "○", "◦", "❍", "□", "■", "※", "- ", "▪")
 CELL_BULLET_MARKS = ("◦", "○", "ㅇ", "·", "•", "ㆍ")   # 셀 ◦ 글머리 스타일로 바꾸는 줄 머리 기호
@@ -134,7 +134,7 @@ def _strip_marker(text: str, marks: tuple) -> str | None:
 def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
     lines = hold_escapes(Path(path).read_text(encoding="utf-8")).splitlines()
     footnotes: dict[str, str] = {}
-    # 불릿 계위는 들여쓰기 폭의 순위로 판정 (폭 값 자체는 원고마다 다름)
+    # 불릿 계위는 들여쓰기 폭의 순위로 결정 (폭 값 자체는 원고마다 다름)
     indents = sorted({len(m.group(1).expandtabs(4)) for ln in lines if (m := BULLET_RE.match(ln))})
     elems: list[Element] = []
     i = 0
@@ -196,7 +196,7 @@ def parse_markdown(path: str) -> tuple[list[Element], dict[str, str]]:
         if m := COL_WIDTH_RE.match(stripped):
             elems.append(Element("colwidth", m.group(1).strip()))
             continue
-        if stripped.startswith(">"):   # 인용 줄은 내용으로 역할 판정 (출처 표기면 출처, 아니면 주석)
+        if stripped.startswith(">"):   # 인용 줄은 내용으로 역할 결정 (출처 표기면 출처, 아니면 주석)
             body = stripped.lstrip("> ").strip()
             if SOURCE_RE.match(body):
                 body, i = _read_source(lines, i, body)
@@ -425,7 +425,7 @@ def lint(elems: list[Element], footnotes: dict | None = None) -> list[str]:
 
 
 def _lint_attached(elems: list[Element], footnotes: dict) -> list[str]:
-    """표와 그림에 부착한 뒤의 요소 순서로 판정하는 결함 (각주 참조, 출처 줄 위치).
+    """표와 그림에 부착한 뒤의 요소 순서로 점검하는 결함 (각주 참조, 출처 줄 위치).
     attach_block_notes는 요소를 고치므로 사본에 적용하여 조판기가 받을 원고를 바꾸지 않음"""
     issues, refs, has_para = [], [], False
     for e in attach_block_notes(copy.deepcopy(elems)):
@@ -507,7 +507,7 @@ def text_units(text: str, space_em: float = C.SPACE_EM_HWPX, ratio: float = 100,
 
 
 def weighted_len(text: str, space_em: float = C.SPACE_EM_HWPX, ratio: float = 100, spacing: float = 0) -> int:
-    """글자 폭 합의 올림값. 줄 수와 정렬 판정처럼 글자가 넘치면 안 되는 판정에 사용"""
+    """글자 폭 합의 올림값. 줄 수와 정렬 결정처럼 글자가 넘치면 안 되는 계산에 사용"""
     return math.ceil(round(text_units(text, space_em, ratio, spacing), 6))   # 소수 누적 오차로 1이 더 올라가지 않게 반올림
 
 
@@ -598,7 +598,7 @@ def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str, nowrap
 
 
 def width_pct(w: float, max_w: int) -> float:
-    """폭(HWPUNIT)을 열 폭 줄과 같은 단위(표 폭 상한 대비 %)로 바꾼 값. 출력 자릿수로 반올림하여 출력값으로 판정"""
+    """폭(HWPUNIT)을 열 폭 줄과 같은 단위(표 폭 상한 대비 %)로 바꾼 값. 출력 자릿수로 반올림하여 출력값으로 판단"""
     return round(w * C.COL_WIDTH_PCT_MAX / max_w, C.COL_WIDTH_PCT_DIGITS)
 
 
@@ -809,7 +809,7 @@ def hmerge_spans(rows: list[list[str]]) -> list[tuple[int, int, int]]:
 
 def col_aligns(rows: list[list[str]], explicit: list, hdr: int = 1) -> list[str]:
     """정렬 결정 단위는 열. 명시 마커 > 글머리 포함 LEFT > CENTER.
-    판정 대상은 머리글 행(hdr개)을 뺀 본문 셀이며 병합 지시 셀은 내용이 없으므로 제외.
+    결정 대상은 머리글 행(hdr개)을 뺀 본문 셀이며 병합 지시 셀은 내용이 없으므로 제외.
     Why: 열 정렬은 표 안에서 열이 하는 역할로 정해짐. 셀 글자의 숫자 모양(연도 2005, 금액 2,005)과 글자 수로는 역할을 구분할 수 없음.
     수량 열의 RIGHT와 서술형 설명 열의 LEFT는 표 전체를 보는 원고 작성자가 마커로 지정"""
     ncol = max(len(r) for r in rows)
@@ -826,7 +826,7 @@ def col_aligns(rows: list[list[str]], explicit: list, hdr: int = 1) -> list[str]
 
 
 def table_plan(e: Element, merge_mode: str) -> dict:
-    """표 하나의 조판 계획. HWPX와 DOCX가 같은 병합, 정렬, 머리글 판정을 쓰도록 한곳에서 계산."""
+    """표 하나의 조판 계획. HWPX와 DOCX가 같은 병합, 정렬, 머리글 결정을 쓰도록 한곳에서 계산."""
     rows = pad_rows(e.data["rows"])
     hdr = header_rows(rows)
     vspans = merge_spans(rows, merge_mode, hdr) if merge_mode != "none" else []
@@ -1063,7 +1063,7 @@ def heading_label(profile: dict, counters: dict, level: int, text: str) -> str:
 
 
 class Numbering:
-    """장, 절, 소절, 가나다 번호와 쪽 나눔 판정. HWPX와 DOCX가 같은 규칙을 쓴다."""
+    """장, 절, 소절, 가나다 번호와 쪽 나눔 결정. HWPX와 DOCX가 같은 규칙을 쓴다."""
 
     def __init__(self, page_break: str):
         self.page_break = page_break   # chapter | section | none
