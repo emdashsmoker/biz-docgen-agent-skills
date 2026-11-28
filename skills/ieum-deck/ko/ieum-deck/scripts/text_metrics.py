@@ -13,7 +13,7 @@ FM_PATH = HERE.parent / "assets" / "font-metrics.json"
 FM = json.load(open(FM_PATH, encoding="utf-8")) if FM_PATH.exists() else None  # 나눔고딕 실측 폭 (em). 없으면 tokens.js 근사 폭
 
 # 글 폭 모델: 빌드(atoms.js 의 charEm, scriptOf, spanEm, textEm, estimateLines)와 같은 규칙. 상수는 빌드가 limits.json 에 기록한 tokens.js METRIC
-# Why: 검수가 빌드와 다른 폭으로 재면 빌드가 맞춘 상자를 넘침으로 판단함. 이전 근사(한글 1.0em, 미측정 문자 0.55em, 계열 경계 간격 없음)는
+# Why: 검수가 빌드와 다른 폭으로 재면 빌드가 맞춘 상자를 넘침으로 분류함. 이전 근사(한글 1.0em, 미측정 문자 0.55em, 계열 경계 간격 없음)는
 #      견본 2종을 4판형(16:9, A4, 10.83, 4:3)으로 렌더한 글 상자 문단 7,337개 중 319개의 줄 수를 렌더와 다르게 셌고,
 #      넘침 FAIL 46건 중 43건은 렌더에서 글이 상자를 0.02인치 넘게 벗어나지 않았음.
 #      이 모델은 줄 수가 렌더와 다른 문단 41개. 넘침 FAIL 10건 중 7건은 렌더에서 넘치지 않음 (7건 모두 줄 수는 렌더와 같고 차이는 상자 여백과 행간 계산에서 생김)

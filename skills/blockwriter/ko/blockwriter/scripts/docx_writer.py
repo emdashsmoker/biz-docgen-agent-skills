@@ -239,7 +239,7 @@ class DocxBuilder(M.TocMarks):
         self._fix_style_order()
 
     def _fix_style_order(self):
-        """pPr 안 자식 순서를 스키마 순서로 정렬 (Word는 순서가 어긋난 문서를 손상으로 판단)"""
+        """pPr 안 자식 순서를 스키마 순서로 정렬 (Word는 순서가 어긋난 문서를 손상으로 인식)"""
         order = ["pStyle", "keepNext", "keepLines", "pageBreakBefore", "widowControl", "numPr", "pBdr", "shd", "tabs",
                  "suppressAutoHyphens", "autoSpaceDE", "autoSpaceDN", "snapToGrid", "spacing", "ind", "jc", "outlineLvl",
                  "sectPr"]

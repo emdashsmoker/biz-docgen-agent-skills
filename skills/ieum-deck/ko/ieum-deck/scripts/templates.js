@@ -196,7 +196,7 @@ const cellList = (v) => (v && v.merged ? [] : (cellItems(v) || [cellText(v)]).fl
 const DEFAULT_LABEL_COLS = [0]; // labelCols 생략 시 구분 열 (bulletRows 에서 빼는 열)
 const arrayOr = (v, fallback) => (Array.isArray(v) ? v : fallback);
 /** 불릿 셀 여부 확인. 항목 2개 이상 셀과 storyboard 의 bulletRows, bulletCols 로 지정한 줄의 항목 1개 셀
- *  Why: 비교 줄 조건과 표 전체 조건은 표의 의미를 아는 작성자가 판단하고 빌더는 지정된 줄만 적용
+ *  Why: 비교 줄 조건과 표 전체 조건은 표의 의미를 아는 작성자가 검토하고 빌더는 지정된 줄만 적용
  *  bulletRows 는 labelCols 의 구분 열 칸을 빼고 적용. 빈 칸, 병합으로 가려진 칸, 하베이 볼 칸은 제외
  *  tableMetrics(열 폭, 기본 정렬)와 tableBlock(문단)이 같이 사용 (확인 결과가 다르면 열 폭 계산에서 불릿 들여쓰기 폭이 빠짐) */
 function isBulletCell(tb, ri, ci, v) {
@@ -315,7 +315,7 @@ function tableColW(tb, w, sz, listCols, dataCols) {
     });
   }));
   const sN = sumOf(nat);
-  // 자료 열 묶음: 같은 종류(숫자, 하베이 볼, 두 글자 이하 기호)의 자료 열이 2개 이상 이어진 구간 (역할 부호, 연도별 수치, 대안별 평가)
+  // 자료 열 묶음: 같은 종류(숫자, 하베이 볼, 두 글자 이하 기호)의 자료 열이 2개 이상 이어진 구간 (역할 부호, 연도별 수치, 대안별 점수)
   const groups = [];
   for (let i = 0; i < ncol; i++) {
     if (!dataCols || !dataCols[i]) continue;

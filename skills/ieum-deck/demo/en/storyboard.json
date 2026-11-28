@@ -87,7 +87,7 @@
        {"label": "Option 2\nCloud service", "items": ["Private cloud AI contract", "Certified service features"]},
        {"label": "Option 3\nGov. platform", "items": ["Platform models and GPUs", "Gov. network documents"]}
       ]}},
-     {"title": "Evaluation (※ preliminary draft)",
+     {"title": "Comparison result (※ preliminary draft)",
       "block": {"kind": "table",
        "head": ["Criterion", "Weight", "Opt. 1", "Opt. 2", "Opt. 3"],
        "rows": [

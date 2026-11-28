@@ -306,7 +306,7 @@ PERIOD_END_RE = re.compile(r"[가-힣)\]\"”'’%]\.\s*$")
 TONE_WARN = [(r"(최대|최초|유일|최고|최상)의?\s", "최상급 단정. 비교 근거 확인"),
              (r"\bRFP\b|제안요청서|과업지시서", "RFP 언급. 요구항목 조견표의 머리글 외에는 과업 내용으로 서술. 기관 지칭이 필요하면 기관 실명"),
              (r"(획기적|혁신적|선도적|압도적|진정한)", "과장 수식어"),
-             (r"판정", "판정. 판단, 평가, 확인, 결정 등 실제 행위로 교체")]
+             (r"판정", "판정. 검토, 확인, 결정 등 실제 행위로 교체")]
 # 기관 호칭 점검. Why: '발주처'는 제안사 쪽에서 상대를 부르는 작업 용어. 원고에 옮겨지면 독자를 제3자로 세우는 공급자 시각의 문장이 되므로 실명으로 유도
 CLIENT_TERM = r"발주\s?(처|기관|부서)"
 CLIENT_SUBJECT_RE = re.compile(CLIENT_TERM + r"(는|은|가|이|에서는|께서는)(?![가-힣])")
@@ -434,7 +434,7 @@ class ProposalLayout:
 
     def _cell_line_role(self, line: str) -> str | None:
         """기호 하나만 있는 셀 줄(비교 매트릭스의 ○ 등)은 글머리로 보지 않는다.
-        Why: lib는 ○로 시작하는 줄을 셀 글머리로 판단해 기호를 지우고 글머리 스타일을 입힌다. ●, ◐와 크기와 정렬이 어긋났다."""
+        Why: lib는 ○로 시작하는 줄을 셀 글머리로 인식해 기호를 지우고 글머리 스타일을 입힌다. ●, ◐와 크기와 정렬이 어긋났다."""
         if len(line.strip()) <= 1:
             return None
         return super()._cell_line_role(line)
@@ -2393,7 +2393,7 @@ _ORIGINAL_COL_ALIGNS = lib.col_aligns
 
 
 def _col_aligns_symbol_neutral(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
-    """기호 하나만 있는 셀(비교 매트릭스의 ○, 일정표의 ■)은 열 정렬 판단에서 글머리로 세지 않는다.
+    """기호 하나만 있는 셀(비교 매트릭스의 ○, 일정표의 ■)은 열 정렬 결정에서 글머리로 세지 않는다.
     Why: lib는 ○로 시작하는 셀이 있으면 열을 LEFT로 정한다. 기호 열이 ●, ◐와 함께 좌측으로 쏠렸다. 명시 마커는 종전대로 우선."""
     masked = [rows[0]] + [["" if v.strip() in lib.BULLET_PREFIXES else v for v in r] for r in rows[1:]]
     return _ORIGINAL_COL_ALIGNS(masked, explicit)

@@ -50,7 +50,7 @@ FOOTNOTE_SUFFIX = ")"      # 각주 번호 뒤 글자. hwpx 각주 번호 형식
 TABLE_IN_MARGIN = (510, 510, 141, 141)          # 표 기본 셀 여백 좌, 우, 위, 아래 (python-hwpx 표 기본값과 같음)
 NOTE_BOOKMARK_PREFIX = "_RefNote"   # 출처 각주 통합에서 첫 각주 참조를 감싸는 책갈피 이름의 접두 (뒤에 각주 순번)
 TOC_BOOKMARK_ID_BASE = 1000000      # 목차 책갈피 id 시작값. 각주 통합용 책갈피 id(각주 순번, 1부터)와 겹치지 않는 범위
-# 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 판단함
+# 서식 요소의 스키마 순서. Word는 순서가 어긋난 요소를 손상으로 인식함
 TCPR_ORDER = ("cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar",
               "textDirection", "tcFitText", "vAlign", "hideMark")
 TBLPR_ORDER = ("tblStyle", "tblpPr", "tblOverlap", "bidiVisual", "tblStyleRowBandSize", "tblStyleColBandSize", "tblW",

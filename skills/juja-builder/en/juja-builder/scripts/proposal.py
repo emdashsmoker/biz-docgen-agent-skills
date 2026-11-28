@@ -294,7 +294,7 @@ PERIOD_END_RE = re.compile(r"[가-힣)\]\"”'’%]\.\s*$")
 TONE_WARN = [(r"(최대|최초|유일|최고|최상)의?\s", "superlative assertion. Check the comparison grounds"),
              (r"\bRFP\b|제안요청서|과업지시서", "RFP mention. Outside the header of the requirement quick-reference table, describe engagement content. If an organization must be named, use its real name"),
              (r"(획기적|혁신적|선도적|압도적|진정한)", "exaggerating modifier"),
-             (r"판정", "판정 (ruling). Replace with the actual act such as 판단, 평가, 확인, 결정")]
+             (r"판정", "판정 (ruling). Replace with the actual act such as 검토, 확인, 결정")]
 # Agency naming verdict. Why: '발주처' is a working term the proposer side uses for the counterpart. Carried into manuscripts it makes supplier-view sentences that set the reader as a third party, so the real name is prompted
 CLIENT_TERM = r"발주\s?(처|기관|부서)"
 CLIENT_SUBJECT_RE = re.compile(CLIENT_TERM + r"(는|은|가|이|에서는|께서는)(?![가-힣])")

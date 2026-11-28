@@ -598,7 +598,7 @@ def fixed_col_widths(spec: str | None, ncol: int, max_w: int, title: str, nowrap
 
 
 def width_pct(w: float, max_w: int) -> float:
-    """폭(HWPUNIT)을 열 폭 줄과 같은 단위(표 폭 상한 대비 %)로 바꾼 값. 출력 자릿수로 반올림하여 출력값으로 판단"""
+    """폭(HWPUNIT)을 열 폭 줄과 같은 단위(표 폭 상한 대비 %)로 바꾼 값. 출력 자릿수로 반올림하여 출력값으로 비교"""
     return round(w * C.COL_WIDTH_PCT_MAX / max_w, C.COL_WIDTH_PCT_DIGITS)
 
 

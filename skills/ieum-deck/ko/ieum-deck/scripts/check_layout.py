@@ -471,7 +471,7 @@ def main():
         band_h, band_w = band_bottom - band_top, band_right - band_left
         lim = LIM.get("LIMIT", {}).get("bandBottomGapMax", 0.3)
         if has_headline and has_body and band_h > 1.0:
-            # 한쪽 여백만 크고 반대쪽이 작을 때만 쏠림으로 판단 (가운데 배치는 제외)
+            # 한쪽 여백만 크고 반대쪽이 작을 때만 쏠림으로 분류 (가운데 배치는 제외)
             pairs = ((("하단", (band_bottom - bot_c) / band_h), ("상단", (top_c - band_top) / band_h)),
                      (("우측", (band_right - right_c) / band_w), ("좌측", (left_c - band_left) / band_w)))
             for (n1, g1), (n2, g2) in pairs:

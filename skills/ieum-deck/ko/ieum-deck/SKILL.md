@@ -272,7 +272,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (확보 직후 변환 시험) 각 순위에서 변환기를 확보한 직후 python-hwpx 로 `안녕하세요!` 한 줄짜리 hwpx 를 작업 폴더 밖의 임시 폴더에 만들어 변환을 시험
     + 생성은 `python3 -c "from hwpx import HwpxDocument; d = HwpxDocument.new(); h = d.parts.headers[0]; [f.set('face', '나눔고딕') for f in h.element.iter('{http://www.hancom.co.kr/hwpml/2011/head}font')]; h.mark_dirty(); d.add_paragraph('안녕하세요!'); d.save_to_path('변환시험.hwpx')"` (헤더의 글꼴 이름은 나눔고딕으로 지정. 나눔고딕은 설치 의존성 fonts-nanum 에 포함)
     + 변환은 `parse_input.py 변환시험.hwpx <임시 폴더>/출력.md --pdf` 로 실행하고 PDF 의 Producer 값으로 그 순위의 변환기가 쓰였는지 확인 (rhwp 가 실패하면 parse_input.py 가 LibreOffice 로 넘어가기 때문)
-    + PDF 쪽을 pdftoppm 으로 이미지로 바꿔 `안녕하세요!` 가 보이는지 확인. rhwp 는 문서 글꼴이 없으면 빈 쪽 PDF 를 만들므로 PDF 생성만으로는 판단하지 않음
+    + PDF 쪽을 pdftoppm 으로 이미지로 바꿔 `안녕하세요!` 가 보이는지 확인. rhwp 는 문서 글꼴이 없으면 빈 쪽 PDF 를 만들므로 PDF 생성만으로는 확인하지 않음
     + 시험이 실패하면 확보가 끝났어도 그 순위를 실패로 보고 다음 순위로 이동
 - (GitHub 저장소 연결) 세션에 GitHub 저장소를 연결하는 도구가 실행 환경에 있으면 1, 2순위의 첫 GitHub 접근 전에 호출
     + 인자는 소유자 `edwardkim`, 저장소 이름 `rhwp` 를 각각 따로 전달
@@ -281,7 +281,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
 - (1순위 rhwp 릴리스) 저장소 https://github.com/edwardkim/rhwp 의 릴리스에서 현 플랫폼(OS, CPU) 자산을 받아 PATH 에 배치
     + GitHub 주소는 웹 화면 경로와 파일 전달 경로로 나뉨
     + 웹 화면 경로(`releases/latest`, `releases/expanded_assets`, `api.github.com`)가 403 이어도 파일 전달 경로(`releases/download/<태그>/<파일명>`)와 git 프로토콜이 통과하는 실행 환경이 있음
-    + 1순위 실패는 파일 전달 경로의 수신 실패로 판단
+    + 1순위 실패는 파일 전달 경로의 수신 실패로 확인
     + 태그는 `git ls-remote --tags --refs https://github.com/edwardkim/rhwp` 출력의 최고 버전 태그로 확인
     + git 접근이 막힌 경우에만 releases/latest 리다이렉트 최종 주소의 끝에서 태그를 확인
     + 자산 목록은 `https://github.com/edwardkim/rhwp/releases/download/<태그>/SHA256SUMS.txt` 를 `curl -fL` 로 받아 파일명 열에서 확인
@@ -309,7 +309,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 실제로 사용된 변환기는 PDF 의 Producer 값으로 확인
 - (3순위 LibreOffice H2Orestart) 1순위와 2순위가 모두 실패했거나 rhwp 권한 거부 항목이 3순위를 가리키는 경우에 사용
 - (rhwp 권한 거부) 실행 환경의 권한 검사가 rhwp 를 받거나 실행하는 명령(태그 조회, 내려받기, 클론, 빌드, 실행)을 거부한 경우의 처리. 거부가 나오면 rhwp 확보를 그 자리에서 멈춤. 이어서 사용자에게 rhwp 내려받기와 실행의 허용 여부를 질의. 답을 받기 전에는 3순위 확보와 2단계 이후 작업을 진행하지 않음
-    + (판단 기준) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령 실행 뒤의 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
+    + (분류 기준) 명령이 실행되지 않고 실행 환경의 거부 응답만 돌아오면 권한 거부. 명령 실행 뒤의 403, 연결 오류, 저장소 접근 거부는 네트워크 실패로 보고 위 순위 이동 규칙을 적용
     + (질의 이유) 권한 거부는 사용자의 허용으로만 풀림. 질의 없이 3순위로 넘어가면 사용자가 허용할 기회가 사라짐
     + (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp 와 무관한 입력 변환(Markdown 변환, 이미지 추출)은 계속 진행
     + (질의 내용) 거부된 명령, rhwp 저장소(https://github.com/edwardkim/rhwp), 허용 시 실행할 명령(릴리스 수신, 필요 시 클론과 빌드, rhwp 실행)을 함께 제시. 출처와 명령을 밝힌 질의여야 사용자의 허용 범위가 분명해짐
@@ -701,11 +701,11 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 하베이 볼의 원 색은 본문 글자색
     + 하베이 볼 범례는 표와 붙여 배치
     + 열 폭은 셀 문구의 한 줄 폭으로 자동 산정
-    + 역할 부호, 연도별 수치, 대안별 평가처럼 이어진 자료 열 묶음은 같은 폭
+    + 역할 부호, 연도별 수치, 대안별 점수처럼 이어진 자료 열 묶음은 같은 폭
     + 불릿은 항목이 2개 이상인 셀과 `bulletRows`, `bulletCols` 로 지정한 줄의 셀에 적용 (`bulletRows` 는 `labelCols` 의 구분 열 제외. 줄바꿈으로 여러 줄이 된 문구는 항목 1개)
     + 줄 지정 기준(비교 줄 조건, 표 전체 조건)은 `references/writing-rules.md` 표 절
     + 열 정렬은 storyboard 작성 단계에서 표마다 `align` 으로 지정 (형식은 `references/templates.md` 표 조판)
-    + 열 정렬 판단 기준은 `references/writing-rules.md` 표 절
+    + 열 정렬 결정 기준은 `references/writing-rules.md` 표 절
     + 셀의 세로 정렬은 표 전체를 가운데로 통일
     + 한 비교 줄의 셀은 모두 한 항목이거나 모두 여러 항목으로 구성 (맞추기 어려운 줄의 불릿은 비교 줄 조건)
     + 표 글자 채움 60% 미만은 빌드 경고

@@ -194,7 +194,7 @@
 
 - One manuscript file per chapter. The file name is `NN_장이름.md`. Short documents such as initiative cards, issue reports, and briefing material may be written as one file
 - Use the figures and facts of the input materials first. Figures outside the materials get a web search source (if allowed) or the `[확인]` marker
-- Apply the references/report.md Source Research section for data sources and source quality. Record figures and facts in 03_자료대장.md one row at a time. The source ledger of a planning report leaves the hypothesis and verdict columns empty. The reflecting section column is filled
+- Apply the references/report.md Source Research section for data sources and source quality. Record figures and facts in 03_자료대장.md one row at a time. The source ledger of a planning report leaves the hypothesis and review-result columns empty. The reflecting section column is filled
 - Present matters for the report recipient to judge (budget, schedule, roles, performance indicators) as tables
 - Apply the norms of the SKILL.md Schedule Chart and Committees sections to the schedule chart and the committee operation (draft) table
 - Volume is one or more ❍ per □. `check volume` judges a lone □ and a table right after □. The □ heading line cap and level counts over the cap are warnings
