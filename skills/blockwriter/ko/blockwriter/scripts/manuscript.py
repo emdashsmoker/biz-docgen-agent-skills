@@ -293,7 +293,7 @@ def parse_fit(spec: str) -> tuple[dict[str, float], list[str]]:
 
 def _apply_fit(elems: list[Element]) -> list[Element]:
     """조판 조정 줄을 대상 요소의 data['fit']으로 옮기고 요소 목록에서 뺀다. 단독 줄의 대상은 바로 다음 요소, 시작 줄의 대상은 끝 줄 앞까지의 요소.
-    읽지 못한 값과 짝이 없는 시작 줄, 끝 줄은 뒤 요소의 data['fit_issues']에 남겨 lint가 알린다"""
+    읽지 못한 값, 끝 줄이 없는 시작 줄, 시작 줄이 없는 끝 줄은 뒤 요소의 data['fit_issues']에 남겨 lint가 알린다"""
     out: list[Element] = []
     once = ranged = None
     issues: list[str] = []

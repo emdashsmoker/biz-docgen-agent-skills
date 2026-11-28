@@ -26,7 +26,7 @@ const LABEL_GAP = T.PANEL.LABEL_GAP; // 행 라벨 상자와 내용 상자 사�
 const GAP_ITEM_MAX = 0.36; // 상자 사이 간격이 늘어날 수 있는 상한 (칸 높이가 남을 때)
 const HIER_GAP_X = 0.2, HIER_GAP_Y = 0.2; // 계층도(grid style hierarchy)의 칸 사이 가로와 세로 간격
 const HIER_ROW_MIN = 0.5; // 계층도 행 높이 하한
-const CELL_GAP_V = 0.1; // 라벨 행과 격자 행 사이 세로 간격 (가로 간격 0.06 은 라벨과 내용의 짝을 보이기 위해 좁게 유지)
+const CELL_GAP_V = 0.1; // 라벨 행과 격자 행 사이 세로 간격 (가로 간격 0.06 은 라벨이 어느 내용에 붙는지 보이도록 좁게 유지)
 const CELL_GAP_V_MAX = 0.24, HIER_GAP_Y_MAX = 0.4; // 칸 높이가 남을 때 행 사이 간격 상한 (일반 격자, 계층도)
 const CELL_GAP_H = 0.14; // 일반 격자 칸 사이 가로 간격 (테두리 칸이 붙어 보이지 않도록 행 라벨 간격과 같은 값)
 const GRID_FLOW_GAP = 0.46; // flow 격자의 열 사이 간격 (오른쪽 화살표 폭 0.28과 좌우 여백)

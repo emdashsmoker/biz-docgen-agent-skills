@@ -169,7 +169,7 @@ DOCX는 form.py의 같은 정의를 Word 단위로 옮긴다.
 
 정적화 (`toc-static`, 절차는 SKILL.md의 목차 정적화 절)
 
-- (HWPX) 대상 책갈피를 가리키는 상호참조(쪽 번호와 책갈피 이름 참조)의 필드 시작 컨트롤과 짝이 되는 필드 끝 컨트롤을 지우고 저장값 글자는 남김. 대상 책갈피 컨트롤을 지움
+- (HWPX) 대상 책갈피를 가리키는 상호참조(쪽 번호와 책갈피 이름 참조)의 필드 시작 컨트롤과 그 필드를 닫는 필드 끝 컨트롤을 지우고 저장값 글자는 남김. 대상 책갈피 컨트롤을 지움
 - (DOCX) 대상 책갈피를 가리키는 PAGEREF와 REF 필드의 fldChar(begin, separate, end)와 instrText를 지우고 결과 글자는 남김. fldSimple 형태는 감싼 요소만 제거. 대상 책갈피의 bookmarkStart와 같은 id의 bookmarkEnd를 지움
 - 각주 번호 상호참조(HWPX의 TARGET_FOOTNOTE, DOCX의 NOTEREF)와 각주 통합용 책갈피는 바꾸지 않음
 - 한/글이 저장한 줄 배치 값(linesegarray)은 그대로 둠. 지우면 줄바꿈을 다시 계산하는 렌더러에서 쪽 배치가 달라짐

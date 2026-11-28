@@ -1116,7 +1116,7 @@ function chart_two(ctx, slide, sb) {
   source(ctx, slide, sb);
 }
 /** AS-IS / TO-BE 대비 + 갭. slots: {asis:{head, items}, tobe:{head, items}, gap:[]} */
-// 행 대응 비교: 현행 항목, 격차, 개선 항목이 1:1 로 짝지어지면 행마다 현행 상자, 격차 화살표, 개선 상자를 배치
+// 행 대응 비교: 현행 항목, 격차, 개선 항목이 1:1 로 대응하면 행마다 현행 상자, 격차 화살표, 개선 상자를 배치
 const CMP_SIZES = [[14, 12, 13], [13, 12, 12], [12, 11, 12]]; // [항목, 근거, 격차] 글자 크기. 본문 높이를 넘으면 다음 단계로 축소
 const CMP_COL_GAP = 0.16; // 상자와 격차 화살표 사이 간격
 const CMP_ROW_GAP = 0.14; // 행 간격

@@ -113,7 +113,7 @@ const LB_CLASS = Object.fromEntries([
 const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
 /** 라틴 규칙의 글자 분류. 한글은 H, 한자는 ID */
 const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
-/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
+/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 에서 앞뒤 글자의 분류로 정한 규칙 요약
  *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이, 줄바꿈 없는 공백(U+00A0)의 앞뒤는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
 function latinBreakOk(a, b) {
   const x = lbClass(a), y = lbClass(b);

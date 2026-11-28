@@ -203,7 +203,7 @@ def _static_hwpx(src: str, out: str, names: set[str]):
 # ── DOCX ──────────────────────────────────────────────────────────────────
 def _docx_fields(root) -> list[dict]:
     """필드 목록 (문서 순서). instr: 명령, parts: 필드를 이루는 fldChar와 instrText, result: 결과 글자 요소, simple: fldSimple 요소
-    Why 순회: Word와 LibreOffice는 필드 요소를 run마다 나누어 저장하므로 run 구성에 기대지 않고 fldChar 순서로 짝을 맞춤"""
+    Why 순회: Word와 LibreOffice는 필드 요소를 run마다 나누어 저장하므로 run 구성에 기대지 않고 fldChar 순서로 begin마다 그 필드를 닫는 end를 찾음"""
     done, open_fields = [], []
     for el in root.iter(f"{W}fldSimple", f"{W}fldChar", f"{W}instrText", f"{W}t"):
         tag = _local(el)
