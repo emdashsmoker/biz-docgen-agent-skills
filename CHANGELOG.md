@@ -44,6 +44,7 @@ Changelog rules
 - Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
 - Added 쓰다 and 잇다 to the colloquial markers, replaced with formal words such as 사용, 작성 and 연계 (#184)
 - Added a rule that replaces words whose double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives a strong colloquial tone, such as 뽑다, 쓰다 and 짝, with formal words of the same meaning (#184)
+- Changed the scope of the double-consonant rule to vocabulary words, keeping tense and grammar forms such as 하였음 and 있음 as they are (#185)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
 * 명사형 헤드라인의 호응 점검을 "함" 붙여 읽기에서 평서문 복원 점검으로 변경 (#182)
@@ -52,6 +53,7 @@ Changelog rules
 * 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
 * 구어체 표지에 쓰다, 잇다 추가 (사용, 작성, 연계 등 격식 어휘로 대체) (#184)
 * 쌍자음(ㄲ, ㄸ, ㅃ, ㅆ, ㅉ)이 들어 구어 어감이 강한 어휘(뽑다, 쓰다, 짝 등)를 같은 뜻의 격식 어휘로 대체하는 규칙 추가 (#184)
+* 쌍자음 규칙의 적용 대상을 낱말 자체에 쌍자음이 든 어휘로 변경 (하였음, 있음 등 시제와 문법 표현은 그대로 사용) (#185)
 
 ### juja-builder
 - Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
@@ -61,6 +63,7 @@ Changelog rules
 - Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
 - Added 쓰다 and 잇다 to the vocabulary notes outside code detection, replaced with formal words such as 사용, 작성 and 연계 (#184)
 - Added a rule that replaces words whose double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives a strong colloquial tone, such as 뽑다, 쓰다 and 짝, with formal words of the same meaning (#184)
+- Changed the scope of the double-consonant rule to vocabulary words, keeping tense and grammar forms such as 하였음 and 있음 as they are (#185)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
 * `check tone`의 판정 경고 추가 (#183)
@@ -69,6 +72,7 @@ Changelog rules
 * 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
 * 코드 색출 대상 밖의 어휘 안내에 쓰다, 잇다 추가 (사용, 작성, 연계 등 격식 어휘로 대체) (#184)
 * 쌍자음(ㄲ, ㄸ, ㅃ, ㅆ, ㅉ)이 들어 구어 어감이 강한 어휘(뽑다, 쓰다, 짝 등)를 같은 뜻의 격식 어휘로 대체하는 규칙 추가 (#184)
+* 쌍자음 규칙의 적용 대상을 낱말 자체에 쌍자음이 든 어휘로 변경 (하였음, 있음 등 시제와 문법 표현은 그대로 사용) (#185)
 
 ## 2026-11-26
 
