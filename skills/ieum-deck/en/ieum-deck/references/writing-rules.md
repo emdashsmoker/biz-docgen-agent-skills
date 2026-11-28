@@ -21,8 +21,9 @@
 - Polite headlines end in the formal 하십시오체 style (e.g. "수립합니다", "확보합니다", "보유하고 있습니다", "추진하겠습니다" and similar forms)
 - Body style is noun-ending regardless of the headline style
 - Headlines and body text use no colloquial or informal style (including a colloquial or informal tone in endings, words, expressions and similar elements)
-- Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름), colloquial verbs (잇다, and verbs with a tense consonant such as 쓰다, 바꾸다, 짚다, 따지다) and similar forms
+- Colloquial markers are hedged and softened endings (-듯, -듯함, -인 셈, -하는 편, -할 만함, -로 봄, -로 보임, -로 여겨짐), explanatory endings (-는데, -인데, -더라, -거든, -잖아), spoken contractions (-하는 게, -할 거, -한 걸, -하는 건), colloquial adverbs (일단, 약간, 좀, 꽤, 딱, 그냥, 나름), colloquial verbs (잇다, 쓰다, 바꾸다, 짚다, 따지다, and similar verbs) and similar forms
 - Delete colloquial markers or replace them with formal expressions
+- Focus the check for colloquial verbs on native words that contain a tense consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ). Replace them with formal words of the same meaning such as 연계, 사용, 작성, 변경, 지적, and 검토
 - Name the referent with a concrete noun instead of a placeholder noun (것, 곳, 거, 셈, 부분 and similar nouns)
 - Secure formality through vocabulary and endings. Do not overuse jargon beyond the reader's level or engineering and software-design phrasing (input value, output, mapping, interface, pipeline, and so on) as a substitute for formality (use software-design phrasing only where a system architecture is explained)
 - Describe organic and complex matters such as the work, actions, procedures, and guidelines of individuals, organizations, and society through the actor and the actual action. Do not depict them as the workings of a computer, machine, or software architecture (input, processing, output, pass, gate, function-like code schemes, and so on)
