@@ -315,7 +315,7 @@ function tableColW(tb, w, sz, listCols, dataCols) {
     });
   }));
   const sN = sumOf(nat);
-  // 자료 열 묶음: 같은 종류(숫자, 하베이 볼, 두 글자 이하 기호)의 자료 열이 2개 이상 이어진 구간 (역할 부호, 연도별 수치, 대안별 점수)
+  // 자료 열 묶음: 같은 종류(숫자, 하베이 볼, 두 글자 이하 기호)의 자료 열이 2개 이상 이어진 구간 (역할 부호, 연도별 수치, 대안별 평가)
   const groups = [];
   for (let i = 0; i < ncol; i++) {
     if (!dataCols || !dataCols[i]) continue;

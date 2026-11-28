@@ -104,11 +104,11 @@ M4 실행계획 수립            실행과제 발굴, 우선순위(필요성, �
     + 경영평가 지표 개선에는 `references/wording.md` 의 경영평가 열 워딩을 사용
 - (비R&D 신사업 발굴 관행) 과업의 이해에서 도출한 핵심이슈와 해결방향을 과업별 접근의 근거로 제시
     + 과업의 이해는 발주기관 개요, 대상 사업 현황, 상위계획, 대상지 현황, 여건의 불확실성으로 구성
-    + 신사업 발굴은 업의 재정의, Long List, 1차 스크린(시장매력성, 발주기관 적합성, 재무 타당성), 2차 스크린 지표, 신규사업 선정, 세부 사업추진계획서로 좁혀 가는 깔때기 구조
+    + 신사업 발굴은 업의 재정의, Long List, 1차 스크린(시장매력성, 발주기관 적합성, 재무 타당성), 2차 스크린 지표, 신규사업 평가, 세부 사업추진계획서로 좁혀 가는 깔때기 구조
     + 활성화 방안은 개발 전 시나리오와 개발 후 시나리오로 분리
 - (대응 구성) module_overview, pest_scan, history_timeline, benchmark_cases, findings_synthesis, strategy_derivation, strategy_review, env_to_strategy, swot, vision_system, goal_hierarchy, task_funnel, priority_matrix, option_evaluation, roadmap, task_definition, pdca_cycle, impact_io
 - (조직진단 대응 구성) job_analysis, workforce_estimation, raci_matrix, gap_analysis, org_redesign, option_evaluation, financial_feasibility, compare
-- 조직 개편안과 운영 방식 대안은 대안별 개요와 같은 기준의 비교 결과로 선정 (option_evaluation)
+- 조직 개편안과 운영 방식 대안은 대안별 개요와 같은 평가 기준의 비교 결과로 선정 (option_evaluation)
 
 ## 사업기획
 
@@ -239,7 +239,7 @@ M3 개선안 도출     대안 설정과 비교, 우선순위, 개선안과 시�
 - 가설은 반증 가능한 형태로 작성
 - 개선안은 변경 사항, 시행 주체, 단계별 적용 시점을 표로 제시
 - 면담과 설문 결과는 조사 개요와 주제별 의견, 언급 비율, 시사점으로 정리 (interview_findings)
-- 대안 비교표는 기준별 가중치와 대안별 점수, 가중 합계로 선정안을 제시 (option_evaluation)
+- 대안 비교표는 평가 기준별 가중치와 대안별 평가, 가중 합계로 선정안을 제시 (option_evaluation)
 - 제도가 개선 대상이면 법령과 규정의 개정 조문을 함께 표기
 - (대응 구성) issue_tree, interview_plan, survey_design, verify_steps, interview_findings, gap_analysis, findings_synthesis, option_evaluation, priority_matrix, chart_text, chart_two, analysis_four, key_numbers, illustrative
 

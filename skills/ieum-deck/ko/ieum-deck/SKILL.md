@@ -701,7 +701,7 @@ license: AGPL-3.0-or-later with an output exception. Terms in LICENSE and NOTICE
     + 하베이 볼의 원 색은 본문 글자색
     + 하베이 볼 범례는 표와 붙여 배치
     + 열 폭은 셀 문구의 한 줄 폭으로 자동 산정
-    + 역할 부호, 연도별 수치, 대안별 점수처럼 이어진 자료 열 묶음은 같은 폭
+    + 역할 부호, 연도별 수치, 대안별 평가처럼 이어진 자료 열 묶음은 같은 폭
     + 불릿은 항목이 2개 이상인 셀과 `bulletRows`, `bulletCols` 로 지정한 줄의 셀에 적용 (`bulletRows` 는 `labelCols` 의 구분 열 제외. 줄바꿈으로 여러 줄이 된 문구는 항목 1개)
     + 줄 지정 기준(비교 줄 조건, 표 전체 조건)은 `references/writing-rules.md` 표 절
     + 열 정렬은 storyboard 작성 단계에서 표마다 `align` 으로 지정 (형식은 `references/templates.md` 표 조판)

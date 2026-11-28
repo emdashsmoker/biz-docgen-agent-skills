@@ -121,7 +121,7 @@
 | Strategy | Candidate task selection | 후보 과제 {{N}}건을 단계별 기준 및 참여 주체의 검토로 좁혀 최종 과제 {{M}}건 선정 | task_funnel |
 | Strategy | Alternative comparison | {{대상}} 대안을 같은 기준으로 비교하여 {{선정안}} 선정 | option_evaluation |
 | Strategy | Priority judgment | 업무 효과성 및 실행 용이성을 점수로 환산하여 착수 순서를 결정 | priority_matrix |
-| Strategy | Program portfolio | 조정기준 항목별 전문가 점수에 따라 기존 사업을 매력성 및 적합성 기준으로 배치 | priority_matrix |
+| Strategy | Program portfolio | 조정기준 항목별 전문가 평가 결과에 따라 기존 사업을 매력성 및 적합성 기준으로 배치 | priority_matrix |
 | Strategy | Roadmap | 전략별 이행과제를 연차 계획으로 배열하여 추진 순서 및 과제 간 연계를 제시 | roadmap |
 | Strategy | Task definition sheet | 이행과제별 추진방안 및 소요예산을 정의서로 정리하여 착수 가능한 실행계획을 제공 | task_definition |
 | Program planning | Program overview | 본 사업은 {{수단}}으로 {{목표}}를 목표로 추진 | table |
