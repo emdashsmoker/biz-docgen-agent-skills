@@ -18,10 +18,10 @@ LIM = json.load(open(HERE / "limits.json", encoding="utf-8")) if (HERE / "limits
 EDGE = LIM.get("BAND", {}).get("EDGE_MIN", 0.42)
 BODY_MIN = LIM.get("SIZE", {}).get("BODY_MIN", 11)
 OWN_BASE_SIZE = (13.333, 7.5)  # own-deck.json 에 원본 판형(slideW, slideH)이 없을 때의 기준 판형 16:9 (tokens.js BASE_W, BASE_H)
-LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 판정 기준 (작은 쪽 글자 면적 대비)
+LABEL_INK_RATIO = 0.3  # 상자 안 라벨과 본문 글자의 겹침 검사 기준 (작은 쪽 글자 면적 대비)
 POINT_TAG = "keypoint"  # Key Point 밴드 문구 칸의 도형 이름 (templates.js CALLOUT_TAG)
 POINT_FILL_MIN = LIM.get("LIMIT", {}).get("pointFillMin", 0.5)  # 문장별 한 줄 폭이 문구 칸 안쪽 폭에서 차지해야 하는 최소 비율
-# 이 크기 이상인 글은 제목으로 보고 불릿 없는 여러 줄 판정에서 제외 (표지 제목 40pt 를 축소 하한 0.6배로 줄여도 24pt, 본문 계열 상한은 목차 항목 20pt)
+# 이 크기 이상인 글은 제목으로 보고 불릿 없는 여러 줄 검사에서 제외 (표지 제목 40pt 를 축소 하한 0.6배로 줄여도 24pt, 본문 계열 상한은 목차 항목 20pt)
 TITLE_PT = 24
 # 표 셀에 허용되는 기본 채움색 (navy 와 mono 테마 색, 틴트, 회색, 흰색). 실행 시 빌드 기록의 palette(적용한 테마 색)를 더함. 그 외 색은 시각 검수 대상
 PALETTE = {"1F3864", "17294A", "6B8EC2", "A9B9D9", "D5DDEC", "E9EBF0", "F7F8FA", "F2F2F2", "C9CDD8",
@@ -273,7 +273,7 @@ def main():
                 # 넘친 높이만큼 상자를 늘려 인접 요소와의 겹침을 검사
                 if not is_band:
                     texts.append(((r[0], r[1], r[2], r[3] + over), sh.name, tf.text[:15]))
-                    # 실제 글자가 차지하는 영역 (아이콘 겹침 판정용)
+                    # 실제 글자가 차지하는 영역 (아이콘 겹침 검사용)
                     ink_w = 0.0
                     for p in tf.paragraphs:
                         runs = para_runs(p)
@@ -321,7 +321,7 @@ def main():
             elif sh.shape_type is not None and not is_band and 0.25 <= w <= 1.3 and 0.25 <= h <= 1.3 and 0.5 <= w / max(h, 0.01) <= 2.0 and has_fill(sh) and not is_white(sh):
                 icons.append((r, sh.name))  # 아이콘 도형 (채움 있는 정사각형에 가까운 작은 도형. 연결선과 마커는 제외)
             elif sh.shape_type is not None and not is_band and w > 0.6 and h > 0.4:
-                # 차트와 표는 자체 내용을 가지므로 빈 패널 판정 대상에서 제외
+                # 차트와 표는 자체 내용을 가지므로 빈 패널 검사 대상에서 제외
                 if not (getattr(sh, "has_chart", False) or getattr(sh, "has_table", False)):
                     rects.append((r, sh.name))
         # 텍스트 상자 겹침
@@ -345,7 +345,7 @@ def main():
                         hard = sm > 0 and jx * jy / sm > 0.3
                     msg = f"[{n}] {'그림과 텍스트' if pic else '텍스트'} 겹침 {texts[i][2]} / {texts[j][2]} ({ratio:.0%})"
                     (fails if pic or hard else warns).append(msg)
-        # 라벨 상자가 내용 상자 안에 놓인 경우는 상자 겹침이 정상이므로 글자 영역으로만 판정
+        # 라벨 상자가 내용 상자 안에 놓인 경우는 상자 겹침이 정상이므로 글자 영역으로만 검사
         for i in range(len(texts)):
             for j in range(i + 1, len(texts)):
                 a, b = texts[i][0], texts[j][0]
@@ -471,7 +471,7 @@ def main():
         band_h, band_w = band_bottom - band_top, band_right - band_left
         lim = LIM.get("LIMIT", {}).get("bandBottomGapMax", 0.3)
         if has_headline and has_body and band_h > 1.0:
-            # 한쪽 여백만 크고 반대쪽이 작을 때만 쏠림으로 판정 (가운데 배치는 제외)
+            # 한쪽 여백만 크고 반대쪽이 작을 때만 쏠림으로 분류 (가운데 배치는 제외)
             pairs = ((("하단", (band_bottom - bot_c) / band_h), ("상단", (top_c - band_top) / band_h)),
                      (("우측", (band_right - right_c) / band_w), ("좌측", (left_c - band_left) / band_w)))
             for (n1, g1), (n2, g2) in pairs:
@@ -483,7 +483,7 @@ def main():
             if cover < LIM.get("LIMIT", {}).get("bodyCoverMin", 0.7):
                 warns.append(f"[{n}] 본문 세로 채움 {cover:.0%} (내용 보강이나 구성 교체)")
 
-        # 헤드라인 글꼴 수집 (덱 전체 일관성 판정용)
+        # 헤드라인 글꼴 수집 (덱 전체 일관성 검사용)
         for sh in slide.shapes:
             if not sh.has_text_frame or not sh.text_frame.text.strip(): continue
             y = sh.top / 914400 if sh.top else 0
@@ -524,7 +524,7 @@ def main():
             bottom = top + (sh.height / 914400 if sh.height else 0)
             # 표 높이는 늘어난 행을 포함한 finalize 의 soffice 재저장 기록 (check_layout 은 finalize 뒤에 실행)
             # 표 영역 안에서 시작하는 글 상자 탐지 (늘어난 표가 덮은 각주, 출처 행, Key Point 밴드 등)
-            # Why: 위 겹침 검사는 각주 영역을 판정에서 제외
+            # Why: 위 겹침 검사는 각주 영역을 검사 대상에서 제외
             left, right = inch(sh.left), inch(sh.left + sh.width)
             covered = [o for o in slide.shapes if o is not sh and o.has_text_frame and o.text_frame.text.strip() and o.top is not None
                        and top + 0.02 <= inch(o.top) < bottom - 0.02 and min(right, inch(o.left + o.width)) - max(left, inch(o.left)) > 0.05]
@@ -532,7 +532,7 @@ def main():
                 o = covered[0]
                 fails.append(f"[{n}] 표와 글 겹침 (표 하단 {bottom:.2f}in > 글 상단 {inch(o.top):.2f}in '{o.text_frame.text.strip()[:15]}'. 행을 늘리는 셀 문구 축약, 열 폭 확대, 행 수 축소 중 선택)")
             if bottom > H - 0.05:
-                fails.append(f"[{n}] 표가 슬라이드 밖으로 넘침 (하단 {bottom:.2f}in > 판정 기준 {H - 0.05:.2f}in, 행 {len(sh.table.rows)}개)")
+                fails.append(f"[{n}] 표가 슬라이드 밖으로 넘침 (하단 {bottom:.2f}in > 검사 기준 {H - 0.05:.2f}in, 행 {len(sh.table.rows)}개)")
             elif bottom > H - EDGE + 0.05:
                 warns.append(f"[{n}] 표가 하단 여백 침범 (하단 {bottom:.2f}in > {H - EDGE:.2f}in)")
             for r in range(len(sh.table.rows)):
@@ -584,7 +584,7 @@ def main():
             if gap >= 2:
                 warns.append(f"[{n}] 표 1열 빈 셀 {gap}개 (병합 누락 추정)")
 
-        # 표 세로 정렬 혼재 (가로 정렬 혼재는 아래 열 단위 검사에서 판정)
+        # 표 세로 정렬 혼재 (가로 정렬 혼재는 아래 열 단위 검사에서 확인)
         for sh in slide.shapes:
             if not sh.has_table: continue
             tbl = sh.table
@@ -657,7 +657,7 @@ def is_pointed(sh):
 
 
 def is_white(sh):
-    """흰색 채움 도형 (도넛 구멍 덮개 등)은 아이콘 판정에서 제외"""
+    """흰색 채움 도형 (도넛 구멍 덮개 등)은 아이콘 여부 확인에서 제외"""
     try:
         return sh.fill.type == 1 and str(sh.fill.fore_color.rgb) == "FFFFFF"
     except Exception:

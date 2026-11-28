@@ -32,7 +32,7 @@ def rhwp_supports(rhwp: str, command: str, flag: str | None = None) -> bool:
     """명령과 옵션의 존재를 도움말 출력으로 확인. 버전마다 CLI가 달라질 수 있다."""
     res = subprocess.run([rhwp, command, "--help"], capture_output=True, text=True)
     text = res.stdout + res.stderr
-    # 미지 명령에도 전체 사용법을 출력하는 버전이 있어 사용법 문구만으로는 존재를 판정할 수 없음
+    # 미지 명령에도 전체 사용법을 출력하는 버전이 있어 사용법 문구만으로는 존재를 확인할 수 없음
     unknown = any(m in text.lower() for m in C.RHWP_UNKNOWN_COMMAND_MARKERS)
     if res.returncode != 0 and (unknown or ("Usage" not in text and "사용법" not in text)):
         return False

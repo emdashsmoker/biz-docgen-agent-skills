@@ -120,7 +120,7 @@
 | Strategy | Individual performance linkage | 조직의 성과목표 및 역량을 개인 성과지표로 연계하여 조직성과와 개인평가를 정렬 | alignment_pyramid |
 | Strategy | Candidate task selection | 후보 과제 {{N}}건을 단계별 기준 및 참여 주체의 검토로 좁혀 최종 과제 {{M}}건 선정 | task_funnel |
 | Strategy | Alternative comparison | {{대상}} 대안을 같은 기준으로 비교하여 {{선정안}} 선정 | option_evaluation |
-| Strategy | Priority judgment | 업무 효과성 및 실행 용이성을 점수로 환산하여 착수 순서를 판정 | priority_matrix |
+| Strategy | Priority judgment | 업무 효과성 및 실행 용이성을 점수로 환산하여 착수 순서를 결정 | priority_matrix |
 | Strategy | Program portfolio | 조정기준 항목별 전문가 평가 결과에 따라 기존 사업을 매력성 및 적합성 기준으로 배치 | priority_matrix |
 | Strategy | Roadmap | 전략별 이행과제를 연차 계획으로 배열하여 추진 순서 및 과제 간 연계를 제시 | roadmap |
 | Strategy | Task definition sheet | 이행과제별 추진방안 및 소요예산을 정의서로 정리하여 착수 가능한 실행계획을 제공 | task_definition |
@@ -136,7 +136,7 @@
 | Program planning | Funding | 재원 부담 주체별 조달 방안 및 확인 자료를 연차 투입 계획과 함께 제시 | funding_plan |
 | Program planning | Budget and phases | 본 사업은 총 {{N}}년 {{N}}단계 사업으로 {{금액}} 투입 | table, roadmap |
 | Program planning | Feasibility review | 과학기술적, 정책적, 경제적 타당성 분석 항목별 기획 근거를 사전 점검 | feasibility_review |
-| Program planning | Economic analysis | 총비용 및 편익을 현재가치로 환산하여 비용편익 비율 중심으로 경제성 판정 | econ_analysis |
+| Program planning | Economic analysis | 총비용 및 편익을 현재가치로 환산하여 비용편익 비율 중심으로 경제성 분석 | econ_analysis |
 | Program planning | Financial feasibility | 성과 예측, 투자수익성, 손익분기점 분석을 종합하여 사업의 재무적 타당성을 판단 | financial_feasibility |
 | Program planning | Economic ripple effects | 사업비 지출 및 사업화 매출에 산업연관표 계수를 적용하여 생산, 부가가치, 취업 유발효과를 산출 | impact_io |
 | Organization diagnosis | Job analysis procedure | 사전준비부터 확정 및 관리까지 순차적 직무분석으로 인사 전반의 기준 정보를 확보 | job_analysis |

@@ -90,7 +90,7 @@ def check():
     f = font_ok()
     print("[OK] NanumGothic" if f else "[FAIL] NanumGothic 서체")
     ok &= f
-    # hwpx 의 배치 확인용 PDF(parse_input.py --pdf)에만 쓰는 선택 의존성. 통과 판정에는 넣지 않음
+    # hwpx 의 배치 확인용 PDF(parse_input.py --pdf)에만 쓰는 선택 의존성. 통과 여부 확인에는 넣지 않음
     rhwp = shutil.which("rhwp")
     print("[INFO] hwpx PDF 변환: rhwp " + ("있음" if rhwp else "없음. LibreOffice H2Orestart 확장이 없으면 --pdf 변환 불가 (확장 설치 여부는 확인하지 않음)"))
     return 0 if ok else 1

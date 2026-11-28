@@ -4,7 +4,7 @@
 // 좌표 단위는 인치, 색상은 tokens 의 6자리. 수치 상수는 tokens.js 에서만 가져온다.
 
 const T = require("./tokens.js");
-const LB = require("./labels.js"); // meta.labels.notation.source 로 추가한 주석 토큰 판정
+const LB = require("./labels.js"); // meta.labels.notation.source 로 추가한 주석 토큰 확인
 const fs = require("fs");
 const path = require("path");
 // 나눔고딕 실측 폭(em). 없으면 tokens.METRIC 근사값 사용
@@ -65,8 +65,8 @@ function scriptOf(c) {
   if ((c >= 0xac00 && c <= 0xd7a3) || isHangulJamo(c) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef) || isHanja(c)) return SCRIPT.ASIAN;
   return SCRIPT.WEAK;
 }
-/** 문구 폭(em)과 양 끝 글자의 계열. prev 는 문구 바로 앞 글자의 계열 (약한 문자 판정용, 문단 첫머리는 WEAK)
- *  간격은 문구 안 글자 사이에만 더함. 앞 글자와 첫 글자 사이 간격은 호출부가 first 로 판정 */
+/** 문구 폭(em)과 양 끝 글자의 계열. prev 는 문구 바로 앞 글자의 계열 (약한 문자 계열 결정용, 문단 첫머리는 WEAK)
+ *  간격은 문구 안 글자 사이에만 더함. 앞 글자와 첫 글자 사이 간격은 호출부가 first 로 결정 */
 function spanEm(s, bold, prev) {
   let em = 0, cur = prev || SCRIPT.WEAK, first = SCRIPT.WEAK;
   for (const ch of String(s)) {
@@ -113,7 +113,7 @@ const LB_CLASS = Object.fromEntries([
 const isHangul = (ch) => { const c = ch.codePointAt(0); return (c >= 0xac00 && c <= 0xd7af) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0xa960 && c <= 0xa97f) || (c >= 0xd7b0 && c <= 0xd7ff) || (c >= 0x3130 && c <= 0x318f); };
 /** 라틴 규칙의 글자 분류. 한글은 H, 한자는 ID */
 const lbClass = (ch) => (isHangul(ch) ? "H" : isHanja(ch.codePointAt(0)) ? "ID" : LB_CLASS[ch] || "AL");
-/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 짝 규칙 요약
+/** 라틴 규칙에서 글자 a 와 b 사이에서 줄을 바꿀 수 있는지. LibreOffice line.txt 에서 앞뒤 글자의 분류로 정한 규칙 요약
  *  (닫는 기호와 쉼표 앞, 여는 기호와 따옴표 뒤, 영문자와 숫자 사이, 줄바꿈 없는 공백(U+00A0)의 앞뒤는 불가. 숫자와 한글, 하이픈 뒤, 한글과 한글 사이는 가능) */
 function latinBreakOk(a, b) {
   const x = lbClass(a), y = lbClass(b);
@@ -145,7 +145,7 @@ function latinBreak(chars, m) {
   while (s > 0 && !latinBreakOk(chars[s - 1], chars[s])) s -= 1;
   return s > 0 && chars[s - 1] === "/" ? 0 : s;
 }
-/** 어절 글자별 계열. 약한 문자는 앞 글자 계열 (prev 는 어절 앞 글자의 계열, 문단 첫머리는 WEAK 이며 라틴으로 판정) */
+/** 어절 글자별 계열. 약한 문자는 앞 글자 계열 (prev 는 어절 앞 글자의 계열, 문단 첫머리는 WEAK 이며 라틴으로 분류) */
 function wordScripts(chars, prev) {
   let cur = prev;
   return chars.map((ch) => (cur = scriptOf(ch.codePointAt(0)) || cur || SCRIPT.LATIN));
@@ -171,7 +171,7 @@ function breakInWord(chars, prev, x, cap, bold, paraEnd) {
  *  공백에서 줄을 바꾸고 줄 끝에 걸린 어절은 LibreOffice 규칙(breakInWord)으로 나눔. 줄 폭보다 넓은 어절은 중간에서 나눔
  *  앞 어절과 같은 줄에 이을 때만 공백과 계열 경계 간격을 더함 (줄을 바꾸면 줄 끝 공백과 간격은 줄 폭에 들지 않음) */
 function wrapParagraph(para, cap, bold) {
-  // 약한 문자의 계열은 문단 첫머리부터 이어서 판정 (last: 직전 어절 끝 글자의 계열)
+  // 약한 문자의 계열은 문단 첫머리부터 이어서 결정 (last: 직전 어절 끝 글자의 계열)
   let cur = 0, n = 1, last = SCRIPT.WEAK;
   const splits = [];
   const words = para.split(" ");
@@ -209,8 +209,8 @@ function wordSplits(str, widthIn, fontPt, bold) {
   const cap = ((widthIn * 72) / fontPt) * (METRICS ? T.METRIC.SAFETY_LINES : T.METRIC.SAFETY);
   return String(str).split("\n").flatMap((para) => wrapParagraph(para, cap, bold).splits);
 }
-const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 판정이 두 줄로 바뀌지 않게 두는 여유 (인치)
-/** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 판정하는 폭보다 더 보수적인 폭 기준 (SAFETY_METRIC. 이 폭이면 estimateLines 도 1줄로 판정) */
+const LINE_FIT_EPS = 0.01; // 폭 반올림으로 한 줄 추정이 두 줄로 바뀌지 않게 두는 여유 (인치)
+/** 문구를 한 줄에 담는 최소 폭(인치). estimateLines 가 1줄로 추정하는 폭보다 더 보수적인 폭 기준 (SAFETY_METRIC. 이 폭이면 estimateLines 도 1줄로 추정) */
 function lineWidthIn(str, pt, bold) {
   return (textEm(str, bold) * pt) / 72 / (METRICS ? T.METRIC.SAFETY_METRIC : T.METRIC.SAFETY) + LINE_FIT_EPS;
 }
@@ -223,7 +223,7 @@ function lineHeightIn(pt, ratio) {
   return (pt * (ratio || T.METRIC.LINE_HEIGHT)) / 72;
 }
 /** 문단 한 줄의 높이(인치): 글꼴 줄 높이(LINE_HEIGHT) x 문단 줄 간격 배수(lnSpc, pptxgenjs lineSpacingMultiple. 없으면 1)
- *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 행 높이 판정용 TABLE_LINE_HEIGHT)
+ *  lineRatio 를 주면 문단 줄 간격 대신 그 값을 줄 높이 비율로 씀 (표 셀은 행 높이 추정용 TABLE_LINE_HEIGHT)
  *  Why: LibreOffice 24.2 는 나눔고딕 줄을 1.2em x 줄 간격 배수로 조판 (커스텀 슬라이드 렌더의 여러 줄 문단 135개가 1.199-1.202em, 줄 간격 0.8-1.5배에 비례).
  *       lnSpc 를 줄 높이 비율로 쓰면 줄 간격 100% 문단을 1.0em 으로 재어 렌더보다 17% 낮게 추정함.
  *       줄 간격 100% 견본 커스텀 슬라이드에 치환 684건을 넣은 렌더에서 이 계산으로 고치면 넘침이 76건에서 62건(16:9), 160건에서 133건(4:3)으로 줄어듦 */
@@ -478,7 +478,7 @@ function shape(pres, slide, atom, override) {
     if (ov.fillText) { paras = growParas(paras, innerW, atom.h - mg[1] - mg[3], 1.0); atom = { ...atom, va: "middle" }; } // 빈 면적을 흡수한 상자는 간격만 키워 채우고 글꼴은 계층 기준값을 유지
     const va = ov.fillText ? "middle" : (ov.va || atom.va || "middle");
     paras = fitParas(paras, innerW, atom.h - mg[1] - mg[3], ov.minPt, undefined, insetSlackIn(mg, va));
-    // 1문단 1줄로 판정된 텍스트는 줄바꿈을 끄고 렌더러의 자간 오차에 따른 예기치 않은 줄바꿈을 막음
+    // 1문단 1줄로 추정된 텍스트는 줄바꿈을 끄고 렌더러의 자간 오차에 따른 예기치 않은 줄바꿈을 막음
     const oneLine = paras.length === 1 && !paras[0].runs.some((r) => r.br) && estimateLines(paras[0].runs.map((r) => r.t).join(""), innerW, paras[0].runs[0].sz || T.SIZE.body, paras[0].runs[0].b) <= 1;
     slide.addText(runsOf(paras, { color: ov.textColor }), {
       ...base, shape: st, isTextBox: true,
@@ -520,7 +520,7 @@ function inkExtent(atom) {
   return { w: w + mg[0] + mg[2], h: h + mg[1] + mg[3] };
 }
 
-/** 형제 상자 판정 키: 원본 글꼴 크기 + 상자 폭과 높이(0.1인치 단위). 같은 키의 상자는 같은 축소율 */
+/** 형제 상자 분류 키: 원본 글꼴 크기 + 상자 폭과 높이(0.1인치 단위). 같은 키의 상자는 같은 축소율 */
 function sizeKey(atom, paras) {
   return `${Math.round(paras[0].runs[0].sz || T.SIZE.body)}|${Math.round(atom.w * 10)}|${Math.round(atom.h * 10)}`;
 }
@@ -703,7 +703,7 @@ function table(slide, atom, opt) {
       const span = c.colspan || 1;
       const cw = tb.colw.slice(colIdx, colIdx + span).reduce((a, b) => a + b, 0);
       const rh = tb.rowh.slice(rowIdx, rowIdx + (c.rowspan || 1)).reduce((a, b) => a + b, 0);
-      // 행 높이 팽창 방지: 나눔고딕 행간이 높아 여유 0.05인치와 행간 1.35 로 판정. 표 전체에서 같은 원본 크기는 같은 축소율 (셀마다 크기가 따로 놀지 않게)
+      // 행 높이 팽창 방지: 나눔고딕 행간이 높아 여유 0.05인치와 행간 1.35 로 추정. 표 전체에서 같은 원본 크기는 같은 축소율 (셀마다 크기가 따로 놀지 않게)
       // 여러 줄 셀(문단 2개 이상 또는 원본 크기에서 줄바꿈)은 원본처럼 행이 늘어나도록 두고, 1줄 셀만 행 높이에 맞춰 축소
       const r00 = paras[0].runs.find((x) => !x.br) || paras[0].runs[0];
       const multi = paras.length >= 2 || estimateLines(paras[0].runs.filter((x) => !x.br).map((x) => x.t).join(""), cw - cm[0] - cm[2], r00.sz || T.SIZE.tableBody, r00.b) > 1;
@@ -1399,7 +1399,7 @@ function playOwn(pres, slide, ownSlideSrc, slots, ctx) {
       if (atom.identity && !sl[id]) continue; // 로고: 미제공 시 생략
       if (!sl[id] && raw.w < 0.45 && raw.h < 0.45 && tinyCount >= 4) continue; // 도구 아이콘 띠(0.45인치 미만이 4개 이상)는 생략 (위 텍스트 상자가 그 영역까지 확장됨)
       if (skipImage.has(raw)) continue; // 표 오른쪽의 삽화 자리 (표를 넓혀 흡수)
-      if (!sl[id] && raw.w < T.PANEL.ICON_MAX && raw.h < T.PANEL.ICON_MAX) { // 판정은 원본 좌표 기준 (판형 축소 시에도 같은 결과)
+      if (!sl[id] && raw.w < T.PANEL.ICON_MAX && raw.h < T.PANEL.ICON_MAX) { // 아이콘 여부 확인은 원본 좌표 기준 (판형 축소 시에도 같은 결과)
         // 아이콘이 덮는 텍스트 상자는 아이콘 왼쪽까지로 폭을 줄여 겹침을 막음
         ownSlide.atoms.forEach((o) => {
           if (!o.paras || o.kind === "table") return;

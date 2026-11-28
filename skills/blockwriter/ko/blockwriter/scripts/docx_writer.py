@@ -239,7 +239,7 @@ class DocxBuilder(M.TocMarks):
         self._fix_style_order()
 
     def _fix_style_order(self):
-        """pPr 안 자식 순서를 스키마 순서로 정렬 (Word는 순서가 어긋난 문서를 손상으로 판정)"""
+        """pPr 안 자식 순서를 스키마 순서로 정렬 (Word는 순서가 어긋난 문서를 손상으로 인식)"""
         order = ["pStyle", "keepNext", "keepLines", "pageBreakBefore", "widowControl", "numPr", "pBdr", "shd", "tabs",
                  "suppressAutoHyphens", "autoSpaceDE", "autoSpaceDN", "snapToGrid", "spacing", "ind", "jc", "outlineLvl",
                  "sectPr"]
@@ -913,7 +913,7 @@ class DocxBuilder(M.TocMarks):
         self.doc.save(out)
 
     def build(self, elems: list[M.Element], footnotes: dict, out: str):
-        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 판정하여 쓰이지 않을 책갈피를 붙이지 않음
+        # 목차 스타일이 없는 양식은 목차를 생략. 본문 기록 전에 확인하여 쓰이지 않을 책갈피를 붙이지 않음
         if self.toc and not (self.form.style("toc_chapter") and self.form.style("toc_section")):
             print(msg("warn_no_toc_style"))
             self.toc = False

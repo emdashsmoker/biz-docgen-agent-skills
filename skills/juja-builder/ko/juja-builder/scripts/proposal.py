@@ -11,11 +11,11 @@
   build     원고/*.md 합본 → 납품/{제안서|사전진단보고서|기획보고서}.hwpx, .docx (--format hwpx|docx|both. 스켈레톤은 실행마다 재생성.
             --labels는 문서 라벨 파일. 기본 라벨은 한국어)
   render    hwpx 또는 docx → PDF + 페이지 PNG (hwpx는 rhwp 우선, 부재 시 LibreOffice와 H2Orestart. docx는 LibreOffice)
-  selftest  표본 원고 조판과 렌더링으로 렌더 경로 판정 (착수 관문. 결과는 state.json checks.render)
+  selftest  표본 원고 조판과 렌더링으로 렌더 경로 점검 (착수 관문. 결과는 state.json checks.render)
   skeleton  발주처 양식.hwpx → 스켈레톤.hwpx + 프로파일 초안
 
 구성: hwpx_report.py는 형식 무관 조판 계층(원고 파서, 인라인 표기, 표 배치 산정, 그림 크기, 목차 순서)과 hwpx 작성기,
-docx_report.py는 docx 작성기. 이 파일은 산출 유형별 판단(제목 번호, 밴드, 캡션 번호, 표 폭 지시)과 판정 규칙을 담당한다.
+docx_report.py는 docx 작성기. 이 파일은 산출 유형별 판단(제목 번호, 밴드, 캡션 번호, 표 폭 지시)과 점검 규칙을 담당한다.
 Why 분리: 내용 원천(MD 원고)과 양식 원천(설정부)을 하나로 두고 판단은 1회만 계산하여 hwpx와 docx가 같은 결과를 기록하게 한다.
 동작 확인 환경: Python 3.11-3.12, python-hwpx 6.12.0, python-docx 1.2.0, lxml, pillow, poppler 24.02, rhwp v0.8.6, LibreOffice(docx 렌더)
 
@@ -188,7 +188,7 @@ TABLE_LINE_UNITS = 80            # 표 한 줄의 가중 글자 폭 (한글 40�
 WIDTH_SPEC_RE = re.compile(r"^\(\s*(?:폭|열폭)\s*[:：]\s*(.+?)\s*\)$")   # 표 폭 지시 줄: (폭: 실적) 그룹명 또는 (폭: 3,2,2) 비율, (폭: 3,2,2, 80%) 비율과 표 폭
 
 # ═══════════════════════════════════════════════════════════════════════
-# 설정부 2: 작업폴더 파일명과 판정 기준
+# 설정부 2: 작업폴더 파일명과 점검 기준
 # ═══════════════════════════════════════════════════════════════════════
 F_STATE = "state.json"
 F_STRATEGY = "00_제안전략서.md"
@@ -234,10 +234,10 @@ Task 1-1. 표본 과업
 COMMON_TEMPLATES = {"41_제안사일반현황.md": "overview.md", "61_수행조직.md": "organization.md", "62_관리부문.md": "management.md"}
 PREFIX_DENSITY = "5"          # check density 대상 (수행부문)
 PREFIX_FILL = ("4", "6")      # check fill 대상 (공통 파트)
-PREFIX_VOLUME = ("3", "4", "5", "6")    # check volume 대상. □ 단독 판정은 전 원고, 구성 단위 하한은 오리지널 파트(3, 5)
+PREFIX_VOLUME = ("3", "4", "5", "6")    # check volume 대상. □ 단독 점검은 전 원고, 구성 단위 하한은 오리지널 파트(3, 5)
 PREFIX_ORIGINAL = ("3", "5")
 # 순번 접두(선택). RFP 지정 목차의 장 순서가 기본 순서와 다를 때 `10-51_추진체계.md`처럼 붙인다.
-# Why: 파일명 첫 숫자가 합본 순서와 판정 유형을 겸하면 지정 목차의 장 순서를 따를 수 없다. 순서는 순번 접두가, 유형은 그 뒤 첫 숫자가 맡는다
+# Why: 파일명 첫 숫자가 합본 순서와 점검 유형을 겸하면 지정 목차의 장 순서를 따를 수 없다. 순서는 순번 접두가, 유형은 그 뒤 첫 숫자가 맡는다
 ORDER_PREFIX_RE = re.compile(r"^\d+-")
 
 CONCRETE_MARK_RE = re.compile(r"\([^)]{0,6}(대상|자료|방법|기준|절차|범위|규모|구성|설계|산정|선정|편성|기록)[^)]{0,6}\)")
@@ -250,7 +250,7 @@ VOLUME_MIN_EVIDENCE = 2     # □ 아래 하이픈+※ 합계 하한
 VOLUME_MIN_BLOCK_PER_TASK = 1   # Task 1개당 표 또는 그림 하한
 VOLUME_TASK_MIN_CHARS = 900     # Task 1개 본문 글자 수 하한 (약 1.5쪽). 통상 Task는 2-5쪽
 VOLUME_SQUARE_MIN_CHARS = 350   # □ 1개 글자 수 하한 (약 0.5쪽)
-# 계위 개수 상한 (SKILL.md 분량 구성 단위 절). 초과는 check volume 경고이며 판정에 반영하지 않음
+# 계위 개수 상한 (SKILL.md 분량 구성 단위 절). 초과는 check volume 경고이며 결과에 반영하지 않음
 SQUARE_PER_SECTION_MAX = 4       # 절(##)이나 항(###) 안의 □. 5개 이상이면 항으로 묶음
 CIRCLE_PER_SQUARE_MAX = 4        # □ 아래 ❍
 DASH_PER_CIRCLE_MAX = 3          # ❍ 아래 하이픈. 4개 이상이면 표로 전환
@@ -259,7 +259,7 @@ LINE_MAX = {"circle": 86, "dash": 84, "dot": 82, "note": 50}   # ❍ 하이픈 �
 SCHEDULE_MARK = "■"              # 추진일정표 기간 셀 표기. 조판 시 음영 셀로 전환
 SCHEDULE_FILL = "#D9D9D9"      # 일정표 기간 셀 채움 (표 머리글과 같은 회색)
 
-# 판정 기준 (check wording/tone)
+# 점검 기준 (check wording/tone)
 FORBIDDEN_DEFAULT = ["가용가능", "할 수 있다", "할 수 있음", "고려하고 있", "검토할 예정", "노력하겠", "가능할 것으로", "필요시 검토"]
 SENTENCE_WARN = [(r"—", "em dash"), (r"가 아닌 ", "대비 구문 'X가 아닌 Y'"), (r"이 아니라 ", "대비 구문 'X가 아니라 Y'"),
                  (r"(으며|하며|이며)\s", "연결어미 복문"), (r"(?<=[가-힣])(하고|되고)\s", "연결어미 복문 (-하고)"), (r"(그리고|그러나|그래서|하지만)\s", "접속부사"),
@@ -282,7 +282,7 @@ TONE_FAIL = [(r"(그간|그동안)[^.\n]{0,25}(소홀|미흡|부족|치중|그�
              (r"\d+\s*개\s*(Module|Task|모듈|영역|축|전략|방안|과제|단계|원칙|방향|관점|부문|파트)", "숫자 선언 (자기 구조의 개수 선언. 항목 자체를 제시)"),
              (r"\d+\s*종(?!류|합|료|목|사)", "N종 선언 (자료명과 대상명을 실명으로 나열. 목록표가 같은 자리에 있을 때만 허용)"),
              (r"(쓰임새|쓰임|짜임새|얼개|뼈대|밑그림|출발점|손질|채비|매만지|다듬|목표 ?값|(일정|보고|회의|과업)[을를의]? ?동기화|일정[을를]? ?정렬)", "비관행 어휘 (references/lexicon.md 대체어 사용)"),
-             (r"\d+\s*(대|가지)\s*(전략|방안|과제|핵심|원칙|방향)", "숫자 선언 (개수 선언 없이 항목 자체를 제시. 외부 계획의 원문 인용이면 판정 오판 사유를 기록)"),
+             (r"\d+\s*(대|가지)\s*(전략|방안|과제|핵심|원칙|방향)", "숫자 선언 (개수 선언 없이 항목 자체를 제시. 외부 계획의 원문 인용이면 오판 사유를 기록)"),
              (r"본 (과업|연구|제안|사업|용역|제안서)", "본 과업 선언 (자기 지시 없이 내용으로 진입. 지칭이 필요하면 '과업' 또는 사업명 실명)"),
              (r"(발주처|주관기관|주관부처)[^.\n]{0,20}(협조|제공|지원)[^.\n]{0,12}(전제|조건)|(을|를)\s*전제로|(확보|제공)(되어야|돼야)\s*(수행|추진|착수)", "전제 서술 (발주처에 조건을 제시하는 문장. 자료 확보 방법을 제안사의 절차로 서술)"),
              (r"(범위|과업|연구)(에|에서)\s*(포함하지|포함되지|다루지)\s*않|제외\s*범위", "제외 선언 (발주처가 묻지 않은 제외 범위를 선언하지 않음. RFP 명시 제외만 범위 표에 반영)"),
@@ -293,11 +293,11 @@ TONE_FAIL = [(r"(그간|그동안)[^.\n]{0,25}(소홀|미흡|부족|치중|그�
              (r"것(임|이다|입니다|이었음)?[.)]?\s*$", "구어체 '것' 종결 ('남은 것', '해야 할 것', '과업의 포인트인 것'. 명사형 종결로 전환: '~ 잔존', '~ 필요', '~이 과업의 핵심')"),
              (r"(는데|은데|한데|인데|(?<!가)운데|더라|거든|잖아)[.)]?\s*$", "구어체 종결 ('-는데', '-인데'는 설명체 어미. 문장을 끊고 명사형으로 종결)"),
              (r"(는|은|을|를|할|될|된|인|한)\s*(게|거|걸|건)(?!\s*\d)(\s|$)", "구어 축약 ('~하는 게' → '~하는 것이' 또는 명사형, '~할 거' → '~ 예정', '~하는 건' → '~은')"),
-             (r"\s(듯함|듯하다|듯|셈|편|만함|터)[.)]?\s*$|(로|고|다고)\s*(봄|보임|보여짐|여겨짐)[.)]?\s*$|(?<![가-힣])(식으로|쪽으로|쪽에서)\s", "전문어로 오인되는 구어체 ('~듯', '~인 셈', '~하는 편', '~로 봄', '~식으로', '~쪽'. 근거를 들어 판정하거나 '~로 판단', '~로 확인'으로 전환)"),
+             (r"\s(듯함|듯하다|듯|셈|편|만함|터)[.)]?\s*$|(로|고|다고)\s*(봄|보임|보여짐|여겨짐)[.)]?\s*$|(?<![가-힣])(식으로|쪽으로|쪽에서)\s", "전문어로 오인되는 구어체 ('~듯', '~인 셈', '~하는 편', '~로 봄', '~식으로', '~쪽'. 근거를 들어 결론짓거나 '~로 판단', '~로 확인'으로 전환)"),
              (r"(^|\s)(일단|약간|좀|꽤|딱|그냥|어쨌든|아무튼|나름)\s", "구어 부사 (삭제하거나 수치·기준으로 대체)"),
              (r"^```", "코드블록 펜스 (산식은 2열 표)")]
-# 계위 줄의 마침표. 계위 1개에 문장 1개. 마침표로 두 문장을 잇거나 줄 끝에 마침표를 붙이는 형태를 FAIL로 판정
-# 판정 대상은 □, ❍(-), 근거(+), ※ 줄. 표 셀, 각주, 출처 줄, 캡션은 날짜와 서지 표기에 마침표가 쓰이므로 제외
+# 계위 줄의 마침표. 계위 1개에 문장 1개. 마침표로 두 문장을 잇거나 줄 끝에 마침표를 붙이는 형태를 FAIL로 분류
+# 점검 대상은 □, ❍(-), 근거(+), ※ 줄. 표 셀, 각주, 출처 줄, 캡션은 날짜와 서지 표기에 마침표가 쓰이므로 제외
 HIER_LINE_RE = re.compile(r"^\s*(□|[-+*]\s|※)")
 PERIOD_EXEMPT_RE = re.compile(r"^\s*(\[\^|※\s*출처|출처\s*[:：]|<표>|!\[)")
 PERIOD_MID_RE = re.compile(r"[가-힣)\]\"”'’%]\.\s+[가-힣(A-Za-z\d]")   # "확정. 이후" 형태. 소수점(3.5)과 URL은 제외됨
@@ -305,12 +305,13 @@ PERIOD_END_RE = re.compile(r"[가-힣)\]\"”'’%]\.\s*$")
 # 구어 의존명사(듯, 셈, 편, 터, 만함)는 앞 공백을 요구. "개편", "재편", "데이터", "센터" 같은 명사형 종결과의 충돌 방지
 TONE_WARN = [(r"(최대|최초|유일|최고|최상)의?\s", "최상급 단정. 비교 근거 확인"),
              (r"\bRFP\b|제안요청서|과업지시서", "RFP 언급. 요구항목 조견표의 머리글 외에는 과업 내용으로 서술. 기관 지칭이 필요하면 기관 실명"),
-             (r"(획기적|혁신적|선도적|압도적|진정한)", "과장 수식어")]
-# 기관 호칭 판정. Why: '발주처'는 제안사 쪽에서 상대를 부르는 작업 용어. 원고에 옮겨지면 독자를 제3자로 세우는 공급자 시각의 문장이 되므로 실명으로 유도
+             (r"(획기적|혁신적|선도적|압도적|진정한)", "과장 수식어"),
+             (r"판정", "판정. 검토, 확인, 결정 등 실제 행위로 교체")]
+# 기관 호칭 점검. Why: '발주처'는 제안사 쪽에서 상대를 부르는 작업 용어. 원고에 옮겨지면 독자를 제3자로 세우는 공급자 시각의 문장이 되므로 실명으로 유도
 CLIENT_TERM = r"발주\s?(처|기관|부서)"
 CLIENT_SUBJECT_RE = re.compile(CLIENT_TERM + r"(는|은|가|이|에서는|께서는)(?![가-힣])")
 CLIENT_TERM_RE = re.compile(CLIENT_TERM)
-# 수행실적 표의 열 이름은 과거 과업의 계약 상대를 가리키는 관행 표기이므로 판정에서 제외
+# 수행실적 표의 열 이름은 과거 과업의 계약 상대를 가리키는 관행 표기이므로 점검에서 제외
 CLIENT_HEADER_CELL_RE = re.compile(r"\|\s*" + CLIENT_TERM + r"\s*(?=\|)")
 CLIENT_SLOT_RE = re.compile(r"\[기관명\]")
 CLIENT_SUBJECT_LABEL = "발주처 주어 서술 (주어를 지운 뒤 서술부에 대상과 상태를 기입. 지칭이 필요하면 00_제안전략서.md 기관 호칭 절의 실명)"
@@ -325,7 +326,7 @@ CHECKS_BY_KIND = {"proposal": ("rfp", "density", "volume", "wording", "tone", "n
                   "report": ("rfp", "volume", "tone", "numbers", "fill"),
                   "plan": ("volume", "tone", "numbers", "fill")}   # 보고서와 기획서의 fill은 [확인] 잔여 경고만
 # check tone 화이트리스트 원천. 핵심 워딩 사전(00_제안전략서.md)과 모듈총괄표(02_모듈총괄표.md)의 Module·Task 명칭.
-# RFP 원문 용어와 유저가 확정한 골격 명칭은 어조 판정 대상이 아님. 최초 check tone 시 state.json에 고정하여 이후 임의 추가를 차단
+# RFP 원문 용어와 유저가 확정한 골격 명칭은 어조 점검 대상이 아님. 최초 check tone 시 state.json에 고정하여 이후 임의 추가를 차단
 # 모듈총괄표는 02_섹션대장, 02_스토리라인과 같은 2단계 설계 산출물이므로 작업폴더 루트에 둔다.
 # Why: 원고/ 안의 번호 파일로 두면 표의 위치가 파일명 정렬에 묶여 지정 목차에서 앞 장(제안사 일반현황 등) 아래로 들어간다.
 # 표의 위치는 원고의 삽입 지시 줄 `(삽입: 모듈총괄표)`가 정하고 build가 합본 시 표로 바꾼다. 표의 원본은 1곳
@@ -333,7 +334,7 @@ F_MODULE_TABLE = "02_모듈총괄표.md"
 MODULE_TABLE_SUFFIX = "모듈총괄표.md"   # 구 방식(원고/50_모듈총괄표.md) 작업폴더 호환용 식별 접미
 INSERT_MODULE_RE = re.compile(r"^\(\s*삽입\s*[:：]\s*모듈총괄표\s*\)$")
 WHITELIST_MASK = "◇"
-WHITELIST_MIN_LEN = 4   # 2-3자 일반명사("조사", "매핑")를 마스킹하면 "조사형" 같은 다른 판정을 가리므로 제외
+WHITELIST_MIN_LEN = 4   # 2-3자 일반명사("조사", "매핑")를 마스킹하면 "조사형" 같은 다른 점검을 가리므로 제외
 TABLE_SEP_RE = lib.TABLE_SEP_RE
 Element = lib.Element
 
@@ -433,7 +434,7 @@ class ProposalLayout:
 
     def _cell_line_role(self, line: str) -> str | None:
         """기호 하나만 있는 셀 줄(비교 매트릭스의 ○ 등)은 글머리로 보지 않는다.
-        Why: lib는 ○로 시작하는 줄을 셀 글머리로 판정해 기호를 지우고 글머리 스타일을 입힌다. ●, ◐와 크기와 정렬이 어긋났다."""
+        Why: lib는 ○로 시작하는 줄을 셀 글머리로 인식해 기호를 지우고 글머리 스타일을 입힌다. ●, ◐와 크기와 정렬이 어긋났다."""
         if len(line.strip()) <= 1:
             return None
         return super()._cell_line_role(line)
@@ -532,7 +533,7 @@ class ProposalLayout:
         (폭: 그룹명) 같은 그룹명의 표는 그룹 전 행을 합쳐 1회 산정한 폭을 공유 (최대 필요폭 기준이므로 좁은 폭은 전파되지 않음)
         (폭: 3,2,2) 비율로 표 폭 상한을 배분. (폭: 3,2,2, 80%) 상한의 80%를 비율로 배분
         지시가 없는 표는 lib 규칙대로 표마다 산정. `--unify auto`일 때만 머리글 또는 첫 열 라벨이 같은 표를 자동 그룹으로 묶음
-        Why 수동 우선: 어떤 표가 같은 양식인지는 문서 설계의 판단이며 기계 판정은 오인을 만든다."""
+        Why 수동 우선: 어떤 표가 같은 양식인지는 문서 설계의 판단이며 기계 분류는 오인을 만든다."""
         tables = [e for e in elems if e.kind == "table" and e.data.get("rows")]
         groups: dict[tuple, list[Element]] = {}
         for e in tables:
@@ -891,7 +892,7 @@ LABELS_NONE = "none"   # --labels none: 작업폴더 state.json에 기록된 라
 
 def use_labels(work: str | None, opt: str | None) -> str | None:
     """라벨 파일을 적용. --labels 값은 작업폴더 state.json에 기록하고, 값이 없으면 기록된 파일을 씀. none은 기록 해제
-    Why 기록: check(원고 표기 인식)와 build(문서 라벨)가 같은 라벨로 원고를 읽어야 판정과 조판이 어긋나지 않음"""
+    Why 기록: check(원고 표기 인식)와 build(문서 라벨)가 같은 라벨로 원고를 읽어야 점검과 조판이 어긋나지 않음"""
     path = None
     if opt and opt != LABELS_NONE:
         path = os.path.abspath(opt)
@@ -916,7 +917,7 @@ def use_labels(work: str | None, opt: str | None) -> str | None:
 
 
 def manuscript_kind(path: str) -> str:
-    """순번 접두를 뗀 파일명. 첫 글자가 판정 유형(3, 5 오리지널. 4, 6 공통)"""
+    """순번 접두를 뗀 파일명. 첫 글자가 점검 유형(3, 5 오리지널. 4, 6 공통)"""
     return ORDER_PREFIX_RE.sub("", os.path.basename(path))
 
 
@@ -1646,7 +1647,7 @@ def check_wording(work: str) -> tuple[bool, list[str], list[str]]:
 
 
 def check_residual(work: str) -> tuple[bool, list[str], list[str]]:
-    """사전진단보고서와 기획보고서의 [확인] 잔여 위치. 판정에는 반영하지 않고 5단계 유저 질의 목록으로 씀"""
+    """사전진단보고서와 기획보고서의 [확인] 잔여 위치. 결과에는 반영하지 않고 5단계 유저 질의 목록으로 씀"""
     warns = []
     for f in manuscript_files(work):
         for i, ln in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
@@ -1659,7 +1660,7 @@ MANUAL_HEADING = "## 수동 기록"   # 05_점검기록.md에서 check all 재�
 
 
 def write_check_report(work: str, auto_lines: list[str]):
-    """자동 판정 결과를 다시 쓰되 수동 기록 절 이하는 보존. 자체 검토, 렌더링 검수, 재량 조정 기록이 재실행으로 지워지지 않게 함"""
+    """자동 점검 결과를 다시 쓰되 수동 기록 절 이하는 보존. 자체 검토, 렌더링 검수, 재량 조정 기록이 재실행으로 지워지지 않게 함"""
     path = os.path.join(work, F_REPORT)
     old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
     i = old.find(MANUAL_HEADING)
@@ -1668,7 +1669,7 @@ def write_check_report(work: str, auto_lines: list[str]):
 
 
 def manuscript_hash(work: str) -> str:
-    """check all이 판정한 원고의 지문. build가 판정 이후의 원고 수정을 감지하는 기준. 모듈총괄표는 build가 원고에 삽입하므로 포함"""
+    """check all이 점검한 원고의 지문. build가 점검 이후의 원고 수정을 감지하는 기준. 모듈총괄표는 build가 원고에 삽입하므로 포함"""
     import hashlib
     h = hashlib.sha256()
     for f in manuscript_files(work) + [p for p in [module_table_path(work)] if os.path.exists(p)]:
@@ -1701,7 +1702,7 @@ def check_fill(work: str) -> tuple[bool, list[str], list[str]]:
                     if v > 100:
                         fails.append(f"참여율 100% 초과 {name}: {r[0]} {v:g}%")
             warns.append(f"{name} 참여율 합계 {total:g}% (인월 산정과 대조)")
-    # 오리지널 파트의 [확인]은 작성 중 임시 표지. 판정은 바꾸지 않고 잔여 위치만 알려 납품 전 유저 질의에 사용
+    # 오리지널 파트의 [확인]은 작성 중 임시 표지. 결과는 바꾸지 않고 잔여 위치만 알려 납품 전 유저 질의에 사용
     for f in [x for pre in PREFIX_ORIGINAL for x in manuscript_files(work, pre)]:
         name = os.path.basename(f)
         for i, ln in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
@@ -1710,7 +1711,7 @@ def check_fill(work: str) -> tuple[bool, list[str], list[str]]:
     return not fails, fails, warns
 
 
-ACRONYM_RE = re.compile(r"[A-Z][A-Z0-9&]+")   # 영문 대문자 약어(RFP, ISP)는 짧아도 화이트리스트에 넣음. 한글 짧은 명사는 다른 판정을 가리므로 제외
+ACRONYM_RE = re.compile(r"[A-Z][A-Z0-9&]+")   # 영문 대문자 약어(RFP, ISP)는 짧아도 화이트리스트에 넣음. 한글 짧은 명사는 다른 점검을 가리므로 제외
 
 
 def _whitelist_terms(work: str) -> list[str]:
@@ -1770,7 +1771,7 @@ def _mask_whitelist(ln: str, terms: list[str]) -> str:
 
 
 def _client_term_findings(ln: str) -> tuple[list[str], list[str]]:
-    """기관 호칭 판정. 주어 자리의 '발주처'와 채우지 않은 호칭 자리는 FAIL, 그 밖의 '발주처'는 WARN.
+    """기관 호칭 점검. 주어 자리의 '발주처'와 채우지 않은 호칭 자리는 FAIL, 그 밖의 '발주처'는 WARN.
     Why: '발주처 협의'처럼 관행상 남는 용례가 있어 전면 FAIL은 오탐이 많음. 주어 반복만 확실한 결함."""
     body = CLIENT_HEADER_CELL_RE.sub("|", ln)
     fails, warns = [], []
@@ -1876,7 +1877,7 @@ def check_numbers(work: str) -> tuple[bool, list[str], list[str]]:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 7-2. 분량 구성 단위 판정 (check volume)
+# 7-2. 분량 구성 단위 점검 (check volume)
 # ═══════════════════════════════════════════════════════════════════════
 def count_warnings(elems: list[Element]) -> list[str]:
     """형제 항목 수가 계위별 상한을 넘는 지점을 경고로 반환. 그룹마다 상한을 처음 넘는 시점에 1회만 알림.
@@ -2392,7 +2393,7 @@ _ORIGINAL_COL_ALIGNS = lib.col_aligns
 
 
 def _col_aligns_symbol_neutral(rows: list[list[str]], explicit: list[str | None]) -> list[str]:
-    """기호 하나만 있는 셀(비교 매트릭스의 ○, 일정표의 ■)은 열 정렬 판정에서 글머리로 세지 않는다.
+    """기호 하나만 있는 셀(비교 매트릭스의 ○, 일정표의 ■)은 열 정렬 결정에서 글머리로 세지 않는다.
     Why: lib는 ○로 시작하는 셀이 있으면 열을 LEFT로 정한다. 기호 열이 ●, ◐와 함께 좌측으로 쏠렸다. 명시 마커는 종전대로 우선."""
     masked = [rows[0]] + [["" if v.strip() in lib.BULLET_PREFIXES else v for v in r] for r in rows[1:]]
     return _ORIGINAL_COL_ALIGNS(masked, explicit)
@@ -2447,12 +2448,12 @@ def cmd_render(a):
 
 
 def _run_self(args: list[str]) -> subprocess.CompletedProcess:
-    """이 CLI를 하위 프로세스로 실행. Why: build와 render의 sys.exit 오류를 잡아 판정 결과로 기록하기 위함"""
+    """이 CLI를 하위 프로세스로 실행. Why: build와 render의 sys.exit 오류를 잡아 시험 결과로 기록하기 위함"""
     return subprocess.run([sys.executable, os.path.abspath(__file__), *args], capture_output=True, text=True)
 
 
 def cmd_selftest(a):
-    """표본 원고를 조판하고 렌더링하여 렌더 경로의 동작을 판정. 결과는 state.json checks.render에 기록.
+    """표본 원고를 조판하고 렌더링하여 렌더 경로의 동작을 점검. 결과는 state.json checks.render에 기록.
     Why: 렌더러 결함을 컨텍스트 여유가 큰 착수 시점에 발견하여 6단계의 확보 실패를 막음"""
     out_dir = os.path.abspath(os.path.join(a.work, D_SELFTEST))  # Why: state.json 기록 경로를 실행 위치와 무관하게 둠
     os.makedirs(out_dir, exist_ok=True)
@@ -2587,7 +2588,7 @@ def main():
     p.add_argument("--engine", default="auto", choices=["auto", "rhwp", "soffice"])
     p.set_defaults(func=cmd_render)
 
-    p = sub.add_parser("selftest", help="표본 원고 조판과 렌더링으로 렌더 경로 판정 (착수 관문, state.json checks.render 기록)")
+    p = sub.add_parser("selftest", help="표본 원고 조판과 렌더링으로 렌더 경로 점검 (착수 관문, state.json checks.render 기록)")
     p.add_argument("work")
     p.add_argument("--rhwp")
     p.add_argument("--engine", default="auto", choices=["auto", "rhwp", "soffice"])

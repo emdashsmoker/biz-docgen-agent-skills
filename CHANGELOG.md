@@ -31,20 +31,36 @@ Changelog rules
 
 ### blockwriter
 - Added a rule to write each sentence-style □ heading so that it restores to a natural declarative sentence with the same meaning when the omitted particles and the ending are added (#182)
+- Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
 
 * 문장형 □가 생략된 조사와 종결 어미를 갖추었을 때 의미가 같은 자연스러운 평서문으로 복원되도록 작성하는 규칙 추가 (#182)
+* 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
 
 ### ieum-deck
 - Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
 - Changed the agreement check of noun-style headlines from reading the result with "함" added to the declarative restoration check (#182)
+- Added 판정 to the lint WARN words (#183)
+- Added calques of English predicates to the review items that lint does not check (#183)
+- Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
 * 명사형 헤드라인의 호응 점검을 "함" 붙여 읽기에서 평서문 복원 점검으로 변경 (#182)
+* lint WARN 어휘에 판정 추가 (#183)
+* lint가 검사하지 않는 검수 항목에 영어 서술어 직역 추가 (#183)
+* 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
 
 ### juja-builder
 - Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
+- Added a `check tone` warning for 판정 (#183)
+- Added calques of English predicates to the vocabulary notes outside code detection (#183)
+- Renamed the 평가 column of 03_자료대장 to 검토 결과 (#183)
+- Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
+* `check tone`의 판정 경고 추가 (#183)
+* 코드 색출 대상 밖의 어휘 안내에 영어 서술어 직역 추가 (#183)
+* 03_자료대장의 평가 열 명칭을 검토 결과로 변경 (#183)
+* 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
 
 ## 2026-11-26
 

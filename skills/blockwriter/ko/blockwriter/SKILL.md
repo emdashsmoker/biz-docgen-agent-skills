@@ -40,7 +40,7 @@ pip install -U "python-hwpx==6.12.0" python-docx lxml pillow openpyxl fonttools 
 - 나머지 패키지는 최신 버전 설치를 먼저 시도하고 설치된 최신 버전으로 작업
 - 나머지 패키지의 최신 API 변경으로 스크립트가 실패하면 스크립트를 최신 API에 맞게 수정
 - 버전 고정은 수정할 수 없을 때의 마지막 수단. 고정하면 사유를 최종 보고에 기재
-- 검수 렌더링에는 렌더러가 필요. HWPX는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice와 H2Orestart 순으로 확보하고 DOCX는 LibreOffice를 사용. 확보 절차(태그 판정, 자산 선택, 명령 체계 확인)는 references/renderers.md
+- 검수 렌더링에는 렌더러가 필요. HWPX는 rhwp 릴리스 바이너리, rhwp 소스 빌드, LibreOffice와 H2Orestart 순으로 확보하고 DOCX는 LibreOffice를 사용. 확보 절차(태그 결정, 자산 선택, 명령 체계 확인)는 references/renderers.md
     - (rhwp 출처) 1순위와 2순위는 rhwp 저장소(https://github.com/edwardkim/rhwp)의 릴리스와 소스를 사용
     - (1순위 릴리스 바이너리) `git ls-remote --tags --refs https://github.com/edwardkim/rhwp`로 태그를 조회. `https://github.com/edwardkim/rhwp/releases/download/<태그>/SHA256SUMS.txt`를 `curl -fL`로 받아 자산 목록을 확인. `https://github.com/edwardkim/rhwp/releases/download/<태그>/<파일명>`의 자산을 `curl -fL`로 수신. SHA256SUMS.txt가 있으면 `sha256sum -c`로 대조. 압축 해제 후 실행 파일에 실행 권한을 부여하여 scripts/rhwp/에 배치. `rhwp --version`과 `rhwp --help`로 동작을 확인
     - (2순위 소스 빌드) rhwp 저장소를 `git clone`으로 받아 소스에서 빌드
@@ -55,7 +55,7 @@ pip install -U "python-hwpx==6.12.0" python-docx lxml pillow openpyxl fonttools 
     5. HWPX 렌더러 확보와 순위별 렌더 시험(references/renderers.md의 HWPX 렌더러 확보 순서 절)
     6. 1단계 기획안 질문
 - HWPX 렌더러 확보가 2순위(소스 빌드)로 넘어가면 빌드를 세션과 분리된 백그라운드 프로세스로 실행하고 빌드 중에 1단계 기획안 질문을 진행. HWPX를 산출하는 작업은 3단계 조판 전에 HWPX 렌더 시험 통과를 확인. 빌드가 그때까지 끝나지 않으면 3순위로 렌더 시험 통과를 먼저 확보하고 빌드 완료 후 rhwp로 렌더 시험을 다시 수행
-- (rhwp 권한 거부) 실행 환경의 권한 검사가 rhwp를 받거나 실행하는 명령을 거부하면 rhwp 확보를 그 자리에서 멈춤. 이어서 유저에게 rhwp 내려받기와 실행의 허용 여부를 질문. 답을 받기 전에는 3순위 렌더 시험이나 원고, 조판, 검수 작업을 진행하지 않음. 권한 거부와 네트워크 실패의 판정 기준은 references/renderers.md의 권한 거부 처리
+- (rhwp 권한 거부) 실행 환경의 권한 검사가 rhwp를 받거나 실행하는 명령을 거부하면 rhwp 확보를 그 자리에서 멈춤. 이어서 유저에게 rhwp 내려받기와 실행의 허용 여부를 질문. 답을 받기 전에는 3순위 렌더 시험이나 원고, 조판, 검수 작업을 진행하지 않음. 권한 거부와 네트워크 실패의 분류 기준은 references/renderers.md의 권한 거부 처리
     - (질문 이유) 권한 거부는 유저의 허용으로만 풀림. 질문 없이 3순위로 넘어가면 유저가 허용할 기회가 사라짐
     - (중단 범위) 같은 rhwp 코드를 다른 경로(2순위 소스 빌드, 다른 내려받기 도구)로 받는 시도도 중단. rhwp와 무관한 준비 항목은 계속 진행
     - (질문 시점) 착수 순서 5번의 거부는 1단계 기획안 질문 목록의 맨 앞 항목으로 질문. 기획안 질문을 생략하는 경우(바로 실행, 요청에 모든 답이 있는 경우)에도 허용 질문은 단독으로 보냄. 이후 단계의 거부는 거부 시점에 질문
@@ -173,7 +173,7 @@ check의 `--expect` 값은 rhwp verify의 기대 조건 인자로 그대로 전�
     - (`INFO:`) 셀이 접히는 표와 열 폭 줄이 있는 표의 현재 폭과 줄바꿈 없는 폭(○ 계위 폭 대비 %). 셀 접힘은 자동 산정이 전제하는 배치이므로 이 줄만으로 원고를 고치지 않음. 4단계 열 폭 결함 수정에서 열 폭 줄 값으로 사용
 4. (검수) check로 구조를 검증하고 render로 만든 쪽 PNG를 열람하여 references/layout.md의 검수 항목 점검과 자유 검수 수행. 검수 PDF와 PNG는 `--outdir`로 납품 폴더 밖에 저장
     - (렌더러) 착수 시점에 확보한 렌더러를 사용. 실행 환경이 바뀌어 render가 렌더러 부재로 실패하면 준비 절의 착수 순서 2-5번을 다시 수행한 뒤 render를 재실행
-    - (열 폭 결함) 자동 산정 열 폭의 결함을 렌더 PNG에서 확인한 표만 원고에 열 폭 줄을 추가하여 재조판. 결함 판정은 references/layout.md 검수 항목 기준. 값은 build `INFO:` 줄의 수치로 references/manuscript.md 표 절의 열 폭 결함 수정 순서에 따라 정함. 첫 조판은 열 폭 줄 없이 수행
+    - (열 폭 결함) 자동 산정 열 폭의 결함을 렌더 PNG에서 확인한 표만 원고에 열 폭 줄을 추가하여 재조판. 결함 점검은 references/layout.md 검수 항목 기준. 값은 build `INFO:` 줄의 수치로 references/manuscript.md 표 절의 열 폭 결함 수정 순서에 따라 정함. 첫 조판은 열 폭 줄 없이 수행
     - (쪽 채움) 마주 보는 두 쪽의 본문이 쪽 아래 끝까지 고르게 채워졌는지 확인. 정보 전달을 유지하는 범위에서 표, 그림, 문단의 크기와 위치 조정 등 양쪽을 균형 있게 채우는 조치를 수행. 기준은 references/layout.md의 쪽 채움 절
     - (줄 정리와 줄 간격 조정) 1단계에서 유저가 고른 범위까지만 수행. 줄 끝에 여유가 거의 없는 줄이 있는 쪽과 쪽 채움이 어긋날 수 있는 쪽을 집중하여 확인. 대상과 값의 판단 기준은 references/layout.md의 조판 조정 절
     - (PDF 동봉) 1단계에서 동봉을 고른 경우 마지막 render가 만든 PDF를 문서와 같은 폴더에 복사하여 함께 전달
@@ -221,7 +221,7 @@ check의 `--expect` 값은 rhwp verify의 기대 조건 인자로 그대로 전�
 | `출처: ` 등 출처 줄 | 출처 | 표나 그림 뒤면 출처 행, 본문 뒤면 직전 문단의 각주 | 같음 |
 | `(조판 조정: )` 줄 | 조판 조정 | 다음 요소나 구간의 장평, 자간, 줄 간격 조정 | 같음 |
 
-- 헤더 번호 제거와 자동 부여, 불릿 계위 판정, 인라인 서식, 각주, 출처 각주 상속, 표와 그림 표기, 출처와 단위 줄 처리, 조판 조정 줄은 references/manuscript.md
+- 헤더 번호 제거와 자동 부여, 불릿 계위 결정, 인라인 서식, 각주, 출처 각주 상속, 표와 그림 표기, 출처와 단위 줄 처리, 조판 조정 줄은 references/manuscript.md
 - □ 아래 서술, 키워드형과 문장형, 절 번호와 가나다 사용 기준도 references/manuscript.md
 
 ## 형식별 차이

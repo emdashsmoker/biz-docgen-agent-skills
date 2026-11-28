@@ -25,7 +25,7 @@
 | 0 Start | Basic report information in 00_진단서.md | `selftest` PASS, kickoff answers reflected |
 | 1 RFP dissection and diagnosis design | 01_요구항목표.md, 00_진단서.md | Requirement items transferred, all sections of the diagnosis file filled (except the reflecting-section column of the utilization design) |
 | 2 Structure finalization | 02_모듈총괄표.md, 02_스토리라인.md | Placement section column of the requirement table filled, `check rfp` PASS, user approval after presenting the three files including 00_진단서.md in one turn |
-| 3 Source research | 03_자료대장.md | At least one verdict row per hypothesis, figures checked in code |
+| 3 Source research | 03_자료대장.md | At least one review-result row per hypothesis, figures checked in code |
 | 4 Manuscript writing | 원고/NN_chapter-name.md | `check volume --file` PASS for each file |
 | 5 Checks | 05_점검기록.md | `check all` PASS, one self-review |
 | 6 Typesetting and review | 납품/사전진단보고서.hwpx or .docx | Render review passed |
@@ -195,10 +195,10 @@
 - Search both the Korean web and the English web. Keep search terms to short key words. Cite the original publisher's page
 - Record facts in 03_자료대장.md one row at a time
     + One fact per row. For list-type material (policy lists, organization lists, and so on), record one table as one row
-    + The verdict is one of 지지 (supporting), 반증 (refuting), or 배경 (background). Background is a current-state fact unrelated to the hypothesis
+    + The review result is one of 지지 (supporting), 반증 (refuting), or 배경 (background). Background is a current-state fact unrelated to the hypothesis
     + The source is organization or author (year), material name, and the address of the subpage where the information appears. For figures retrieved from a database, state the database name, query conditions, and retrieval date together
 
-| ID | 가설 | 판정 | 사실 | 수치와 단위 | 기준 시점 | 출처 | 반영 절 |
+| ID | 가설 | 검토 결과 | 사실 | 수치와 단위 | 기준 시점 | 출처 | 반영 절 |
 |---|---|---|---|---|---|---|---|
 | F01 | H1 | 지지 | [확인] | [확인] | [확인] | [확인] | [확인] |
 
@@ -268,7 +268,7 @@
 - For leftover `[확인]`, bundle the list of locations into one turn at step 5 and ask the user. Fill in values received. For places without values, delete the sentence or row after user approval
 - Records of the self-review and render review go under the `## 수동 기록` section of 05_점검기록.md
 - One self-review. The items are figure integrity, source reliability, logical leaps, reader perspective, and bracketed subheadings from the SKILL.md In-Depth Review section, plus the two items below
-    + (Hypothesis response) The □ conclusions of the manuscripts match the verdicts in 03_자료대장.md. Replace judgment statements of rejected hypotheses with the revised versions
+    + (Hypothesis response) The □ conclusions of the manuscripts match the review results in 03_자료대장.md. Replace judgment statements of rejected hypotheses with the revised versions
     + (Internal vocabulary) The manuscripts meet the report vocabulary rule of the Reader-Perspective Writing section. Framework stage names, final result requirements, and numbers such as Q1 and H1 are also check targets. Where they remain, describe their meaning as actual content. The tone verdict of `check all` does not judge this vocabulary
 
 ## Typesetting

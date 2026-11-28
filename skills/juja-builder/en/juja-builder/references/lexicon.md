@@ -22,6 +22,8 @@
 
 - `check tone` flags the words on the left. Replace them with the words on the right
 - 밀도 and 체크 are outside code detection. For 입력 and 출력, code flags only combined forms such as "입력이", "입력으로", "입력되", "입력 자료", "입력값", "출력이", "출력으로", "출력물", and "출력값". Check other forms directly while writing
+- `check tone` reports 판정 (ruling) as a WARN. Replace it with the actual act such as 검토, 확인, or 결정 (review, check, decision)
+- Literal translations of English predicates outside code detection (-로 기능한다 "functions as", 중요한 역할을 한다 "plays an important role", 방어 가능하다 "defensible", 강해진다 and 약해진다 "strengthens, weakens") are replaced with the actual act or the property that changes
 - The source of flagged words is TONE_FAIL in the settings part of scripts/proposal.py. If this table and the settings part disagree, the settings part rules
 
 | Flagged words | Replacements | Note |

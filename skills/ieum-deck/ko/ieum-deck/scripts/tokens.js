@@ -406,7 +406,7 @@ const LIMIT = {
   boxFillMin: 0.45, // 테두리 상자 안 텍스트가 차지해야 하는 최소 비율 (추정 폭 기반이라 실제보다 낮게 잡힘)
   pointFillMin: 0.5, // Key Point 밴드 문장마다 한 줄 폭이 문구 칸 안쪽 폭에서 차지해야 하는 최소 비율 (writing-rules.md 내용 구성 절. 2줄 이상 문장은 첫 줄이 폭을 채우므로 통과)
   bandBottomGapMax: 0.15, // 본문 밴드 하단 여백 상한 (내용이 위로 몰리는 정도)
-  bodyCoverMin: 0.7, // 본문 밴드 높이 가운데 내용이 차지해야 하는 최소 비율 (상자를 내용에 맞춰 줄인 뒤 남는 공간 판정)
+  bodyCoverMin: 0.7, // 본문 밴드 높이 가운데 내용이 차지해야 하는 최소 비율 (상자를 내용에 맞춰 줄인 뒤 남는 공간 검사)
   bulletOnlyShareMax: 0.5, // 불릿 패널만 쓴 슬라이드의 본문 내 최대 비중
   deckVarietyRatio: 0.3, // 본문 슬라이드 대비 템플릿 종류 하한
   deckTemplateShareMax: 0.4, // 한 템플릿이 본문에서 차지하는 최대 비중
@@ -421,7 +421,7 @@ const METRIC = {
   EM_SPACE: 0.3,
   LINE_HEIGHT: 1.2,
   SAFETY: 0.92,
-  SAFETY_METRIC: 0.9, // 글 폭 판정(lineWidthIn, wordWidthIn) 여유. 0.99 로 올리면 견본 2종(recipe-demos, proposal-templates) 빌드 경고 70개 발생 (상자 글 채움 경고)
+  SAFETY_METRIC: 0.9, // 글 폭 검사(lineWidthIn, wordWidthIn) 여유. 0.99 로 올리면 견본 2종(recipe-demos, proposal-templates) 빌드 경고 70개 발생 (상자 글 채움 경고)
   // 줄 수 추정(estimateLines) 여유. 폭 계산에 계열 경계 간격(SCRIPT_GAP_EM)과 기호 실측 폭을 반영한 뒤 견본 2종의 LibreOffice 렌더와 대조하여 정함
   // 0.995: 표 297행 추정 줄 수와 렌더 줄 수 일치, 겹치지 않는 표 밖 글 상자 약 1,740개 과다 추정 0, 과소 추정 0
   // 0.99 는 문구 폭이 칸 폭의 99.0-99.5% 인 글 상자 4개에서 과다 추정(유령 줄). 1.0 미만 여유는 렌더 폭이 계산보다 넓은 경우를 흡수
@@ -432,7 +432,7 @@ const METRIC = {
   //       pdftotext -bbox-layout 단어 좌표로 폭을 잼. 12pt 0.228em, 11pt 0.227em. 이 간격과 글자 폭으로 계산한 폭이 일반체 12pt, 11pt, 굵은체 12pt 267건 모두 렌더 폭과 일치
   SCRIPT_GAP_EM: 0.227,
   DONUT_PLOT: 0.9, // 도넛 차트의 플롯 지름 대비 상자 크기 비율 (중앙 흰 원 계산)
-  // 표 셀 행 높이 판정용 줄 높이 (em). 실측 행간보다 크게 두어 행 팽창을 막는 여유값
+  // 표 셀 행 높이 추정용 줄 높이 (em). 실측 행간보다 크게 두어 행 팽창을 막는 여유값
   // 실측: LibreOffice 24.2 표 셀 렌더 행간은 1.15em x 줄 간격 배수 (견본 2종 4판형의 셀 안 여러 줄 문단 290개, 배수 1.0-1.3 에서 1.148-1.157em). 글 상자는 1.2em
   // 이 값은 실측보다 17% 커서 줄 간격 확대(templates.js LNSPC_MAX) 뒤에도 글이 행 안쪽 높이를 넘지 않음 (같은 렌더의 표 셀 4,596개 중 행간 때문에 넘친 셀 0개)
   // PowerPoint 행간은 미확인이므로 여유를 유지
@@ -478,7 +478,7 @@ function writeLimits(dir) {
   // lint 가 헤드라인 길이를 한글 1자 폭 단위로 재므로 같은 단위를 씀 (평균 글자 폭 기준 값은 좁은 판형에서 2줄 넘김을 놓침)
   const baseW = scaled("16:9").headline.w;
   const HEADLINE_LINE_CHARS = Object.fromEntries(Object.keys(LAYOUTS).map((k) => [k, Math.floor((LIMIT.headlineOneLine * scaled(k).headline.w) / baseW)]));
-  // METRIC: check_layout 이 빌드(atoms.js)와 같은 폭 모델(글자 폭 근사, 계열 경계 간격, 줄 수 여유)로 넘침과 어절 폭을 판정하도록 공유
+  // METRIC: check_layout 이 빌드(atoms.js)와 같은 폭 모델(글자 폭 근사, 계열 경계 간격, 줄 수 여유)로 넘침과 어절 폭을 검사하도록 공유
   fs.writeFileSync(path.join(dir, "limits.json"), JSON.stringify({ LIMIT, HEADLINE_LINE_CHARS, SIZE: { BODY_MIN: SIZE.BODY_MIN }, LAYOUTS, BAND: { EDGE_MIN: BAND.EDGE_MIN, CONTENT_Y: BAND.CONTENT_Y, BODY_PAD: BAND.BODY_PAD, CONTENT_BOTTOM: BAND.CONTENT_BOTTOM }, PANEL: { GAP: PANEL.GAP }, THEME_TEXT: { RULES: THEME_TEXT_RULES, HINT: THEME_TEXT_HINT, TEXT_DARK: TEXT_DARK_DEFAULT }, METRIC }, null, 1));
 }
 

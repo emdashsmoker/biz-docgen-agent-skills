@@ -78,7 +78,7 @@ function groupSize(boxes, itemsList, base) {
   return best;
 }
 
-const PP_LINE_RATIO = 1.4; // PowerPoint 의 나눔고딕 줄 높이 근사 (글꼴 크기 대비). 렌더링 판정치 1.2 보다 높음
+const PP_LINE_RATIO = 1.4; // PowerPoint 의 나눔고딕 줄 높이 근사 (글꼴 크기 대비). 렌더링 기준치 1.2 보다 높음
 /** 불릿 목록 문단 구성. bullets 와 bulletFitSize 가 같은 문단으로 높이를 재도록 공유 */
 function bulletParas(list, o, sz) {
   const paras = [];
@@ -87,7 +87,7 @@ function bulletParas(list, o, sz) {
     // 불릿은 항목 경계를 식별하는 표지이므로 항목이 하나인 상자에는 두 줄로 줄바꿈되어도 붙이지 않음
     const single = !o.forceBullet && list.length === 1 && !(typeof it !== "string" && it.sub && it.sub.length);
     // ※ 나 출처로 시작하는 줄은 주석이므로 불릿을 붙이지 않고 작은 회색으로 표기
-    // "자료 수집" 같은 일반 항목과 구분하도록 출처와 자료는 콜론이 붙은 경우만 주석으로 판정 (영문 Source, Note 도 같은 기준)
+    // "자료 수집" 같은 일반 항목과 구분하도록 출처와 자료는 콜론이 붙은 경우만 주석으로 분류 (영문 Source, Note 도 같은 기준)
     // meta.labels.notation.source 로 추가한 토큰("토큰:")과 번호 표기 라벨(common.footnoteLabel, sourceLabel)도 주석으로 인식 (LB.isExtraNote)
     const isNote = /^\s*(※|출처\s*[:：]|자료\s*[:：]|[Ss]ources?\s*[:：]|[Nn]otes?\s*[:：])/.test(String(tx)) || LB.isExtraNote(tx);
     if (isNote) {
@@ -110,7 +110,7 @@ function bulletFitSize(box, items, opt) {
   const first = fitted.find((p) => p.bullet && !p.lvl) || fitted[0];
   return first ? first.runs[0].sz : sz;
 }
-/** 불릿 문단 높이 합 (ratio 는 줄 높이 배수, 생략하면 렌더링 판정치) */
+/** 불릿 문단 높이 합 (ratio 는 줄 높이 배수, 생략하면 렌더링 기준치) */
 function bulletParasH(ps, innerW, ratio) {
   return ps.reduce((h, p) => h + A.estimateLines(p.runs[0].t, innerW - T.PARA.bulletIndentIn, p.runs[0].sz, p.runs[0].b) * A.lineHeightIn(p.runs[0].sz, ratio) + (p.spcBef || 0) / 72, 0);
 }
@@ -195,10 +195,10 @@ const isHarvey = (v) => typeof v === "string" && !!HARVEY[v.trim()];
 const cellList = (v) => (v && v.merged ? [] : (cellItems(v) || [cellText(v)]).flatMap((t) => String(t == null ? "" : t).split("\n")).map((t) => t.trim()).filter(Boolean));
 const DEFAULT_LABEL_COLS = [0]; // labelCols 생략 시 구분 열 (bulletRows 에서 빼는 열)
 const arrayOr = (v, fallback) => (Array.isArray(v) ? v : fallback);
-/** 불릿 셀 판정. 항목 2개 이상 셀과 storyboard 의 bulletRows, bulletCols 로 지정한 줄의 항목 1개 셀
- *  Why: 비교 줄 조건과 표 전체 조건은 표의 의미를 아는 작성자가 판정하고 빌더는 지정된 줄만 적용
+/** 불릿 셀 여부 확인. 항목 2개 이상 셀과 storyboard 의 bulletRows, bulletCols 로 지정한 줄의 항목 1개 셀
+ *  Why: 비교 줄 조건과 표 전체 조건은 표의 의미를 아는 작성자가 검토하고 빌더는 지정된 줄만 적용
  *  bulletRows 는 labelCols 의 구분 열 칸을 빼고 적용. 빈 칸, 병합으로 가려진 칸, 하베이 볼 칸은 제외
- *  tableMetrics(열 폭, 기본 정렬)와 tableBlock(문단)이 같이 사용 (판정이 다르면 열 폭 계산에서 불릿 들여쓰기 폭이 빠짐) */
+ *  tableMetrics(열 폭, 기본 정렬)와 tableBlock(문단)이 같이 사용 (확인 결과가 다르면 열 폭 계산에서 불릿 들여쓰기 폭이 빠짐) */
 function isBulletCell(tb, ri, ci, v) {
   const items = cellList(v);
   if (items.length > 1) return true;
@@ -217,7 +217,7 @@ const ROW_BREATH = 0.12; // 여러 줄 셀 행의 줄 간격 확대 뒤 남기�
 const QUESTION_END = /(는가|인가|은가|한가|던가|을까|할까|는지|\?)\s*$/; // 질문 문장 끝 (진단 질문 열은 왼쪽 정렬)
 const DATA_CELL_MAX_CHARS = 2; // 역할 부호처럼 두 글자 이하 기호만 담는 열은 자료 열 (숫자, 하베이 볼 열 포함)
 const LNSPC_MAX = 1.3; // 여러 줄 셀의 줄 간격 상한 (행 높이가 남을 때)
-// 경계 구간 판정 폭 계수. 문구 폭이 칸 폭의 99-100% 에 놓이면 렌더 폭 오차(11pt 에서 계산보다 최대 0.65% 넓음)로
+// 경계 구간 확인용 폭 계수. 문구 폭이 칸 폭의 99-100% 에 놓이면 렌더 폭 오차(11pt 에서 계산보다 최대 0.65% 넓음)로
 // 추정 줄 수와 렌더 줄 수가 갈려 유령 줄(1줄 행만 높아짐)이나 행 팽창이 생김. 칸 폭 -3% 와 +3% 에서 줄 수가 같으면 안정
 const EDGE_FACTORS = [0.97, 1.03];
 const EDGE_STEP = 0.005; // 경계 구간 회피로 열 사이에 옮기는 폭 단위 (인치)
@@ -550,7 +550,7 @@ function callout(ctx, slide, box, lbl, text) {
 }
 /** Key Point 띠 폭. 묶음 폭 w0 에서 시작하여 문구가 띠 높이 안에 들어가는 폭까지 넓힘 (상한 maxW)
  *  패널이나 카드 묶음이 짧은 항목에 맞춰 좁아지면 띠 문구가 상자 밖으로 넘치므로 띠와 묶음을 함께 넓히는 데 씀
- *  줄 수는 형식별 문구 칸 폭으로 판정 (라벨 칸 형식은 라벨 칸 폭을 뺀 폭, 틴트 상자 형식은 띠 전체 안쪽 폭) */
+ *  줄 수는 형식별 문구 칸 폭으로 추정 (라벨 칸 형식은 라벨 칸 폭을 뺀 폭, 틴트 상자 형식은 띠 전체 안쪽 폭) */
 function calloutW(ctx, text, w0, maxW) {
   const { lw, mg } = calloutFrame(ctx, pointLabel(ctx, ctx.sb));
   const lines = calloutLines(text);
@@ -1116,7 +1116,7 @@ function chart_two(ctx, slide, sb) {
   source(ctx, slide, sb);
 }
 /** AS-IS / TO-BE 대비 + 갭. slots: {asis:{head, items}, tobe:{head, items}, gap:[]} */
-// 행 대응 비교: 현행 항목, 격차, 개선 항목이 1:1 로 짝지어지면 행마다 현행 상자, 격차 화살표, 개선 상자를 배치
+// 행 대응 비교: 현행 항목, 격차, 개선 항목이 1:1 로 대응하면 행마다 현행 상자, 격차 화살표, 개선 상자를 배치
 const CMP_SIZES = [[14, 12, 13], [13, 12, 12], [12, 11, 12]]; // [항목, 근거, 격차] 글자 크기. 본문 높이를 넘으면 다음 단계로 축소
 const CMP_COL_GAP = 0.16; // 상자와 격차 화살표 사이 간격
 const CMP_ROW_GAP = 0.14; // 행 간격
@@ -1348,7 +1348,7 @@ function org(ctx, slide, sb) {
       const paras = mem.map((m, k) => ({ align: "center", spcBef: k ? extra : 0, runs: [{ t: m, sz, color: T.COLOR.textDark }] }));
       slide.addText(A.runsOf(paras), { x: bd.x, y: bd.y, w: bd.w, h: bd.h, isTextBox: true, valign: "middle", margin: A.boxMargin([0.06, 0.04, 0.06, 0.04]), autoFit: false });
     }
-    // 분담 문구는 본문 정보이므로 본문 하한(11pt)으로 조판 (10pt 는 check_layout 이 주석 크기로 판정)
+    // 분담 문구는 본문 정보이므로 본문 하한(11pt)으로 조판 (10pt 는 check_layout 이 주석 크기로 분류)
     if (t.share) A.text(slide, { x: c.x, y: bd.y + bd.h, w: c.w, h: 0.28 }, t.share, { sz: T.SIZE.BODY_MIN, color: T.COLOR.textMuted, align: "center" });
   });
   const noteH = boxNoteH(note, 0.28);
