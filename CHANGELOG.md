@@ -27,6 +27,25 @@ Changelog rules
 - (Push) Commit on top of the latest main and push directly to main.
 -->
 
+## 2026-11-28
+
+### blockwriter
+- Added a rule to write each sentence-style □ heading so that it restores to a natural declarative sentence with the same meaning when the omitted particles and the ending are added (#182)
+
+* 문장형 □가 생략된 조사와 종결 어미를 갖추었을 때 의미가 같은 자연스러운 평서문으로 복원되도록 작성하는 규칙 추가 (#182)
+
+### ieum-deck
+- Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
+- Changed the agreement check of noun-style headlines from reading the result with "함" added to the declarative restoration check (#182)
+
+* 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
+* 명사형 헤드라인의 호응 점검을 "함" 붙여 읽기에서 평서문 복원 점검으로 변경 (#182)
+
+### juja-builder
+- Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
+
+* 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
+
 ## 2026-11-26
 
 ### ieum-deck
