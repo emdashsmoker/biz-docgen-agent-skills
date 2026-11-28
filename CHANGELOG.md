@@ -42,12 +42,16 @@ Changelog rules
 - Added 판정 to the lint WARN words (#183)
 - Added calques of English predicates to the review items that lint does not check (#183)
 - Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
+- Added 쓰다 and 잇다 to the colloquial markers, replaced with formal words such as 사용, 작성 and 연계 (#184)
+- Added a rule that replaces words whose double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives a strong colloquial tone, such as 뽑다, 쓰다 and 짝, with formal words of the same meaning (#184)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
 * 명사형 헤드라인의 호응 점검을 "함" 붙여 읽기에서 평서문 복원 점검으로 변경 (#182)
 * lint WARN 어휘에 판정 추가 (#183)
 * lint가 검사하지 않는 검수 항목에 영어 서술어 직역 추가 (#183)
 * 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
+* 구어체 표지에 쓰다, 잇다 추가 (사용, 작성, 연계 등 격식 어휘로 대체) (#184)
+* 쌍자음(ㄲ, ㄸ, ㅃ, ㅆ, ㅉ)이 들어 구어 어감이 강한 어휘(뽑다, 쓰다, 짝 등)를 같은 뜻의 격식 어휘로 대체하는 규칙 추가 (#184)
 
 ### juja-builder
 - Added a grammar check that restores a Korean noun-ending sentence to a declarative sentence with the omitted particles and the ending in place (rewriting of sentences that do not restore naturally or that change meaning) (#182)
@@ -55,12 +59,16 @@ Changelog rules
 - Added calques of English predicates to the vocabulary notes outside code detection (#183)
 - Renamed the 평가 column of 03_자료대장 to 검토 결과 (#183)
 - Changed the wording of the instructions to name the actual act instead of stock words such as 판정, 평가 and 짝, keeping 평가 for institutional and established concepts (#183)
+- Added 쓰다 and 잇다 to the vocabulary notes outside code detection, replaced with formal words such as 사용, 작성 and 연계 (#184)
+- Added a rule that replaces words whose double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives a strong colloquial tone, such as 뽑다, 쓰다 and 짝, with formal words of the same meaning (#184)
 
 * 명사형 종결 문장을 생략된 조사와 종결 어미를 갖춘 평서문으로 복원하는 문법 점검 추가 (자연스럽게 복원되지 않거나 의미가 달라지는 문장의 재작성) (#182)
 * `check tone`의 판정 경고 추가 (#183)
 * 코드 색출 대상 밖의 어휘 안내에 영어 서술어 직역 추가 (#183)
 * 03_자료대장의 평가 열 명칭을 검토 결과로 변경 (#183)
 * 판정, 평가, 짝 등 상투 어휘 대신 실제 행위를 나타내는 어휘로 지침 문구 변경 (제도 용어와 확립된 개념의 평가는 유지) (#183)
+* 코드 색출 대상 밖의 어휘 안내에 쓰다, 잇다 추가 (사용, 작성, 연계 등 격식 어휘로 대체) (#184)
+* 쌍자음(ㄲ, ㄸ, ㅃ, ㅆ, ㅉ)이 들어 구어 어감이 강한 어휘(뽑다, 쓰다, 짝 등)를 같은 뜻의 격식 어휘로 대체하는 규칙 추가 (#184)
 
 ## 2026-11-26
 
