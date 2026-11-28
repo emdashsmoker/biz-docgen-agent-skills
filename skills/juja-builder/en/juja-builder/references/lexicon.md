@@ -24,7 +24,7 @@
 - 밀도 and 체크 are outside code detection. For 입력 and 출력, code flags only combined forms such as "입력이", "입력으로", "입력되", "입력 자료", "입력값", "출력이", "출력으로", "출력물", and "출력값". Check other forms directly while writing
 - `check tone` reports 판정 (ruling) as a WARN. Replace it with the actual act such as 검토, 확인, or 결정 (review, check, decision)
 - Literal translations of English predicates outside code detection (-로 기능한다 "functions as", 중요한 역할을 한다 "plays an important role", 방어 가능하다 "defensible", 강해진다 and 약해진다 "strengthens, weakens") are replaced with the actual act or the property that changes
-- Words with a colloquial tone outside code detection are replaced with a formal word of the same meaning. Replace 쓰다 (use or write) with a word such as 사용, 활용, 작성, or 기재 (use, apply, draft, enter) and 잇다 (join) with a word such as 연계 (link). The same rule applies to a word whose double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives it a strong colloquial tone, such as 뽑다 (pick), 쓰다, and 짝 (pair)
+- Words with a colloquial tone outside code detection are replaced with a formal word of the same meaning. Replace 쓰다 (use or write) with a word such as 사용, 활용, 작성, or 기재 (use, apply, draft, enter) and 잇다 (join) with a word such as 연계 (link). The same rule applies to a vocabulary word whose own double consonant (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) gives it a strong colloquial tone, such as 뽑다 (pick), 쓰다, and 짝 (pair). Tense and grammar forms such as 하였음 and 있음 stay as they are
 - The source of flagged words is TONE_FAIL in the settings part of scripts/proposal.py. If this table and the settings part disagree, the settings part rules
 
 | Flagged words | Replacements | Note |
